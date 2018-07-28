@@ -44,6 +44,11 @@ public:
       friends.insert(uid);
    }
 
+   void remove_friend(uid_type uid)
+   {
+      friends.erase(uid);
+   }
+
    void remove_group(gid_type group)
    {
       // Removes group owned by this user from his list of groups.
@@ -114,6 +119,7 @@ public:
 };
 
 struct server_data {
+private:
    // May grow up to millions of users.
    std::unordered_map<uid_type, user> users;
 
@@ -125,6 +131,26 @@ struct server_data {
    std::stack<gid_type> avail_groups_idxs;
    std::vector<group> groups;
 
+   auto alloc_group()
+   {
+      if (avail_groups_idxs.empty()) {
+         auto size = groups.size();
+         groups.push_back({});
+         return static_cast<gid_type>(size);
+      }
+
+      auto i = avail_groups_idxs.top();
+      avail_groups_idxs.pop();
+      return i;
+   }
+
+   void dealloc_group(gid_type gid)
+   {
+      groups[gid].reset();
+      avail_groups_idxs.push(gid);
+   }
+
+public:
    void add_user(uid_type id, std::vector<uid_type> contacts)
    {
       auto new_user = users.insert({id, {}});
@@ -166,34 +192,11 @@ struct server_data {
       }
    }
 
-   auto alloc_group()
+   auto add_group(uid_type owner)
    {
-      if (avail_groups_idxs.empty()) {
-         auto size = groups.size();
-         groups.push_back({});
-         return static_cast<gid_type>(size);
-      }
-
-      auto i = avail_groups_idxs.top();
-      avail_groups_idxs.pop();
-      return i;
-   }
-
-   void dealloc_group(gid_type gid)
-   {
-      groups[gid].reset();
-      avail_groups_idxs.push(gid);
-   }
-
-   auto add_group(group g)
-   {
-      // REMARK: After creating the groups we have to inform the app
-      // what group id was assigned.
-      auto gid = alloc_group();
-      groups[gid] = g;
-
-      // Updates the owner with his new group.
-      auto match = users.find(g.get_owner());
+      // Before allocating a new group it is a good idea to check if
+      // the owner passed to us indeed exists.
+      auto match = users.find(owner);
       if (match == std::end(users)) {
          // This is a non-existing user. Perhaps the json command was
          // sent with the wrong information signaling a logic error in
@@ -201,10 +204,14 @@ struct server_data {
          return static_cast<gid_type>(-1);
       }
 
-      // After seting we have to notify the new user he owns a new
-      // group.
-      match->second.add_group(gid);
-      return gid;
+      // Updates the user with his new group.
+      match->second.add_group(owner);
+
+      // We can proceed and allocate the group.
+      auto gid = alloc_group();
+      groups[gid].set_owner(owner);
+
+      return owner;
    }
 
    auto gid_in_range(gid_type gid) const noexcept

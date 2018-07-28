@@ -131,6 +131,11 @@ private:
    std::stack<gid_type> avail_groups_idxs;
    std::vector<group> groups;
 
+   auto gid_in_range(gid_type gid) const noexcept
+   {
+      return gid >= 0 && gid < groups.size();
+   }
+
    auto alloc_group()
    {
       if (avail_groups_idxs.empty()) {
@@ -212,11 +217,6 @@ public:
       groups[gid].set_owner(owner);
 
       return owner;
-   }
-
-   auto gid_in_range(gid_type gid) const noexcept
-   {
-      return gid >= 0 && gid < groups.size();
    }
 
    group remove_group(uid_type owner, gid_type gid)

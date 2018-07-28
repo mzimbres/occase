@@ -5,6 +5,7 @@
 #include <vector>
 #include <algorithm>
 #include <unordered_map>
+#include <unordered_set>
 
 using uid_type = long long;
 using gid_type = long long;
@@ -84,7 +85,7 @@ private:
    // 
    // Given those requirements above, I think a hash table is more
    // appropriate.
-   std::vector<uid_type> members;
+   std::unordered_set<uid_type> members;
 
 public:
    auto get_owner() const noexcept {return owner;}
@@ -99,6 +100,16 @@ public:
    {
       owner = -1;
       members = {};
+   }
+
+   void add_member(uid_type uid)
+   {
+      members.insert(uid);
+   }
+
+   void remove_member(uid_type uid)
+   {
+      members.erase(uid);
    }
 };
 
@@ -248,6 +259,23 @@ struct server_data {
       to_match->second.add_group(gid);
       from_match->second.remove_group(gid);
       return true;
+   }
+
+   void add_group_member( uid_type owner
+                        , uid_type new_member
+                        , gid_type gid)
+   {
+      if (!gid_in_range(gid))
+         return;
+
+      if (!groups[gid].is_owned_by(owner))
+         return;
+         
+      auto n = users.count(new_member);
+      if (n == 0)
+         return; // The user does not exist.
+
+      groups[gid].add_member(new_member);
    }
 };
 

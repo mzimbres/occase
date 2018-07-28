@@ -2,6 +2,7 @@
 
 #include <stack>
 #include <vector>
+#include <algorithm>
 #include <unordered_map>
 
 using uid_type = long long;
@@ -16,11 +17,11 @@ struct user {
    std::vector<uid_type> friends;
 
    // Groups owned by this user.
-   std::vector<gid_type> group_ids;
+   std::vector<gid_type> groups_owner;
 };
 
 struct group {
-   uid_type owner;
+   uid_type owner {-1};
    std::vector<uid_type> members;
 };
 
@@ -32,7 +33,7 @@ struct data {
    // vector. When a new group is requested we will pop one index
    // from the stack and use it, if none is available we push_back in
    // the vector.
-   std::stack<gid_type> avail_group_idxs;
+   std::stack<gid_type> avail_groups_idxs;
    std::vector<group> groups;
 
    void add_user(uid_type id, user u)
@@ -71,25 +72,32 @@ struct data {
       }
    }
 
-   gid_type prepare_for_new_group()
+   auto alloc_group()
    {
-      if (avail_group_idxs.empty()) {
+      if (avail_groups_idxs.empty()) {
          auto size = groups.size();
          groups.push_back({});
-         return size;
+         return static_cast<gid_type>(size);
       }
 
-      auto i = avail_group_idxs.top();
-      avail_group_idxs.pop();
+      auto i = avail_groups_idxs.top();
+      avail_groups_idxs.pop();
       return i;
    }
 
-   gid_type add_group(group g)
+   void dealloc_group(gid_type gid)
+   {
+      groups[gid].members = {};
+      groups[gid].owner = -1;
+      avail_groups_idxs.push(gid);
+   }
+
+   auto add_group(group g)
    {
       // REMARK: After creating the groups we have to inform the app
       // what is the group id.
 
-      auto gid = prepare_for_new_group();
+      auto gid = alloc_group();
       groups[gid] = g;
 
       // Updates the owner with his new group.
@@ -97,10 +105,43 @@ struct data {
       if (match == std::end(users)) {
          // This is a non-existing user. Perhaps the json command was
          // sent with the wrong information signaling a bug in the app.
-         return -1;
+         return static_cast<gid_type>(-1);
       }
 
-      match->second.group_ids.push_back(gid);
+      match->second.groups_owner.push_back(gid);
+      return gid;
+   }
+
+   group remove_group(gid_type gid)
+   {
+      if (gid < 0 || gid >= groups.size())
+         return {};
+
+      if (groups[gid].owner == -1) {
+         // This group is already deallocated. The caller called us
+         // with the wrong gid.
+         return {};
+      }
+
+      // To remove a user we have to inform its members the group
+      // has been removed, therefore we will make a copy before
+      // removing it.
+      auto removed_group = groups[gid];
+      dealloc_group(gid);
+
+      // Now we have to remove this gid from the owners list.
+      auto user_match = users.find(removed_group.owner);
+      if (user_match == std::end(users))
+         return {}; // This looks like an internal logic problem.
+
+      auto group_match =
+         std::remove( std::begin(user_match->second.groups_owner)
+                    , std::end(user_match->second.groups_owner)
+                    , removed_group.owner);
+
+      user_match->second.groups_owner.erase( group_match
+                               , std::end(user_match->second.groups_owner));
+      return removed_group;
    }
 };
 

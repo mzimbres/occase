@@ -46,6 +46,13 @@ struct user {
       own_groups.erase(group_match, std::end(own_groups));
    }
 
+   void add_group(gid_type gid)
+   {
+      // After seting we have to notify the new user he owns a new
+      // group.
+      own_groups.push_back(gid);
+   }
+
    // Further remarks: This user struct will not store the groups it
    // belongs to. This information can be obtained from the groups
    // array in an indirect manner i.e. by traversing it and quering
@@ -71,6 +78,11 @@ struct group {
    // For now I will stick with a vector that is very bad if 3. is
    // true and change it later if the need arises.
    std::vector<uid_type> members;
+
+   auto is_owned_by(uid_type uid) const noexcept
+   {
+      return owner == uid;
+   }
 };
 
 struct server_data {
@@ -167,10 +179,20 @@ struct server_data {
       return gid;
    }
 
-   group remove_group(gid_type gid)
+   auto gid_in_range(gid_type gid) const noexcept
    {
-      if (gid < 0 || gid >= groups.size())
-         return {};
+      return gid >= 0 && gid < groups.size();
+   }
+
+   group remove_group(uid_type uid, gid_type gid)
+   {
+      if (!gid_in_range(gid))
+         return {}; // Out of range? Logic error.
+
+      // The user must be the owner of the group to be allowed to
+      // remove it
+      if (!groups[gid].is_owned_by(uid))
+         return {}; // Sorry, you are not allowed.
 
       if (groups[gid].owner == -1) {
          // This group is already deallocated. The caller called us
@@ -191,6 +213,30 @@ struct server_data {
 
       user_match->second.remove_owned_group(gid);
       return removed_group;
+   }
+
+   auto change_group_ownership( uid_type from, uid_type to
+                              , gid_type gid)
+   {
+      if (!gid_in_range(gid))
+         return false;
+
+      if (!groups[gid].is_owned_by(from))
+         return false; // Sorry, you are not allowed.
+
+      auto from_match = users.find(from);
+      if (from_match == std::end(users))
+         return false;
+
+      auto to_match = users.find(to);
+      if (to_match == std::end(users))
+         return false;
+
+      // The new owner exists.
+      groups[gid].owner = to;
+      to_match->second.add_group(gid);
+      from_match->second.remove_owned_group(gid);
+      return true;
    }
 };
 

@@ -160,7 +160,8 @@ public:
 template <class T>
 class grow_only_vector {
 public:
-   using size_type = typename std::vector<T>::size_type;
+   //using size_type = typename std::vector<T>::size_type;
+   using size_type = long long;
    using reference = typename std::vector<T>::reference;
    using const_reference = typename std::vector<T>::const_reference;
 
@@ -182,7 +183,7 @@ public:
       if (avail.empty()) {
          auto size = items.size();
          items.push_back({});
-         return size;
+         return static_cast<size_type>(size);
       }
 
       auto i = avail.top();
@@ -197,7 +198,8 @@ public:
 
    auto is_valid_index(size_type idx) const noexcept
    {
-      return idx >= 0 && idx < items.size();
+      return idx >= 0
+          && idx < static_cast<size_type>(items.size());
    }
 };
 

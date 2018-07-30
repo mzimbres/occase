@@ -50,9 +50,9 @@ public:
       friends.erase(uid);
    }
 
+   // Removes group owned by this user from his list of groups.
    void remove_group(gid_type group)
    {
-      // Removes group owned by this user from his list of groups.
       auto group_match =
          std::remove( std::begin(own_groups), std::end(own_groups)
                     , group);
@@ -153,42 +153,53 @@ public:
    }
 };
 
-struct server_data {
+// Items will be added in the vector and wont be removed, instead,
+// we will push its index in the stack. When a new group is
+// requested we will pop one index from the stack and use it, if
+// none is available we push_back in the vector.
+template <class T>
+class grow_only_vector {
+public:
+   using index_type = typename std::vector<T>::size_type;
+private:
+   std::stack<index_type> avail;
+public:
+   // I do not want to replicate the vector interface here so I will
+   // let the vector public. 
+   std::vector<T> items;
+
+   // Returns the index of an element int the group that is free
+   // for use.
+   auto allocate()
+   {
+      if (avail.empty()) {
+         auto size = items.size();
+         items.push_back({});
+         return size;
+      }
+
+      auto i = avail.top();
+      avail.pop();
+      return i;
+   }
+
+   void deallocate(index_type idx)
+   {
+      avail.push(idx);
+   }
+
+   auto is_valid_index(index_type idx) const noexcept
+   {
+      return idx >= 0 && idx < items.size();
+   }
+};
+
+class server_data {
 private:
    // May grow up to millions of users.
    std::unordered_map<uid_type, user> users;
 
-   // Groups will be added in the groups array and wont be removed,
-   // instead, we will set its owner to -1 and push its index in the
-   // stack. When a new group is requested we will pop one index from
-   // the stack and use it, if none is available we push_back in the
-   // vector.
-   std::stack<gid_type> avail_groups_idxs;
-   std::vector<group> groups;
-
-   auto gid_in_range(gid_type gid) const noexcept
-   {
-      return gid >= 0 && gid < groups.size();
-   }
-
-   auto alloc_group()
-   {
-      if (avail_groups_idxs.empty()) {
-         auto size = groups.size();
-         groups.push_back({});
-         return static_cast<gid_type>(size);
-      }
-
-      auto i = avail_groups_idxs.top();
-      avail_groups_idxs.pop();
-      return i;
-   }
-
-   void dealloc_group(gid_type gid)
-   {
-      groups[gid].reset();
-      avail_groups_idxs.push(gid);
-   }
+   grow_only_vector<group> groups;
 
 public:
    void add_user(uid_type id, std::vector<uid_type> contacts)
@@ -248,27 +259,28 @@ public:
       match->second.add_group(owner);
 
       // We can proceed and allocate the group.
-      auto gid = alloc_group();
-      groups[gid].set_owner(owner);
+      auto gid = groups.allocate();
+      groups.items[gid].set_owner(owner);
 
       return owner;
    }
 
    group remove_group(uid_type owner, gid_type gid)
    {
-      if (!gid_in_range(gid))
+      if (!groups.is_valid_index(gid))
          return {}; // Out of range? Logic error.
 
       // The user must be the owner of the group to be allowed to
       // remove it
-      if (!groups[gid].is_owned_by(owner))
+      if (!groups.items[gid].is_owned_by(owner))
          return {}; // Sorry, you are not allowed.
 
       // To remove a group we have to inform its members the group has
       // been removed, therefore we will make a copy before removing
       // and return it.
-      auto removed_group = groups[gid];
-      dealloc_group(gid);
+      auto removed_group = groups.items[gid];
+      groups.items[gid].reset();
+      groups.deallocate(gid);
 
       // Now we have to remove this gid from the owners list.
       auto user_match = users.find(removed_group.get_owner());
@@ -282,10 +294,10 @@ public:
    auto change_group_ownership( uid_type from, uid_type to
                               , gid_type gid)
    {
-      if (!gid_in_range(gid))
+      if (!groups.is_valid_index(gid))
          return false;
 
-      if (!groups[gid].is_owned_by(from))
+      if (!groups.items[gid].is_owned_by(from))
          return false; // Sorry, you are not allowed.
 
       auto from_match = users.find(from);
@@ -297,7 +309,7 @@ public:
          return false;
 
       // The new owner exists.
-      groups[gid].set_owner(to);
+      groups.items[gid].set_owner(to);
       to_match->second.add_group(gid);
       from_match->second.remove_group(gid);
       return true;
@@ -307,17 +319,17 @@ public:
                         , uid_type new_member
                         , gid_type gid)
    {
-      if (!gid_in_range(gid))
+      if (!groups.is_valid_index(gid))
          return;
 
-      if (!groups[gid].is_owned_by(owner))
+      if (!groups.items[gid].is_owned_by(owner))
          return;
          
       auto n = users.count(new_member);
       if (n == 0)
          return; // The user does not exist.
 
-      groups[gid].add_member(new_member);
+      groups.items[gid].add_member(new_member);
    }
 };
 

@@ -160,13 +160,20 @@ public:
 template <class T>
 class grow_only_vector {
 public:
-   using index_type = typename std::vector<T>::size_type;
+   using size_type = typename std::vector<T>::size_type;
+   using reference = typename std::vector<T>::reference;
+   using const_reference = typename std::vector<T>::const_reference;
+
 private:
-   std::stack<index_type> avail;
-public:
-   // I do not want to replicate the vector interface here so I will
-   // let the vector public. 
+   std::stack<size_type> avail;
    std::vector<T> items;
+
+public:
+   reference operator[](size_type i)
+   { return items[i]; };
+
+   const_reference operator[](size_type i) const
+   { return items[i]; };
 
    // Returns the index of an element int the group that is free
    // for use.
@@ -183,12 +190,12 @@ public:
       return i;
    }
 
-   void deallocate(index_type idx)
+   void deallocate(size_type idx)
    {
       avail.push(idx);
    }
 
-   auto is_valid_index(index_type idx) const noexcept
+   auto is_valid_index(size_type idx) const noexcept
    {
       return idx >= 0 && idx < items.size();
    }
@@ -260,7 +267,7 @@ public:
 
       // We can proceed and allocate the group.
       auto gid = groups.allocate();
-      groups.items[gid].set_owner(owner);
+      groups[gid].set_owner(owner);
 
       return owner;
    }
@@ -272,14 +279,14 @@ public:
 
       // The user must be the owner of the group to be allowed to
       // remove it
-      if (!groups.items[gid].is_owned_by(owner))
+      if (!groups[gid].is_owned_by(owner))
          return {}; // Sorry, you are not allowed.
 
       // To remove a group we have to inform its members the group has
       // been removed, therefore we will make a copy before removing
       // and return it.
-      auto removed_group = groups.items[gid];
-      groups.items[gid].reset();
+      auto removed_group = groups[gid];
+      groups[gid].reset();
       groups.deallocate(gid);
 
       // Now we have to remove this gid from the owners list.
@@ -297,7 +304,7 @@ public:
       if (!groups.is_valid_index(gid))
          return false;
 
-      if (!groups.items[gid].is_owned_by(from))
+      if (!groups[gid].is_owned_by(from))
          return false; // Sorry, you are not allowed.
 
       auto from_match = users.find(from);
@@ -309,7 +316,7 @@ public:
          return false;
 
       // The new owner exists.
-      groups.items[gid].set_owner(to);
+      groups[gid].set_owner(to);
       to_match->second.add_group(gid);
       from_match->second.remove_group(gid);
       return true;
@@ -322,14 +329,14 @@ public:
       if (!groups.is_valid_index(gid))
          return;
 
-      if (!groups.items[gid].is_owned_by(owner))
+      if (!groups[gid].is_owned_by(owner))
          return;
          
       auto n = users.count(new_member);
       if (n == 0)
          return; // The user does not exist.
 
-      groups.items[gid].add_member(new_member);
+      groups[gid].add_member(new_member);
    }
 };
 

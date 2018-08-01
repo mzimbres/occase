@@ -8,12 +8,69 @@
 #include <unordered_map>
 #include <unordered_set>
 
-using uid_type = long long;
-using gid_type = long long;
+// Internally useres and groups will be refered to by their index on a
+// vector.
+using index_type = int;
+
+// This is the type we will use to associate a user  with something
+// that identifies them in the real world like their phone numbers or
+// email.
+using id_type = int;
+
+// Items will be added in the vector and wont be removed, instead, we
+// will push its index in the stack. When a new item is requested we
+// will pop one index from the stack and use it, if none is available
+// we push_back in the vector.
+template <class T>
+class grow_only_vector {
+public:
+   // I do not want an unsigned index type.
+   //using size_type = typename std::vector<T>::size_type;
+   using size_type = int;
+   using reference = typename std::vector<T>::reference;
+   using const_reference = typename std::vector<T>::const_reference;
+
+private:
+   std::stack<size_type> avail;
+   std::vector<T> items;
+
+public:
+   reference operator[](size_type i)
+   { return items[i]; };
+
+   const_reference operator[](size_type i) const
+   { return items[i]; };
+
+   // Returns the index of an element int the group that is free
+   // for use.
+   auto allocate()
+   {
+      if (avail.empty()) {
+         auto size = items.size();
+         items.push_back({});
+         return static_cast<size_type>(size);
+      }
+
+      auto i = avail.top();
+      avail.pop();
+      return i;
+   }
+
+   void deallocate(size_type idx)
+   {
+      avail.push(idx);
+   }
+
+   auto is_valid_index(size_type idx) const noexcept
+   {
+      return idx >= 0
+          && idx < static_cast<size_type>(items.size());
+   }
+};
 
 class user {
 private:
-   // The operations we are suposed to perform on an user's friends
+   // The operations we are suposed to perform on a user's friends
    // are
    //
    // 1. Insert: On registration and as user adds or remove friends.
@@ -25,7 +82,7 @@ private:
    // expected to be no more that 1000.  If we begin to perform
    // searche often, we may have to change this to a data structure
    // with faster lookups.
-   std::set<uid_type> friends;
+   std::set<index_type> friends;
 
    // The user is expected to create groups, of which he becomes the
    // owner. The total number of groups a user creates won't be high
@@ -37,21 +94,21 @@ private:
    // 3. Search ??? O(n) (No need now, clarify this).
    // 
    // A vector seems the most suitable for these requirements.
-   std::vector<gid_type> own_groups;
+   std::vector<index_type> own_groups;
 
 public:
-   void add_friend(uid_type uid)
+   void add_friend(index_type uid)
    {
       friends.insert(uid);
    }
 
-   void remove_friend(uid_type uid)
+   void remove_friend(index_type uid)
    {
       friends.erase(uid);
    }
 
    // Removes group owned by this user from his list of groups.
-   void remove_group(gid_type group)
+   void remove_group(index_type group)
    {
       auto group_match =
          std::remove( std::begin(own_groups), std::end(own_groups)
@@ -60,7 +117,7 @@ public:
       own_groups.erase(group_match, std::end(own_groups));
    }
 
-   void add_group(gid_type gid)
+   void add_group(index_type gid)
    {
       own_groups.push_back(gid);
    }
@@ -109,7 +166,7 @@ class group {
 private:
    group_visibility visibility {group_visibility::PUBLIC};
    
-   uid_type owner {-1}; // The user that owns this group.
+   index_type owner {-1}; // The user that owns this group.
 
    // The number of members in a group is expected be on the
    // thousands, let us say 100k. The operations performed are
@@ -124,14 +181,14 @@ private:
    // 
    // Given those requirements above, I think a hash table is more
    // appropriate.
-   std::unordered_map< uid_type
+   std::unordered_map< index_type
                      , group_mem_info> members;
 
 public:
    auto get_owner() const noexcept {return owner;}
-   void set_owner(uid_type uid) noexcept {owner = uid;}
+   void set_owner(index_type uid) noexcept {owner = uid;}
 
-   auto is_owned_by(uid_type uid) const noexcept
+   auto is_owned_by(index_type uid) const noexcept
    {
       return uid > 0 && owner == uid;
    }
@@ -142,76 +199,26 @@ public:
       members = {};
    }
 
-   void add_member(uid_type uid)
+   void add_member(index_type uid)
    {
       members.insert({uid, {}});
    }
 
-   void remove_member(uid_type uid)
+   void remove_member(index_type uid)
    {
       members.erase(uid);
-   }
-};
-
-// Items will be added in the vector and wont be removed, instead,
-// we will push its index in the stack. When a new group is
-// requested we will pop one index from the stack and use it, if
-// none is available we push_back in the vector.
-template <class T>
-class grow_only_vector {
-public:
-   //using size_type = typename std::vector<T>::size_type;
-   using size_type = long long;
-   using reference = typename std::vector<T>::reference;
-   using const_reference = typename std::vector<T>::const_reference;
-
-private:
-   std::stack<size_type> avail;
-   std::vector<T> items;
-
-public:
-   reference operator[](size_type i)
-   { return items[i]; };
-
-   const_reference operator[](size_type i) const
-   { return items[i]; };
-
-   // Returns the index of an element int the group that is free
-   // for use.
-   auto allocate()
-   {
-      if (avail.empty()) {
-         auto size = items.size();
-         items.push_back({});
-         return static_cast<size_type>(size);
-      }
-
-      auto i = avail.top();
-      avail.pop();
-      return i;
-   }
-
-   void deallocate(size_type idx)
-   {
-      avail.push(idx);
-   }
-
-   auto is_valid_index(size_type idx) const noexcept
-   {
-      return idx >= 0
-          && idx < static_cast<size_type>(items.size());
    }
 };
 
 class server_data {
 private:
    // May grow up to millions of users.
-   std::unordered_map<uid_type, user> users;
+   std::unordered_map<index_type, user> users;
 
    grow_only_vector<group> groups;
 
 public:
-   void add_user(uid_type id, std::vector<uid_type> contacts)
+   void add_user(index_type id, std::vector<index_type> contacts)
    {
       auto new_user = users.insert({id, {}});
       if (!new_user.second) {
@@ -252,7 +259,7 @@ public:
       }
    }
 
-   auto add_group(uid_type owner)
+   auto add_group(index_type owner)
    {
       // Before allocating a new group it is a good idea to check if
       // the owner passed to us indeed exists.
@@ -261,7 +268,7 @@ public:
          // This is a non-existing user. Perhaps the json command was
          // sent with the wrong information signaling a logic error in
          // the app.
-         return static_cast<gid_type>(-1);
+         return static_cast<index_type>(-1);
       }
 
       // Updates the user with his new group.
@@ -274,7 +281,7 @@ public:
       return owner;
    }
 
-   group remove_group(uid_type owner, gid_type gid)
+   group remove_group(index_type owner, index_type gid)
    {
       if (!groups.is_valid_index(gid))
          return {}; // Out of range? Logic error.
@@ -300,8 +307,8 @@ public:
       return removed_group;
    }
 
-   auto change_group_ownership( uid_type from, uid_type to
-                              , gid_type gid)
+   auto change_group_ownership( index_type from, index_type to
+                              , index_type gid)
    {
       if (!groups.is_valid_index(gid))
          return false;
@@ -324,9 +331,9 @@ public:
       return true;
    }
 
-   void add_group_member( uid_type owner
-                        , uid_type new_member
-                        , gid_type gid)
+   void add_group_member( index_type owner
+                        , index_type new_member
+                        , index_type gid)
    {
       if (!groups.is_valid_index(gid))
          return;

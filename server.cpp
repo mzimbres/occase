@@ -186,7 +186,7 @@ private:
 
 public:
    auto get_owner() const noexcept {return owner;}
-   void set_owner(index_type uid) noexcept {owner = uid;}
+   void set_owner(index_type idx) noexcept {owner = idx;}
 
    auto is_owned_by(index_type uid) const noexcept
    {
@@ -212,99 +212,112 @@ public:
 
 class server_data {
 private:
-   // May grow up to millions of users.
-   std::unordered_map<index_type, user> users;
-
    grow_only_vector<group> groups;
+   grow_only_vector<user> users;
+
+   // May grow up to millions of users.
+   std::unordered_map<id_type, index_type> id_to_idx_map;
 
 public:
-   void add_user(index_type id, std::vector<index_type> contacts)
+
+   // This function is is used to add a user say when he first
+   // installs the app and it sends the first message to the server.
+   // It will basically allocate his tables internally.
+   //
+   // id:       User telephone.
+   // contacts: Telephones of his contacts. 
+   // return:   Index in the users vector that we will use to refer to
+   //           him without having to perform searches. This is what
+   //           we will return to the user to be stored in his app.
+   auto add_user(id_type id, std::vector<index_type> contacts)
    {
-      auto new_user = users.insert({id, {}});
+      auto new_user = id_to_idx_map.insert({id, {}});
       if (!new_user.second) {
-         // The user already exists. This case can be triggered by
-         // some conditions
-         // 1. The user inserted or removed a contact from his phone
-         //    and is sending us his new contacts.
-         // 2. The user lost his phone and the number was assigned to
+         // The user already exists in the system. This case can be
+         // triggered by some conditions
+         // 1. The user lost his phone and the number was assigned to
          //    a new person.
-         // REVIEW: For now we will handle 1. and think about 2.
-         // later.
+         // 2. He reinstalled the app.
          //
-         // Some of the user contacts are not registered, that means
-         // we have to check one for one. But since this is not any
-         // different that in the case the user did not exist we can
-         // continue.
+         // REVIEW: I still do not know how to handle this sitiations
+         // properly so I am not going to do anything for now. We
+         // could for example reset his data.
       }
 
-      // Regardless whether insertion took place or not, we have to
-      // test which of its friends are already registered and add them
-      // as a user friend one by one.
+      // The user did not exist in the system. We have to allocate
+      // space for him.
+      auto new_user_idx = users.allocate();
+      
+      // Now we can add all his cantact that are already registered in
+      // the app.
       for (auto const& o : contacts) {
-         auto existing_user = users.find(o);
-         if (existing_user == std::end(users))
+         auto existing_user = id_to_idx_map.find(o);
+         if (existing_user == std::end(id_to_idx_map))
             continue;
 
          // A contact was found in our database, let us add him as a
-         // user friend. We do not have to check if it is already in
-         // the array as case would handled by the set automaticaly.
-         new_user.first->second.add_friend(o);
+         // the new user friend. We do not have to check if it is
+         // already in the array as case would handled by the set
+         // automaticaly.
+         auto idx = existing_user->second;
+         users[new_user_idx].add_friend(idx);
 
          // REVIEW: We also have to inform the existing user that one of
          // his contacts just registered. This will be made only upon
          // request, for now, we will only add the new user in the
          // existing user's friends and let him be notified if the new
          // user sends him a message.
-         existing_user->second.add_friend(new_user.first->first);
+         users[idx].add_friend(new_user_idx);
       }
+
+      return new_user_idx;
    }
 
+   // TODO: update_user_contacts.
+
+   // Adds new group for the specified owner and returns its index.
    auto add_group(index_type owner)
    {
       // Before allocating a new group it is a good idea to check if
-      // the owner passed to us indeed exists.
-      auto match = users.find(owner);
-      if (match == std::end(users)) {
+      // the owner passed is at least in a valid range.
+      if (users.is_valid_index(owner)) {
          // This is a non-existing user. Perhaps the json command was
          // sent with the wrong information signaling a logic error in
          // the app.
          return static_cast<index_type>(-1);
       }
 
-      // Updates the user with his new group.
-      match->second.add_group(owner);
-
       // We can proceed and allocate the group.
-      auto gid = groups.allocate();
-      groups[gid].set_owner(owner);
+      auto idx = groups.allocate();
+      groups[idx].set_owner(owner);
 
-      return owner;
+      // Updates the user with his new group.
+      users[owner].add_group(idx);
+
+      return idx;
    }
 
-   group remove_group(index_type owner, index_type gid)
+   // Removes the group and updates the owner.
+   auto remove_group(index_type idx)
    {
-      if (!groups.is_valid_index(gid))
-         return {}; // Out of range? Logic error.
-
-      // The user must be the owner of the group to be allowed to
-      // remove it
-      if (!groups[gid].is_owned_by(owner))
-         return {}; // Sorry, you are not allowed.
+      if (!groups.is_valid_index(idx))
+         return group {}; // Out of range? Logic error.
 
       // To remove a group we have to inform its members the group has
       // been removed, therefore we will make a copy before removing
       // and return it.
-      auto removed_group = groups[gid];
-      groups[gid].reset();
-      groups.deallocate(gid);
+      const auto removed_group = std::move(groups[idx]);
 
-      // Now we have to remove this gid from the owners list.
-      auto user_match = users.find(removed_group.get_owner());
-      if (user_match == std::end(users))
-         return {}; // This looks like an internal logic problem.
+      // remove this line after implementing the swap idiom on the
+      // group class.
+      groups[idx].reset();
 
-      user_match->second.remove_group(gid);
-      return removed_group;
+      groups.deallocate(idx);
+
+      // Now we have to remove this group from the owners list.
+      const auto owner = removed_group.get_owner();
+      users[owner].remove_group(idx);
+      return removed_group; // Let RVO optimize this.
    }
 
    auto change_group_ownership( index_type from, index_type to
@@ -316,35 +329,34 @@ public:
       if (!groups[gid].is_owned_by(from))
          return false; // Sorry, you are not allowed.
 
-      auto from_match = users.find(from);
-      if (from_match == std::end(users))
+      if (!users.is_valid_index(from))
          return false;
 
-      auto to_match = users.find(to);
-      if (to_match == std::end(users))
+      if (!users.is_valid_index(to))
          return false;
 
       // The new owner exists.
       groups[gid].set_owner(to);
-      to_match->second.add_group(gid);
-      from_match->second.remove_group(gid);
+      users[to].add_group(gid);
+      users[from].remove_group(gid);
       return true;
    }
 
-   void add_group_member( index_type owner
-                        , index_type new_member
+   auto add_group_member( index_type owner, index_type new_member
                         , index_type gid)
    {
       if (!groups.is_valid_index(gid))
-         return;
+         return false;
 
       if (!groups[gid].is_owned_by(owner))
-         return;
-         
-      auto n = users.count(new_member);
-      if (n == 0)
-         return; // The user does not exist.
+         return false;
 
+      if (!users.is_valid_index(owner))
+         return false;
+
+      if (!users.is_valid_index(new_member))
+         return false;
+         
       groups[gid].add_member(new_member);
    }
 };

@@ -23,8 +23,8 @@ private:
    tcp::resolver resolver;
    websocket::stream<tcp::socket> ws;
    boost::beast::multi_buffer buffer;
-   std::string host_;
-   std::string text_;
+   std::string host;
+   std::string text;
 
 public:
    // Resolver and socket require an io_context
@@ -35,23 +35,19 @@ public:
    { }
 
    // Start the asynchronous operation
-   void run( char const* host
+   void run( char const* host_
            , char const* port
-           , char const* text)
+           , char const* text_)
    {
       // Save these for later
-      host_ = host;
-      text_ = text;
+      host = host_;
+      text = text_;
+
+      auto handler = [p = shared_from_this()](auto ec, auto res)
+      { p->on_resolve(ec, res); };
 
       // Look up the domain name
-      resolver.async_resolve(
-            host,
-            port,
-            std::bind(
-               &session::on_resolve,
-               shared_from_this(),
-               std::placeholders::_1,
-               std::placeholders::_2));
+      resolver.async_resolve(host, port, handler);
    }
 
    void on_resolve( boost::system::error_code ec
@@ -60,15 +56,20 @@ public:
       if (ec)
          return fail(ec, "resolve");
 
+      auto handler = std::bind(
+               &session::on_connect,
+               shared_from_this(),
+               std::placeholders::_1);
+
+      // This does not work, why?
+      //auto handler2 = [p = shared_from_this()](auto ec)
+      //{ p->on_connect(ec); };
+
       // Make the connection on the IP address we get from a lookup
       boost::asio::async_connect(
             ws.next_layer(),
             results.begin(),
-            results.end(),
-            std::bind(
-               &session::on_connect,
-               shared_from_this(),
-               std::placeholders::_1));
+            results.end(), handler);
    }
 
    void on_connect(boost::system::error_code ec)
@@ -76,12 +77,11 @@ public:
       if (ec)
          return fail(ec, "connect");
 
+      auto handler = [p = shared_from_this()](auto ec)
+      { p->on_handshake(ec); };
+
       // Perform the websocket handshake
-      ws.async_handshake(host_, "/",
-         std::bind(
-            &session::on_handshake,
-            shared_from_this(),
-            std::placeholders::_1));
+      ws.async_handshake(host, "/", handler);
    }
 
    void on_handshake(boost::system::error_code ec)
@@ -89,14 +89,13 @@ public:
       if (ec)
          return fail(ec, "handshake");
 
+      auto handler = [p = shared_from_this()](auto ec, auto res)
+      { p->on_write(ec, res); };
+
       // Send the message
       ws.async_write(
-            boost::asio::buffer(text_),
-            std::bind(
-               &session::on_write,
-               shared_from_this(),
-               std::placeholders::_1,
-               std::placeholders::_2));
+            boost::asio::buffer(text),
+            handler);
    }
 
    void on_write( boost::system::error_code ec
@@ -107,14 +106,11 @@ public:
       if (ec)
          return fail(ec, "write");
 
+      auto handler = [p = shared_from_this()](auto ec, auto res)
+      { p->on_read(ec, res); };
+
       // Read a message into our buffer
-      ws.async_read(
-            buffer,
-            std::bind(
-               &session::on_read,
-               shared_from_this(),
-               std::placeholders::_1,
-               std::placeholders::_2));
+      ws.async_read(buffer, handler);
    }
 
    void on_read( boost::system::error_code ec
@@ -125,12 +121,11 @@ public:
       if (ec)
          return fail(ec, "read");
 
+      auto handler = [p = shared_from_this()](auto ec)
+      { p->on_close(ec); };
+
       // Close the WebSocket connection
-      ws.async_close(websocket::close_code::normal,
-            std::bind(
-               &session::on_close,
-               shared_from_this(),
-               std::placeholders::_1));
+      ws.async_close(websocket::close_code::normal, handler);
    }
 
    void on_close(boost::system::error_code ec)
@@ -160,14 +155,10 @@ int main(int argc, char** argv)
    auto const port = argv[2];
    auto const text = argv[3];
 
-   // The io_context is required for all I/O
    boost::asio::io_context ioc;
 
-   // Launch the asynchronous operation
    std::make_shared<session>(ioc)->run(host, port, text);
 
-   // Run the I/O service. The call will return when
-   // the socket is closed.
    ioc.run();
 
    return EXIT_SUCCESS;

@@ -396,13 +396,11 @@ public:
 
    void run()
    {
+      auto handler = [p = shared_from_this()](auto ec)
+      { p->on_accept(ec); };
+
       ws.async_accept(
-         boost::asio::bind_executor(
-            strand,
-            std::bind(
-               &session::on_accept,
-               shared_from_this(),
-               std::placeholders::_1)));
+         boost::asio::bind_executor(strand, handler));
    }
 
    void on_accept(boost::system::error_code ec)
@@ -415,15 +413,13 @@ public:
 
    void do_read()
    {
-      ws.async_read(
-            buffer,
-            boost::asio::bind_executor(
-               strand,
-               std::bind(
-                  &session::on_read,
-                  shared_from_this(),
-                  std::placeholders::_1,
-                  std::placeholders::_2)));
+      auto handler = [p = shared_from_this()](auto ec, auto n)
+      { p->on_read(ec, n); };
+
+      ws.async_read( buffer
+                   , boost::asio::bind_executor(
+                        strand,
+                        handler));
    }
 
    void on_read( boost::system::error_code ec
@@ -440,15 +436,14 @@ public:
 
       // Echo the message
       ws.text(ws.got_text());
-      ws.async_write(
-            buffer.data(),
-            boost::asio::bind_executor(
-               strand,
-               std::bind(
-                  &session::on_write,
-                  shared_from_this(),
-                  std::placeholders::_1,
-                  std::placeholders::_2)));
+
+      auto handler = [p = shared_from_this()](auto ec, auto n)
+      { p->on_write(ec, n); };
+
+      ws.async_write( buffer.data()
+                    , boost::asio::bind_executor(
+                         strand,
+                         handler));
    }
 
    void on_write( boost::system::error_code ec
@@ -521,12 +516,10 @@ public:
 
    void do_accept()
    {
-      acceptor.async_accept(
-            socket,
-            std::bind(
-               &listener::on_accept,
-               shared_from_this(),
-               std::placeholders::_1));
+      auto handler = [p = shared_from_this()](auto ec)
+      { p->on_accept(ec); };
+
+      acceptor.async_accept(socket, handler);
    }
 
    void on_accept(boost::system::error_code ec)
@@ -565,12 +558,6 @@ int main(int argc, char* argv[])
 
    // Create and launch a listening port
    std::make_shared<listener>(ioc, tcp::endpoint{address, port})->run();
-
-   // Run the I/O service on the requested number of threads
-   std::vector<std::thread> v;
-   v.reserve(threads - 1);
-   for(auto i = threads - 1; i > 0; --i)
-      v.emplace_back( [&ioc] { ioc.run(); });
 
    ioc.run();
    return EXIT_SUCCESS;

@@ -2,9 +2,19 @@
 
 #include <set>
 #include <vector>
+#include <memory>
 
 #include "config.hpp"
 
+class server_session;
+
+
+// Remarks: This user struct will not store the groups it belongs to.
+// This information can be obtained from the groups array in an
+// indirect manner i.e. by traversing it and quering each group
+// whether this user is a member. This is a very expensive operation
+// and I am usure we need it. However, the app will have to store the
+// groups it belongs to so that it can send messages to to group.
 class user {
 private:
    // The operations we are suposed to perform on a user's friends
@@ -33,20 +43,18 @@ private:
    // A vector seems the most suitable for these requirements.
    std::vector<index_type> own_groups;
 
+   // User websocket session.
+   std::weak_ptr<server_session> session;
+
 public:
+   user() = default;
+   ~user() = default;
+
    void add_friend(index_type uid);
    void remove_friend(index_type uid);
 
    // Removes group owned by this user from his list of groups.
    void remove_group(index_type group);
    void add_group(index_type gid);
-
-   // Further remarks: This user struct will not store the groups it
-   // belongs to. This information can be obtained from the groups
-   // array in an indirect manner i.e. by traversing it and quering
-   // each group whether this user is a member. This is a very
-   // expensive operation and I am usure we need it. However, the app
-   // will have to store the groups it belongs to so that it can send
-   // messages to to group.
 };
 

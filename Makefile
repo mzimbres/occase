@@ -10,10 +10,17 @@ CPPFLAGS=-I$(BOOST_INCLUDE) -I$(JSON_INCLUDE) -L$(BOOST_LIB) \
 
 CPP=g++
 
+DEPS=user.hpp config.hpp
+
 LIBS=-lpthread -lboost_system
 
-server: server.cpp
-	$(CPP) -o $@ $< $(CPPFLAGS) $(LIBS)
+OBJS=user.o
+
+%.o: %.cpp $(DEPS)
+	$(CPP) -c -o $@ $< $(CPPFLAGS) $(LIBS)
+
+server: server.cpp $(OBJS)
+	$(CPP) -o $@ $< $(CPPFLAGS) $(LIBS) user.o
 
 client: client.cpp
 	$(CPP) -o $@ $< $(CPPFLAGS) $(LIBS)
@@ -21,5 +28,5 @@ client: client.cpp
 .PHONY: clean
 
 clean:
-	rm -f server client
+	rm -f server client $(OBJS)
 

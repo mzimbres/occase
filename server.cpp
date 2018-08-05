@@ -1,4 +1,3 @@
-#include <set>
 #include <stack>
 #include <memory>
 #include <string>
@@ -21,11 +20,10 @@
 
 #include <nlohmann/json.hpp>
 
-using json = nlohmann::json;
+#include "config.hpp"
+#include "user.hpp"
 
-// Internally users and groups will be refered to by their index on a
-// vector.
-using index_type = int;
+using json = nlohmann::json;
 
 // This is the type we will use to associate a user  with something
 // that identifies them in the real world like their phone numbers or
@@ -81,69 +79,6 @@ public:
       return idx >= 0
           && idx < static_cast<size_type>(items.size());
    }
-};
-
-class user {
-private:
-   // The operations we are suposed to perform on a user's friends
-   // are
-   //
-   // 1. Insert: On registration and as user adds or remove friends.
-   // 2. Remove: On registration and as user adds or remove friends.
-   // 3. Search. I do not think we will perform read-only searches.
-   //
-   // Revove should happens with even less frequency that insertion,
-   // what makes this operation non-critical. The number of friends is
-   // expected to be no more that 1000.  If we begin to perform
-   // searche often, we may have to change this to a data structure
-   // with faster lookups.
-   std::set<index_type> friends;
-
-   // The user is expected to create groups, of which he becomes the
-   // owner. The total number of groups a user creates won't be high
-   // on average, lets us say less than 20. The operations we are
-   // expected to perform on the groups a user owns are
-   //
-   // 1. Insert rarely and always in the back O(1).
-   // 2. Remove rarely O(n).
-   // 3. Search ??? O(n) (No need now, clarify this).
-   // 
-   // A vector seems the most suitable for these requirements.
-   std::vector<index_type> own_groups;
-
-public:
-   void add_friend(index_type uid)
-   {
-      friends.insert(uid);
-   }
-
-   void remove_friend(index_type uid)
-   {
-      friends.erase(uid);
-   }
-
-   // Removes group owned by this user from his list of groups.
-   void remove_group(index_type group)
-   {
-      auto group_match =
-         std::remove( std::begin(own_groups), std::end(own_groups)
-                    , group);
-
-      own_groups.erase(group_match, std::end(own_groups));
-   }
-
-   void add_group(index_type gid)
-   {
-      own_groups.push_back(gid);
-   }
-
-   // Further remarks: This user struct will not store the groups it
-   // belongs to. This information can be obtained from the groups
-   // array in an indirect manner i.e. by traversing it and quering
-   // each group whether this user is a member. This is a very
-   // expensive operation and I am usure we need it. However, the app
-   // will have to store the groups it belongs to so that it can send
-   // messages to to group.
 };
 
 enum class group_membership

@@ -23,7 +23,7 @@ private:
    tcp::resolver resolver;
    websocket::stream<tcp::socket> ws;
    boost::beast::multi_buffer buffer;
-   std::string host;
+   std::string host {"127.0.0.1"};
    std::string text;
 
 public:
@@ -34,14 +34,37 @@ public:
    , ws(ioc)
    { }
 
-   // Start the asynchronous operation
-   void run( char const* host_
-           , char const* port
-           , char const* text_)
+   void prompt_for_msg()
    {
-      // Save these for later
-      host = host_;
-      text = text_;
+      int cmd = -1;
+      while (cmd == -1) {
+         std::cout << "Type a command: 1, 2, 3." << std::endl;
+         std::cin >> cmd;
+         if (cmd == 1) {
+            text = "cmd1";
+         } else if (cmd == 2) {
+            text = "cmd2";
+         } else if (cmd == 3) {
+            text = "cmd3";
+         } else {
+            std::cout << "Invalid command." << std::endl;
+            cmd = -1;
+         }
+      }
+
+      auto handler = [p = shared_from_this()](auto ec, auto res)
+      { p->on_write(ec, res); };
+
+      // Send the message
+      ws.async_write(
+         boost::asio::buffer(text),
+         handler);
+   }
+
+   // Start the asynchronous operation
+   void run()
+   {
+      char const* port = "8080";
 
       auto handler = [p = shared_from_this()](auto ec, auto res)
       { p->on_resolve(ec, res); };
@@ -89,13 +112,10 @@ public:
       if (ec)
          return fail(ec, "handshake");
 
-      auto handler = [p = shared_from_this()](auto ec, auto res)
-      { p->on_write(ec, res); };
-
-      // Send the message
-      ws.async_write(
-            boost::asio::buffer(text),
-            handler);
+      auto handler = [p = shared_from_this()]()
+      { p->prompt_for_msg(); };
+      
+      boost::asio::post(resolver.get_executor(), handler);
    }
 
    void on_write( boost::system::error_code ec
@@ -140,24 +160,11 @@ public:
    }
 };
 
-int main(int argc, char** argv)
+int main()
 {
-   // Check command line arguments.
-   if (argc != 4) {
-      std::cerr <<
-         "Usage: client <host> <port> <text>\n" <<
-         "Example:\n" <<
-         "    client echo.websocket.org 80 \"Hello, world!\"\n";
-      return EXIT_FAILURE;
-   }
-
-   auto const host = argv[1];
-   auto const port = argv[2];
-   auto const text = argv[3];
-
    boost::asio::io_context ioc;
 
-   std::make_shared<session>(ioc)->run(host, port, text);
+   std::make_shared<session>(ioc)->run();
 
    ioc.run();
 

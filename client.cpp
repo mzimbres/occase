@@ -1,3 +1,5 @@
+#include <thread>
+#include <mutex>
 #include <memory>
 #include <string>
 #include <cstdlib>
@@ -20,7 +22,8 @@ void fail(boost::system::error_code ec, char const* what)
    std::cerr << what << ": " << ec.message() << "\n";
 }
 
-class session : public std::enable_shared_from_this<session> {
+class session :
+   public std::enable_shared_from_this<session> {
 private:
    tcp::resolver resolver;
    websocket::stream<tcp::socket> ws;
@@ -28,6 +31,7 @@ private:
    std::string host {"127.0.0.1"};
    std::string text;
    int id = -1;
+   std::mutex mutex;
 
 public:
    // Resolver and socket require an io_context
@@ -39,6 +43,7 @@ public:
 
    void prompt_for_msg()
    {
+      std::lock_guard<std::mutex> lock(mutex);
       int cmd = -1;
       while (cmd == -1) {
          std::cout << "Type a command: \n\n"
@@ -84,9 +89,14 @@ public:
          handler);
    }
 
-   // Start the asynchronous operation
+   void send_msg(std::string msg)
+   {
+      std::lock_guard<std::mutex> lock(mutex);
+   }
+
    void run()
    {
+      std::lock_guard<std::mutex> lock(mutex);
       char const* port = "8080";
 
       auto handler = [p = shared_from_this()](auto ec, auto res)
@@ -99,6 +109,7 @@ public:
    void on_resolve( boost::system::error_code ec
                   , tcp::resolver::results_type results)
    {
+      std::lock_guard<std::mutex> lock(mutex);
       if (ec)
          return fail(ec, "resolve");
 
@@ -120,6 +131,7 @@ public:
 
    void on_connect(boost::system::error_code ec)
    {
+      std::lock_guard<std::mutex> lock(mutex);
       if (ec)
          return fail(ec, "connect");
 
@@ -132,6 +144,7 @@ public:
 
    void on_handshake(boost::system::error_code ec)
    {
+      std::lock_guard<std::mutex> lock(mutex);
       if (ec)
          return fail(ec, "handshake");
 
@@ -144,6 +157,7 @@ public:
    void on_write( boost::system::error_code ec
                 , std::size_t bytes_transferred)
    {
+      std::lock_guard<std::mutex> lock(mutex);
       boost::ignore_unused(bytes_transferred);
 
       if (ec)
@@ -159,6 +173,7 @@ public:
    void on_read( boost::system::error_code ec
                , std::size_t bytes_transferred)
    {
+      std::lock_guard<std::mutex> lock(mutex);
       boost::ignore_unused(bytes_transferred);
 
       if (ec)
@@ -176,6 +191,7 @@ public:
 
    void on_close(boost::system::error_code ec)
    {
+      std::lock_guard<std::mutex> lock(mutex);
       if (ec)
          return fail(ec, "close");
 

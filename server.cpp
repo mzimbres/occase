@@ -6,6 +6,7 @@
 #include <vector>
 #include <thread>
 #include <cstdlib>
+#include <sstream>
 #include <iostream>
 #include <algorithm>
 #include <functional>
@@ -17,6 +18,10 @@
 #include <boost/asio/bind_executor.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/asio/ip/tcp.hpp>
+
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 // Internally users and groups will be refered to by their index on a
 // vector.
@@ -437,10 +442,38 @@ public:
       // Echo the message
       ws.text(ws.got_text());
 
+      json resp;
+      std::stringstream ss;
+      ss << boost::beast::buffers(buffer.data());
+      try {
+         json j;
+         ss >> j;
+         std::cout << j << std::endl;
+         auto cmd = j["cmd"].get<std::string>();
+         if (cmd == "login") {
+            auto name = j["name"].dump();
+            auto tel = j["tel"].dump();
+            std::cout << "Login:\n\n"
+                      << "   Name: " << name << "\n"
+                      << "   Tel.: " << tel << "\n"
+                      << std::endl;
+            json login_ack;
+            resp["cmd"] = "login_ack";
+            resp["result"] = "ok";
+            resp["user_id"] = "23";
+         } else if (cmd == "msg") {
+         } else {
+            std::cerr << "Server: Unknown command "
+                       << cmd << std::endl;
+         }
+      } catch (...) {
+         std::cerr << "Server: Invalid json." << std::endl;
+      }
+
       auto handler = [p = shared_from_this()](auto ec, auto n)
       { p->on_write(ec, n); };
 
-      ws.async_write( buffer.data()
+      ws.async_write( boost::asio::buffer(resp.dump())
                     , boost::asio::bind_executor(
                          strand,
                          handler));
@@ -464,8 +497,10 @@ public:
 // Accepts incoming connections and launches the sessions
 class listener : public std::enable_shared_from_this<listener>
 {
+private:
    tcp::acceptor acceptor;
    tcp::socket socket;
+   server_data sd;
 
 public:
    listener( boost::asio::io_context& ioc
@@ -527,7 +562,6 @@ public:
       if (ec) {
          fail(ec, "accept");
       } else {
-         // Create the session and run it
          std::make_shared<session>(std::move(socket))->run();
       }
 
@@ -542,13 +576,9 @@ int main(int argc, char* argv[])
    auto const port = static_cast<unsigned short>(8080);
    auto const threads = 1;
 
-   server_data sd;
-
-   // The io_context is required for all I/O
    boost::asio::io_context ioc{threads};
 
-   // Create and launch a listening port
-   std::make_shared<listener>(ioc, tcp::endpoint{address, port})->run();
+   std::make_shared<listener>(ioc, tcp::endpoint {address, port})->run();
 
    ioc.run();
    return EXIT_SUCCESS;

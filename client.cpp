@@ -9,7 +9,10 @@
 #include <boost/asio/connect.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
+#include <nlohmann/json.hpp>
+
 using tcp = boost::asio::ip::tcp;
+using json = nlohmann::json;
 namespace websocket = boost::beast::websocket;
 
 void fail(boost::system::error_code ec, char const* what)
@@ -38,10 +41,18 @@ public:
    {
       int cmd = -1;
       while (cmd == -1) {
-         std::cout << "Type a command: 1, 2, 3." << std::endl;
+         std::cout << "Type a command: \n\n"
+                   << "  1: Login.\n"
+                   << "  2: Send message.\n"
+                   << "  3: Create group.\n"
+                   << std::endl;
          std::cin >> cmd;
          if (cmd == 1) {
-            text = "cmd1";
+            json j;
+            j["cmd"] = "login";
+            j["name"] = "Marcelo Zimbres";
+            j["tel"] = "1";
+            text = j.dump();
          } else if (cmd == 2) {
             text = "cmd2";
          } else if (cmd == 3) {

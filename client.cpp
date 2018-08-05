@@ -20,14 +20,14 @@ void fail(boost::system::error_code ec, char const* what)
    std::cerr << what << ": " << ec.message() << "\n";
 }
 
-class session : public std::enable_shared_from_this<session>
-{
+class session : public std::enable_shared_from_this<session> {
 private:
    tcp::resolver resolver;
    websocket::stream<tcp::socket> ws;
    boost::beast::multi_buffer buffer;
    std::string host {"127.0.0.1"};
    std::string text;
+   int id = -1;
 
 public:
    // Resolver and socket require an io_context
@@ -43,8 +43,10 @@ public:
       while (cmd == -1) {
          std::cout << "Type a command: \n\n"
                    << "  1: Login.\n"
-                   << "  2: Send message.\n"
-                   << "  3: Create group.\n"
+                   << "  2: Create group.\n"
+                   << "  3: Send message.\n"
+                   << "  4: Join group.\n"
+                   << "  5: Exit.\n"
                    << std::endl;
          std::cin >> cmd;
          if (cmd == 1) {
@@ -54,9 +56,19 @@ public:
             j["tel"] = "1";
             text = j.dump();
          } else if (cmd == 2) {
-            text = "cmd2";
+            json j;
+            j["cmd"] = "create_group";
+            j["name"] = "Repasse de automóveis";
+            text = j.dump();
          } else if (cmd == 3) {
             text = "cmd3";
+         } else if (cmd == 4) {
+            text = "cmd3";
+         } else if (cmd == 5) {
+            auto handler = [p = shared_from_this()](auto ec)
+            { p->on_close(ec); };
+            ws.async_close(websocket::close_code::normal, handler);
+            return;
          } else {
             std::cout << "Invalid command." << std::endl;
             cmd = -1;
@@ -152,11 +164,14 @@ public:
       if (ec)
          return fail(ec, "read");
 
-      auto handler = [p = shared_from_this()](auto ec)
-      { p->on_close(ec); };
+      std::cout << boost::beast::buffers(buffer.data())
+                << std::endl;
+      buffer.consume(buffer.size());
 
-      // Close the WebSocket connection
-      ws.async_close(websocket::close_code::normal, handler);
+      auto handler = [p = shared_from_this()]()
+      { p->prompt_for_msg(); };
+      
+      boost::asio::post(resolver.get_executor(), handler);
    }
 
    void on_close(boost::system::error_code ec)
@@ -164,10 +179,8 @@ public:
       if (ec)
          return fail(ec, "close");
 
-      // If we get here then the connection is closed gracefully
-
-      // The buffers() function helps print a ConstBufferSequence
-      std::cout << boost::beast::buffers(buffer.data()) << std::endl;
+      std::cout << "Connection is closed gracefully"
+                << std::endl;
    }
 };
 

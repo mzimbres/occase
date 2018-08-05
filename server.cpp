@@ -30,7 +30,7 @@ using index_type = int;
 // This is the type we will use to associate a user  with something
 // that identifies them in the real world like their phone numbers or
 // email.
-using id_type = int;
+using id_type = std::string;
 
 // Items will be added in the vector and wont be removed, instead, we
 // will push its index in the stack. When a new item is requested we
@@ -235,16 +235,16 @@ private:
 
 public:
 
-   // This function is is used to add a user say when he first
-   // installs the app and it sends the first message to the server.
-   // It will basically allocate his tables internally.
+   // This function is used to add a new user when he first installs
+   // the app and it sends the first message to the server.  It
+   // basically allocates user entries internally.
    //
    // id:       User telephone.
    // contacts: Telephones of his contacts. 
    // return:   Index in the users vector that we will use to refer to
    //           him without having to perform searches. This is what
    //           we will return to the user to be stored in his app.
-   auto add_user(id_type id, std::vector<index_type> contacts)
+   auto add_user(id_type id, std::vector<id_type> contacts)
    {
       auto new_user = id_to_idx_map.insert({id, {}});
       if (!new_user.second) {
@@ -263,8 +263,8 @@ public:
       // space for him.
       auto new_user_idx = users.allocate();
       
-      // Now we can add all his cantact that are already registered in
-      // the app.
+      // Now we can add all his cantacts that are already registered
+      // in the app.
       for (auto const& o : contacts) {
          auto existing_user = id_to_idx_map.find(o);
          if (existing_user == std::end(id_to_idx_map))
@@ -392,11 +392,14 @@ private:
    boost::asio::strand<
       boost::asio::io_context::executor_type> strand;
    boost::beast::multi_buffer buffer;
+   std::shared_ptr<server_data> sd;
 
 public:
-   explicit session(tcp::socket socket)
+   explicit session( tcp::socket socket
+                   , std::shared_ptr<server_data> sd_)
    : ws(std::move(socket))
    , strand(ws.get_executor())
+   , sd(sd_)
    { }
 
    void run()
@@ -460,7 +463,9 @@ public:
             json login_ack;
             resp["cmd"] = "login_ack";
             resp["result"] = "ok";
-            resp["user_id"] = "23";
+
+            // Handle list of contacts later.
+            resp["user_idx"] = sd->add_user(tel, {});
          } else if (cmd == "msg") {
          } else {
             std::cerr << "Server: Unknown command "
@@ -495,18 +500,18 @@ public:
 };
 
 // Accepts incoming connections and launches the sessions
-class listener : public std::enable_shared_from_this<listener>
-{
+class listener : public std::enable_shared_from_this<listener> {
 private:
    tcp::acceptor acceptor;
    tcp::socket socket;
-   server_data sd;
+   std::shared_ptr<server_data> sd;
 
 public:
    listener( boost::asio::io_context& ioc
            , tcp::endpoint endpoint)
    : acceptor(ioc)
    , socket(ioc)
+   , sd(std::make_shared<server_data>())
    {
       boost::system::error_code ec;
 
@@ -562,7 +567,8 @@ public:
       if (ec) {
          fail(ec, "accept");
       } else {
-         std::make_shared<session>(std::move(socket))->run();
+         std::make_shared<session>( std::move(socket)
+                                  , sd)->run();
       }
 
       // Accept another connection

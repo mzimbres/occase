@@ -32,6 +32,10 @@ private:
    std::string text;
    int id = -1;
    std::mutex mutex;
+   using work_type =
+      boost::asio::executor_work_guard<
+         boost::asio::io_context::executor_type>;
+   work_type work;
 
 public:
    // Resolver and socket require an io_context
@@ -39,12 +43,13 @@ public:
    session(boost::asio::io_context& ioc)
    : resolver(ioc)
    , ws(ioc)
+   , work(boost::asio::make_work_guard(ioc))
    { }
 
    void send_msg(std::string msg)
    {
-      auto handler = [this, msg = std::move(msg)]()
-      { write(std::move(msg)); };
+      auto handler = [p = shared_from_this(), msg = std::move(msg)]()
+      { p->write(std::move(msg)); };
 
       boost::asio::post(resolver.get_executor(), handler);
    }
@@ -56,6 +61,14 @@ public:
       { p->on_write(ec, res); };
 
       ws.async_write(boost::asio::buffer(text), handler);
+   }
+
+   void exit()
+   {
+      auto handler = [p = shared_from_this()]()
+      { p->close(); };
+
+      boost::asio::post(resolver.get_executor(), handler);
    }
 
    void close()
@@ -149,13 +162,14 @@ public:
       //ws.async_read(buffer, handler);
    }
 
-   void on_close(boost::system::error_code ec) const
+   void on_close(boost::system::error_code ec)
    {
       if (ec)
          return fail(ec, "close");
 
       std::cout << "Connection is closed gracefully"
                 << std::endl;
+      work.reset();
    }
 };
 
@@ -203,7 +217,7 @@ struct prompt_usr {
          std::cin >> cmd;
          auto str = get_cmd_str(cmd);
          if (str.empty()) {
-            p->close();
+            p->exit();
             break;
          }
          p->send_msg(str);
@@ -220,8 +234,6 @@ int main()
    std::thread thr {prompt_usr {p}};
 
    p->run();
-   //using work_type = boost::asio::executor_work_guard<boost::asio::io_context::executor_type>;
-   auto work = boost::asio::make_work_guard(ioc);
    ioc.run();
    thr.join();
 

@@ -1,0 +1,123 @@
+#include "server_session.hpp"
+
+namespace
+{
+
+void fail(boost::system::error_code ec, char const* what)
+{
+   std::cerr << what << ": " << ec.message() << "\n";
+}
+
+}
+
+server_session::server_session( tcp::socket socket
+                              , std::shared_ptr<server_data> sd_)
+: ws(std::move(socket))
+, strand(ws.get_executor())
+, sd(sd_)
+{ }
+
+void server_session::run()
+{
+   auto handler = [p = shared_from_this()](auto ec)
+   { p->on_accept(ec); };
+
+   ws.async_accept(
+      boost::asio::bind_executor(strand, handler));
+}
+
+void server_session::on_accept(boost::system::error_code ec)
+{
+   if (ec)
+      return fail(ec, "accept");
+
+   do_read();
+}
+
+void server_session::do_read()
+{
+   auto handler = [p = shared_from_this()](auto ec, auto n)
+   { p->on_read(ec, n); };
+
+   ws.async_read( buffer
+                , boost::asio::bind_executor(
+                     strand,
+                     handler));
+}
+
+void server_session::on_read( boost::system::error_code ec
+                            , std::size_t bytes_transferred)
+{
+   boost::ignore_unused(bytes_transferred);
+
+   // This indicates that the session was closed
+   if (ec == websocket::error::closed)
+      return;
+
+   if (ec)
+      fail(ec, "read");
+
+   // Echo the message
+   ws.text(ws.got_text());
+
+   json resp;
+   std::stringstream ss;
+   ss << boost::beast::buffers(buffer.data());
+   try {
+      json j;
+      ss >> j;
+      std::cout << j << std::endl;
+      auto cmd = j["cmd"].get<std::string>();
+      if (cmd == "login") {
+         auto name = j["name"].get<std::string>();
+         auto tel = j["tel"].get<std::string>();
+         json login_ack;
+         resp["cmd"] = "login_ack";
+         resp["result"] = "ok";
+         resp["user_idx"] = sd->add_user(tel, {});
+
+         std::cout << "New login from " << name << " " << tel
+                   << std::endl;
+
+      } else if (cmd == "create_group") {
+         auto user_id = j["user_id"].get<int>();
+         auto group_idx = sd->create_group(user_id);
+         if (group_idx == -1) {
+            std::cout << "Cannot create group." << std::endl;
+            resp["result"] = "fail";
+         } else {
+            resp["result"] = "ok";
+         }
+         resp["cmd"] = "create_group_ack";
+         resp["group_idx"] = group_idx;
+      } else {
+         std::cerr << "Server: Unknown command "
+                    << cmd << std::endl;
+      }
+   } catch (...) {
+      std::cerr << "Server: Invalid json." << std::endl;
+   }
+
+   auto handler = [p = shared_from_this()](auto ec, auto n)
+   { p->on_write(ec, n); };
+
+   ws.async_write( boost::asio::buffer(resp.dump())
+                 , boost::asio::bind_executor(
+                      strand,
+                      handler));
+}
+
+void server_session::on_write( boost::system::error_code ec
+                             , std::size_t bytes_transferred)
+{
+   boost::ignore_unused(bytes_transferred);
+
+   if (ec)
+      return fail(ec, "write");
+
+   // Clear the buffer
+   buffer.consume(buffer.size());
+
+   do_read();
+}
+

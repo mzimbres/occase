@@ -1,5 +1,6 @@
 #include <thread>
 #include <mutex>
+#include <vector>
 #include <memory>
 #include <string>
 #include <cstdlib>
@@ -36,6 +37,7 @@ private:
    work_type work;
    std::string tel;
    int id = -1;
+   std::vector<int> groups;
 
    void write(std::string msg)
    {
@@ -138,6 +140,15 @@ private:
             }
          }
 
+         if (cmd == "create_group_ack") {
+            auto log_res = j["result"].get<std::string>();
+            if (log_res == "ok") {
+               auto group_idx = j["group_idx"].get<int>();
+               groups.push_back(group_idx);
+               std::cout << "Client: adding group " << group_idx << std::endl;
+            }
+         }
+
       } catch (std::exception const& e) {
          std::cerr << "Error: " << e.what() << std::endl;
       }
@@ -157,6 +168,15 @@ private:
                 << std::endl;
       work.reset();
    }
+
+   void send_msg(std::string msg)
+   {
+      auto handler = [p = shared_from_this(), msg = std::move(msg)]()
+      { p->write(std::move(msg)); };
+
+      boost::asio::post(resolver.get_executor(), handler);
+   }
+
 public:
    explicit
    session( boost::asio::io_context& ioc
@@ -167,12 +187,23 @@ public:
    , tel(std::move(tel_))
    { }
 
-   void send_msg(std::string msg)
+   void login()
    {
-      auto handler = [p = shared_from_this(), msg = std::move(msg)]()
-      { p->write(std::move(msg)); };
+      json j;
+      j["cmd"] = "login";
+      j["name"] = "Marcelo Zimbres";
+      j["tel"] = "1";
 
-      boost::asio::post(resolver.get_executor(), handler);
+      send_msg(j.dump());
+   }
+
+   void create_group()
+   {
+      json j;
+      j["cmd"] = "create_group";
+      j["user_id"] = id;
+
+      send_msg(j.dump());
    }
 
    void exit()
@@ -195,34 +226,6 @@ public:
    }
 };
 
-std::string get_cmd_str(int cmd)
-{
-   if (cmd == 1) {
-      json j;
-      j["cmd"] = "login";
-      j["name"] = "Marcelo Zimbres";
-      j["tel"] = "1";
-      return j.dump();
-   } 
-   
-   if (cmd == 2) {
-      json j;
-      j["cmd"] = "create_group";
-      j["name"] = "Repasse de automóveis";
-      return j.dump();
-   }
-   
-   if (cmd == 3) {
-      return "cmd3";
-   }
-   
-   if (cmd == 4) {
-      return "cmd3";
-   }
-   
-   return {};
-}
-
 struct prompt_usr {
    std::shared_ptr<session> p;
    void operator()() const
@@ -237,12 +240,32 @@ struct prompt_usr {
                    << std::endl;
          auto cmd = -1;
          std::cin >> cmd;
-         auto str = get_cmd_str(cmd);
-         if (str.empty()) {
+         std::string str;
+
+         if (cmd == 1) {
+            p->login();
+            continue;
+         }
+         
+         if (cmd == 2) {
+            p->create_group();
+            continue;
+         }
+         
+         if (cmd == 3) {
+            str = "cmd3";
+            continue;
+         }
+         
+         if (cmd == 4) {
+            str = "cmd3";
+            continue;
+         }
+         
+         if (cmd == -1) {
             p->exit();
             break;
          }
-         p->send_msg(str);
       }
    }
 };

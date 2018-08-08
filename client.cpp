@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <cstdlib>
+#include <sstream>
 #include <iostream>
 #include <functional>
 
@@ -11,10 +12,7 @@
 #include <boost/asio/connect.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
-#include <nlohmann/json.hpp>
-
-using tcp = boost::asio::ip::tcp;
-using json = nlohmann::json;
+#include "config.hpp"
 
 namespace websocket = boost::beast::websocket;
 
@@ -25,34 +23,19 @@ void fail(boost::system::error_code ec, char const* what)
 
 class session : public std::enable_shared_from_this<session> {
 private:
+   using work_type =
+      boost::asio::executor_work_guard<
+         boost::asio::io_context::executor_type>;
+
    tcp::resolver resolver;
    websocket::stream<tcp::socket> ws;
    boost::beast::multi_buffer buffer;
    std::string host {"127.0.0.1"};
    std::string text;
-   int id = -1;
    std::mutex mutex;
-   using work_type =
-      boost::asio::executor_work_guard<
-         boost::asio::io_context::executor_type>;
    work_type work;
-
-public:
-   // Resolver and socket require an io_context
-   explicit
-   session(boost::asio::io_context& ioc)
-   : resolver(ioc)
-   , ws(ioc)
-   , work(boost::asio::make_work_guard(ioc))
-   { }
-
-   void send_msg(std::string msg)
-   {
-      auto handler = [p = shared_from_this(), msg = std::move(msg)]()
-      { p->write(std::move(msg)); };
-
-      boost::asio::post(resolver.get_executor(), handler);
-   }
+   std::string tel;
+   int id = -1;
 
    void write(std::string msg)
    {
@@ -63,31 +46,12 @@ public:
       ws.async_write(boost::asio::buffer(text), handler);
    }
 
-   void exit()
-   {
-      auto handler = [p = shared_from_this()]()
-      { p->close(); };
-
-      boost::asio::post(resolver.get_executor(), handler);
-   }
-
    void close()
    {
       auto handler = [p = shared_from_this()](auto ec)
       { p->on_close(ec); };
 
       ws.async_close(websocket::close_code::normal, handler);
-   }
-
-   void run()
-   {
-      char const* port = "8080";
-
-      auto handler = [p = shared_from_this()](auto ec, auto res)
-      { p->on_resolve(ec, res); };
-
-      // Look up the domain name
-      resolver.async_resolve(host, port, handler);
    }
 
    void on_resolve( boost::system::error_code ec
@@ -128,6 +92,11 @@ public:
    {
       if (ec)
          return fail(ec, "handshake");
+
+      auto handler = [p = shared_from_this()](auto ec, auto res)
+      { p->on_read(ec, res); };
+
+      ws.async_read(buffer, handler);
    }
 
    void on_write( boost::system::error_code ec
@@ -138,28 +107,45 @@ public:
       if (ec)
          return fail(ec, "write");
 
-      auto handler = [p = shared_from_this()](auto ec, auto res)
-      { p->on_read(ec, res); };
+      //auto handler = [p = shared_from_this()](auto ec, auto res)
+      //{ p->on_read(ec, res); };
 
-      ws.async_read(buffer, handler);
+      //ws.async_read(buffer, handler);
    }
 
    void on_read( boost::system::error_code ec
                , std::size_t bytes_transferred)
    {
-      boost::ignore_unused(bytes_transferred);
+      try {
+         boost::ignore_unused(bytes_transferred);
 
-      if (ec)
-         return fail(ec, "read");
+         if (ec)
+            return fail(ec, "read");
 
-      std::cout << boost::beast::buffers(buffer.data())
-                << std::endl;
-      buffer.consume(buffer.size());
+         json j;
+         std::stringstream ss;
+         ss << boost::beast::buffers(buffer.data());
+         ss >> j;
+         buffer.consume(buffer.size());
 
-      //auto handler = [p = shared_from_this()](auto ec, auto res)
-      //{ p->on_read(ec, res); };
+         auto cmd = j["cmd"].get<std::string>();
 
-      //ws.async_read(buffer, handler);
+         if (cmd == "login_ack") {
+            auto log_res = j["result"].get<std::string>();
+            if (log_res == "ok") {
+               id = j["user_idx"].get<int>();
+               std::cout << "Client: assigning id " << id << std::endl;
+            }
+         }
+
+      } catch (std::exception const& e) {
+         std::cerr << "Error: " << e.what() << std::endl;
+      }
+
+      auto handler = [p = shared_from_this()](auto ec, auto res)
+      { p->on_read(ec, res); };
+
+      ws.async_read(buffer, handler);
    }
 
    void on_close(boost::system::error_code ec)
@@ -170,6 +156,42 @@ public:
       std::cout << "Connection is closed gracefully"
                 << std::endl;
       work.reset();
+   }
+public:
+   explicit
+   session( boost::asio::io_context& ioc
+          , std::string tel_)
+   : resolver(ioc)
+   , ws(ioc)
+   , work(boost::asio::make_work_guard(ioc))
+   , tel(std::move(tel_))
+   { }
+
+   void send_msg(std::string msg)
+   {
+      auto handler = [p = shared_from_this(), msg = std::move(msg)]()
+      { p->write(std::move(msg)); };
+
+      boost::asio::post(resolver.get_executor(), handler);
+   }
+
+   void exit()
+   {
+      auto handler = [p = shared_from_this()]()
+      { p->close(); };
+
+      boost::asio::post(resolver.get_executor(), handler);
+   }
+
+   void run()
+   {
+      char const* port = "8080";
+
+      auto handler = [p = shared_from_this()](auto ec, auto res)
+      { p->on_resolve(ec, res); };
+
+      // Look up the domain name
+      resolver.async_resolve(host, port, handler);
    }
 };
 
@@ -229,7 +251,7 @@ int main()
 {
    boost::asio::io_context ioc;
 
-   auto p = std::make_shared<session>(ioc);
+   auto p = std::make_shared<session>(ioc, "4901733216046");
 
    std::thread thr {prompt_usr {p}};
 

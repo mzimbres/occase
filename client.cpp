@@ -234,8 +234,8 @@ struct prompt_usr {
          std::cout << "Type a command: \n\n"
                    << "  1: Login.\n"
                    << "  2: Create group.\n"
-                   << "  3: Send message.\n"
-                   << "  4: Join group.\n"
+                   << "  3: Join group.\n"
+                   << "  4: Send group message.\n"
                    << "  5: Exit.\n"
                    << std::endl;
          auto cmd = -1;

@@ -1,12 +1,15 @@
 #pragma once
 
 #include <vector>
+#include <memory>
 #include <unordered_map>
 
 #include "config.hpp"
 #include "user.hpp"
 #include "group.hpp"
 #include "grow_only_vector.hpp"
+
+class server_session;
 
 class server_data {
 private:
@@ -23,11 +26,12 @@ public:
    // basically allocates user entries internally.
    //
    // id:       User telephone.
-   // contacts: Telephones of his contacts. 
+   // s:        Web socket session.
    // return:   Index in the users vector that we will use to refer to
    //           him without having to perform searches. This is what
    //           we will return to the user to be stored in his app.
-   index_type add_user(id_type id, std::vector<id_type> contacts);
+   index_type add_user( id_type id
+                      , std::shared_ptr<server_session> s);
 
    // TODO: update_user_contacts.
 

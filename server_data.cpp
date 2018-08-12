@@ -1,7 +1,8 @@
 #include "server_data.hpp"
 
 index_type
-server_data::add_user(id_type id, std::vector<id_type> contacts)
+server_data::add_user( id_type id
+                     , std::shared_ptr<server_session> session)
 {
    index_type new_user_idx = -1;
    auto new_user = id_to_idx_map.insert({id, {}});
@@ -21,28 +22,10 @@ server_data::add_user(id_type id, std::vector<id_type> contacts)
       // space for him.
       new_user_idx = users.allocate();
    }
-   
-   // Now we can add all his cantacts that are already registered
-   // in the app.
-   for (auto const& o : contacts) {
-      auto existing_user = id_to_idx_map.find(o);
-      if (existing_user == std::end(id_to_idx_map))
-         continue;
 
-      // A contact was found in our database, let us add him as a
-      // the new user friend. We do not have to check if it is
-      // already in the array as case would handled by the set
-      // automaticaly.
-      auto idx = existing_user->second;
-      users[new_user_idx].add_friend(idx);
-
-      // REVIEW: We also have to inform the existing user that one of
-      // his contacts just registered. This will be made only upon
-      // request, for now, we will only add the new user in the
-      // existing user's friends and let him be notified if the new
-      // user sends him a message.
-      users[idx].add_friend(new_user_idx);
-   }
+   // Set users websocket session.
+   if (!users[new_user_idx].has_session())
+      users[new_user_idx].set_session(session);
 
    return new_user_idx;
 }

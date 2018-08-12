@@ -8,7 +8,6 @@
 
 class server_session;
 
-
 // Remarks: This user struct will not store the groups it belongs to.
 // This information can be obtained from the groups array in an
 // indirect manner i.e. by traversing it and quering each group
@@ -56,5 +55,8 @@ public:
    // Removes group owned by this user from his list of groups.
    void remove_group(index_type group);
    void add_group(index_type gid);
+   auto has_session() const {return session.use_count() != 0;} 
+   void set_session(std::shared_ptr<server_session> s)
+   {session = s;}
 };
 

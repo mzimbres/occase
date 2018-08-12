@@ -20,12 +20,6 @@ private:
    boost::beast::multi_buffer buffer;
    std::shared_ptr<server_data> sd;
 
-public:
-   explicit
-   server_session( tcp::socket socket
-                 , std::shared_ptr<server_data> sd_);
-
-   void run();
    void on_accept(boost::system::error_code ec);
    void do_read();
 
@@ -34,6 +28,18 @@ public:
 
    void on_write( boost::system::error_code ec
                 , std::size_t bytes_transferred);
+
+   void write(std::string msg);
+
+   void login_handler(json j);
+   void create_group_handler(json j);
+
+public:
+   explicit
+   server_session( tcp::socket socket
+                 , std::shared_ptr<server_data> sd_);
+
+   void run();
 };
 
 

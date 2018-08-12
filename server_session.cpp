@@ -60,48 +60,71 @@ void server_session::on_read( boost::system::error_code ec
    // Echo the message
    ws.text(ws.got_text());
 
-   json resp;
-   std::stringstream ss;
-   ss << boost::beast::buffers(buffer.data());
    try {
+      std::stringstream ss;
+      ss << boost::beast::buffers(buffer.data());
       json j;
       ss >> j;
-      std::cout << j << std::endl;
+
+      //std::cout << j << std::endl;
       auto cmd = j["cmd"].get<std::string>();
       if (cmd == "login") {
-         auto name = j["name"].get<std::string>();
-         auto tel = j["tel"].get<std::string>();
-         json login_ack;
-         resp["cmd"] = "login_ack";
-         resp["result"] = "ok";
-         resp["user_idx"] = sd->add_user(tel, {});
-
-         std::cout << "New login from " << name << " " << tel
-                   << std::endl;
-
-      } else if (cmd == "create_group") {
-         auto user_id = j["user_id"].get<int>();
-         auto group_idx = sd->create_group(user_id);
-         if (group_idx == -1) {
-            std::cout << "Cannot create group." << std::endl;
-            resp["result"] = "fail";
-         } else {
-            resp["result"] = "ok";
-         }
-         resp["cmd"] = "create_group_ack";
-         resp["group_idx"] = group_idx;
-      } else {
-         std::cerr << "Server: Unknown command "
-                    << cmd << std::endl;
+         login_handler(std::move(j));
+         return;
       }
+      
+      if (cmd == "create_group") {
+         create_group_handler(std::move(j));
+         return;
+      }
+      
+      std::cerr << "Server: Unknown command " << cmd << std::endl;
    } catch (...) {
       std::cerr << "Server: Invalid json." << std::endl;
    }
+}
 
+void server_session::create_group_handler(json j)
+{
+   auto user_id = j["user_id"].get<int>();
+   auto group_idx = sd->create_group(user_id);
+
+   json resp;
+   if (group_idx == -1) {
+      std::cout << "Cannot create group." << std::endl;
+      resp["result"] = "fail";
+   } else {
+      resp["result"] = "ok";
+   }
+
+   resp["cmd"] = "create_group_ack";
+   resp["group_idx"] = group_idx;
+
+   write(resp.dump());
+}
+
+void server_session::login_handler(json j)
+{
+   auto name = j["name"].get<std::string>();
+   auto tel = j["tel"].get<std::string>();
+
+   json resp;
+   resp["cmd"] = "login_ack";
+   resp["result"] = "ok";
+   resp["user_idx"] = sd->add_user(tel, shared_from_this());
+
+   std::cout << "New login from " << name << " " << tel
+             << std::endl;
+
+   write(resp.dump());
+}
+
+void server_session::write(std::string msg)
+{
    auto handler = [p = shared_from_this()](auto ec, auto n)
    { p->on_write(ec, n); };
 
-   ws.async_write( boost::asio::buffer(resp.dump())
+   ws.async_write( boost::asio::buffer(std::move(msg))
                  , boost::asio::bind_executor(
                       strand,
                       handler));

@@ -108,7 +108,7 @@ int main(int argc, char* argv[])
    auto const port = static_cast<unsigned short>(8080);
    auto const threads = 1;
 
-   boost::asio::io_context ioc{threads};
+   boost::asio::io_context ioc {threads};
 
    std::make_shared<listener>(ioc, tcp::endpoint {address, port})->run();
 

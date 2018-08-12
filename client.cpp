@@ -221,6 +221,17 @@ public:
       send_msg(j.dump());
    }
 
+   void send_group_msg(std::string msg)
+   {
+      json j;
+      j["cmd"] = "send_group_msg";
+      j["from"] = id;
+      j["to"] = 0;
+      j["msg"] = msg;
+
+      send_msg(j.dump());
+   }
+
    void exit()
    {
       auto handler = [p = shared_from_this()]()
@@ -273,7 +284,7 @@ struct prompt_usr {
          }
          
          if (cmd == 4) {
-            str = "cmd3";
+            p->send_group_msg("Fala mulecada.");
             continue;
          }
          

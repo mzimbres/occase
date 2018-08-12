@@ -82,11 +82,26 @@ void server_session::on_read( boost::system::error_code ec
          join_group_handler(std::move(j));
          return;
       }
+
+      if (cmd == "send_group_msg") {
+         send_group_msg_handler(std::move(j));
+         return;
+      }
       
       std::cerr << "Server: Unknown command " << cmd << std::endl;
    } catch (...) {
       std::cerr << "Server: Invalid json." << std::endl;
    }
+}
+
+void server_session::send_group_msg_handler(json j)
+{
+   //auto from = j["from"].get<int>();
+   auto to = j["to"].get<int>();
+   auto msg = j["msg"].get<std::string>();
+
+   // TODO: use return type.
+   sd->send_group_msg(msg, to);
 }
 
 void server_session::create_group_handler(json j)

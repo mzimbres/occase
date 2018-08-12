@@ -46,5 +46,7 @@ public:
                               , index_type gid);
 
    bool join_group(index_type new_member, index_type gid);
+
+   int send_group_msg(std::string const& msg, index_type to) const;
 };
 

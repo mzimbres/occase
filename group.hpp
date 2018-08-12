@@ -4,6 +4,7 @@
 #include <unordered_map>
 
 #include "config.hpp"
+#include "grow_only_vector.hpp"
 
 enum class group_membership
 {
@@ -81,6 +82,14 @@ public:
    void remove_member(index_type uid)
    {
       members.erase(uid);
+   }
+
+   void broadcast_msg( std::string msg
+                      , grow_only_vector<user> const& users) const
+   {
+      for (auto const& user : members) {
+         users[user.first].send_msg(msg);
+      }
    }
 };
 

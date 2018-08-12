@@ -30,6 +30,20 @@ server_data::add_user( id_type id
    return new_user_idx;
 }
 
+int server_data::send_group_msg(std::string const& msg, index_type to) const
+{
+   if (!groups.is_valid_index(to)) {
+      // This is a non-existing user. Perhaps the json command was
+      // sent with the wrong information signaling a logic error in
+      // the app.
+      return -1;
+   }
+
+   // Now we broadcast.
+   groups[to].broadcast_msg(std::move(msg), users);
+   return 1;
+}
+
 index_type server_data::create_group(index_type owner)
 {
    // Before allocating a new group it is a good idea to check if

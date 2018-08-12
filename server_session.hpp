@@ -29,11 +29,10 @@ private:
    void on_write( boost::system::error_code ec
                 , std::size_t bytes_transferred);
 
-   void write(std::string msg);
-
    void login_handler(json j);
    void create_group_handler(json j);
    void join_group_handler(json j);
+   void send_group_msg_handler(json j);
 
 public:
    explicit
@@ -41,6 +40,7 @@ public:
                  , std::shared_ptr<server_data> sd_);
 
    void run();
+   void write(std::string msg);
 };
 
 

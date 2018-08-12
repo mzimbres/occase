@@ -58,5 +58,6 @@ public:
    auto has_session() const {return session.use_count() != 0;} 
    void set_session(std::shared_ptr<server_session> s)
    {session = s;}
+   void send_msg(std::string const& msg) const;
 };
 

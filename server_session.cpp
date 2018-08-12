@@ -77,6 +77,11 @@ void server_session::on_read( boost::system::error_code ec
          create_group_handler(std::move(j));
          return;
       }
+
+      if (cmd == "join_group") {
+         join_group_handler(std::move(j));
+         return;
+      }
       
       std::cerr << "Server: Unknown command " << cmd << std::endl;
    } catch (...) {
@@ -86,8 +91,8 @@ void server_session::on_read( boost::system::error_code ec
 
 void server_session::create_group_handler(json j)
 {
-   auto user_id = j["user_id"].get<int>();
-   auto group_idx = sd->create_group(user_id);
+   auto from = j["from"].get<int>();
+   auto group_idx = sd->create_group(from);
 
    json resp;
    if (group_idx == -1) {
@@ -99,6 +104,25 @@ void server_session::create_group_handler(json j)
 
    resp["cmd"] = "create_group_ack";
    resp["group_idx"] = group_idx;
+
+   write(resp.dump());
+}
+
+void server_session::join_group_handler(json j)
+{
+   auto from = j["from"].get<int>();
+   auto group_idx = j["group_idx"].get<int>();
+
+   json resp;
+   if (!sd->join_group(from, group_idx)) {
+      std::cout << "Cannot join group." << std::endl;
+      resp["result"] = "fail";
+   } else {
+      resp["result"] = "ok";
+   }
+
+   resp["cmd"] = "join_group_ack";
+   resp["result"] = "ok";
 
    write(resp.dump());
 }

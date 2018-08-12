@@ -95,16 +95,9 @@ bool server_data::change_group_ownership( index_type from, index_type to
    return true;
 }
 
-bool server_data::add_group_member( index_type owner, index_type new_member
-                                  , index_type gid)
+bool server_data::join_group(index_type new_member, index_type gid)
 {
    if (!groups.is_valid_index(gid))
-      return false;
-
-   if (!groups[gid].is_owned_by(owner))
-      return false;
-
-   if (!users.is_valid_index(owner))
       return false;
 
    if (!users.is_valid_index(new_member))

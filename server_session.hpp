@@ -33,6 +33,7 @@ private:
 
    void login_handler(json j);
    void create_group_handler(json j);
+   void join_group_handler(json j);
 
 public:
    explicit

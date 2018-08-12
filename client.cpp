@@ -149,6 +149,11 @@ private:
             }
          }
 
+         if (cmd == "join_group_ack") {
+            auto log_res = j["result"].get<std::string>();
+            std::cout << "Client: join group ack" << log_res << std::endl;
+         }
+
       } catch (std::exception const& e) {
          std::cerr << "Error: " << e.what() << std::endl;
       }
@@ -192,7 +197,7 @@ public:
       json j;
       j["cmd"] = "login";
       j["name"] = "Marcelo Zimbres";
-      j["tel"] = "1";
+      j["tel"] = tel;
 
       send_msg(j.dump());
    }
@@ -201,7 +206,17 @@ public:
    {
       json j;
       j["cmd"] = "create_group";
-      j["user_id"] = id;
+      j["from"] = id;
+
+      send_msg(j.dump());
+   }
+
+   void join_group()
+   {
+      json j;
+      j["cmd"] = "join_group";
+      j["from"] = id;
+      j["group_idx"] = 0;
 
       send_msg(j.dump());
    }
@@ -253,7 +268,7 @@ struct prompt_usr {
          }
          
          if (cmd == 3) {
-            str = "cmd3";
+            p->join_group();
             continue;
          }
          
@@ -270,11 +285,16 @@ struct prompt_usr {
    }
 };
 
-int main()
+int main(int argc, char* argv[])
 {
+   if (argc != 2) {
+      std::cerr << "Please, provide a user id." << std::endl;
+      return EXIT_FAILURE;
+   }
+
    boost::asio::io_context ioc;
 
-   auto p = std::make_shared<session>(ioc, "4901733216046");
+   auto p = std::make_shared<session>(ioc, argv[1]);
 
    std::thread thr {prompt_usr {p}};
 

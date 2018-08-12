@@ -45,7 +45,6 @@ public:
    bool change_group_ownership( index_type from, index_type to
                               , index_type gid);
 
-   bool add_group_member( index_type owner, index_type new_member
-                        , index_type gid);
+   bool join_group(index_type new_member, index_type gid);
 };
 

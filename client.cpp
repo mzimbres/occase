@@ -95,6 +95,11 @@ private:
       if (ec)
          return fail(ec, "handshake");
 
+      do_read();
+   }
+
+   void do_read()
+   {
       auto handler = [p = shared_from_this()](auto ec, auto res)
       { p->on_read(ec, res); };
 
@@ -162,10 +167,7 @@ private:
          std::cerr << "Error: " << e.what() << std::endl;
       }
 
-      auto handler = [p = shared_from_this()](auto ec, auto res)
-      { p->on_read(ec, res); };
-
-      ws.async_read(buffer, handler);
+      do_read();
    }
 
    void on_close(boost::system::error_code ec)
@@ -173,7 +175,7 @@ private:
       if (ec)
          return fail(ec, "close");
 
-      std::cout << "Connection is closed gracefully"
+      std::cout << "Connection closed gracefully"
                 << std::endl;
       work.reset();
    }

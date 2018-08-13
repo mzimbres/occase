@@ -54,11 +54,11 @@ void server_session::on_read( boost::system::error_code ec
    if (ec == websocket::error::closed)
       return;
 
-   if (ec)
+   if (ec) {
       fail(ec, "read");
-
-   // Echo the message
-   ws.text(ws.got_text());
+      do_read();
+      return;
+   }
 
    try {
       std::stringstream ss;
@@ -158,6 +158,8 @@ void server_session::login_handler(json j)
 
 void server_session::write(std::string msg)
 {
+   ws.text(ws.got_text());
+
    auto handler = [p = shared_from_this()](auto ec, auto n)
    { p->on_write(ec, n); };
 

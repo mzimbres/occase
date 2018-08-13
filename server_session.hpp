@@ -33,6 +33,7 @@ private:
    void create_group_handler(json j);
    void join_group_handler(json j);
    void send_group_msg_handler(json j);
+   void write(std::string msg);
 
 public:
    explicit
@@ -40,7 +41,6 @@ public:
                  , std::shared_ptr<server_data> sd_);
 
    void run();
-   void write(std::string msg);
 };
 
 

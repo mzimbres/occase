@@ -63,6 +63,8 @@ void server_session::on_read( boost::system::error_code ec
    try {
       std::stringstream ss;
       ss << boost::beast::buffers(buffer.data());
+      //auto str = ss.str();
+      //std::cout << str << std::endl;
       json j;
       ss >> j;
 
@@ -70,28 +72,20 @@ void server_session::on_read( boost::system::error_code ec
       auto cmd = j["cmd"].get<std::string>();
       if (cmd == "login") {
          login_handler(std::move(j));
-         return;
-      }
-      
-      if (cmd == "create_group") {
+      } else if (cmd == "create_group") {
          create_group_handler(std::move(j));
-         return;
-      }
-
-      if (cmd == "join_group") {
+      } else if (cmd == "join_group") {
          join_group_handler(std::move(j));
-         return;
-      }
-
-      if (cmd == "send_group_msg") {
+      } else if (cmd == "send_group_msg") {
          send_group_msg_handler(std::move(j));
-         return;
+      } else {
+         std::cerr << "Server: Unknown command " << cmd << std::endl;
       }
-      
-      std::cerr << "Server: Unknown command " << cmd << std::endl;
    } catch (...) {
       std::cerr << "Server: Invalid json." << std::endl;
    }
+
+   do_read();
 }
 
 void server_session::send_group_msg_handler(json j)
@@ -100,8 +94,12 @@ void server_session::send_group_msg_handler(json j)
    auto to = j["to"].get<int>();
    auto msg = j["msg"].get<std::string>();
 
+   json bc;
+   bc["cmd"] = "message";
+   bc["message"] = msg;
+
    // TODO: use return type.
-   sd->send_group_msg(msg, to);
+   sd->send_group_msg(bc.dump(), to);
 }
 
 void server_session::create_group_handler(json j)
@@ -180,6 +178,5 @@ void server_session::on_write( boost::system::error_code ec
    // Clear the buffer
    buffer.consume(buffer.size());
 
-   do_read();
 }
 

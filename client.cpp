@@ -108,11 +108,6 @@ private:
 
       if (ec)
          return fail(ec, "write");
-
-      //auto handler = [p = shared_from_this()](auto ec, auto res)
-      //{ p->on_read(ec, res); };
-
-      //ws.async_read(buffer, handler);
    }
 
    void on_read( boost::system::error_code ec
@@ -127,8 +122,12 @@ private:
          json j;
          std::stringstream ss;
          ss << boost::beast::buffers(buffer.data());
+         auto str = ss.str();
+         std::cout << str << std::endl;
          ss >> j;
          buffer.consume(buffer.size());
+         //auto str = ss.str();
+         //std::cout << str << std::endl;
 
          auto cmd = j["cmd"].get<std::string>();
 
@@ -152,6 +151,11 @@ private:
          if (cmd == "join_group_ack") {
             auto log_res = j["result"].get<std::string>();
             std::cout << "Client: join group ack" << log_res << std::endl;
+         }
+
+         if (cmd == "message") {
+            auto msg = j["message"].get<std::string>();
+            std::cout << msg << std::endl;
          }
 
       } catch (std::exception const& e) {

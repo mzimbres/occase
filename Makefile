@@ -16,14 +16,16 @@ LIBS=-lpthread
 
 OBJS=user.o server_data.o server_session.o
 
+all: client server
+
 %.o: %.cpp $(DEPS)
 	$(CPP) -c -o $@ $< $(CPPFLAGS) $(LIBS)
 
-server: server.cpp $(OBJS)
-	$(CPP) -o $@ $< $(CPPFLAGS) $(LIBS) $(OBJS) $(BOOST_LIBS)
-
 client: client.cpp
 	$(CPP) -o $@ $< $(CPPFLAGS) $(LIBS) $(BOOST_LIBS)
+
+server: server.cpp $(OBJS)
+	$(CPP) -o $@ $< $(CPPFLAGS) $(LIBS) $(OBJS) $(BOOST_LIBS)
 
 .PHONY: clean
 

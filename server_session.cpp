@@ -56,7 +56,6 @@ void server_session::on_read( boost::system::error_code ec
 
    if (ec) {
       fail(ec, "read");
-      do_read();
       return;
    }
 

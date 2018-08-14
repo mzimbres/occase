@@ -1,4 +1,5 @@
 #include "client_session.hpp"
+#include "group.hpp"
 
 namespace websocket = boost::beast::websocket;
 
@@ -158,35 +159,6 @@ client_session::client_session( boost::asio::io_context& ioc
 , tel(std::move(tel_))
 { }
 
-void client_session::login()
-{
-   json j;
-   j["cmd"] = "login";
-   j["name"] = "Marcelo Zimbres";
-   j["tel"] = tel;
-
-   send_msg(j.dump());
-}
-
-void client_session::create_group()
-{
-   json j;
-   j["cmd"] = "create_group";
-   j["from"] = id;
-
-   send_msg(j.dump());
-}
-
-void client_session::join_group()
-{
-   json j;
-   j["cmd"] = "join_group";
-   j["from"] = id;
-   j["group_idx"] = 0;
-
-   send_msg(j.dump());
-}
-
 void client_session::send_group_msg(std::string msg)
 {
    json j;
@@ -213,6 +185,40 @@ void client_session::run()
 
    // Look up the domain name
    resolver.async_resolve(host, port, handler);
+}
+
+void client_session::login()
+{
+   json j;
+   j["cmd"] = "login";
+   j["name"] = "Marcelo Zimbres";
+   j["tel"] = tel;
+
+   send_msg(j.dump());
+}
+
+void client_session::create_group()
+{
+   json j;
+   j["cmd"] = "create_group";
+   j["from"] = id;
+
+   group_info info { {"Repasse de automoveis Sao Paulo"}
+                   , {"Destinado a pessoas fisicas e juridicas."}};
+
+   j["info"] = info;
+
+   send_msg(j.dump());
+}
+
+void client_session::join_group()
+{
+   json j;
+   j["cmd"] = "join_group";
+   j["from"] = id;
+   j["group_idx"] = 0;
+
+   send_msg(j.dump());
 }
 
 void client_session::login_ack_handler(json j)
@@ -245,6 +251,7 @@ void client_session::join_group_ack_handler(json j)
    auto res = j["result"].get<std::string>();
    if (res == "ok") {
       std::cout << "Joining group successful" << std::endl;
+      std::cout << j << std::endl;
       return;
    }
 

@@ -37,7 +37,7 @@ public:
 
    // Creates a new group for the specified owner and returns its
    // index.
-   index_type create_group(index_type owner);
+   index_type create_group(index_type owner, group_info info);
 
    // Removes the group and updates the owner.
    group remove_group(index_type idx);

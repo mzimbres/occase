@@ -104,20 +104,24 @@ void server_session::send_group_msg_handler(json j)
 void server_session::create_group_handler(json j)
 {
    auto from = j["from"].get<int>();
-   auto group_idx = sd->create_group(from);
+   group_info info = j["info"].get<group_info>();
+   auto idx = sd->create_group(from, info);
 
-   json resp;
-   if (group_idx == -1) {
-      std::cout << "Cannot create group." << std::endl;
+   if (idx == -1) {
+      json resp;
+      resp["cmd"] = "create_group_ack";
       resp["result"] = "fail";
-   } else {
-      resp["result"] = "ok";
+      write(resp.dump());
+      return;
    }
 
+   json resp;
    resp["cmd"] = "create_group_ack";
-   resp["group_idx"] = group_idx;
+   resp["result"] = "ok";
+   resp["group_idx"] = idx;
 
    write(resp.dump());
+
 }
 
 void server_session::join_group_handler(json j)
@@ -125,17 +129,19 @@ void server_session::join_group_handler(json j)
    auto from = j["from"].get<int>();
    auto group_idx = j["group_idx"].get<int>();
 
-   json resp;
    if (!sd->join_group(from, group_idx)) {
       std::cout << "Cannot join group." << std::endl;
+      json resp;
+      resp["cmd"] = "join_group_ack";
       resp["result"] = "fail";
-   } else {
-      resp["result"] = "ok";
+      write(resp.dump());
+      return;
    }
 
+   json resp;
    resp["cmd"] = "join_group_ack";
    resp["result"] = "ok";
-
+   //resp["info"] = groups[idx].get_info(),
    write(resp.dump());
 }
 

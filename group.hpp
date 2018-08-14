@@ -4,7 +4,16 @@
 #include <unordered_map>
 
 #include "config.hpp"
+#include "user.hpp"
 #include "grow_only_vector.hpp"
+
+struct group_info {
+   std::string title;
+   std::string description;
+};
+
+void to_json(json& j, const group_info& g);
+void from_json(const json& j, group_info& g);
 
 enum class group_membership
 {
@@ -58,10 +67,13 @@ private:
    // appropriate.
    std::unordered_map< index_type
                      , group_mem_info> members;
+   group_info info;
 
 public:
    auto get_owner() const noexcept {return owner;}
    void set_owner(index_type idx) noexcept {owner = idx;}
+   void set_info(group_info info_) {info = std::move(info_);}
+   auto const& get_info() const noexcept {return info;}
 
    auto is_owned_by(index_type uid) const noexcept
    {
@@ -85,11 +97,6 @@ public:
    }
 
    void broadcast_msg( std::string msg
-                      , grow_only_vector<user> const& users) const
-   {
-      for (auto const& user : members) {
-         users[user.first].send_msg(msg);
-      }
-   }
+                      , grow_only_vector<user> const& users) const;
 };
 

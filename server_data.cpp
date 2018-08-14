@@ -44,7 +44,7 @@ int server_data::send_group_msg(std::string const& msg, index_type to) const
    return 1;
 }
 
-index_type server_data::create_group(index_type owner)
+index_type server_data::create_group(index_type owner, group_info info)
 {
    // Before allocating a new group it is a good idea to check if
    // the owner passed is at least in a valid range.
@@ -58,6 +58,7 @@ index_type server_data::create_group(index_type owner)
    // We can proceed and allocate the group.
    auto idx = groups.allocate();
    groups[idx].set_owner(owner);
+   groups[idx].set_info(std::move(info));
 
    // Updates the user with his new group.
    users[owner].add_group(idx);

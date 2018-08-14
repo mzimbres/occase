@@ -10,27 +10,26 @@ CPPFLAGS=-I$(BOOST_INCLUDE) -I$(JSON_INCLUDE) \
 
 CPP=g++
 
-SERVER_FILES=user.hpp config.hpp server_data.hpp server_session.hpp
-CLIENT_FILES=client_session.hpp
+FILES=user.hpp group.hpp config.hpp server_data.hpp \
+      server_session.hpp client_session.hpp
 
 LIBS=-lpthread
 
-SERVER_OBJS=user.o server_data.o server_session.o 
-CLIENT_OBJS=client_session.o
+OBJS=user.o server_data.o server_session.o client_session.o group.o
 
 all: client server
 
-%.o: %.cpp $(SERVER_FILES) $(CLIENT_FILES)
+%.o: %.cpp $(FILES)
 	$(CPP) -c -o $@ $< $(CPPFLAGS) $(LIBS)
 
-client: client.cpp $(CLIENT_OBJS)
-	$(CPP) -o $@ $< $(CPPFLAGS) $(LIBS) $(CLIENT_OBJS) $(BOOST_LIBS)
+client: client.cpp $(OBJS)
+	$(CPP) -o $@ $< $(CPPFLAGS) $(LIBS) $(OBJS) $(BOOST_LIBS)
 
-server: server.cpp $(SERVER_OBJS)
-	$(CPP) -o $@ $< $(CPPFLAGS) $(LIBS) $(SERVER_OBJS) $(BOOST_LIBS)
+server: server.cpp $(OBJS)
+	$(CPP) -o $@ $< $(CPPFLAGS) $(LIBS) $(OBJS) $(BOOST_LIBS)
 
 .PHONY: clean
 
 clean:
-	rm -f server client $(SERVER_OBJS) $(CLIENT_OBJS)
+	rm -f server client $(OBJS)
 

@@ -2,7 +2,6 @@
 
 #include "config.hpp"
 
-#include <mutex>
 #include <thread>
 #include <vector>
 #include <sstream>
@@ -24,8 +23,8 @@ private:
    websocket::stream<tcp::socket> ws;
    boost::beast::multi_buffer buffer;
    std::string host {"127.0.0.1"};
+   char const* port = "8080";
    std::string text;
-   std::mutex mutex;
    work_type work;
    std::string tel;
    int id = -1;
@@ -44,6 +43,10 @@ private:
                , std::size_t bytes_transferred);
    void on_close(boost::system::error_code ec);
    void send_msg(std::string msg);
+   void login_ack_handler(json j);
+   void create_group_ack_handler(json j);
+   void join_group_ack_handler(json j);
+   void message_handler(json j);
 
 public:
    explicit

@@ -69,6 +69,7 @@ void client_session::on_handshake(boost::system::error_code ec)
       return fail(ec, "handshake");
 
    do_read();
+   login();
 }
 
 void client_session::do_read()
@@ -94,14 +95,17 @@ void client_session::on_read( boost::system::error_code ec
    try {
       boost::ignore_unused(bytes_transferred);
 
-      if (ec)
+      if (ec) {
+         buffer.consume(buffer.size());
+
+         // Insert timer here.
+         do_read();
          return fail(ec, "read");
+      }
 
       json j;
       std::stringstream ss;
       ss << boost::beast::buffers(buffer.data());
-      auto str = ss.str();
-      std::cout << str << std::endl;
       ss >> j;
       buffer.consume(buffer.size());
       //auto str = ss.str();
@@ -110,30 +114,15 @@ void client_session::on_read( boost::system::error_code ec
       auto cmd = j["cmd"].get<std::string>();
 
       if (cmd == "login_ack") {
-         auto log_res = j["result"].get<std::string>();
-         if (log_res == "ok") {
-            id = j["user_idx"].get<int>();
-            std::cout << "Client: assigning id " << id << std::endl;
-         }
-      }
-
-      if (cmd == "create_group_ack") {
-         auto log_res = j["result"].get<std::string>();
-         if (log_res == "ok") {
-            auto group_idx = j["group_idx"].get<int>();
-            groups.push_back(group_idx);
-            std::cout << "Client: adding group " << group_idx << std::endl;
-         }
-      }
-
-      if (cmd == "join_group_ack") {
-         auto log_res = j["result"].get<std::string>();
-         std::cout << "Client: join group ack" << log_res << std::endl;
-      }
-
-      if (cmd == "message") {
-         auto msg = j["message"].get<std::string>();
-         std::cout << msg << std::endl;
+         login_ack_handler(std::move(j));
+      } else if (cmd == "create_group_ack") {
+         create_group_ack_handler(j);
+      } else if (cmd == "join_group_ack") {
+         join_group_ack_handler(j);
+      } else if (cmd == "message") {
+         message_handler(j);
+      } else {
+         std::cout << "Unknown command." << std::endl;
       }
 
    } catch (std::exception const& e) {
@@ -219,8 +208,6 @@ void client_session::exit()
 
 void client_session::run()
 {
-   char const* port = "8080";
-
    auto handler = [p = shared_from_this()](auto ec, auto res)
    { p->on_resolve(ec, res); };
 
@@ -228,4 +215,45 @@ void client_session::run()
    resolver.async_resolve(host, port, handler);
 }
 
+void client_session::login_ack_handler(json j)
+{
+   auto res = j["result"].get<std::string>();
+   if (res == "ok") {
+      id = j["user_idx"].get<int>();
+      std::cout << "Id: " << id << std::endl;
+      return;
+   }
+
+   std::cout << "Login failed. " << id << std::endl;
+}
+
+void client_session::create_group_ack_handler(json j)
+{
+   auto res = j["result"].get<std::string>();
+   if (res == "ok") {
+      auto group_idx = j["group_idx"].get<int>();
+      groups.push_back(group_idx);
+      std::cout << "Adding group: " << group_idx << std::endl;
+      return;
+   }
+
+   std::cout << "Create group failed. " << id << std::endl;
+}
+
+void client_session::join_group_ack_handler(json j)
+{
+   auto res = j["result"].get<std::string>();
+   if (res == "ok") {
+      std::cout << "Joining group successful" << std::endl;
+      return;
+   }
+
+   std::cout << "Create group failed. " << id << std::endl;
+}
+
+void client_session::message_handler(json j)
+{
+   auto msg = j["message"].get<std::string>();
+   std::cout << msg << std::endl;
+}
 

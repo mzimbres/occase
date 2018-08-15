@@ -22,8 +22,8 @@ private:
 public:
 
    // This function is used to add a new user when he first installs
-   // the app and it sends the first message to the server.  It
-   // basically allocates user entries internally.
+   // the app and sends the first message to the server.  It basically
+   // allocates user entries internally.
    //
    // id:       User telephone.
    // s:        Web socket session.
@@ -45,7 +45,7 @@ public:
    bool change_group_ownership( index_type from, index_type to
                               , index_type gid);
 
-   bool join_group(index_type new_member, index_type gid);
+   void on_join_group(json j, std::shared_ptr<server_session> session);
 
    int send_group_msg(std::string const& msg, index_type to) const;
 };

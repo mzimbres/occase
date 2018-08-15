@@ -28,7 +28,7 @@ void user::add_group(index_type gid)
    own_groups.push_back(gid);
 }
 
-void user::send_msg(std::string const& msg) const
+void user::send_msg(std::string msg) const
 {
    if (auto s = session.lock()) {
       s->write(std::move(msg));

@@ -1,4 +1,5 @@
 #include "server_data.hpp"
+#include "server_session.hpp"
 
 index_type
 server_data::add_user( id_type id
@@ -110,16 +111,32 @@ bool server_data::change_group_ownership( index_type from, index_type to
    return true;
 }
 
-bool server_data::join_group(index_type new_member, index_type gid)
+void
+server_data::on_join_group(json j, std::shared_ptr<server_session> session)
 {
-   if (!groups.is_valid_index(gid))
-      return false;
+   auto from = j["from"].get<int>();
+   auto gid = j["group_idx"].get<int>();
 
-   if (!users.is_valid_index(new_member))
-      return false;
-      
-   groups[gid].add_member(new_member);
+   const auto b1 = groups.is_valid_index(gid);
+   const auto b2 = users.is_valid_index(from);
 
-   return true;
+   if (!b1 || !b2) {
+      json resp;
+      resp["cmd"] = "join_group_ack";
+      resp["result"] = "fail";
+      session->write(resp.dump());
+      return;
+   }
+
+   // For safety we save the connection in case it expired.
+   users[from].set_session(session);
+   groups[gid].add_member(from);
+
+   json resp;
+   resp["cmd"] = "join_group_ack";
+   resp["result"] = "ok";
+   resp["info"] = groups[gid].get_info(),
+
+   users[from].send_msg(resp.dump());
 }
 

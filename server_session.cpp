@@ -74,7 +74,7 @@ void server_session::on_read( boost::system::error_code ec
       } else if (cmd == "create_group") {
          create_group_handler(std::move(j));
       } else if (cmd == "join_group") {
-         join_group_handler(std::move(j));
+         sd->on_join_group(std::move(j), shared_from_this());
       } else if (cmd == "send_group_msg") {
          send_group_msg_handler(std::move(j));
       } else {
@@ -122,27 +122,6 @@ void server_session::create_group_handler(json j)
 
    write(resp.dump());
 
-}
-
-void server_session::join_group_handler(json j)
-{
-   auto from = j["from"].get<int>();
-   auto group_idx = j["group_idx"].get<int>();
-
-   if (!sd->join_group(from, group_idx)) {
-      std::cout << "Cannot join group." << std::endl;
-      json resp;
-      resp["cmd"] = "join_group_ack";
-      resp["result"] = "fail";
-      write(resp.dump());
-      return;
-   }
-
-   json resp;
-   resp["cmd"] = "join_group_ack";
-   resp["result"] = "ok";
-   //resp["info"] = groups[idx].get_info(),
-   write(resp.dump());
 }
 
 void server_session::login_handler(json j)

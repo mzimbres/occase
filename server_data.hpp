@@ -24,9 +24,6 @@ public:
    // This function is used to add a new user when he first installs
    // the app and sends the first message to the server.  It basically
    // allocates user entries internally.
-   //
-   // id:       User telephone.
-   // s:        Web socket session.
    void on_login(json j, std::shared_ptr<server_session> s);
 
    void on_create_group(json j, std::shared_ptr<server_session> s);
@@ -40,5 +37,7 @@ public:
    void on_join_group(json j, std::shared_ptr<server_session> session);
 
    void on_group_msg(json j, std::shared_ptr<server_session> session);
+
+   void on_message(json j, std::shared_ptr<server_session> session);
 };
 

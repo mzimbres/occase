@@ -64,20 +64,7 @@ void server_session::on_read( boost::system::error_code ec
       ss << boost::beast::buffers(buffer.data());
       json j;
       ss >> j;
-
-      //std::cout << j << std::endl;
-      auto cmd = j["cmd"].get<std::string>();
-      if (cmd == "login") {
-         sd->on_login(std::move(j), shared_from_this());
-      } else if (cmd == "create_group") {
-         sd->on_create_group(std::move(j), shared_from_this());
-      } else if (cmd == "join_group") {
-         sd->on_join_group(std::move(j), shared_from_this());
-      } else if (cmd == "send_group_msg") {
-         sd->on_group_msg(std::move(j), shared_from_this());
-      } else {
-         std::cerr << "Server: Unknown command " << cmd << std::endl;
-      }
+      sd->on_message(std::move(j), shared_from_this());
    } catch (...) {
       std::cerr << "Server: Invalid json." << std::endl;
    }

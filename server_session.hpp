@@ -38,4 +38,3 @@ public:
    void write(std::string msg);
 };
 
-

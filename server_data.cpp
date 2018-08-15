@@ -1,6 +1,24 @@
 #include "server_data.hpp"
 #include "server_session.hpp"
 
+void
+server_data::on_message(json j, std::shared_ptr<server_session> session)
+{
+   //std::cout << j << std::endl;
+   auto cmd = j["cmd"].get<std::string>();
+   if (cmd == "login") {
+      on_login(std::move(j), session);
+   } else if (cmd == "create_group") {
+      on_create_group(std::move(j), session);
+   } else if (cmd == "join_group") {
+      on_join_group(std::move(j), session);
+   } else if (cmd == "send_group_msg") {
+      on_group_msg(std::move(j), session);
+   } else {
+      std::cerr << "Server: Unknown command " << cmd << std::endl;
+   }
+}
+
 void server_data::on_login(json j, std::shared_ptr<server_session> s)
 {
    auto tel = j["tel"].get<std::string>();
@@ -94,14 +112,12 @@ void server_data::on_create_group(json j, std::shared_ptr<server_session> s)
       return;
    }
 
-   users[owner].store_session(s);
-
-   // We can proceed and allocate the group.
    auto idx = groups.allocate();
    groups[idx].set_owner(owner);
    groups[idx].set_info(std::move(info));
+   groups[idx].add_member(owner);
 
-   // Updates the user with his new group.
+   users[owner].store_session(s);
    users[owner].add_group(idx);
 
    json resp;

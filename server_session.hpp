@@ -29,7 +29,6 @@ private:
    void on_write( boost::system::error_code ec
                 , std::size_t bytes_transferred);
 
-   void create_group_handler(json j);
    void send_group_msg_handler(json j);
 
 public:

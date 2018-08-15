@@ -70,7 +70,7 @@ void server_session::on_read( boost::system::error_code ec
       if (cmd == "login") {
          sd->on_login(std::move(j), shared_from_this());
       } else if (cmd == "create_group") {
-         create_group_handler(std::move(j));
+         sd->on_create_group(std::move(j), shared_from_this());
       } else if (cmd == "join_group") {
          sd->on_join_group(std::move(j), shared_from_this());
       } else if (cmd == "send_group_msg") {
@@ -97,29 +97,6 @@ void server_session::send_group_msg_handler(json j)
 
    // TODO: use return type.
    sd->send_group_msg(bc.dump(), to);
-}
-
-void server_session::create_group_handler(json j)
-{
-   auto from = j["from"].get<int>();
-   group_info info = j["info"].get<group_info>();
-   auto idx = sd->create_group(from, info);
-
-   if (idx == -1) {
-      json resp;
-      resp["cmd"] = "create_group_ack";
-      resp["result"] = "fail";
-      write(resp.dump());
-      return;
-   }
-
-   json resp;
-   resp["cmd"] = "create_group_ack";
-   resp["result"] = "ok";
-   resp["group_idx"] = idx;
-
-   write(resp.dump());
-
 }
 
 void server_session::write(std::string msg)

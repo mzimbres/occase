@@ -29,9 +29,7 @@ public:
    // s:        Web socket session.
    void on_login(json j, std::shared_ptr<server_session> s);
 
-   // Creates a new group for the specified owner and returns its
-   // index.
-   index_type create_group(index_type owner, group_info info);
+   void on_create_group(json j, std::shared_ptr<server_session> s);
 
    // Removes the group and updates the owner.
    group remove_group(index_type idx);

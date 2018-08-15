@@ -56,16 +56,25 @@ int server_data::send_group_msg(std::string const& msg, index_type to) const
    return 1;
 }
 
-index_type server_data::create_group(index_type owner, group_info info)
+void server_data::on_create_group(json j, std::shared_ptr<server_session> s)
 {
+   auto owner = j["from"].get<int>();
+   auto info = j["info"].get<group_info>();
+
    // Before allocating a new group it is a good idea to check if
    // the owner passed is at least in a valid range.
    if (!users.is_valid_index(owner)) {
       // This is a non-existing user. Perhaps the json command was
       // sent with the wrong information signaling a logic error in
       // the app.
-      return static_cast<index_type>(-1);
+      json resp;
+      resp["cmd"] = "create_group_ack";
+      resp["result"] = "fail";
+      s->write(resp.dump());
+      return;
    }
+
+   users[owner].store_session(s);
 
    // We can proceed and allocate the group.
    auto idx = groups.allocate();
@@ -75,7 +84,12 @@ index_type server_data::create_group(index_type owner, group_info info)
    // Updates the user with his new group.
    users[owner].add_group(idx);
 
-   return idx;
+   json resp;
+   resp["cmd"] = "create_group_ack";
+   resp["result"] = "ok";
+   resp["group_idx"] = idx;
+
+   users[owner].send_msg(resp.dump());
 }
 
 group server_data::remove_group(index_type idx)

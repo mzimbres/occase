@@ -32,6 +32,7 @@ void server_data::on_login(json j, std::shared_ptr<server_session> s)
    // exception is thrown we will no release new_user_idx back to the
    // usrs array causing a leak. We have to eleaborate some way to use
    // RAII.
+
    users[new_user_idx].store_session(s);
 
    json resp;
@@ -42,18 +43,37 @@ void server_data::on_login(json j, std::shared_ptr<server_session> s)
    users[new_user_idx].send_msg(resp.dump());
 }
 
-int server_data::send_group_msg(std::string const& msg, index_type to) const
+void
+server_data::on_group_msg(json j, std::shared_ptr<server_session> s)
 {
+   auto to = j["to"].get<int>();
+
    if (!groups.is_valid_index(to)) {
+      // This is a non-existing group. Perhaps the json command was
+      // sent with the wrong information signaling a logic error in
+      // the app.
+
+      // TODO: Return an ack with error.
+      return;
+   }
+
+   auto from = j["from"].get<int>();
+   if (!users.is_valid_index(from)) {
       // This is a non-existing user. Perhaps the json command was
       // sent with the wrong information signaling a logic error in
       // the app.
-      return -1;
+
+      // TODO: Return an ack with error.
+      return;
    }
 
-   // Now we broadcast.
-   groups[to].broadcast_msg(std::move(msg), users);
-   return 1;
+   users[from].store_session(s);
+
+   json resp;
+   resp["cmd"] = "message";
+   resp["message"] = j["msg"].get<std::string>();
+
+   groups[to].broadcast_msg(resp.dump(), users);
 }
 
 void server_data::on_create_group(json j, std::shared_ptr<server_session> s)

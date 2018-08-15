@@ -29,8 +29,6 @@ private:
    void on_write( boost::system::error_code ec
                 , std::size_t bytes_transferred);
 
-   void send_group_msg_handler(json j);
-
 public:
    explicit
    server_session( tcp::socket socket

@@ -39,6 +39,6 @@ public:
 
    void on_join_group(json j, std::shared_ptr<server_session> session);
 
-   int send_group_msg(std::string const& msg, index_type to) const;
+   void on_group_msg(json j, std::shared_ptr<server_session> session);
 };
 

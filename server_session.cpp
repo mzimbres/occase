@@ -74,7 +74,7 @@ void server_session::on_read( boost::system::error_code ec
       } else if (cmd == "join_group") {
          sd->on_join_group(std::move(j), shared_from_this());
       } else if (cmd == "send_group_msg") {
-         send_group_msg_handler(std::move(j));
+         sd->on_group_msg(std::move(j), shared_from_this());
       } else {
          std::cerr << "Server: Unknown command " << cmd << std::endl;
       }
@@ -83,20 +83,6 @@ void server_session::on_read( boost::system::error_code ec
    }
 
    do_read();
-}
-
-void server_session::send_group_msg_handler(json j)
-{
-   //auto from = j["from"].get<int>();
-   auto to = j["to"].get<int>();
-   auto msg = j["msg"].get<std::string>();
-
-   json bc;
-   bc["cmd"] = "message";
-   bc["message"] = msg;
-
-   // TODO: use return type.
-   sd->send_group_msg(bc.dump(), to);
 }
 
 void server_session::write(std::string msg)

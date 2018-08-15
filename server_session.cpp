@@ -62,15 +62,13 @@ void server_session::on_read( boost::system::error_code ec
    try {
       std::stringstream ss;
       ss << boost::beast::buffers(buffer.data());
-      //auto str = ss.str();
-      //std::cout << str << std::endl;
       json j;
       ss >> j;
 
       //std::cout << j << std::endl;
       auto cmd = j["cmd"].get<std::string>();
       if (cmd == "login") {
-         login_handler(std::move(j));
+         sd->on_login(std::move(j), shared_from_this());
       } else if (cmd == "create_group") {
          create_group_handler(std::move(j));
       } else if (cmd == "join_group") {
@@ -122,22 +120,6 @@ void server_session::create_group_handler(json j)
 
    write(resp.dump());
 
-}
-
-void server_session::login_handler(json j)
-{
-   auto name = j["name"].get<std::string>();
-   auto tel = j["tel"].get<std::string>();
-
-   json resp;
-   resp["cmd"] = "login_ack";
-   resp["result"] = "ok";
-   resp["user_idx"] = sd->add_user(tel, shared_from_this());
-
-   std::cout << "New login from " << name << " " << tel
-             << std::endl;
-
-   write(resp.dump());
 }
 
 void server_session::write(std::string msg)

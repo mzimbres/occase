@@ -27,13 +27,7 @@ public:
    //
    // id:       User telephone.
    // s:        Web socket session.
-   // return:   Index in the users vector that we will use to refer to
-   //           him without having to perform searches. This is what
-   //           we will return to the user to be stored in his app.
-   index_type add_user( id_type id
-                      , std::shared_ptr<server_session> s);
-
-   // TODO: update_user_contacts.
+   void on_login(json j, std::shared_ptr<server_session> s);
 
    // Creates a new group for the specified owner and returns its
    // index.

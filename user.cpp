@@ -37,3 +37,12 @@ void user::send_msg(std::string msg) const
    }
 }
 
+void user::store_session(std::shared_ptr<server_session> s)
+{
+   // TODO: Makes sure that our session object stops existing when the
+   // client cannot be reached anymore. It may be safer to simply set
+   // the connection every time.
+   if (session.use_count() == 0)
+      session = s;
+}
+

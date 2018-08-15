@@ -1,12 +1,16 @@
 #include "server_data.hpp"
 #include "server_session.hpp"
 
-index_type
-server_data::add_user( id_type id
-                     , std::shared_ptr<server_session> session)
+void server_data::on_login(json j, std::shared_ptr<server_session> s)
 {
+   auto tel = j["tel"].get<std::string>();
+
+   auto name = j["name"].get<std::string>();
+   std::cout << "New login from " << name << " " << tel
+             << std::endl;
+
    index_type new_user_idx = -1;
-   auto new_user = id_to_idx_map.insert({id, {}});
+   auto new_user = id_to_idx_map.insert({tel, {}});
    if (!new_user.second) {
       // The user already exists in the system. This case can be
       // triggered by some conditions
@@ -24,11 +28,18 @@ server_data::add_user( id_type id
       new_user_idx = users.allocate();
    }
 
-   // Set users websocket session.
-   if (!users[new_user_idx].has_session())
-      users[new_user_idx].set_session(session);
+   // TODO: The following piece of code is very critical, if an
+   // exception is thrown we will no release new_user_idx back to the
+   // usrs array causing a leak. We have to eleaborate some way to use
+   // RAII.
+   users[new_user_idx].store_session(s);
 
-   return new_user_idx;
+   json resp;
+   resp["cmd"] = "login_ack";
+   resp["result"] = "ok";
+   resp["user_idx"] = new_user_idx;
+
+   users[new_user_idx].send_msg(resp.dump());
 }
 
 int server_data::send_group_msg(std::string const& msg, index_type to) const
@@ -129,7 +140,7 @@ server_data::on_join_group(json j, std::shared_ptr<server_session> session)
    }
 
    // For safety we save the connection in case it expired.
-   users[from].set_session(session);
+   users[from].store_session(session);
    groups[gid].add_member(from);
 
    json resp;

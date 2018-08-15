@@ -55,9 +55,7 @@ public:
    // Removes group owned by this user from his list of groups.
    void remove_group(index_type group);
    void add_group(index_type gid);
-   auto has_session() const {return session.use_count() != 0;} 
-   void set_session(std::shared_ptr<server_session> s)
-   {session = s;}
+   void store_session(std::shared_ptr<server_session> s);
    void send_msg(std::string msg) const;
 };
 

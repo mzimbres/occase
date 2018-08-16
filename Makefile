@@ -11,7 +11,7 @@ CPPFLAGS=-I$(BOOST_INCLUDE) -I$(JSON_INCLUDE) \
 CPP=g++
 
 FILES=user.hpp group.hpp config.hpp server_data.hpp \
-      server_session.hpp client_session.hpp
+      server_session.hpp client_session.hpp grow_only_vector.hpp
 
 LIBS=-lpthread
 

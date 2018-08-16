@@ -13,13 +13,17 @@ class server_session;
 
 class server_data {
 private:
-   grow_only_vector<group> groups;
    grow_only_vector<user> users;
+   grow_only_vector<group> groups;
 
    // May grow up to millions of users.
    std::unordered_map<id_type, index_type> id_to_idx_map;
 
 public:
+   server_data(int users_size, int groups_size)
+   : users(users_size)
+   , groups(groups_size)
+   {}
 
    // This function is used to add a new user when he first installs
    // the app and sends the first message to the server.  It basically

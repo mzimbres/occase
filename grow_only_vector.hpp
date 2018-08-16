@@ -21,37 +21,42 @@ private:
    std::vector<T> items;
 
 public:
-   reference operator[](size_type i)
+   grow_only_vector(int size)
+   : items(size)
+   {
+      while (size-- != 0)
+         avail.push(size);
+   }
+
+   reference operator[](size_type i) noexcept
    { return items[i]; };
 
-   const_reference operator[](size_type i) const
+   const_reference operator[](size_type i) const noexcept
    { return items[i]; };
 
    // Returns the index of an element int the group that is free
    // for use.
-   auto allocate()
+   auto allocate() noexcept
    {
-      if (avail.empty()) {
-         auto size = items.size();
-         items.push_back({});
-         return static_cast<size_type>(size);
-      }
+      if (avail.empty())
+         return static_cast<size_type>(-1);
 
       auto i = avail.top();
       avail.pop();
       return i;
    }
 
-   void deallocate(size_type idx)
+   // TODO: Check out if we can make this noexcept since it begins
+   // with its maximum size on construction.
+   void deallocate(size_type idx) noexcept
    {
       avail.push(idx);
    }
 
    auto is_valid_index(size_type idx) const noexcept
    {
-      return idx >= 0
+      return idx >= static_cast<size_type>(0)
           && idx < static_cast<size_type>(items.size());
    }
 };
-
 

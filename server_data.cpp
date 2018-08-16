@@ -112,6 +112,7 @@ void server_data::on_create_group(json j, std::shared_ptr<server_session> s)
       return;
    }
 
+   // BUG: Make sure idx is not -1 and return error.
    auto idx = groups.allocate();
    groups[idx].set_owner(owner);
    groups[idx].set_info(std::move(info));

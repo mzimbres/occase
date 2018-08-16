@@ -34,10 +34,11 @@ private:
 
 public:
    listener( boost::asio::io_context& ioc
-           , tcp::endpoint endpoint)
+           , tcp::endpoint endpoint
+           , std::shared_ptr<server_data> sd_)
    : acceptor(ioc)
    , socket(ioc)
-   , sd(std::make_shared<server_data>())
+   , sd(sd_)
    {
       boost::system::error_code ec;
 
@@ -110,8 +111,16 @@ int main(int argc, char* argv[])
 
    boost::asio::io_context ioc {threads};
 
-   std::make_shared<listener>(ioc, tcp::endpoint {address, port})->run();
+   
+   auto users_size = 10;
+   auto groups_size = 10;
 
+   auto sd = std::make_shared<server_data>(users_size, groups_size);
+
+   auto lt = std::make_shared<listener>( ioc , tcp::endpoint {address, port}
+                                       , sd);
+
+   lt->run();
    ioc.run();
    return EXIT_SUCCESS;
 }

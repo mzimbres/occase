@@ -55,6 +55,7 @@ public:
    void create_group();
    void join_group();
    void send_group_msg(std::string msg);
+   void send_user_msg(std::string msg);
    void exit();
    void run();
 };

@@ -42,6 +42,8 @@ public:
 
    void on_group_msg(json j, std::shared_ptr<server_session> session);
 
+   void on_user_msg(json j, std::shared_ptr<server_session> session);
+
    void on_message(json j, std::shared_ptr<server_session> session);
 };
 

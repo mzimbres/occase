@@ -170,6 +170,17 @@ void client_session::send_group_msg(std::string msg)
    send_msg(j.dump());
 }
 
+void client_session::send_user_msg(std::string msg)
+{
+   json j;
+   j["cmd"] = "send_user_msg";
+   j["from"] = id;
+   j["to"] = 0;
+   j["msg"] = msg;
+
+   send_msg(j.dump());
+}
+
 void client_session::exit()
 {
    auto handler = [p = shared_from_this()]()

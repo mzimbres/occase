@@ -14,6 +14,8 @@ server_data::on_message(json j, std::shared_ptr<server_session> session)
       on_join_group(std::move(j), session);
    } else if (cmd == "send_group_msg") {
       on_group_msg(std::move(j), session);
+   } else if (cmd == "send_user_msg") {
+      on_user_msg(std::move(j), session);
    } else {
       std::cerr << "Server: Unknown command " << cmd << std::endl;
    }
@@ -64,6 +66,15 @@ void server_data::on_login(json j, std::shared_ptr<server_session> s)
 void
 server_data::on_group_msg(json j, std::shared_ptr<server_session> s)
 {
+   auto from = j["from"].get<int>();
+   if (!users.is_valid_index(from)) {
+      // This is a non-existing user. Perhaps the json command was
+      // sent with the wrong information signaling a logic error in
+      // the app.
+      // TODO: Decide what to do here.
+      return;
+   }
+
    auto to = j["to"].get<int>();
 
    if (!groups.is_valid_index(to)) {
@@ -71,17 +82,11 @@ server_data::on_group_msg(json j, std::shared_ptr<server_session> s)
       // sent with the wrong information signaling a logic error in
       // the app.
 
-      // TODO: Return an ack with error.
-      return;
-   }
-
-   auto from = j["from"].get<int>();
-   if (!users.is_valid_index(from)) {
-      // This is a non-existing user. Perhaps the json command was
-      // sent with the wrong information signaling a logic error in
-      // the app.
-
-      // TODO: Return an ack with error.
+      json resp;
+      resp["cmd"] = "message_ack";
+      resp["result"] = "fail";
+      resp["reason"] = "Non existing group";
+      s->write(resp.dump());
       return;
    }
 
@@ -94,10 +99,40 @@ server_data::on_group_msg(json j, std::shared_ptr<server_session> s)
    groups[to].broadcast_msg(resp.dump(), users);
 }
 
+void 
+server_data::on_user_msg(json j, std::shared_ptr<server_session> s)
+{
+   auto from = j["from"].get<int>();
+   if (!users.is_valid_index(from)) {
+      // This is a non-existing user. Perhaps the json command was
+      // sent with the wrong information signaling a logic error in
+      // the app.
+      // TODO: Decide what to do here.
+      return;
+   }
+
+   auto to = j["to"].get<int>();
+
+   if (!users.is_valid_index(to)) {
+      // This is a non-existing user. Perhaps the json command was
+      // sent with the wrong information signaling a logic error in
+      // the app.
+      // TODO: Decide what to do here.
+      return;
+   }
+
+   users[from].store_session(s);
+
+   json resp;
+   resp["cmd"] = "message";
+   resp["message"] = j["msg"].get<std::string>();
+
+   users[to].send_msg(resp.dump());
+}
+
 void server_data::on_create_group(json j, std::shared_ptr<server_session> s)
 {
    auto owner = j["from"].get<int>();
-   auto info = j["info"].get<group_info>();
 
    // Before allocating a new group it is a good idea to check if
    // the owner passed is at least in a valid range.
@@ -108,17 +143,32 @@ void server_data::on_create_group(json j, std::shared_ptr<server_session> s)
       json resp;
       resp["cmd"] = "create_group_ack";
       resp["result"] = "fail";
-      s->write(resp.dump());
+      //s->write(resp.dump());
       return;
    }
 
-   // BUG: Make sure idx is not -1 and return error.
+   users[owner].store_session(s);
+
    auto idx = groups.allocate();
+   if (idx == -1) {
+      // We run out of memory in this server and this group must be
+      // created else where. This situation must be thought carefully
+      // I still donot know if this can happen. If so many groups will
+      // ever be created.
+
+      json resp;
+      resp["cmd"] = "create_group_ack";
+      resp["result"] = "fail";
+      resp["reason"] = "Out of memory";
+      //users[owner].send_msg(resp.dump());
+      return;
+   }
+
+   auto info = j["info"].get<group_info>();
    groups[idx].set_owner(owner);
    groups[idx].set_info(std::move(info));
    groups[idx].add_member(owner);
 
-   users[owner].store_session(s);
    users[owner].add_group(idx);
 
    json resp;
@@ -174,24 +224,31 @@ bool server_data::change_group_ownership( index_type from, index_type to
 }
 
 void
-server_data::on_join_group(json j, std::shared_ptr<server_session> session)
+server_data::on_join_group(json j, std::shared_ptr<server_session> s)
 {
    auto from = j["from"].get<int>();
-   auto gid = j["group_idx"].get<int>();
-
-   const auto b1 = groups.is_valid_index(gid);
-   const auto b2 = users.is_valid_index(from);
-
-   if (!b1 || !b2) {
+   if (!users.is_valid_index(from)) {
       json resp;
       resp["cmd"] = "join_group_ack";
       resp["result"] = "fail";
-      session->write(resp.dump());
+      resp["reason"] = "THIS SHOULD NOT HAPPEN: Invalid user.";
+      //s->write(resp.dump());
       return;
    }
 
-   // For safety we save the connection in case it expired.
-   users[from].store_session(session);
+   users[from].store_session(s);
+
+   auto gid = j["group_idx"].get<int>();
+
+   if (!groups.is_valid_index(gid)) {
+      json resp;
+      resp["cmd"] = "join_group_ack";
+      resp["result"] = "fail";
+      resp["reason"] = "THIS SHOULD NOT HAPPEN: Invalid group.";
+      //s->write(resp.dump());
+      return;
+   }
+
    groups[gid].add_member(from);
 
    json resp;

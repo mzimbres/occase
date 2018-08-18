@@ -16,7 +16,8 @@ struct prompt_usr {
                    << "  1: Create group.\n"
                    << "  2: Join group.\n"
                    << "  3: Send group message.\n"
-                   << "  4: Exit.\n"
+                   << "  4: Send user message.\n"
+                   << "  5: Exit.\n"
                    << std::endl;
          auto cmd = -1;
          std::cin >> cmd;
@@ -33,7 +34,12 @@ struct prompt_usr {
          }
          
          if (cmd == 3) {
-            p->send_group_msg("Fala mulecada.");
+            p->send_group_msg("Mensagem ao grupo.");
+            continue;
+         }
+
+         if (cmd == 4) {
+            p->send_user_msg("Mensagem particular a um membro.");
             continue;
          }
          

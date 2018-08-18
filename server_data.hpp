@@ -29,21 +29,16 @@ public:
    // the app and sends the first message to the server.  It basically
    // allocates user entries internally.
    index_type on_login(json j, std::shared_ptr<server_session> s);
-
    index_type on_create_group(json j, std::shared_ptr<server_session> s);
 
-   // Removes the group and updates the owner.
    group remove_group(index_type idx);
-
    bool change_group_ownership( index_type from, index_type to
                               , index_type gid);
-
    index_type on_join_group(json j, std::shared_ptr<server_session> session);
-
    index_type on_group_msg(json j, std::shared_ptr<server_session> session);
-
    index_type on_user_msg(json j, std::shared_ptr<server_session> session);
-
    index_type on_read(json j, std::shared_ptr<server_session> session);
+
+   void on_write(index_type user_idx);
 };
 

@@ -177,7 +177,7 @@ index_type server_data::on_create_group(json j, std::shared_ptr<server_session> 
       resp["cmd"] = "create_group_ack";
       resp["result"] = "fail";
       resp["reason"] = "Out of memory";
-      //users[from].send_msg(resp.dump());
+      users[from].send_msg(resp.dump());
       return from;
    }
 
@@ -256,11 +256,21 @@ server_data::on_join_group(json j, std::shared_ptr<server_session> s)
 
    if (!groups.is_valid_index(gid)) {
       // TODO: Clarify how this could happen.
+      json resp;
+      resp["cmd"] = "join_group_ack";
+      resp["result"] = "fail";
+      resp["reason"] = "Invalid group id.";
+      users[from].send_msg(resp.dump());
       return from;
    }
 
    if (!groups[gid].is_active()) {
       // TODO: Clarify how this could happen.
+      json resp;
+      resp["cmd"] = "join_group_ack";
+      resp["result"] = "fail";
+      resp["reason"] = "Group not active.";
+      users[from].send_msg(resp.dump());
       return from;
    }
 
@@ -273,5 +283,15 @@ server_data::on_join_group(json j, std::shared_ptr<server_session> s)
 
    users[from].send_msg(resp.dump());
    return from;
+}
+
+void server_data::on_write(index_type user_idx)
+{
+   if (!users.is_valid_index(user_idx)) {
+      // TODO: Clarify how this could happen.
+      return;
+   }
+
+   users[user_idx].on_write();
 }
 

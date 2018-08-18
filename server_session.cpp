@@ -98,5 +98,6 @@ void server_session::on_write( boost::system::error_code ec
 
    // Clear the buffer
    buffer.consume(buffer.size());
+   sd->on_write(user_idx);
 }
 

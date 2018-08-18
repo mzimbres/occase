@@ -1,6 +1,7 @@
 #pragma once
 
 #include <set>
+#include <queue>
 #include <vector>
 #include <memory>
 
@@ -45,6 +46,8 @@ private:
    // User websocket session.
    std::weak_ptr<server_session> session;
 
+   std::queue<std::string> queue;
+
 public:
    user() = default;
    ~user() = default;
@@ -59,6 +62,7 @@ public:
    void remove_group(index_type group);
    void add_group(index_type gid);
    void store_session(std::shared_ptr<server_session> s);
-   void send_msg(std::string msg) const;
+   void send_msg(std::string msg);
+   void on_write();
 };
 

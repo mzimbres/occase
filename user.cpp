@@ -28,15 +28,6 @@ void user::add_group(index_type gid)
    own_groups.push_back(gid);
 }
 
-void user::send_msg(std::string msg) const
-{
-   if (auto s = session.lock()) {
-      s->write(std::move(msg));
-   } else {
-      std::cerr << "Session is expired." << std::endl;
-   }
-}
-
 void user::store_session(std::shared_ptr<server_session> s)
 {
    // TODO: Makes sure that our session object stops existing when the
@@ -44,5 +35,37 @@ void user::store_session(std::shared_ptr<server_session> s)
    // the connection every time.
    if (session.use_count() == 0)
       session = s;
+}
+
+void user::send_msg(std::string msg)
+{
+   const auto is_empty = queue.empty();
+   queue.push(std::move(msg));
+
+   if (is_empty) {
+      if (auto s = session.lock()) {
+         s->write(queue.front());
+         return;
+      }
+
+      // TODO: Decide what to do here.
+      std::cerr << "Session is expired." << std::endl;
+   }
+}
+
+void user::on_write()
+{
+   queue.pop();
+
+   if (queue.empty())
+      return; // No more message to send to the client.
+
+   if (auto s = session.lock()) {
+      s->write(queue.front());
+      return;
+   }
+
+   // TODO: Decide what to do here.
+   std::cerr << "Session is expired." << std::endl;
 }
 

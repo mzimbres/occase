@@ -99,6 +99,6 @@ public:
    }
 
    void broadcast_msg( std::string msg
-                      , grow_only_vector<user> const& users) const;
+                     , grow_only_vector<user>& users) const;
 };
 

@@ -58,9 +58,15 @@ int main(int argc, char* argv[])
       return EXIT_FAILURE;
    }
 
+   client_options op
+   { {"127.0.0.1"}
+   , {"8080"}
+   , argv[1]
+   };
+
    boost::asio::io_context ioc;
 
-   auto p = std::make_shared<client_session>(ioc, argv[1]);
+   auto p = std::make_shared<client_session>(ioc, std::move(op));
 
    std::thread thr {prompt_usr {p}};
 

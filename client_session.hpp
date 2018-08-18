@@ -13,6 +13,12 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/steady_timer.hpp>
 
+struct client_options {
+   std::string host;
+   std::string port;
+   std::string tel;
+};
+
 class client_session : public std::enable_shared_from_this<client_session> {
 private:
    using work_type =
@@ -23,11 +29,10 @@ private:
    boost::asio::steady_timer timer;
    websocket::stream<tcp::socket> ws;
    boost::beast::multi_buffer buffer;
-   std::string host {"127.0.0.1"};
-   char const* port = "8080";
-   std::string text;
    work_type work;
-   std::string tel;
+   std::string text;
+
+   client_options op;
    int id = -1;
    std::vector<int> groups;
 
@@ -55,7 +60,8 @@ private:
 
 public:
    explicit
-   client_session(boost::asio::io_context& ioc, std::string tel_);
+   client_session( boost::asio::io_context& ioc
+                 , client_options op_);
    void login();
    void create_group();
    void join_group();

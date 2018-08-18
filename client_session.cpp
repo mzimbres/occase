@@ -15,6 +15,15 @@ void fail(boost::system::error_code ec, char const* what)
 
 } // Anonymous.
 
+client_session::client_session( boost::asio::io_context& ioc
+                              , client_options op_)
+: resolver(ioc)
+, timer(ioc)
+, ws(ioc)
+, work(boost::asio::make_work_guard(ioc))
+, op(std::move(op_))
+{ }
+
 void client_session::write(std::string msg)
 {
    text = std::move(msg);
@@ -69,7 +78,7 @@ client_session::on_connect( boost::system::error_code ec
    { p->on_handshake(ec, results); };
 
    // Perform the websocket handshake
-   ws.async_handshake(host, "/", handler);
+   ws.async_handshake(op.host, "/", handler);
 }
 
 void
@@ -168,15 +177,6 @@ void client_session::send_msg(std::string msg)
    boost::asio::post(resolver.get_executor(), handler);
 }
 
-client_session::client_session( boost::asio::io_context& ioc
-                              , std::string tel_)
-: resolver(ioc)
-, timer(ioc)
-, ws(ioc)
-, work(boost::asio::make_work_guard(ioc))
-, tel(std::move(tel_))
-{ }
-
 void client_session::send_group_msg(std::string msg)
 {
    json j;
@@ -213,7 +213,7 @@ void client_session::run()
    { p->on_resolve(ec, res); };
 
    // Look up the domain name
-   resolver.async_resolve(host, port, handler);
+   resolver.async_resolve(op.host, op.port, handler);
 }
 
 void client_session::login()
@@ -221,7 +221,7 @@ void client_session::login()
    json j;
    j["cmd"] = "login";
    j["name"] = "Marcelo Zimbres";
-   j["tel"] = tel;
+   j["tel"] = op.tel;
 
    send_msg(j.dump());
 }

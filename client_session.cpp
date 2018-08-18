@@ -286,8 +286,15 @@ void client_session::create_group_ack_handler(json j)
    if (op.interative)
       return;
 
-   if (op.create_n_groups > 0)
-      create_group();
+   if (op.create_n_groups <= 0)
+      return;
+
+   timer.expires_after(op.create_groups_int);
+
+   auto handler = [p = shared_from_this()](auto ec)
+   { p->create_group(); };
+
+   timer.async_wait(handler);
 }
 
 void client_session::join_group_ack_handler(json j)

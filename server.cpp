@@ -110,7 +110,6 @@ int main(int argc, char* argv[])
    auto const threads = 1;
 
    boost::asio::io_context ioc {threads};
-
    
    auto users_size = 100;
    auto groups_size = 100;

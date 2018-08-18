@@ -22,6 +22,8 @@ struct client_options {
    bool interative;
    int create_n_groups;
    std::chrono::milliseconds create_groups_int;
+   int number_of_joins;
+   std::chrono::milliseconds joins_interval;
 };
 
 class client_session : public std::enable_shared_from_this<client_session> {

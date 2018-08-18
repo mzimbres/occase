@@ -64,7 +64,10 @@ void server_session::on_read( boost::system::error_code ec
       ss << boost::beast::buffers(buffer.data());
       json j;
       ss >> j;
-      sd->on_message(std::move(j), shared_from_this());
+      user_idx = sd->on_read(std::move(j), shared_from_this());
+      if (user_idx == -1)
+         return;
+
    } catch (...) {
       std::cerr << "Server: Invalid json." << std::endl;
    }

@@ -1,27 +1,28 @@
 #include "server_data.hpp"
 #include "server_session.hpp"
 
-void
-server_data::on_message(json j, std::shared_ptr<server_session> session)
+index_type
+server_data::on_read(json j, std::shared_ptr<server_session> session)
 {
    //std::cout << j << std::endl;
    auto cmd = j["cmd"].get<std::string>();
    if (cmd == "login") {
-      on_login(std::move(j), session);
+      return on_login(std::move(j), session);
    } else if (cmd == "create_group") {
-      on_create_group(std::move(j), session);
+      return on_create_group(std::move(j), session);
    } else if (cmd == "join_group") {
-      on_join_group(std::move(j), session);
+      return on_join_group(std::move(j), session);
    } else if (cmd == "send_group_msg") {
-      on_group_msg(std::move(j), session);
+      return on_group_msg(std::move(j), session);
    } else if (cmd == "send_user_msg") {
-      on_user_msg(std::move(j), session);
+      return on_user_msg(std::move(j), session);
    } else {
       std::cerr << "Server: Unknown command " << cmd << std::endl;
+      return -1;
    }
 }
 
-void server_data::on_login(json j, std::shared_ptr<server_session> s)
+index_type server_data::on_login(json j, std::shared_ptr<server_session> s)
 {
    auto tel = j["tel"].get<std::string>();
 
@@ -48,6 +49,11 @@ void server_data::on_login(json j, std::shared_ptr<server_session> s)
       new_user_idx = users.allocate();
    }
 
+   if (new_user_idx == -1) {
+      // TODO: Send the user a message reporting some error.
+      return -1; // We run out of memory.
+   }
+
    // TODO: The following piece of code is very critical, if an
    // exception is thrown we will no release new_user_idx back to the
    // usrs array causing a leak. We have to eleaborate some way to use
@@ -61,9 +67,10 @@ void server_data::on_login(json j, std::shared_ptr<server_session> s)
    resp["user_idx"] = new_user_idx;
 
    users[new_user_idx].send_msg(resp.dump());
+   return new_user_idx;
 }
 
-void
+index_type
 server_data::on_group_msg(json j, std::shared_ptr<server_session> s)
 {
    auto from = j["from"].get<int>();
@@ -72,7 +79,7 @@ server_data::on_group_msg(json j, std::shared_ptr<server_session> s)
       // sent with the wrong information signaling a logic error in
       // the app.
       // TODO: Decide what to do here.
-      return;
+      return -1;
    }
 
    users[from].store_session(s);
@@ -89,13 +96,13 @@ server_data::on_group_msg(json j, std::shared_ptr<server_session> s)
       resp["result"] = "fail";
       resp["reason"] = "Non existing group";
       s->write(resp.dump());
-      return;
+      return from;
    }
 
    if (!groups[to].is_active()) {
       // TODO: Report back to the user that this groups does no exist
       // anymore.
-      return;
+      return from;
    }
 
    json resp;
@@ -103,9 +110,10 @@ server_data::on_group_msg(json j, std::shared_ptr<server_session> s)
    resp["message"] = j["msg"].get<std::string>();
 
    groups[to].broadcast_msg(resp.dump(), users);
+   return from;
 }
 
-void 
+index_type
 server_data::on_user_msg(json j, std::shared_ptr<server_session> s)
 {
    auto from = j["from"].get<int>();
@@ -114,7 +122,7 @@ server_data::on_user_msg(json j, std::shared_ptr<server_session> s)
       // sent with the wrong information signaling a logic error in
       // the app.
       // TODO: Decide what to do here.
-      return;
+      return -1;
    }
 
    auto to = j["to"].get<int>();
@@ -124,7 +132,7 @@ server_data::on_user_msg(json j, std::shared_ptr<server_session> s)
       // sent with the wrong information signaling a logic error in
       // the app.
       // TODO: Decide what to do here.
-      return;
+      return from;
    }
 
    users[from].store_session(s);
@@ -134,15 +142,16 @@ server_data::on_user_msg(json j, std::shared_ptr<server_session> s)
    resp["message"] = j["msg"].get<std::string>();
 
    users[to].send_msg(resp.dump());
+   return from;
 }
 
-void server_data::on_create_group(json j, std::shared_ptr<server_session> s)
+index_type server_data::on_create_group(json j, std::shared_ptr<server_session> s)
 {
-   auto owner = j["from"].get<int>();
+   auto from = j["from"].get<int>();
 
    // Before allocating a new group it is a good idea to check if
    // the owner passed is at least in a valid range.
-   if (!users.is_valid_index(owner)) {
+   if (!users.is_valid_index(from)) {
       // This is a non-existing user. Perhaps the json command was
       // sent with the wrong information signaling a logic error in
       // the app.
@@ -150,10 +159,12 @@ void server_data::on_create_group(json j, std::shared_ptr<server_session> s)
       resp["cmd"] = "create_group_ack";
       resp["result"] = "fail";
       //s->write(resp.dump());
-      return;
+
+      // TODO: Review what should be returned here.
+      return -1;
    }
 
-   users[owner].store_session(s);
+   users[from].store_session(s);
 
    auto idx = groups.allocate();
    if (idx == -1) {
@@ -166,23 +177,24 @@ void server_data::on_create_group(json j, std::shared_ptr<server_session> s)
       resp["cmd"] = "create_group_ack";
       resp["result"] = "fail";
       resp["reason"] = "Out of memory";
-      //users[owner].send_msg(resp.dump());
-      return;
+      //users[from].send_msg(resp.dump());
+      return from;
    }
 
    auto info = j["info"].get<group_info>();
-   groups[idx].set_owner(owner);
+   groups[idx].set_owner(from);
    groups[idx].set_info(std::move(info));
-   groups[idx].add_member(owner);
+   groups[idx].add_member(from);
 
-   users[owner].add_group(idx);
+   users[from].add_group(idx);
 
    json resp;
    resp["cmd"] = "create_group_ack";
    resp["result"] = "ok";
    resp["group_id"] = idx;
 
-   users[owner].send_msg(resp.dump());
+   users[from].send_msg(resp.dump());
+   return from;
 }
 
 group server_data::remove_group(index_type idx)
@@ -229,13 +241,13 @@ bool server_data::change_group_ownership( index_type from, index_type to
    return true;
 }
 
-void
+index_type
 server_data::on_join_group(json j, std::shared_ptr<server_session> s)
 {
    auto from = j["from"].get<int>();
    if (!users.is_valid_index(from)) {
       // TODO: Clarify how this could happen.
-      return;
+      return -1;
    }
 
    users[from].store_session(s);
@@ -244,12 +256,12 @@ server_data::on_join_group(json j, std::shared_ptr<server_session> s)
 
    if (!groups.is_valid_index(gid)) {
       // TODO: Clarify how this could happen.
-      return;
+      return from;
    }
 
    if (!groups[gid].is_active()) {
       // TODO: Clarify how this could happen.
-      return;
+      return from;
    }
 
    groups[gid].add_member(from);
@@ -260,5 +272,6 @@ server_data::on_join_group(json j, std::shared_ptr<server_session> s)
    resp["info"] = groups[gid].get_info(),
 
    users[from].send_msg(resp.dump());
+   return from;
 }
 

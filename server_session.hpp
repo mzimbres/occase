@@ -29,6 +29,8 @@ private:
    void on_write( boost::system::error_code ec
                 , std::size_t bytes_transferred);
 
+   int user_idx = -1;
+
 public:
    explicit
    server_session( tcp::socket socket

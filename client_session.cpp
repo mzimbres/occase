@@ -272,9 +272,26 @@ void client_session::login_ack_handler(json j)
 void client_session::create_group_ack_handler(json j)
 {
    --op.create_n_groups;
+
    auto res = j["result"].get<std::string>();
    if (res == "fail") {
       std::cout << "Create group failed. " << id << std::endl;
+
+      if (op.interative)
+         return;
+
+      // The creation of groups ended and we can proceed joining
+      // groups.
+      if (op.number_of_joins <= 0)
+         return;
+
+      timer.expires_after(op.joins_interval);
+
+      auto handler = [p = shared_from_this()](auto ec)
+      { p->join_group(); };
+
+      timer.async_wait(handler);
+
       return;
    }
 
@@ -299,14 +316,31 @@ void client_session::create_group_ack_handler(json j)
 
 void client_session::join_group_ack_handler(json j)
 {
+   --op.number_of_joins;
+
    auto res = j["result"].get<std::string>();
-   if (res == "ok") {
-      std::cout << "Joining group successful" << std::endl;
-      std::cout << j << std::endl;
+   if (res == "fail") {
+      std::cout << "Create group failed. " << id << std::endl;
       return;
    }
 
-   std::cout << "Create group failed. " << id << std::endl;
+   std::cout << "Joining group successful" << std::endl;
+   std::cout << j << std::endl;
+
+   if (op.interative)
+      return;
+
+   // The creation of groups ended and we can proceed joining
+   // groups.
+   if (op.number_of_joins <= 0)
+      return;
+
+   timer.expires_after(op.joins_interval);
+
+   auto handler = [p = shared_from_this()](auto ec)
+   { p->join_group(); };
+
+   timer.async_wait(handler);
 }
 
 void client_session::message_handler(json j)

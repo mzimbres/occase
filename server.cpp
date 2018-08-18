@@ -112,8 +112,8 @@ int main(int argc, char* argv[])
    boost::asio::io_context ioc {threads};
 
    
-   auto users_size = 10;
-   auto groups_size = 10;
+   auto users_size = 100;
+   auto groups_size = 100;
 
    auto sd = std::make_shared<server_data>(users_size, groups_size);
 

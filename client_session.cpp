@@ -253,26 +253,41 @@ void client_session::join_group()
 void client_session::login_ack_handler(json j)
 {
    auto res = j["result"].get<std::string>();
-   if (res == "ok") {
-      id = j["user_idx"].get<int>();
-      std::cout << "Id: " << id << std::endl;
+   if (res == "fail") {
+      std::cout << "Login failed. " << id << std::endl;
       return;
    }
 
-   std::cout << "Login failed. " << id << std::endl;
+   id = j["user_idx"].get<int>();
+   std::cout << "Login successfull with Id: " << id << std::endl;
+
+   if (op.interative)
+      return;
+   
+   // We are not in an interative session, so we can proceed and
+   // perform some actions.
+   create_group();
 }
 
 void client_session::create_group_ack_handler(json j)
 {
+   --op.create_n_groups;
    auto res = j["result"].get<std::string>();
-   if (res == "ok") {
-      auto group_idx = j["group_idx"].get<int>();
-      groups.push_back(group_idx);
-      std::cout << "Adding group: " << group_idx << std::endl;
+   if (res == "fail") {
+      std::cout << "Create group failed. " << id << std::endl;
       return;
    }
 
-   std::cout << "Create group failed. " << id << std::endl;
+   auto group_idx = j["group_idx"].get<int>();
+   groups.insert(group_idx);
+   std::cout << "Create groups successfull with id: "
+             << group_idx << std::endl;
+
+   if (op.interative)
+      return;
+
+   if (op.create_n_groups > 0)
+      create_group();
 }
 
 void client_session::join_group_ack_handler(json j)

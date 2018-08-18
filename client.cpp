@@ -59,9 +59,12 @@ int main(int argc, char* argv[])
    }
 
    client_options op
-   { {"127.0.0.1"}
-   , {"8080"}
-   , argv[1]
+   { {"127.0.0.1"}                // Host
+   , {"8080"}                     // Port
+   , argv[1]                      // User telefone
+   , false                        // Sets interative mode.
+   , 10                           // Number of groups to create.
+   , std::chrono::milliseconds{1} // Interval for groups creation.
    };
 
    boost::asio::io_context ioc;

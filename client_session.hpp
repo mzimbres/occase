@@ -2,8 +2,10 @@
 
 #include "config.hpp"
 
+#include <set>
 #include <thread>
 #include <vector>
+#include <chrono>
 #include <sstream>
 #include <functional>
 
@@ -17,6 +19,9 @@ struct client_options {
    std::string host;
    std::string port;
    std::string tel;
+   bool interative;
+   int create_n_groups;
+   std::chrono::milliseconds create_groups_int;
 };
 
 class client_session : public std::enable_shared_from_this<client_session> {
@@ -34,7 +39,7 @@ private:
 
    client_options op;
    int id = -1;
-   std::vector<int> groups;
+   std::set<int> groups;
 
    void write(std::string msg);
    void async_close();

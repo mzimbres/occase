@@ -1,6 +1,8 @@
 #include "client_session.hpp"
 #include "group.hpp"
 
+#include <chrono>
+
 namespace websocket = boost::beast::websocket;
 
 namespace 
@@ -36,26 +38,32 @@ void client_session::on_resolve( boost::system::error_code ec
    if (ec)
       return fail(ec, "resolve");
 
-   auto handler = std::bind(
-            &client_session::on_connect,
-            shared_from_this(),
-            std::placeholders::_1);
-
-   // This does not work, why?
-   //auto handler2 = [p = shared_from_this()](auto ec)
-   //{ p->on_connect(ec); };
-
-   // Make the connection on the IP address we get from a lookup
-   boost::asio::async_connect(
-         ws.next_layer(),
-         results.begin(),
-         results.end(), handler);
+   async_connect(results);
 }
 
-void client_session::on_connect(boost::system::error_code ec)
+void client_session::async_connect(tcp::resolver::results_type results)
 {
-   if (ec)
-      return fail(ec, "connect");
+   std::cout  << "Trying to connect." << std::endl;
+   auto handler = [results, p = shared_from_this()](auto ec, auto Iterator)
+   { p->on_connect(ec, results); };
+
+   boost::asio::async_connect(ws.next_layer(), results.begin(),
+      results.end(), handler);
+}
+
+void
+client_session::on_connect( boost::system::error_code ec
+                          , tcp::resolver::results_type results)
+{
+   if (ec) {
+      timer.expires_after(std::chrono::seconds{1});
+
+      auto handler = [results, p = shared_from_this()](auto ec)
+      { p->async_connect(results); };
+
+      timer.async_wait(handler);
+      return;
+   }
 
    auto handler = [p = shared_from_this()](auto ec)
    { p->on_handshake(ec); };
@@ -154,6 +162,7 @@ void client_session::send_msg(std::string msg)
 client_session::client_session( boost::asio::io_context& ioc
                               , std::string tel_)
 : resolver(ioc)
+, timer(ioc)
 , ws(ioc)
 , work(boost::asio::make_work_guard(ioc))
 , tel(std::move(tel_))

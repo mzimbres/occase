@@ -11,6 +11,7 @@
 #include <boost/beast/websocket.hpp>
 #include <boost/asio/connect.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/steady_timer.hpp>
 
 
 class client_session : public std::enable_shared_from_this<client_session> {
@@ -20,6 +21,7 @@ private:
          boost::asio::io_context::executor_type>;
 
    tcp::resolver resolver;
+   boost::asio::steady_timer timer;
    websocket::stream<tcp::socket> ws;
    boost::beast::multi_buffer buffer;
    std::string host {"127.0.0.1"};
@@ -34,7 +36,8 @@ private:
    void close();
    void on_resolve( boost::system::error_code ec
                   , tcp::resolver::results_type results);
-   void on_connect(boost::system::error_code ec);
+   void on_connect( boost::system::error_code ec
+                  , tcp::resolver::results_type results);
    void on_handshake(boost::system::error_code ec);
    void do_read();
    void on_write( boost::system::error_code ec
@@ -47,6 +50,7 @@ private:
    void create_group_ack_handler(json j);
    void join_group_ack_handler(json j);
    void message_handler(json j);
+   void async_connect(tcp::resolver::results_type results);
 
 public:
    explicit

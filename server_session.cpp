@@ -95,6 +95,5 @@ void server_session::on_write( boost::system::error_code ec
 
    // Clear the buffer
    buffer.consume(buffer.size());
-
 }
 

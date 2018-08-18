@@ -245,7 +245,7 @@ void client_session::join_group()
    json j;
    j["cmd"] = "join_group";
    j["from"] = id;
-   j["group_idx"] = 0;
+   j["group_id"] = 0;
 
    send_msg(j.dump());
 }
@@ -278,10 +278,10 @@ void client_session::create_group_ack_handler(json j)
       return;
    }
 
-   auto group_idx = j["group_idx"].get<int>();
-   groups.insert(group_idx);
+   auto group_id = j["group_id"].get<int>();
+   groups.insert(group_id);
    std::cout << "Create groups successfull with id: "
-             << group_idx << std::endl;
+             << group_id << std::endl;
 
    if (op.interative)
       return;

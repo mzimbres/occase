@@ -52,6 +52,9 @@ public:
    void add_friend(index_type uid);
    void remove_friend(index_type uid);
 
+   // TODO: What to do? Should return true only if user still has an
+   // account.
+   auto is_active() const {return true;}
    // Removes group owned by this user from his list of groups.
    void remove_group(index_type group);
    void add_group(index_type gid);

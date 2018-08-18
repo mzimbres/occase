@@ -75,6 +75,8 @@ public:
    void set_info(group_info info_) {info = std::move(info_);}
    auto const& get_info() const noexcept {return info;}
 
+   auto is_active() const noexcept {return owner != -1;}
+
    auto is_owned_by(index_type uid) const noexcept
    {
       return uid > 0 && owner == uid;

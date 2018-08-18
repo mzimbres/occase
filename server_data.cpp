@@ -75,6 +75,8 @@ server_data::on_group_msg(json j, std::shared_ptr<server_session> s)
       return;
    }
 
+   users[from].store_session(s);
+
    auto to = j["to"].get<int>();
 
    if (!groups.is_valid_index(to)) {
@@ -90,7 +92,11 @@ server_data::on_group_msg(json j, std::shared_ptr<server_session> s)
       return;
    }
 
-   users[from].store_session(s);
+   if (!groups[to].is_active()) {
+      // TODO: Report back to the user that this groups does no exist
+      // anymore.
+      return;
+   }
 
    json resp;
    resp["cmd"] = "message";
@@ -174,7 +180,7 @@ void server_data::on_create_group(json j, std::shared_ptr<server_session> s)
    json resp;
    resp["cmd"] = "create_group_ack";
    resp["result"] = "ok";
-   resp["group_idx"] = idx;
+   resp["group_id"] = idx;
 
    users[owner].send_msg(resp.dump());
 }
@@ -228,24 +234,21 @@ server_data::on_join_group(json j, std::shared_ptr<server_session> s)
 {
    auto from = j["from"].get<int>();
    if (!users.is_valid_index(from)) {
-      json resp;
-      resp["cmd"] = "join_group_ack";
-      resp["result"] = "fail";
-      resp["reason"] = "THIS SHOULD NOT HAPPEN: Invalid user.";
-      //s->write(resp.dump());
+      // TODO: Clarify how this could happen.
       return;
    }
 
    users[from].store_session(s);
 
-   auto gid = j["group_idx"].get<int>();
+   auto gid = j["group_id"].get<int>();
 
    if (!groups.is_valid_index(gid)) {
-      json resp;
-      resp["cmd"] = "join_group_ack";
-      resp["result"] = "fail";
-      resp["reason"] = "THIS SHOULD NOT HAPPEN: Invalid group.";
-      //s->write(resp.dump());
+      // TODO: Clarify how this could happen.
+      return;
+   }
+
+   if (!groups[gid].is_active()) {
+      // TODO: Clarify how this could happen.
       return;
    }
 

@@ -13,7 +13,6 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/steady_timer.hpp>
 
-
 class client_session : public std::enable_shared_from_this<client_session> {
 private:
    using work_type =
@@ -33,17 +32,19 @@ private:
    std::vector<int> groups;
 
    void write(std::string msg);
-   void close();
+   void async_close();
    void on_resolve( boost::system::error_code ec
                   , tcp::resolver::results_type results);
    void on_connect( boost::system::error_code ec
                   , tcp::resolver::results_type results);
-   void on_handshake(boost::system::error_code ec);
-   void do_read();
+   void on_handshake( boost::system::error_code ec
+                    , tcp::resolver::results_type results);
+   void do_read(tcp::resolver::results_type results);
    void on_write( boost::system::error_code ec
                 , std::size_t bytes_transferred);
    void on_read( boost::system::error_code ec
-               , std::size_t bytes_transferred);
+               , std::size_t bytes_transferred
+               , tcp::resolver::results_type results);
    void on_close(boost::system::error_code ec);
    void send_msg(std::string msg);
    void login_ack_handler(json j);

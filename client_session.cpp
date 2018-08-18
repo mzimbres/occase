@@ -24,7 +24,7 @@ void client_session::write(std::string msg)
    ws.async_write(boost::asio::buffer(text), handler);
 }
 
-void client_session::close()
+void client_session::async_close()
 {
    auto handler = [p = shared_from_this()](auto ec)
    { p->on_close(ec); };
@@ -65,26 +65,28 @@ client_session::on_connect( boost::system::error_code ec
       return;
    }
 
-   auto handler = [p = shared_from_this()](auto ec)
-   { p->on_handshake(ec); };
+   auto handler = [p = shared_from_this(), results](auto ec)
+   { p->on_handshake(ec, results); };
 
    // Perform the websocket handshake
    ws.async_handshake(host, "/", handler);
 }
 
-void client_session::on_handshake(boost::system::error_code ec)
+void
+client_session::on_handshake( boost::system::error_code ec
+                            , tcp::resolver::results_type results)
 {
    if (ec)
       return fail(ec, "handshake");
 
-   do_read();
+   do_read(results);
    login();
 }
 
-void client_session::do_read()
+void client_session::do_read(tcp::resolver::results_type results)
 {
-   auto handler = [p = shared_from_this()](auto ec, auto res)
-   { p->on_read(ec, res); };
+   auto handler = [p = shared_from_this(), results](auto ec, auto res)
+   { p->on_read(ec, res, results); };
 
    ws.async_read(buffer, handler);
 }
@@ -99,17 +101,23 @@ void client_session::on_write( boost::system::error_code ec
 }
 
 void client_session::on_read( boost::system::error_code ec
-                            , std::size_t bytes_transferred)
+                            , std::size_t bytes_transferred
+                            , tcp::resolver::results_type results)
 {
    try {
       boost::ignore_unused(bytes_transferred);
 
       if (ec) {
          buffer.consume(buffer.size());
+         std::cout << "Connection lost, trying to reconnect." << std::endl;
 
-         // Insert timer here.
-         do_read();
-         return fail(ec, "read");
+         timer.expires_after(std::chrono::seconds{1});
+
+         auto handler = [results, p = shared_from_this()](auto ec)
+         { p->async_connect(results); };
+
+         timer.async_wait(handler);
+         return;
       }
 
       json j;
@@ -138,7 +146,7 @@ void client_session::on_read( boost::system::error_code ec
       std::cerr << "Error: " << e.what() << std::endl;
    }
 
-   do_read();
+   do_read(results);
 }
 
 void client_session::on_close(boost::system::error_code ec)
@@ -193,7 +201,7 @@ void client_session::send_user_msg(std::string msg)
 void client_session::exit()
 {
    auto handler = [p = shared_from_this()]()
-   { p->close(); };
+   { p->async_close(); };
 
    boost::asio::post(resolver.get_executor(), handler);
 }

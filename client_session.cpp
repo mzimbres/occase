@@ -108,6 +108,7 @@ void client_session::on_read( boost::system::error_code ec
       boost::ignore_unused(bytes_transferred);
 
       if (ec) {
+         fail(ec, "read");
          buffer.consume(buffer.size());
          std::cout << "Connection lost, trying to reconnect." << std::endl;
 

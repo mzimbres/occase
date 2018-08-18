@@ -13,15 +13,20 @@ struct prompt_usr {
    {
       for (;;) {
          std::cout << "Type a command: \n\n"
+                   << "  0: Exit.\n"
                    << "  1: Create group.\n"
                    << "  2: Join group.\n"
                    << "  3: Send group message.\n"
                    << "  4: Send user message.\n"
-                   << "  5: Exit.\n"
                    << std::endl;
          auto cmd = -1;
          std::cin >> cmd;
          std::string str;
+
+         if (cmd == 0) {
+            p->exit();
+            break;
+         }
 
          if (cmd == 1) {
             p->create_group();
@@ -41,11 +46,6 @@ struct prompt_usr {
          if (cmd == 4) {
             p->send_user_msg("Mensagem particular a um membro.");
             continue;
-         }
-         
-         if (cmd == -1) {
-            p->exit();
-            break;
          }
       }
    }

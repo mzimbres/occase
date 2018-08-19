@@ -5,15 +5,8 @@
 
 #include "config.hpp"
 #include "user.hpp"
+#include "json_utils.hpp"
 #include "grow_only_vector.hpp"
-
-struct group_info {
-   std::string title;
-   std::string description;
-};
-
-void to_json(json& j, const group_info& g);
-void from_json(const json& j, group_info& g);
 
 enum class group_membership
 {

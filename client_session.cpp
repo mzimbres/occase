@@ -155,8 +155,12 @@ client_session::on_handshake( boost::system::error_code ec
 
    if (number_of_logins > 0) {
       login();
+      --number_of_dropped_logins;
       return;
    }
+
+   if (number_of_dropped_logins != 0)
+      std::cout << "Error: number_of_dropped_logins != 0" << std::endl;
 
    if (number_of_create_groups > 0) {
       create_group();
@@ -269,7 +273,7 @@ void client_session::login()
       return;
    }
 
-   // The correct login.
+   // The valid login.
    if (number_of_logins == 1) {
       json j;
       j["cmd"] = "login";
@@ -527,19 +531,22 @@ void client_session::prompt_close()
 
 void client_session::on_login_ack(json j)
 {
-   if (!op.interative) {
-      timer.expires_after(op.interval);
-      if (number_of_logins > 0) {
-         // As it is now, this condition will not happen.
-         auto handler = [p = shared_from_this()](auto ec)
-         { p->login(); };
-
-         timer.async_wait(handler);
-      }
-   }
-
    auto res = j["result"].get<std::string>();
    if (res == "fail") {
+      // TODO: Change longin() so that it triggers an invalid login
+      // that takes us here and from here we can repost a valid login.
+      // For example
+      //
+      // if (!op.interative) {
+      //    timer.expires_after(op.interval);
+      //    if (number_of_logins > 0) {
+      //       auto handler = [p = shared_from_this()](auto ec)
+      //       { p->login(); };
+      //
+      //       timer.async_wait(handler);
+      //    }
+      // }
+
       std::cout << "Login failed. " << id << std::endl;
       return;
    }
@@ -548,10 +555,12 @@ void client_session::on_login_ack(json j)
    std::cout << "Login successfull with Id: " << id << std::endl;
 
    if (!op.interative) {
+      // TODO: Before we proceed with create group we could repost a
+      // login command to see how the server responds. Let us do it
+      // later, this will make the code even more complicated.
       timer.expires_after(op.interval);
       auto handler = [p = shared_from_this()](auto ec)
       { p->create_group(); };
-
       timer.async_wait(handler);
    }
 }

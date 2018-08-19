@@ -44,6 +44,7 @@ private:
    std::set<int> groups;
 
    int number_of_logins = 5;
+   int number_of_dropped_logins = number_of_logins;
 
    int number_of_valid_create_groups = 10;
    int number_of_create_groups = 8;

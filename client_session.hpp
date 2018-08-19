@@ -48,6 +48,8 @@ private:
 
    int number_of_valid_create_groups = 10;
    int number_of_create_groups = 8;
+   int number_of_valid_joins = 10;
+   int number_of_joins = 4;
 
    void async_close();
    void write(std::string msg);

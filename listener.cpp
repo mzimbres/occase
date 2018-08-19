@@ -43,8 +43,8 @@ listener::listener( boost::asio::io_context& ioc
       return;
    }
 
-   std::cout << "max_listen_connections: "
-             << boost::asio::socket_base::max_listen_connections << std::endl;
+   //std::cout << "max_listen_connections: "
+   //          << boost::asio::socket_base::max_listen_connections << std::endl;
 
    acceptor.listen(
          boost::asio::socket_base::max_listen_connections, ec);

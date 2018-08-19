@@ -94,6 +94,7 @@ client_session::on_handshake( boost::system::error_code ec
       return fail(ec, "handshake");
 
    do_read(results);
+
    if (number_of_logins > 0) {
       login();
       return;
@@ -101,6 +102,11 @@ client_session::on_handshake( boost::system::error_code ec
 
    if (number_of_create_groups > 0) {
       create_group();
+      return;
+   }
+
+   if (number_of_joins > 0) {
+      join_group();
       return;
    }
 }
@@ -141,11 +147,6 @@ void client_session::on_read( boost::system::error_code ec
          fail(ec, "read");
          buffer.consume(buffer.size());
          //std::cout << "Connection lost, trying to reconnect." << std::endl;
-
-         //// We do a pop from the list here because a wron command may be
-         //// causing the server to give up on the connection and we
-         //// want to proceed with the next.
-         //msg_queue.pop();
 
          timer.expires_after(std::chrono::seconds{1});
 
@@ -369,12 +370,46 @@ void client_session::prompt_create_group()
 
 void client_session::join_group()
 {
-   json j;
-   j["cmd"] = "join_group";
-   j["from"] = id;
-   j["group_id"] = 0;
+   if (number_of_joins == 4) {
+      json j;
+      j["cmd"] = "join_group";
+      j["from"] = id; // Should cause error.
+      j["group_iid"] = number_of_joins;
+      send_msg({j.dump()});
+      --number_of_joins;
+      return;
+   }
 
-   send_msg({j.dump()});
+   if (number_of_joins == 3) {
+      json j;
+      j["cmd"] = "join_group";
+      j["from"] = id + 1; // Should cause error.
+      j["group_id"] = number_of_joins;
+      send_msg({j.dump()});
+      --number_of_joins;
+      return;
+   }
+
+   if (number_of_joins == 2) {
+      json j;
+      j["cmd"] = "joiin_group";
+      j["from"] = id;
+      j["group_id"] = number_of_joins;
+      send_msg({j.dump()});
+      --number_of_joins;
+      return;
+   }
+
+   if (number_of_joins == 1) {
+      json j;
+      j["cmd"] = "join_group";
+      j["from"] = id;
+      j["group_id"] = number_of_valid_joins;
+      send_msg({j.dump()});
+      if (number_of_valid_joins-- == 0)
+         --number_of_joins;
+      return;
+   }
 }
 
 void client_session::prompt_join_group()
@@ -496,6 +531,8 @@ void client_session::join_group_ack_handler(json j)
 {
    if (!op.interative) {
       timer.expires_after(op.interval);
+      // Further joins that are not dropped by the server for being invalid
+      // jsons could be also triggered here.
       if (op.number_of_joins-- > 0) {
          auto handler = [p = shared_from_this()](auto ec)
          { p->join_group(); };

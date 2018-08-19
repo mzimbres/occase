@@ -281,7 +281,8 @@ void client_session::create_group()
       group_info info { {"Repasse"}, {"Carros."}};
       j["info"] = info;
       send_msg({j.dump()});
-      --number_of_create_groups;
+      if (--number_of_valid_create_groups == 0)
+         --number_of_create_groups;
       //std::cout << "Just send a valid create group: " << j << std::endl;
       return;
    }

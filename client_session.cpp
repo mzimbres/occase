@@ -351,31 +351,29 @@ void client_session::create_group_ack_handler(json j)
 
 void client_session::join_group_ack_handler(json j)
 {
-   --op.number_of_joins;
+   if (!op.interative) {
+      if (op.number_of_joins-- > 0) {
+         timer.expires_after(op.joins_interval);
+
+         auto handler = [p = shared_from_this()](auto ec)
+         { p->join_group(); };
+
+         timer.async_wait(handler);
+      } else {
+      }
+   }
 
    auto res = j["result"].get<std::string>();
    if (res == "fail") {
-      std::cout << "Create group failed. " << id << std::endl;
+      std::cout << "Joining group failed." << std::endl;
       return;
    }
 
    std::cout << "Joining group successful" << std::endl;
-   std::cout << j << std::endl;
-
-   if (op.interative)
-      return;
-
-   // The creation of groups ended and we can proceed joining
-   // groups.
-   if (op.number_of_joins <= 0)
-      return;
-
-   timer.expires_after(op.joins_interval);
-
-   auto handler = [p = shared_from_this()](auto ec)
-   { p->join_group(); };
-
-   timer.async_wait(handler);
+   auto info = j["info"].get<group_info>();
+   std::cout << "   Title:       " << info.title << "\n"
+             << "   Description: " << info.description << "\n"
+             << std::endl;
 }
 
 void client_session::message_handler(json j)

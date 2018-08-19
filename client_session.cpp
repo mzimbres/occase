@@ -105,6 +105,13 @@ void client_session::on_write( boost::system::error_code ec
 {
    boost::ignore_unused(bytes_transferred);
 
+   msg_queue.pop();
+
+   if (msg_queue.empty())
+      return; // No more message to send to the client.
+
+   write(msg_queue.front());
+
    if (ec)
       return fail(ec, "write");
 }
@@ -171,40 +178,11 @@ void client_session::on_close(boost::system::error_code ec)
 
 void client_session::send_msg(std::string msg)
 {
-   auto handler = [p = shared_from_this(), msg = std::move(msg)]()
-   { p->write(std::move(msg)); };
+   const auto is_empty = msg_queue.empty();
+   msg_queue.push(std::move(msg));
 
-   boost::asio::post(resolver.get_executor(), handler);
-}
-
-void client_session::send_group_msg(std::string msg)
-{
-   json j;
-   j["cmd"] = "send_group_msg";
-   j["from"] = id;
-   j["to"] = 0;
-   j["msg"] = msg;
-
-   send_msg(j.dump());
-}
-
-void client_session::send_user_msg(std::string msg)
-{
-   json j;
-   j["cmd"] = "send_user_msg";
-   j["from"] = id;
-   j["to"] = 0;
-   j["msg"] = msg;
-
-   send_msg(j.dump());
-}
-
-void client_session::exit()
-{
-   auto handler = [p = shared_from_this()]()
-   { p->async_close(); };
-
-   boost::asio::post(resolver.get_executor(), handler);
+   if (is_empty)
+      write(msg_queue.front());
 }
 
 void client_session::run()
@@ -226,6 +204,13 @@ void client_session::login()
    send_msg(j.dump());
 }
 
+void client_session::prompt_login()
+{
+   auto handler = [p = shared_from_this()]() { p->login(); };
+
+   boost::asio::post(resolver.get_executor(), handler);
+}
+
 void client_session::create_group()
 {
    json j;
@@ -240,6 +225,14 @@ void client_session::create_group()
    send_msg(j.dump());
 }
 
+void client_session::prompt_create_group()
+{
+   auto handler = [p = shared_from_this()]()
+   { p->create_group(); };
+
+   boost::asio::post(resolver.get_executor(), handler);
+}
+
 void client_session::join_group()
 {
    json j;
@@ -248,6 +241,60 @@ void client_session::join_group()
    j["group_id"] = 0;
 
    send_msg(j.dump());
+}
+
+void client_session::prompt_join_group()
+{
+   auto handler = [p = shared_from_this()]()
+   { p->join_group(); };
+
+   boost::asio::post(resolver.get_executor(), handler);
+}
+
+void client_session::send_group_msg(std::string msg)
+{
+   json j;
+   j["cmd"] = "send_group_msg";
+   j["from"] = id;
+   j["to"] = 0;
+   j["msg"] = msg;
+
+   send_msg(j.dump());
+}
+
+void client_session::prompt_send_group_msg(std::string msg_)
+{
+   auto handler = [p = shared_from_this(), msg = std::move(msg_)]()
+   { p->send_group_msg(std::move(msg)); };
+
+   boost::asio::post(resolver.get_executor(), handler);
+}
+
+void client_session::send_user_msg(std::string msg)
+{
+   json j;
+   j["cmd"] = "send_user_msg";
+   j["from"] = id;
+   j["to"] = 0;
+   j["msg"] = msg;
+
+   send_msg(j.dump());
+}
+
+void client_session::prompt_send_user_msg(std::string msg_)
+{
+   auto handler = [p = shared_from_this(), msg = std::move(msg_)]()
+   { p->send_user_msg(std::move(msg)); };
+
+   boost::asio::post(resolver.get_executor(), handler);
+}
+
+void client_session::prompt_close()
+{
+   auto handler = [p = shared_from_this()]()
+   { p->async_close(); };
+
+   boost::asio::post(resolver.get_executor(), handler);
 }
 
 void client_session::login_ack_handler(json j)

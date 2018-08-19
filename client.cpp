@@ -24,27 +24,27 @@ struct prompt_usr {
          std::string str;
 
          if (cmd == 0) {
-            p->exit();
+            p->prompt_close();
             break;
          }
 
          if (cmd == 1) {
-            p->create_group();
+            p->prompt_create_group();
             continue;
          }
          
          if (cmd == 2) {
-            p->join_group();
+            p->prompt_join_group();
             continue;
          }
          
          if (cmd == 3) {
-            p->send_group_msg("Mensagem ao grupo.");
+            p->prompt_send_group_msg("Mensagem ao grupo.");
             continue;
          }
 
          if (cmd == 4) {
-            p->send_user_msg("Mensagem particular a um membro.");
+            p->prompt_send_user_msg("Mensagem particular a um membro.");
             continue;
          }
       }

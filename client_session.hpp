@@ -3,6 +3,7 @@
 #include "config.hpp"
 
 #include <set>
+#include <queue>
 #include <thread>
 #include <vector>
 #include <chrono>
@@ -38,13 +39,14 @@ private:
    boost::beast::multi_buffer buffer;
    work_type work;
    std::string text;
+   std::queue<std::string> msg_queue;
 
    client_options op;
    int id = -1;
    std::set<int> groups;
 
-   void write(std::string msg);
    void async_close();
+   void write(std::string msg);
    void on_resolve( boost::system::error_code ec
                   , tcp::resolver::results_type results);
    void on_connect( boost::system::error_code ec
@@ -64,17 +66,23 @@ private:
    void join_group_ack_handler(json j);
    void message_handler(json j);
    void async_connect(tcp::resolver::results_type results);
-
-public:
-   explicit
-   client_session( boost::asio::io_context& ioc
-                 , client_options op_);
    void login();
    void create_group();
    void join_group();
    void send_group_msg(std::string msg);
    void send_user_msg(std::string msg);
-   void exit();
+   void close();
+
+public:
+   explicit
+   client_session( boost::asio::io_context& ioc
+                 , client_options op_);
+   void prompt_login();
+   void prompt_create_group();
+   void prompt_join_group();
+   void prompt_send_group_msg(std::string msg);
+   void prompt_send_user_msg(std::string msg);
+   void prompt_close();
    void run();
 };
 

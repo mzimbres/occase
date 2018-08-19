@@ -59,9 +59,13 @@ void server_session::on_read( boost::system::error_code ec
       return;
    }
 
+   std::string tmp;
    try {
       std::stringstream ss;
       ss << boost::beast::buffers(buffer.data());
+      tmp = ss.str();
+      std::cout << tmp << std::endl;
+      buffer.consume(std::size(buffer));
       json j;
       ss >> j;
       user_idx = sd->on_read(std::move(j), shared_from_this());
@@ -69,7 +73,8 @@ void server_session::on_read( boost::system::error_code ec
          return;
 
    } catch (...) {
-      std::cerr << "Server: Invalid json." << std::endl;
+      std::cerr << "Server: Invalid json: " << tmp << std::endl;
+      return;
    }
 
    do_read();

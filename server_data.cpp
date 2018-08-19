@@ -25,10 +25,10 @@ server_data::on_read(json j, std::shared_ptr<server_session> session)
 index_type server_data::on_login(json j, std::shared_ptr<server_session> s)
 {
    auto tel = j["tel"].get<std::string>();
-
    auto name = j["name"].get<std::string>();
-   std::cout << "New login from " << name << " " << tel
-             << std::endl;
+
+   //std::cout << "New login from " << name << " " << tel
+   //          << std::endl;
 
    index_type new_user_idx = -1;
    auto new_user = id_to_idx_map.insert({tel, {}});
@@ -41,7 +41,8 @@ index_type server_data::on_login(json j, std::shared_ptr<server_session> s)
       //
       // REVIEW: I still do not know how to handle this sitiations
       // properly so I am not going to do anything for now. We
-      // could for example reset his data.
+      // could for example reset his data and send him an SMS for
+      // confimation. 
       new_user_idx = new_user.first->second;
    } else {
       // The user did not exist in the system. We have to allocate
@@ -55,11 +56,12 @@ index_type server_data::on_login(json j, std::shared_ptr<server_session> s)
    }
 
    // TODO: The following piece of code is very critical, if an
-   // exception is thrown we will no release new_user_idx back to the
-   // usrs array causing a leak. We have to eleaborate some way to use
-   // RAII.
+   // exception is thrown we will not release new_user_idx back to the
+   // users array causing a leak. We have to eleaborate some way to
+   // use RAII.
 
    users[new_user_idx].store_session(s);
+   users[new_user_idx].set_id(std::move(tel));
 
    json resp;
    resp["cmd"] = "login_ack";

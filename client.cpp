@@ -64,20 +64,20 @@ int main(int argc, char* argv[])
    , argv[1]                        // User telefone.
    , false                          // Sets interative mode.
    , std::chrono::milliseconds{100} // Interval for groups creation.
-   , 110                            // Number of create groups.
-   , 110                            // Number of joins.
-   , 110                            // Number of messages.
+   , 15                             // Number of create groups.
+   , 15                             // Number of joins.
+   , 15                             // Number of messages.
    };
 
    boost::asio::io_context ioc;
 
    auto p = std::make_shared<client_session>(ioc, std::move(op));
 
-   std::thread thr {prompt_usr {p}};
+   //std::thread thr {prompt_usr {p}};
 
    p->run();
    ioc.run();
-   thr.join();
+   //thr.join();
 
    return EXIT_SUCCESS;
 }

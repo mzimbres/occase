@@ -39,12 +39,12 @@ void user::store_session(std::shared_ptr<server_session> s)
 
 void user::send_msg(std::string msg)
 {
-   const auto is_empty = queue.empty();
-   queue.push(std::move(msg));
+   const auto is_empty = msg_queue.empty();
+   msg_queue.push(std::move(msg));
 
    if (is_empty) {
       if (auto s = session.lock()) {
-         s->write(queue.front());
+         s->write(msg_queue.front());
          return;
       }
 
@@ -55,17 +55,29 @@ void user::send_msg(std::string msg)
 
 void user::on_write()
 {
-   queue.pop();
+   msg_queue.pop();
 
-   if (queue.empty())
+   if (msg_queue.empty())
       return; // No more message to send to the client.
 
    if (auto s = session.lock()) {
-      s->write(queue.front());
+      s->write(msg_queue.front());
       return;
    }
 
    // TODO: Decide what to do here.
    std::cerr << "Session is expired." << std::endl;
+}
+
+void user::reset()
+{
+   // TODO: Verify if we have to perform some cleanup before reseting,
+   // like releasing groups.
+
+   id = {};
+   friends = {};
+   own_groups = {};
+   session = {};
+   msg_queue = std::queue<std::string> {};
 }
 

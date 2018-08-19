@@ -17,6 +17,9 @@ class server_session;
 // groups it belongs to so that it can send messages to to group.
 class user {
 private:
+   // At the moment I think this will be the user telephone.
+   id_type id;
+
    // The operations we are suposed to perform on a user's friends
    // are
    //
@@ -46,7 +49,7 @@ private:
    // User websocket session.
    std::weak_ptr<server_session> session;
 
-   std::queue<std::string> queue;
+   std::queue<std::string> msg_queue;
 
 public:
    user() = default;
@@ -57,12 +60,14 @@ public:
 
    // TODO: What to do? Should return true only if user still has an
    // account.
-   auto is_active() const {return true;}
+   auto is_active() const {return std::empty(id);}
    // Removes group owned by this user from his list of groups.
    void remove_group(index_type group);
    void add_group(index_type gid);
    void store_session(std::shared_ptr<server_session> s);
    void send_msg(std::string msg);
    void on_write();
+   void reset();
+   void set_id(id_type id_) {id = std::move(id_);}
 };
 

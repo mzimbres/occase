@@ -9,8 +9,8 @@ int main(int argc, char* argv[])
    auto const address = boost::asio::ip::make_address("127.0.0.1");
    auto const port = static_cast<unsigned short>(8080);
    auto const threads = 1;
-   auto const users_size = 100;
-   auto const groups_size = 100;
+   auto const users_size = 10;
+   auto const groups_size = 10;
 
    boost::asio::io_context ioc {threads};
    

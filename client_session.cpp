@@ -26,7 +26,9 @@ client_session::client_session( boost::asio::io_context& ioc
 
 void client_session::write(std::string msg)
 {
+   std::cout << "Sending: " << msg << std::endl;
    text = std::move(msg);
+
    auto handler = [p = shared_from_this()](auto ec, auto res)
    { p->on_write(ec, res); };
 
@@ -74,6 +76,8 @@ client_session::on_connect( boost::system::error_code ec
       return;
    }
 
+   std::cout << "Connection stablished." << std::endl;
+
    auto handler = [p = shared_from_this(), results](auto ec)
    { p->on_handshake(ec, results); };
 
@@ -85,6 +89,7 @@ void
 client_session::on_handshake( boost::system::error_code ec
                             , tcp::resolver::results_type results)
 {
+   std::cout << "on_handshake" << std::endl;
    if (ec)
       return fail(ec, "handshake");
 
@@ -103,10 +108,11 @@ void client_session::do_read(tcp::resolver::results_type results)
 void client_session::on_write( boost::system::error_code ec
                              , std::size_t bytes_transferred)
 {
+   std::cout << "on_write" << std::endl;
+
    boost::ignore_unused(bytes_transferred);
 
    msg_queue.pop();
-
    if (msg_queue.empty())
       return; // No more message to send to the client.
 
@@ -128,6 +134,11 @@ void client_session::on_read( boost::system::error_code ec
          buffer.consume(buffer.size());
          std::cout << "Connection lost, trying to reconnect." << std::endl;
 
+         //// We do a pop from the list here because a wron command may be
+         //// causing the server to give up on the connection and we
+         //// want to proceed with the next.
+         //msg_queue.pop();
+
          timer.expires_after(std::chrono::seconds{1});
 
          auto handler = [results, p = shared_from_this()](auto ec)
@@ -142,8 +153,8 @@ void client_session::on_read( boost::system::error_code ec
       ss << boost::beast::buffers(buffer.data());
       ss >> j;
       buffer.consume(buffer.size());
-      //auto str = ss.str();
-      //std::cout << str << std::endl;
+      auto str = ss.str();
+      std::cout << "Received: " << str << std::endl;
 
       auto cmd = j["cmd"].get<std::string>();
 
@@ -176,16 +187,10 @@ void client_session::on_close(boost::system::error_code ec)
    work.reset();
 }
 
-void client_session::send_msg(std::vector<std::string> msgs)
+void client_session::send_msg(std::string msg)
 {
-   const auto is_empty = msg_queue.empty();
-   while (!msgs.empty()) {
-      msg_queue.push(std::move(msgs.back()));
-      msgs.pop_back();
-   }
-
-   if (is_empty)
-      write(msg_queue.front());
+   msg_queue.push(std::move(msg));
+   write(msg_queue.front());
 }
 
 void client_session::run()
@@ -199,12 +204,56 @@ void client_session::run()
 
 void client_session::login()
 {
-   json j;
-   j["cmd"] = "login";
-   j["name"] = "Marcelo Zimbres";
-   j["tel"] = op.tel;
+   if (number_of_logins == 5) {
+      json j;
+      j["cmd"] = "logrn";
+      j["name"] = "Marcelo Zimbres";
+      j["tel"] = op.tel;
+      send_msg(j.dump());
+      --number_of_logins;
+      return;
+   }
 
-   send_msg({j.dump()});
+   if (number_of_logins == 4) {
+      json j;
+      j["crd"] = "login";
+      j["name"] = "Marcelo Zimbres";
+      j["tel"] = op.tel;
+      send_msg(j.dump());
+      --number_of_logins;
+      return;
+   }
+
+   if (number_of_logins == 3) {
+      json j;
+      j["crd"] = "login";
+      j["nume"] = "Marcelo Zimbres";
+      j["tel"] = op.tel;
+      send_msg(j.dump());
+      --number_of_logins;
+      return;
+   }
+
+   if (number_of_logins == 2) {
+      json j;
+      j["crd"] = "login";
+      j["nuMe"] = "Marcelo Zimbres";
+      j["Teal"] = op.tel;
+      send_msg(j.dump());
+      --number_of_logins;
+      return;
+   }
+
+   // The correct login.
+   if (number_of_logins == 1) {
+      json j;
+      j["cmd"] = "login";
+      j["name"] = "Marcelo Zimbres";
+      j["tel"] = op.tel;
+      send_msg(j.dump());
+      --number_of_logins;
+      return;
+   }
 }
 
 void client_session::prompt_login()
@@ -261,18 +310,7 @@ void client_session::send_group_msg()
    j["from"] = id;
    j["to"] = 0;
 
-   std::vector<std::string> vec;
-
-   j["msg"] = "Mensagem ao grupo";
-   vec.push_back(j.dump());
-
-   j["msg"] = "m2";
-   vec.push_back(j.dump());
-
-   j["msg"] = "m3";
-   vec.push_back(j.dump());
-
-   send_msg(vec);
+   send_msg(j.dump());
 }
 
 void client_session::prompt_send_group_msg()
@@ -312,6 +350,21 @@ void client_session::prompt_close()
 
 void client_session::login_ack_handler(json j)
 {
+   if (!op.interative) {
+      timer.expires_after(op.interval);
+      if (number_of_logins-- > 0) {
+         auto handler = [p = shared_from_this()](auto ec)
+         { p->login(); };
+
+         timer.async_wait(handler);
+      } else {
+         auto handler = [p = shared_from_this()](auto ec)
+         { p->create_group(); };
+
+         timer.async_wait(handler);
+      }
+   }
+
    auto res = j["result"].get<std::string>();
    if (res == "fail") {
       std::cout << "Login failed. " << id << std::endl;
@@ -320,20 +373,13 @@ void client_session::login_ack_handler(json j)
 
    id = j["user_idx"].get<int>();
    std::cout << "Login successfull with Id: " << id << std::endl;
-
-   if (op.interative)
-      return;
-   
-   // We are not in an interative session, so we can proceed and
-   // perform some actions.
-   create_group();
 }
 
 void client_session::create_group_ack_handler(json j)
 {
    if (!op.interative) {
       timer.expires_after(op.interval);
-      if (op.create_n_groups-- > 0) {
+      if (op.number_of_create_groups-- > 0) {
          auto handler = [p = shared_from_this()](auto ec)
          { p->create_group(); };
 

@@ -48,6 +48,7 @@ private:
 
    int number_of_valid_create_groups = 10;
    int number_of_create_groups = 8;
+   int number_of_dropped_create_groups = number_of_create_groups - 2;
 
    int number_of_valid_joins = 10;
    int number_of_joins = 4;

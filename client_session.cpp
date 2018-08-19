@@ -164,8 +164,13 @@ client_session::on_handshake( boost::system::error_code ec
 
    if (number_of_create_groups > 0) {
       create_group();
+      --number_of_dropped_create_groups;
       return;
    }
+
+   if (number_of_dropped_create_groups != 0)
+      std::cout << "Error: " << number_of_dropped_create_groups << " != 0"
+                << std::endl;
 
    if (number_of_joins > 0) {
       join_group();
@@ -295,10 +300,13 @@ void client_session::prompt_login()
 void client_session::create_group()
 {
    //std::cout << "Create group: " << number_of_create_groups << std::endl;
+
+   // Should be accepted by the server.
    if (number_of_create_groups == 8) {
       json j;
       j["cmd"] = "create_group";
       j["from"] = id;
+      j["tel"] = op.tel;
       group_info info { {"Repasse"}, {"Carros."}};
       j["info"] = info;
       send_msg({j.dump()});
@@ -312,6 +320,7 @@ void client_session::create_group()
       json j;
       j["cmud"] = "create_group";
       j["from"] = id;
+      j["tel"] = op.tel;
       group_info info { {"Repasse"}, {"Carros."}};
       j["info"] = info;
       send_msg({j.dump()});
@@ -323,6 +332,7 @@ void client_session::create_group()
       json j;
       j["cmd"] = "craeate_group";
       j["from"] = id;
+      j["tel"] = op.tel;
       group_info info { {"Repasse"}, {"Carros."}};
       j["info"] = info;
       send_msg({j.dump()});
@@ -334,6 +344,7 @@ void client_session::create_group()
       json j;
       j["cmd"] = "create_group";
       j["froim"] = id;
+      j["tel"] = op.tel;
       group_info info { {"Repasse"}, {"Carros."}};
       j["info"] = info;
       send_msg({j.dump()});
@@ -345,6 +356,7 @@ void client_session::create_group()
       json j;
       j["cmd"] = "create_group";
       j["from"] = id + 1;
+      j["tel"] = op.tel;
       group_info info { {"Repasse"}, {"Carros."}};
       j["info"] = info;
       send_msg({j.dump()});
@@ -356,6 +368,7 @@ void client_session::create_group()
       json j;
       j["cmd"] = "create_group";
       j["from"] = id;
+      j["tel"] = op.tel;
       group_info info { {"Repasse"}, {"Carros."}};
       j["inafo"] = info;
       send_msg({j.dump()});
@@ -367,6 +380,7 @@ void client_session::create_group()
       json j;
       j["cmd"] = "create_group";
       j["from"] = id;
+      j["tel"] = op.tel;
       j["info"] = "aaaaa";
       send_msg({j.dump()});
       --number_of_create_groups;

@@ -176,7 +176,14 @@ index_type server_data::on_create_group(json j, std::shared_ptr<server_session> 
       return -1;
    }
 
+   auto tel = j["tel"].get<std::string>();
+   if (tel != users[from].get_id()) {
+      return -1;
+   }
+
    users[from].store_session(s);
+
+   auto info = j["info"].get<group_info>();
 
    auto idx = groups.allocate();
    if (idx == -1) {
@@ -193,7 +200,6 @@ index_type server_data::on_create_group(json j, std::shared_ptr<server_session> 
       return from;
    }
 
-   auto info = j["info"].get<group_info>();
    groups[idx].set_owner(from);
    groups[idx].set_info(std::move(info));
    groups[idx].add_member(from);

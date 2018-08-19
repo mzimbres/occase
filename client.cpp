@@ -39,12 +39,12 @@ struct prompt_usr {
          }
          
          if (cmd == 3) {
-            p->prompt_send_group_msg("Mensagem ao grupo.");
+            p->prompt_send_group_msg();
             continue;
          }
 
          if (cmd == 4) {
-            p->prompt_send_user_msg("Mensagem particular a um membro.");
+            p->prompt_send_user_msg();
             continue;
          }
       }
@@ -63,10 +63,10 @@ int main(int argc, char* argv[])
    , {"8080"}                       // Port.
    , argv[1]                        // User telefone.
    , false                          // Sets interative mode.
-   , 103                            // Number of groups to create.
-   , std::chrono::milliseconds{500} // Interval for groups creation.
-   , 103                            // Number of joins.
-   , std::chrono::milliseconds{500} // Interval between joins.
+   , std::chrono::milliseconds{100} // Interval for groups creation.
+   , 110                            // Number of create groups.
+   , 110                            // Number of joins.
+   , 110                            // Number of messages.
    };
 
    boost::asio::io_context ioc;

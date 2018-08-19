@@ -21,10 +21,10 @@ struct client_options {
    std::string port;
    std::string tel;
    bool interative;
+   std::chrono::milliseconds interval;
    int create_n_groups;
-   std::chrono::milliseconds create_groups_int;
    int number_of_joins;
-   std::chrono::milliseconds joins_interval;
+   int number_of_group_msgs;
 };
 
 class client_session : public std::enable_shared_from_this<client_session> {
@@ -60,7 +60,7 @@ private:
                , std::size_t bytes_transferred
                , tcp::resolver::results_type results);
    void on_close(boost::system::error_code ec);
-   void send_msg(std::string msg);
+   void send_msg(std::vector<std::string> msgs);
    void login_ack_handler(json j);
    void create_group_ack_handler(json j);
    void join_group_ack_handler(json j);
@@ -69,8 +69,8 @@ private:
    void login();
    void create_group();
    void join_group();
-   void send_group_msg(std::string msg);
-   void send_user_msg(std::string msg);
+   void send_group_msg();
+   void send_user_msg();
    void close();
 
 public:
@@ -80,8 +80,8 @@ public:
    void prompt_login();
    void prompt_create_group();
    void prompt_join_group();
-   void prompt_send_group_msg(std::string msg);
-   void prompt_send_user_msg(std::string msg);
+   void prompt_send_group_msg();
+   void prompt_send_user_msg();
    void prompt_close();
    void run();
 };

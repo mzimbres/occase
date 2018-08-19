@@ -176,10 +176,13 @@ void client_session::on_close(boost::system::error_code ec)
    work.reset();
 }
 
-void client_session::send_msg(std::string msg)
+void client_session::send_msg(std::vector<std::string> msgs)
 {
    const auto is_empty = msg_queue.empty();
-   msg_queue.push(std::move(msg));
+   while (!msgs.empty()) {
+      msg_queue.push(std::move(msgs.back()));
+      msgs.pop_back();
+   }
 
    if (is_empty)
       write(msg_queue.front());
@@ -201,7 +204,7 @@ void client_session::login()
    j["name"] = "Marcelo Zimbres";
    j["tel"] = op.tel;
 
-   send_msg(j.dump());
+   send_msg({j.dump()});
 }
 
 void client_session::prompt_login()
@@ -222,7 +225,7 @@ void client_session::create_group()
 
    j["info"] = info;
 
-   send_msg(j.dump());
+   send_msg({j.dump()});
 }
 
 void client_session::prompt_create_group()
@@ -240,7 +243,7 @@ void client_session::join_group()
    j["from"] = id;
    j["group_id"] = 0;
 
-   send_msg(j.dump());
+   send_msg({j.dump()});
 }
 
 void client_session::prompt_join_group()
@@ -251,40 +254,50 @@ void client_session::prompt_join_group()
    boost::asio::post(resolver.get_executor(), handler);
 }
 
-void client_session::send_group_msg(std::string msg)
+void client_session::send_group_msg()
 {
    json j;
    j["cmd"] = "send_group_msg";
    j["from"] = id;
    j["to"] = 0;
-   j["msg"] = msg;
 
-   send_msg(j.dump());
+   std::vector<std::string> vec;
+
+   j["msg"] = "Mensagem ao grupo";
+   vec.push_back(j.dump());
+
+   j["msg"] = "m2";
+   vec.push_back(j.dump());
+
+   j["msg"] = "m3";
+   vec.push_back(j.dump());
+
+   send_msg(vec);
 }
 
-void client_session::prompt_send_group_msg(std::string msg_)
+void client_session::prompt_send_group_msg()
 {
-   auto handler = [p = shared_from_this(), msg = std::move(msg_)]()
-   { p->send_group_msg(std::move(msg)); };
+   auto handler = [p = shared_from_this()]()
+   { p->send_group_msg(); };
 
    boost::asio::post(resolver.get_executor(), handler);
 }
 
-void client_session::send_user_msg(std::string msg)
+void client_session::send_user_msg()
 {
    json j;
    j["cmd"] = "send_user_msg";
    j["from"] = id;
    j["to"] = 0;
-   j["msg"] = msg;
+   j["msg"] = "Mensagem ao usuario.";
 
-   send_msg(j.dump());
+   send_msg({j.dump()});
 }
 
-void client_session::prompt_send_user_msg(std::string msg_)
+void client_session::prompt_send_user_msg()
 {
-   auto handler = [p = shared_from_this(), msg = std::move(msg_)]()
-   { p->send_user_msg(std::move(msg)); };
+   auto handler = [p = shared_from_this()]()
+   { p->send_user_msg(); };
 
    boost::asio::post(resolver.get_executor(), handler);
 }
@@ -319,16 +332,13 @@ void client_session::login_ack_handler(json j)
 void client_session::create_group_ack_handler(json j)
 {
    if (!op.interative) {
+      timer.expires_after(op.interval);
       if (op.create_n_groups-- > 0) {
-         timer.expires_after(op.create_groups_int);
-
          auto handler = [p = shared_from_this()](auto ec)
          { p->create_group(); };
 
          timer.async_wait(handler);
       } else {
-         timer.expires_after(op.joins_interval);
-
          auto handler = [p = shared_from_this()](auto ec)
          { p->join_group(); };
 
@@ -352,14 +362,17 @@ void client_session::create_group_ack_handler(json j)
 void client_session::join_group_ack_handler(json j)
 {
    if (!op.interative) {
+      timer.expires_after(op.interval);
       if (op.number_of_joins-- > 0) {
-         timer.expires_after(op.joins_interval);
-
          auto handler = [p = shared_from_this()](auto ec)
          { p->join_group(); };
 
          timer.async_wait(handler);
       } else {
+         auto handler = [p = shared_from_this()](auto ec)
+         { p->send_group_msg(); };
+
+         timer.async_wait(handler);
       }
    }
 

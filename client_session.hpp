@@ -22,7 +22,6 @@ struct client_options {
    std::string tel;
    bool interative;
    std::chrono::milliseconds interval;
-   int number_of_joins;
    int number_of_group_msgs;
 };
 
@@ -48,8 +47,12 @@ private:
 
    int number_of_valid_create_groups = 10;
    int number_of_create_groups = 8;
+
    int number_of_valid_joins = 10;
    int number_of_joins = 4;
+
+   int number_of_valid_group_msgs = 10;
+   int number_of_group_msgs = 4;
 
    void async_close();
    void write(std::string msg);
@@ -67,10 +70,11 @@ private:
                , tcp::resolver::results_type results);
    void on_close(boost::system::error_code ec);
    void send_msg(std::string msg);
-   void login_ack_handler(json j);
-   void create_group_ack_handler(json j);
-   void join_group_ack_handler(json j);
-   void message_handler(json j);
+   void on_login_ack(json j);
+   void on_create_group_ack(json j);
+   void on_join_group_ack(json j);
+   void on_send_group_msg_ack(json j);
+   void on_message(json j);
    void async_connect(tcp::resolver::results_type results);
    void login();
    void create_group();

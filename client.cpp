@@ -64,7 +64,6 @@ int main(int argc, char* argv[])
    , argv[1]                        // User telefone.
    , false                          // Sets interative mode.
    , std::chrono::milliseconds{100} // Interval for groups creation.
-   , 15                             // Number of joins.
    , 15                             // Number of messages.
    };
 

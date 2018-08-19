@@ -94,10 +94,10 @@ server_data::on_group_msg(json j, std::shared_ptr<server_session> s)
       // the app.
 
       json resp;
-      resp["cmd"] = "message_ack";
+      resp["cmd"] = "send_group_msg_ack";
       resp["result"] = "fail";
       resp["reason"] = "Non existing group";
-      s->write(resp.dump());
+      users[from].send_msg(resp.dump());
       return from;
    }
 
@@ -112,6 +112,16 @@ server_data::on_group_msg(json j, std::shared_ptr<server_session> s)
    resp["message"] = j["msg"].get<std::string>();
 
    groups[to].broadcast_msg(resp.dump(), users);
+
+   // We also have to acknowledge the broadcast of the message.
+   // Perhaps this is only for debugging purposes as the user can
+   // inferr himself if the message was sent by looking if the message
+   // arrived in the corresponding group.
+   json ack;
+   ack["cmd"] = "send_group_msg_ack";
+   ack["result"] = "ok";
+   users[from].send_msg(ack.dump());
+
    return from;
 }
 

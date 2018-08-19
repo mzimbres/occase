@@ -15,6 +15,64 @@ void fail(boost::system::error_code ec, char const* what)
 
 } // Anonymous.
 
+void client_session::on_read( boost::system::error_code ec
+                            , std::size_t bytes_transferred
+                            , tcp::resolver::results_type results)
+{
+   try {
+      boost::ignore_unused(bytes_transferred);
+
+      if (ec) {
+         fail(ec, "read");
+         buffer.consume(buffer.size());
+         //std::cout << "Connection lost, trying to reconnect." << std::endl;
+
+         timer.expires_after(std::chrono::seconds{1});
+
+         auto handler = [results, p = shared_from_this()](auto ec)
+         { p->async_connect(results); };
+
+         timer.async_wait(handler);
+         return;
+      }
+
+      json j;
+      std::stringstream ss;
+      ss << boost::beast::buffers(buffer.data());
+      ss >> j;
+      buffer.consume(buffer.size());
+      auto str = ss.str();
+      //std::cout << "Received: " << str << std::endl;
+
+      auto cmd = j["cmd"].get<std::string>();
+
+      if (cmd == "login_ack") {
+         on_login_ack(std::move(j));
+      } else if (cmd == "create_group_ack") {
+         on_create_group_ack(j);
+      } else if (cmd == "join_group_ack") {
+         on_join_group_ack(j);
+      } else if (cmd == "send_group_msg_ack") {
+         on_send_group_msg_ack(j);
+      } else if (cmd == "message") {
+         on_message(j);
+      } else {
+         std::cout << "Unknown command." << std::endl;
+      }
+
+   } catch (std::exception const& e) {
+      std::cerr << "Error: " << e.what() << std::endl;
+   }
+
+   do_read(results);
+}
+
+void client_session::on_message(json j)
+{
+   auto msg = j["message"].get<std::string>();
+   std::cout << msg << std::endl;
+}
+
 client_session::client_session( boost::asio::io_context& ioc
                               , client_options op_)
 : resolver(ioc)
@@ -109,6 +167,11 @@ client_session::on_handshake( boost::system::error_code ec
       join_group();
       return;
    }
+
+   if (number_of_group_msgs > 0) {
+      send_group_msg();
+      return;
+   }
 }
 
 void client_session::do_read(tcp::resolver::results_type results)
@@ -136,56 +199,6 @@ void client_session::on_write( boost::system::error_code ec
       return fail(ec, "write");
 }
 
-void client_session::on_read( boost::system::error_code ec
-                            , std::size_t bytes_transferred
-                            , tcp::resolver::results_type results)
-{
-   try {
-      boost::ignore_unused(bytes_transferred);
-
-      if (ec) {
-         fail(ec, "read");
-         buffer.consume(buffer.size());
-         //std::cout << "Connection lost, trying to reconnect." << std::endl;
-
-         timer.expires_after(std::chrono::seconds{1});
-
-         auto handler = [results, p = shared_from_this()](auto ec)
-         { p->async_connect(results); };
-
-         timer.async_wait(handler);
-         return;
-      }
-
-      json j;
-      std::stringstream ss;
-      ss << boost::beast::buffers(buffer.data());
-      ss >> j;
-      buffer.consume(buffer.size());
-      auto str = ss.str();
-      //std::cout << "Received: " << str << std::endl;
-
-      auto cmd = j["cmd"].get<std::string>();
-
-      if (cmd == "login_ack") {
-         login_ack_handler(std::move(j));
-      } else if (cmd == "create_group_ack") {
-         create_group_ack_handler(j);
-      } else if (cmd == "join_group_ack") {
-         join_group_ack_handler(j);
-      } else if (cmd == "message") {
-         message_handler(j);
-      } else {
-         std::cout << "Unknown command." << std::endl;
-      }
-
-   } catch (std::exception const& e) {
-      std::cerr << "Error: " << e.what() << std::endl;
-   }
-
-   do_read(results);
-}
-
 void client_session::on_close(boost::system::error_code ec)
 {
    if (ec)
@@ -198,8 +211,11 @@ void client_session::on_close(boost::system::error_code ec)
 
 void client_session::send_msg(std::string msg)
 {
+   auto is_empty = std::empty(msg_queue);
    msg_queue.push(std::move(msg));
-   write(msg_queue.front());
+
+   if (is_empty)
+      write(msg_queue.front());
 }
 
 void client_session::run()
@@ -422,12 +438,56 @@ void client_session::prompt_join_group()
 
 void client_session::send_group_msg()
 {
-   json j;
-   j["cmd"] = "send_group_msg";
-   j["from"] = id;
-   j["to"] = 0;
+   if (number_of_group_msgs == 5) {
+      json j;
+      j["cmd"] = "send_group_msg";
+      j["from"] = id + 1;
+      j["to"] = 0;
+      j["msg"] = "Message to group";
+      send_msg(j.dump());
+      --number_of_group_msgs;
+   }
 
-   send_msg(j.dump());
+   if (number_of_group_msgs == 4) {
+      json j;
+      j["cmd"] = "send_group_msg";
+      j["friom"] = id;
+      j["to"] = 0;
+      j["msg"] = "Message to group";
+      send_msg(j.dump());
+      --number_of_group_msgs;
+   }
+
+   if (number_of_group_msgs == 3) {
+      json j;
+      j["cmd"] = "send_9group_msg";
+      j["from"] = id;
+      j["to"] = 0;
+      j["msg"] = "Message to group";
+      send_msg(j.dump());
+      --number_of_group_msgs;
+   }
+
+   if (number_of_group_msgs == 2) {
+      json j;
+      j["cm2d"] = "send_group_msg";
+      j["from"] = id;
+      j["to"] = 0;
+      j["msg"] = "Message to group";
+      send_msg(j.dump());
+      --number_of_group_msgs;
+   }
+
+   if (number_of_group_msgs == 1) {
+      json j;
+      j["cmd"] = "send_group_msg";
+      j["from"] = id;
+      j["to"] = number_of_valid_group_msgs;
+      j["msg"] = "Message to group";
+      send_msg(j.dump());
+      if (number_of_valid_group_msgs-- == 0)
+         --number_of_group_msgs;
+   }
 }
 
 void client_session::prompt_send_group_msg()
@@ -465,7 +525,7 @@ void client_session::prompt_close()
    boost::asio::post(resolver.get_executor(), handler);
 }
 
-void client_session::login_ack_handler(json j)
+void client_session::on_login_ack(json j)
 {
    if (!op.interative) {
       timer.expires_after(op.interval);
@@ -496,7 +556,7 @@ void client_session::login_ack_handler(json j)
    }
 }
 
-void client_session::create_group_ack_handler(json j)
+void client_session::on_create_group_ack(json j)
 {
    if (!op.interative) {
       timer.expires_after(op.interval);
@@ -527,13 +587,13 @@ void client_session::create_group_ack_handler(json j)
              << std::endl;
 }
 
-void client_session::join_group_ack_handler(json j)
+void client_session::on_join_group_ack(json j)
 {
    if (!op.interative) {
       timer.expires_after(op.interval);
       // Further joins that are not dropped by the server for being invalid
       // jsons could be also triggered here.
-      if (op.number_of_joins-- > 0) {
+      if (number_of_joins > 0) {
          auto handler = [p = shared_from_this()](auto ec)
          { p->join_group(); };
 
@@ -557,9 +617,32 @@ void client_session::join_group_ack_handler(json j)
    std::cout << info << std::endl;
 }
 
-void client_session::message_handler(json j)
+void client_session::on_send_group_msg_ack(json j)
 {
-   auto msg = j["message"].get<std::string>();
-   std::cout << msg << std::endl;
+   if (!op.interative) {
+      timer.expires_after(op.interval);
+      if (number_of_group_msgs > 0) {
+         auto handler = [p = shared_from_this()](auto ec)
+         { p->send_group_msg(); };
+
+         timer.async_wait(handler);
+      }
+   }
+
+   auto res = j["result"].get<std::string>();
+   if (res == "fail") {
+      std::cout << "Send group message fail." << std::endl;
+      return;
+   }
+
+   std::cout << "Send group message ok." << std::endl;
+
+   //if (!op.interative) {
+   //   timer.expires_after(op.interval);
+   //   auto handler = [p = shared_from_this()](auto ec)
+   //   { p->create_group(); };
+
+   //   timer.async_wait(handler);
+   //}
 }
 

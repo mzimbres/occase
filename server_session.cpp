@@ -64,16 +64,18 @@ void server_session::on_read( boost::system::error_code ec
       std::stringstream ss;
       ss << boost::beast::buffers(buffer.data());
       tmp = ss.str();
-      std::cout << tmp << std::endl;
       buffer.consume(std::size(buffer));
       json j;
       ss >> j;
+      //std::cout << "Valid json: " << tmp << std::endl;
       user_idx = sd->on_read(std::move(j), shared_from_this());
-      if (user_idx == -1)
+      if (user_idx == -1) {
+         //std::cout << "Leaving with -1." << std::endl;
          return;
+      }
 
    } catch (...) {
-      std::cerr << "Server: Invalid json: " << tmp << std::endl;
+      //std::cerr << "Server: Invalid json: " << tmp << std::endl;
       return;
    }
 

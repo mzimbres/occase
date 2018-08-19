@@ -22,7 +22,6 @@ struct client_options {
    std::string tel;
    bool interative;
    std::chrono::milliseconds interval;
-   int number_of_create_groups;
    int number_of_joins;
    int number_of_group_msgs;
 };
@@ -46,6 +45,7 @@ private:
    std::set<int> groups;
 
    int number_of_logins = 5;
+   int number_of_create_groups = 8;
 
    void async_close();
    void write(std::string msg);

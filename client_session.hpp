@@ -42,7 +42,7 @@ private:
 
    client_options op;
    user_bind bind;
-   std::set<int> groups;
+   std::set<group_bind> groups;
 
    int number_of_logins = 4;
    int number_of_dropped_logins = number_of_logins;

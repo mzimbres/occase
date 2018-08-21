@@ -211,7 +211,7 @@ index_type server_data::on_create_group(json j, std::shared_ptr<server_session> 
    json resp;
    resp["cmd"] = "create_group_ack";
    resp["result"] = "ok";
-   resp["group_id"] = idx;
+   resp["group_bind"] = group_bind {host, idx};
 
    users[from.index].send_msg(resp.dump());
    return from.index;
@@ -272,9 +272,9 @@ server_data::on_join_group(json j, std::shared_ptr<server_session> s)
 
    users[from.index].store_session(s);
 
-   auto gid = j["group_id"].get<int>();
+   auto gbind = j["group_bind"].get<group_bind>();
 
-   if (!groups.is_valid_index(gid)) {
+   if (!groups.is_valid_index(gbind.index)) {
       // TODO: Clarify how this could happen.
       json resp;
       resp["cmd"] = "join_group_ack";
@@ -283,7 +283,7 @@ server_data::on_join_group(json j, std::shared_ptr<server_session> s)
       return from.index;
    }
 
-   if (!groups[gid].is_active()) {
+   if (!groups[gbind.index].is_active()) {
       // TODO: Clarify how this could happen.
       json resp;
       resp["cmd"] = "join_group_ack";
@@ -292,12 +292,12 @@ server_data::on_join_group(json j, std::shared_ptr<server_session> s)
       return from.index;
    }
 
-   groups[gid].add_member(from.index);
+   groups[gbind.index].add_member(from.index);
 
    json resp;
    resp["cmd"] = "join_group_ack";
    resp["result"] = "ok";
-   resp["info"] = groups[gid].get_info(),
+   resp["info"] = groups[gbind.index].get_info(),
 
    users[from.index].send_msg(resp.dump());
    return from.index;

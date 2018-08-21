@@ -387,7 +387,7 @@ void client_session::join_group()
       json j;
       j["cmd"] = "join_group";
       j["from"] = bind;
-      j["group_iid"] = number_of_joins;
+      j["group_iid"] = group_bind {"wwr", number_of_joins};
       send_msg({j.dump()});
       --number_of_joins;
       return;
@@ -399,7 +399,7 @@ void client_session::join_group()
       auto tmp = bind;
       ++tmp.index;
       j["from"] = tmp;
-      j["group_id"] = number_of_joins;
+      j["group_bind"] = group_bind {"criatura", number_of_joins};
       send_msg({j.dump()});
       --number_of_joins;
       return;
@@ -409,7 +409,7 @@ void client_session::join_group()
       json j;
       j["cmd"] = "joiin_group";
       j["from"] = bind;
-      j["group_id"] = number_of_joins;
+      j["group_bind"] = group_bind {"criatura", number_of_joins};
       send_msg({j.dump()});
       --number_of_joins;
       return;
@@ -419,7 +419,7 @@ void client_session::join_group()
       json j;
       j["cmd"] = "join_group";
       j["from"] = bind;
-      j["group_id"] = number_of_valid_joins;
+      j["group_bind"] = group_bind {"criatura", number_of_valid_joins};
       send_msg({j.dump()});
       if (number_of_valid_joins-- == 0)
          --number_of_joins;
@@ -586,10 +586,10 @@ void client_session::on_create_group_ack(json j)
       return;
    }
 
-   auto group_id = j["group_id"].get<int>();
-   groups.insert(group_id);
+   auto gbind = j["group_bind"].get<group_bind>();
+   groups.insert(gbind);
 
-   std::cout << "Create groups successfull: " << group_id
+   std::cout << "Create groups successfull: \n" << gbind
              << std::endl;
 }
 

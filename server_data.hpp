@@ -13,6 +13,8 @@ class server_session;
 
 class server_data {
 private:
+   std::string host = "criatura";
+
    grow_only_vector<user> users;
    grow_only_vector<group> groups;
 

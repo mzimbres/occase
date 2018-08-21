@@ -42,7 +42,7 @@ void client_session::on_read( boost::system::error_code ec
       ss >> j;
       buffer.consume(buffer.size());
       auto str = ss.str();
-      //std::cout << "Received: " << str << std::endl;
+      std::cout << "Received: " << str << std::endl;
 
       auto cmd = j["cmd"].get<std::string>();
 
@@ -151,35 +151,39 @@ client_session::on_handshake( boost::system::error_code ec
    if (ec)
       return fail(ec, "handshake");
 
+   // This function must be called before we begin to write commands
+   // so that we can receive a dropped connection on the server.
    do_read(results);
 
-   if (number_of_logins > 0) {
-      login();
-      --number_of_dropped_logins;
-      return;
-   }
+   if (!op.interative) {
+      if (number_of_logins > 0) {
+         login();
+         --number_of_dropped_logins;
+         return;
+      }
 
-   if (number_of_dropped_logins != 0)
-      std::cout << "Error: number_of_dropped_logins != 0" << std::endl;
+      if (number_of_dropped_logins != 0)
+         std::cout << "Error: number_of_dropped_logins != 0" << std::endl;
 
-   if (number_of_create_groups > 0) {
-      create_group();
-      --number_of_dropped_create_groups;
-      return;
-   }
+      if (number_of_create_groups > 0) {
+         create_group();
+         --number_of_dropped_create_groups;
+         return;
+      }
 
-   if (number_of_dropped_create_groups != 0)
-      std::cout << "Error: " << number_of_dropped_create_groups << " != 0"
-                << std::endl;
+      if (number_of_dropped_create_groups != 0)
+         std::cout << "Error: " << number_of_dropped_create_groups << " != 0"
+                   << std::endl;
 
-   if (number_of_joins > 0) {
-      join_group();
-      return;
-   }
+      if (number_of_joins > 0) {
+         join_group();
+         return;
+      }
 
-   if (number_of_group_msgs > 0) {
-      send_group_msg();
-      return;
+      if (number_of_group_msgs > 0) {
+         send_group_msg();
+         return;
+      }
    }
 }
 
@@ -305,10 +309,8 @@ void client_session::create_group()
    if (number_of_create_groups == 8) {
       json j;
       j["cmd"] = "create_group";
-      j["from"] = id;
-      j["tel"] = op.tel;
-      group_info info { {"Repasse"}, {"Carros."}};
-      j["info"] = info;
+      j["from"] = bind;
+      j["info"] = group_info { {"Repasse"}, {"Carros."}};
       send_msg({j.dump()});
       if (--number_of_valid_create_groups == 0)
          --number_of_create_groups;
@@ -319,10 +321,8 @@ void client_session::create_group()
    if (number_of_create_groups == 7) {
       json j;
       j["cmud"] = "create_group";
-      j["from"] = id;
-      j["tel"] = op.tel;
-      group_info info { {"Repasse"}, {"Carros."}};
-      j["info"] = info;
+      j["from"] = bind;
+      j["info"] = group_info { {"Repasse"}, {"Carros."}};
       send_msg({j.dump()});
       --number_of_create_groups;
       return;
@@ -331,10 +331,8 @@ void client_session::create_group()
    if (number_of_create_groups == 6) {
       json j;
       j["cmd"] = "craeate_group";
-      j["from"] = id;
-      j["tel"] = op.tel;
-      group_info info { {"Repasse"}, {"Carros."}};
-      j["info"] = info;
+      j["from"] = bind;
+      j["info"] = group_info { {"Repasse"}, {"Carros."}};
       send_msg({j.dump()});
       --number_of_create_groups;
       return;
@@ -343,10 +341,8 @@ void client_session::create_group()
    if (number_of_create_groups == 5) {
       json j;
       j["cmd"] = "create_group";
-      j["froim"] = id;
-      j["tel"] = op.tel;
-      group_info info { {"Repasse"}, {"Carros."}};
-      j["info"] = info;
+      j["froim"] = bind;
+      j["info"] = group_info { {"Repasse"}, {"Carros."}};
       send_msg({j.dump()});
       --number_of_create_groups;
       return;
@@ -355,10 +351,10 @@ void client_session::create_group()
    if (number_of_create_groups == 4) {
       json j;
       j["cmd"] = "create_group";
-      j["from"] = id + 1;
-      j["tel"] = op.tel;
-      group_info info { {"Repasse"}, {"Carros."}};
-      j["info"] = info;
+      auto tmp = bind;
+      ++bind.index;
+      j["from"] = bind;
+      j["info"] = group_info { {"Repasse"}, {"Carros."}};
       send_msg({j.dump()});
       --number_of_create_groups;
       return;
@@ -367,10 +363,8 @@ void client_session::create_group()
    if (number_of_create_groups == 3) {
       json j;
       j["cmd"] = "create_group";
-      j["from"] = id;
-      j["tel"] = op.tel;
-      group_info info { {"Repasse"}, {"Carros."}};
-      j["inafo"] = info;
+      j["from"] = bind;
+      j["inafo"] = group_info { {"Repasse"}, {"Carros."}};
       send_msg({j.dump()});
       --number_of_create_groups;
       return;
@@ -379,8 +373,7 @@ void client_session::create_group()
    if (number_of_create_groups == 2) {
       json j;
       j["cmd"] = "create_group";
-      j["from"] = id;
-      j["tel"] = op.tel;
+      j["from"] = bind;
       j["info"] = "aaaaa";
       send_msg({j.dump()});
       --number_of_create_groups;
@@ -407,7 +400,7 @@ void client_session::join_group()
    if (number_of_joins == 4) {
       json j;
       j["cmd"] = "join_group";
-      j["from"] = id; // Should cause error.
+      j["from"] = bind;
       j["group_iid"] = number_of_joins;
       send_msg({j.dump()});
       --number_of_joins;
@@ -417,7 +410,9 @@ void client_session::join_group()
    if (number_of_joins == 3) {
       json j;
       j["cmd"] = "join_group";
-      j["from"] = id + 1; // Should cause error.
+      auto tmp = bind;
+      ++tmp.index;
+      j["from"] = tmp;
       j["group_id"] = number_of_joins;
       send_msg({j.dump()});
       --number_of_joins;
@@ -427,7 +422,7 @@ void client_session::join_group()
    if (number_of_joins == 2) {
       json j;
       j["cmd"] = "joiin_group";
-      j["from"] = id;
+      j["from"] = bind;
       j["group_id"] = number_of_joins;
       send_msg({j.dump()});
       --number_of_joins;
@@ -437,7 +432,7 @@ void client_session::join_group()
    if (number_of_joins == 1) {
       json j;
       j["cmd"] = "join_group";
-      j["from"] = id;
+      j["from"] = bind;
       j["group_id"] = number_of_valid_joins;
       send_msg({j.dump()});
       if (number_of_valid_joins-- == 0)
@@ -459,7 +454,9 @@ void client_session::send_group_msg()
    if (number_of_group_msgs == 5) {
       json j;
       j["cmd"] = "send_group_msg";
-      j["from"] = id + 1;
+      auto tmp = bind;
+      ++tmp.index;
+      j["from"] = tmp;
       j["to"] = 0;
       j["msg"] = "Message to group";
       send_msg(j.dump());
@@ -469,7 +466,7 @@ void client_session::send_group_msg()
    if (number_of_group_msgs == 4) {
       json j;
       j["cmd"] = "send_group_msg";
-      j["friom"] = id;
+      j["friom"] = bind;
       j["to"] = 0;
       j["msg"] = "Message to group";
       send_msg(j.dump());
@@ -479,7 +476,7 @@ void client_session::send_group_msg()
    if (number_of_group_msgs == 3) {
       json j;
       j["cmd"] = "send_9group_msg";
-      j["from"] = id;
+      j["from"] = bind;
       j["to"] = 0;
       j["msg"] = "Message to group";
       send_msg(j.dump());
@@ -489,7 +486,7 @@ void client_session::send_group_msg()
    if (number_of_group_msgs == 2) {
       json j;
       j["cm2d"] = "send_group_msg";
-      j["from"] = id;
+      j["from"] = bind;
       j["to"] = 0;
       j["msg"] = "Message to group";
       send_msg(j.dump());
@@ -499,7 +496,7 @@ void client_session::send_group_msg()
    if (number_of_group_msgs == 1) {
       json j;
       j["cmd"] = "send_group_msg";
-      j["from"] = id;
+      j["from"] = bind;
       j["to"] = number_of_valid_group_msgs;
       j["msg"] = "Message to group";
       send_msg(j.dump());
@@ -520,7 +517,7 @@ void client_session::send_user_msg()
 {
    json j;
    j["cmd"] = "send_user_msg";
-   j["from"] = id;
+   j["from"] = bind;
    j["to"] = 0;
    j["msg"] = "Mensagem ao usuario.";
 
@@ -561,12 +558,12 @@ void client_session::on_login_ack(json j)
       //    }
       // }
 
-      std::cout << "Login failed. " << id << std::endl;
+      std::cout << "Login failed." << std::endl;
       return;
    }
 
-   id = j["user_idx"].get<int>();
-   std::cout << "Login successfull with Id: " << id << std::endl;
+   bind = j["user_bind"].get<user_bind>();
+   std::cout << "Login successfull with bind: \n" << bind << std::endl;
 
    if (!op.interative) {
       // TODO: Before we proceed with create group we could repost a

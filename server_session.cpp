@@ -67,16 +67,16 @@ void server_session::on_read( boost::system::error_code ec
       buffer.consume(std::size(buffer));
       json j;
       ss >> j;
-      //std::cout << "Valid json serialization: " << tmp << std::endl;
       user_idx = sd->on_read(std::move(j), shared_from_this());
       if (user_idx == -1) {
-         //std::cout << "Dropping connection." << std::endl;
+         std::cout << "Dropping connection." << std::endl;
          return;
       }
 
+      std::cout << "Accepted: " << tmp << std::endl;
+
    } catch (...) {
-      //std::cerr << "Invalid json serialization: " << tmp << std::endl;
-      //std::cout << "Dropping connection." << std::endl;
+      std::cerr << "Exception from: " << tmp << std::endl;
       return;
    }
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "config.hpp"
+#include "json_utils.hpp"
 
 #include <set>
 #include <queue>
@@ -40,7 +41,7 @@ private:
    std::queue<std::string> msg_queue;
 
    client_options op;
-   int id = -1;
+   user_bind bind;
    std::set<int> groups;
 
    int number_of_logins = 5;

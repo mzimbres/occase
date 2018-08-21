@@ -35,14 +35,22 @@ index_type server_data::on_login(json j, std::shared_ptr<server_session> s)
    if (!new_user.second) {
       // The user already exists in the system. This case can be
       // triggered by some conditions
+      //
       // 1. The user lost his phone and the number was assigned to
       //    a new person.
-      // 2. He reinstalled the app.
+      // 2. The user reinstalled the app.
+      // 3. There is an error in the app and it is sending us more
+      //    than one login.
       //
-      // REVIEW: I still do not know how to handle this sitiations
-      // properly so I am not going to do anything for now. We
-      // could for example reset his data and send him an SMS for
-      // confimation. 
+      // REVIEW: I think the best strategy here is to reset the user
+      // data to avoid leaking it to whatever person the numer
+      // happened to be assigned to. If the user uninstalled the app
+      // himself, them he may be ok with losing his data. 
+      //
+      // TODO: This is where we will send the user an SMS for
+      // confirmation he is thw owner of this number. This function
+      // will have to be split in two, when the user confirms the SMS
+      // code. This behaviour must be taking care in the APP.
       new_user_idx = new_user.first->second;
    } else {
       // The user did not exist in the system. We have to allocate
@@ -61,12 +69,12 @@ index_type server_data::on_login(json j, std::shared_ptr<server_session> s)
    // use RAII.
 
    users[new_user_idx].store_session(s);
-   users[new_user_idx].set_id(std::move(tel));
+   users[new_user_idx].set_id(tel);
 
    json resp;
    resp["cmd"] = "login_ack";
    resp["result"] = "ok";
-   resp["user_idx"] = new_user_idx;
+   resp["user_bind"] = user_bind {tel, host, new_user_idx};
 
    users[new_user_idx].send_msg(resp.dump());
    return new_user_idx;
@@ -75,8 +83,8 @@ index_type server_data::on_login(json j, std::shared_ptr<server_session> s)
 index_type
 server_data::on_group_msg(json j, std::shared_ptr<server_session> s)
 {
-   auto from = j["from"].get<int>();
-   if (!users.is_valid_index(from)) {
+   auto from = j["from"].get<user_bind>();
+   if (!users.is_valid_index(from.index)) {
       // This is a non-existing user. Perhaps the json command was
       // sent with the wrong information signaling a logic error in
       // the app.
@@ -84,7 +92,7 @@ server_data::on_group_msg(json j, std::shared_ptr<server_session> s)
       return -1;
    }
 
-   users[from].store_session(s);
+   users[from.index].store_session(s);
 
    auto to = j["to"].get<int>();
 
@@ -97,14 +105,14 @@ server_data::on_group_msg(json j, std::shared_ptr<server_session> s)
       resp["cmd"] = "send_group_msg_ack";
       resp["result"] = "fail";
       resp["reason"] = "Non existing group";
-      users[from].send_msg(resp.dump());
-      return from;
+      users[from.index].send_msg(resp.dump());
+      return from.index;
    }
 
    if (!groups[to].is_active()) {
       // TODO: Report back to the user that this groups does no exist
       // anymore.
-      return from;
+      return from.index;
    }
 
    json resp;
@@ -120,16 +128,16 @@ server_data::on_group_msg(json j, std::shared_ptr<server_session> s)
    json ack;
    ack["cmd"] = "send_group_msg_ack";
    ack["result"] = "ok";
-   users[from].send_msg(ack.dump());
+   users[from.index].send_msg(ack.dump());
 
-   return from;
+   return from.index;
 }
 
 index_type
 server_data::on_user_msg(json j, std::shared_ptr<server_session> s)
 {
-   auto from = j["from"].get<int>();
-   if (!users.is_valid_index(from)) {
+   auto from = j["from"].get<user_bind>();
+   if (!users.is_valid_index(from.index)) {
       // This is a non-existing user. Perhaps the json command was
       // sent with the wrong information signaling a logic error in
       // the app.
@@ -144,26 +152,26 @@ server_data::on_user_msg(json j, std::shared_ptr<server_session> s)
       // sent with the wrong information signaling a logic error in
       // the app.
       // TODO: Decide what to do here.
-      return from;
+      return from.index;
    }
 
-   users[from].store_session(s);
+   users[from.index].store_session(s);
 
    json resp;
    resp["cmd"] = "message";
    resp["message"] = j["msg"].get<std::string>();
 
    users[to].send_msg(resp.dump());
-   return from;
+   return from.index;
 }
 
 index_type server_data::on_create_group(json j, std::shared_ptr<server_session> s)
 {
-   auto from = j["from"].get<int>();
+   auto from = j["from"].get<user_bind>();
 
    // Before allocating a new group it is a good idea to check if
    // the owner passed is at least in a valid range.
-   if (!users.is_valid_index(from)) {
+   if (!users.is_valid_index(from.index)) {
       // This is a non-existing user. Perhaps the json command was
       // sent with the wrong information signaling a logic error in
       // the app.
@@ -176,12 +184,11 @@ index_type server_data::on_create_group(json j, std::shared_ptr<server_session> 
       return -1;
    }
 
-   auto tel = j["tel"].get<std::string>();
-   if (tel != users[from].get_id()) {
+   if (from.tel != users[from.index].get_id()) {
       return -1;
    }
 
-   users[from].store_session(s);
+   users[from.index].store_session(s);
 
    auto info = j["info"].get<group_info>();
 
@@ -195,24 +202,23 @@ index_type server_data::on_create_group(json j, std::shared_ptr<server_session> 
       json resp;
       resp["cmd"] = "create_group_ack";
       resp["result"] = "fail";
-      resp["reason"] = "Out of memory";
-      users[from].send_msg(resp.dump());
-      return from;
+      users[from.index].send_msg(resp.dump());
+      return from.index;
    }
 
-   groups[idx].set_owner(from);
+   groups[idx].set_owner(from.index);
    groups[idx].set_info(std::move(info));
-   groups[idx].add_member(from);
+   groups[idx].add_member(from.index);
 
-   users[from].add_group(idx);
+   users[from.index].add_group(idx);
 
    json resp;
    resp["cmd"] = "create_group_ack";
    resp["result"] = "ok";
    resp["group_id"] = idx;
 
-   users[from].send_msg(resp.dump());
-   return from;
+   users[from.index].send_msg(resp.dump());
+   return from.index;
 }
 
 group server_data::remove_group(index_type idx)
@@ -262,13 +268,13 @@ bool server_data::change_group_ownership( index_type from, index_type to
 index_type
 server_data::on_join_group(json j, std::shared_ptr<server_session> s)
 {
-   auto from = j["from"].get<int>();
-   if (!users.is_valid_index(from)) {
+   auto from = j["from"].get<user_bind>();
+   if (!users.is_valid_index(from.index)) {
       // TODO: Clarify how this could happen.
       return -1;
    }
 
-   users[from].store_session(s);
+   users[from.index].store_session(s);
 
    auto gid = j["group_id"].get<int>();
 
@@ -277,9 +283,8 @@ server_data::on_join_group(json j, std::shared_ptr<server_session> s)
       json resp;
       resp["cmd"] = "join_group_ack";
       resp["result"] = "fail";
-      resp["reason"] = "Invalid group id.";
-      users[from].send_msg(resp.dump());
-      return from;
+      users[from.index].send_msg(resp.dump());
+      return from.index;
    }
 
    if (!groups[gid].is_active()) {
@@ -287,20 +292,19 @@ server_data::on_join_group(json j, std::shared_ptr<server_session> s)
       json resp;
       resp["cmd"] = "join_group_ack";
       resp["result"] = "fail";
-      resp["reason"] = "Group not active.";
-      users[from].send_msg(resp.dump());
-      return from;
+      users[from.index].send_msg(resp.dump());
+      return from.index;
    }
 
-   groups[gid].add_member(from);
+   groups[gid].add_member(from.index);
 
    json resp;
    resp["cmd"] = "join_group_ack";
    resp["result"] = "ok";
    resp["info"] = groups[gid].get_info(),
 
-   users[from].send_msg(resp.dump());
-   return from;
+   users[from.index].send_msg(resp.dump());
+   return from.index;
 }
 
 void server_data::on_write(index_type user_idx)

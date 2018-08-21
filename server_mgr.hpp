@@ -11,7 +11,7 @@
 
 class server_session;
 
-class server_data {
+class server_mgr {
 private:
    std::string host = "criatura";
 
@@ -22,7 +22,7 @@ private:
    std::unordered_map<id_type, index_type> id_to_idx_map;
 
 public:
-   server_data(int users_size, int groups_size)
+   server_mgr(int users_size, int groups_size)
    : users(users_size)
    , groups(groups_size)
    {}

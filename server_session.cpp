@@ -11,7 +11,7 @@ void fail(boost::system::error_code ec, char const* what)
 }
 
 server_session::server_session( tcp::socket socket
-                              , std::shared_ptr<server_data> sd_)
+                              , std::shared_ptr<server_mgr> sd_)
 : ws(std::move(socket))
 , strand(ws.get_executor())
 , sd(sd_)

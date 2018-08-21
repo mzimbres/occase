@@ -9,7 +9,7 @@
 #include <boost/asio/ip/tcp.hpp>
 
 #include "config.hpp"
-#include "server_data.hpp"
+#include "server_mgr.hpp"
 
 class server_session :
    public std::enable_shared_from_this<server_session> {
@@ -18,7 +18,7 @@ private:
    boost::asio::strand<
       boost::asio::io_context::executor_type> strand;
    boost::beast::multi_buffer buffer;
-   std::shared_ptr<server_data> sd;
+   std::shared_ptr<server_mgr> sd;
 
    void on_accept(boost::system::error_code ec);
    void do_read();
@@ -34,7 +34,7 @@ private:
 public:
    explicit
    server_session( tcp::socket socket
-                 , std::shared_ptr<server_data> sd_);
+                 , std::shared_ptr<server_mgr> sd_);
 
    void run();
    void write(std::string msg);

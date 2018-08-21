@@ -18,7 +18,7 @@ void fail(boost::system::error_code ec, char const* what)
 
 listener::listener( boost::asio::io_context& ioc
                   , tcp::endpoint endpoint
-                  , std::shared_ptr<server_data> sd_)
+                  , std::shared_ptr<server_mgr> sd_)
 : acceptor(ioc)
 , socket(ioc)
 , sd(sd_)

@@ -11,13 +11,13 @@ CPPFLAGS = -I$(BOOST_INCLUDE) -I$(JSON_INCLUDE) \
            -std=$(CPP_VERSION) $(DEBUG_FLAGS) $(OTHER_FLAGS)
 
 
-HEADERS = user.hpp group.hpp config.hpp server_data.hpp \
+HEADERS = user.hpp group.hpp config.hpp server_mgr.hpp \
           server_session.hpp client_session.hpp grow_only_vector.hpp \
           listener.hpp json_utils.hpp
 
 COMMON_OBJS = json_utils.o
 
-SERVER_OBJS = user.o group.o server_data.o server_session.o listener.o
+SERVER_OBJS = user.o group.o server_mgr.o server_session.o listener.o
 
 CLIENT_OBJS = client_session.o
 

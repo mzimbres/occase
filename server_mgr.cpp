@@ -1,8 +1,8 @@
-#include "server_data.hpp"
+#include "server_mgr.hpp"
 #include "server_session.hpp"
 
 index_type
-server_data::on_read(json j, std::shared_ptr<server_session> session)
+server_mgr::on_read(json j, std::shared_ptr<server_session> session)
 {
    //std::cout << j << std::endl;
    auto cmd = j["cmd"].get<std::string>();
@@ -22,7 +22,7 @@ server_data::on_read(json j, std::shared_ptr<server_session> session)
    }
 }
 
-index_type server_data::on_login(json j, std::shared_ptr<server_session> s)
+index_type server_mgr::on_login(json j, std::shared_ptr<server_session> s)
 {
    auto tel = j["tel"].get<std::string>();
 
@@ -77,7 +77,7 @@ index_type server_data::on_login(json j, std::shared_ptr<server_session> s)
 }
 
 index_type
-server_data::on_group_msg(json j, std::shared_ptr<server_session> s)
+server_mgr::on_group_msg(json j, std::shared_ptr<server_session> s)
 {
    auto from = j["from"].get<user_bind>();
    if (!users.is_valid_index(from.index)) {
@@ -130,7 +130,7 @@ server_data::on_group_msg(json j, std::shared_ptr<server_session> s)
 }
 
 index_type
-server_data::on_user_msg(json j, std::shared_ptr<server_session> s)
+server_mgr::on_user_msg(json j, std::shared_ptr<server_session> s)
 {
    auto from = j["from"].get<user_bind>();
    if (!users.is_valid_index(from.index)) {
@@ -161,7 +161,7 @@ server_data::on_user_msg(json j, std::shared_ptr<server_session> s)
    return from.index;
 }
 
-index_type server_data::on_create_group(json j, std::shared_ptr<server_session> s)
+index_type server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
 {
    auto from = j["from"].get<user_bind>();
 
@@ -217,7 +217,7 @@ index_type server_data::on_create_group(json j, std::shared_ptr<server_session> 
    return from.index;
 }
 
-group server_data::remove_group(index_type idx)
+group server_mgr::remove_group(index_type idx)
 {
    if (!groups.is_valid_index(idx))
       return group {}; // Out of range? Logic error.
@@ -239,7 +239,7 @@ group server_data::remove_group(index_type idx)
    return removed_group; // Let RVO optimize this.
 }
 
-bool server_data::change_group_ownership( index_type from, index_type to
+bool server_mgr::change_group_ownership( index_type from, index_type to
                                         , index_type gid)
 {
    if (!groups.is_valid_index(gid))
@@ -262,7 +262,7 @@ bool server_data::change_group_ownership( index_type from, index_type to
 }
 
 index_type
-server_data::on_join_group(json j, std::shared_ptr<server_session> s)
+server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
 {
    auto from = j["from"].get<user_bind>();
    if (!users.is_valid_index(from.index)) {
@@ -303,7 +303,7 @@ server_data::on_join_group(json j, std::shared_ptr<server_session> s)
    return from.index;
 }
 
-void server_data::on_write(index_type user_idx)
+void server_mgr::on_write(index_type user_idx)
 {
    if (!users.is_valid_index(user_idx)) {
       // TODO: Clarify how this could happen.

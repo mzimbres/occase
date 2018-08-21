@@ -14,7 +14,7 @@ int main(int argc, char* argv[])
 
    boost::asio::io_context ioc {threads};
    
-   auto sd = std::make_shared<server_data>(users_size, groups_size);
+   auto sd = std::make_shared<server_mgr>(users_size, groups_size);
 
    std::make_shared<listener>( ioc , tcp::endpoint {address, port}
                              , sd)->run();

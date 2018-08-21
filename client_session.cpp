@@ -28,7 +28,9 @@ void client_session::on_read( boost::system::error_code ec
       boost::ignore_unused(bytes_transferred);
 
       if (ec) {
-         fail(ec, "read");
+         if (mgr.on_fail_read(ec) == -1)
+            return;
+
          buffer.consume(buffer.size());
          //std::cout << "Connection lost, trying to reconnect." << std::endl;
 
@@ -49,8 +51,7 @@ void client_session::on_read( boost::system::error_code ec
       auto str = ss.str();
       std::cout << "Received: " << str << std::endl;
 
-      auto r = mgr.on_message(j, shared_from_this());
-      if (r == -1) {
+      if (mgr.on_read(j, shared_from_this()) == -1) {
          std::cerr << "Server error. Please fix." << std::endl;
          return;
       }

@@ -51,7 +51,8 @@ private:
 public:
    client_mgr(std::string tel_);
    user_bind bind;
-   int on_message(json j, std::shared_ptr<client_session> s);
+   int on_read(json j, std::shared_ptr<client_session> s);
+   int on_fail_read(boost::system::error_code ec);
    void on_write(std::shared_ptr<client_session> s);
    int on_handshake(std::shared_ptr<client_session> s);
    //void prompt_login();

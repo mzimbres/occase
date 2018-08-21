@@ -7,7 +7,7 @@ client_mgr::client_mgr(std::string tel_)
 {
 }
 
-int client_mgr::on_message(json j, std::shared_ptr<client_session> s)
+int client_mgr::on_read(json j, std::shared_ptr<client_session> s)
 {
    auto cmd = j["cmd"].get<std::string>();
 
@@ -25,6 +25,12 @@ int client_mgr::on_message(json j, std::shared_ptr<client_session> s)
       std::cout << "Unknown command." << std::endl;
       return -1;
    }
+}
+
+int client_mgr::on_fail_read(boost::system::error_code ec)
+{
+   std::cerr << "client_mgr::on_fail_read: " << ec.message() << "\n";
+   return 1;
 }
 
 int client_mgr::on_login_ack(json j, std::shared_ptr<client_session> s)

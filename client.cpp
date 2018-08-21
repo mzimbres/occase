@@ -7,49 +7,49 @@
 #include "config.hpp"
 #include "client_session.hpp"
 
-struct prompt_usr {
-   std::shared_ptr<client_session> p;
-   void operator()() const
-   {
-      for (;;) {
-         std::cout << "Type a command: \n\n"
-                   << "  0: Exit.\n"
-                   << "  1: Create group.\n"
-                   << "  2: Join group.\n"
-                   << "  3: Send group message.\n"
-                   << "  4: Send user message.\n"
-                   << std::endl;
-         auto cmd = -1;
-         std::cin >> cmd;
-         std::string str;
-
-         if (cmd == 0) {
-            p->prompt_close();
-            break;
-         }
-
-         if (cmd == 1) {
-            p->prompt_create_group();
-            continue;
-         }
-         
-         if (cmd == 2) {
-            p->prompt_join_group();
-            continue;
-         }
-         
-         if (cmd == 3) {
-            p->prompt_send_group_msg();
-            continue;
-         }
-
-         if (cmd == 4) {
-            p->prompt_send_user_msg();
-            continue;
-         }
-      }
-   }
-};
+//struct prompt_usr {
+//   std::shared_ptr<client_session> p;
+//   void operator()() const
+//   {
+//      for (;;) {
+//         std::cout << "Type a command: \n\n"
+//                   << "  0: Exit.\n"
+//                   << "  1: Create group.\n"
+//                   << "  2: Join group.\n"
+//                   << "  3: Send group message.\n"
+//                   << "  4: Send user message.\n"
+//                   << std::endl;
+//         auto cmd = -1;
+//         std::cin >> cmd;
+//         std::string str;
+//
+//         if (cmd == 0) {
+//            p->prompt_close();
+//            break;
+//         }
+//
+//         if (cmd == 1) {
+//            p->prompt_create_group();
+//            continue;
+//         }
+//         
+//         if (cmd == 2) {
+//            p->prompt_join_group();
+//            continue;
+//         }
+//         
+//         if (cmd == 3) {
+//            p->prompt_send_group_msg();
+//            continue;
+//         }
+//
+//         if (cmd == 4) {
+//            p->prompt_send_user_msg();
+//            continue;
+//         }
+//      }
+//   }
+//};
 
 int main(int argc, char* argv[])
 {
@@ -61,15 +61,12 @@ int main(int argc, char* argv[])
    client_options op
    { {"127.0.0.1"}                  // Host.
    , {"8080"}                       // Port.
-   , argv[1]                        // User telefone.
-   , false                          // Sets interative mode.
-   , std::chrono::milliseconds{100} // Interval for groups creation.
-   , 15                             // Number of messages.
    };
 
    boost::asio::io_context ioc;
 
-   auto p = std::make_shared<client_session>(ioc, std::move(op));
+   client_mgr mgr(argv[1]);
+   auto p = std::make_shared<client_session>(ioc, std::move(op), mgr);
 
    //std::thread thr {prompt_usr {p}};
 

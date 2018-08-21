@@ -13,13 +13,13 @@ CPPFLAGS = -I$(BOOST_INCLUDE) -I$(JSON_INCLUDE) \
 
 HEADERS = user.hpp group.hpp config.hpp server_mgr.hpp \
           server_session.hpp client_session.hpp grow_only_vector.hpp \
-          listener.hpp json_utils.hpp
+          listener.hpp json_utils.hpp client_mgr.hpp
 
 COMMON_OBJS = json_utils.o
 
 SERVER_OBJS = user.o group.o server_mgr.o server_session.o listener.o
 
-CLIENT_OBJS = client_session.o
+CLIENT_OBJS = client_session.o client_mgr.o
 
 OBJS = $(SERVER_OBJS) $(CLIENT_OBJS) $(COMMON_OBJS)
 

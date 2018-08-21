@@ -242,20 +242,9 @@ void client_session::run()
 
 void client_session::login()
 {
-   if (number_of_logins == 5) {
-      json j;
-      j["cmd"] = "logrn";
-      j["name"] = "Marcelo Zimbres";
-      j["tel"] = op.tel;
-      send_msg(j.dump());
-      --number_of_logins;
-      return;
-   }
-
    if (number_of_logins == 4) {
       json j;
-      j["crd"] = "login";
-      j["name"] = "Marcelo Zimbres";
+      j["cmd"] = "logrn";
       j["tel"] = op.tel;
       send_msg(j.dump());
       --number_of_logins;
@@ -265,7 +254,6 @@ void client_session::login()
    if (number_of_logins == 3) {
       json j;
       j["crd"] = "login";
-      j["nume"] = "Marcelo Zimbres";
       j["tel"] = op.tel;
       send_msg(j.dump());
       --number_of_logins;
@@ -275,7 +263,6 @@ void client_session::login()
    if (number_of_logins == 2) {
       json j;
       j["crd"] = "login";
-      j["nuMe"] = "Marcelo Zimbres";
       j["Teal"] = op.tel;
       send_msg(j.dump());
       --number_of_logins;
@@ -286,7 +273,6 @@ void client_session::login()
    if (number_of_logins == 1) {
       json j;
       j["cmd"] = "login";
-      j["name"] = "Marcelo Zimbres";
       j["tel"] = op.tel;
       send_msg(j.dump());
       --number_of_logins;

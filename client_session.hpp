@@ -44,7 +44,7 @@ private:
    user_bind bind;
    std::set<int> groups;
 
-   int number_of_logins = 5;
+   int number_of_logins = 4;
    int number_of_dropped_logins = number_of_logins;
 
    int number_of_valid_create_groups = 10;

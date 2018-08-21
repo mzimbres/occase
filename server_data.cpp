@@ -25,10 +25,6 @@ server_data::on_read(json j, std::shared_ptr<server_session> session)
 index_type server_data::on_login(json j, std::shared_ptr<server_session> s)
 {
    auto tel = j["tel"].get<std::string>();
-   auto name = j["name"].get<std::string>();
-
-   //std::cout << "New login from " << name << " " << tel
-   //          << std::endl;
 
    index_type new_user_idx = -1;
    auto new_user = id_to_idx_map.insert({tel, {}});
@@ -48,7 +44,7 @@ index_type server_data::on_login(json j, std::shared_ptr<server_session> s)
       // himself, them he may be ok with losing his data. 
       //
       // TODO: This is where we will send the user an SMS for
-      // confirmation he is thw owner of this number. This function
+      // confirmation he is the owner of this number. This function
       // will have to be split in two, when the user confirms the SMS
       // code. This behaviour must be taking care in the APP.
       new_user_idx = new_user.first->second;

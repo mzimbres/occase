@@ -79,9 +79,7 @@ client_mgr::on_ok_create_group_ack(json j, std::shared_ptr<client_session> s)
              << std::endl;
 
    if (number_of_ok_create_groups-- == 0) {
-      // Fix the server to send fail group and call it here. I will go
-      // directly to join_group.
-      join_group(s);
+      create_fail_group(s);
       return 1;
    }
 
@@ -93,8 +91,12 @@ int
 client_mgr::on_fail_create_group_ack( json j
                                     , std::shared_ptr<client_session> s)
 {
-   // This is not going to be triggered at the moment.
-   std::cout << "Create group failed." << std::endl;
+   if (number_of_fail_create_groups-- == 0) {
+      join_group(s);
+      return 1;
+   }
+
+   create_fail_group(s);
    return 1;
 }
 
@@ -218,6 +220,12 @@ void client_mgr::create_ok_group(std::shared_ptr<client_session> s)
 
 void client_mgr::create_fail_group(std::shared_ptr<client_session> s)
 {
+   // This is a valid command but should exceed the server capacity.
+   json j;
+   j["cmd"] = "create_group";
+   j["from"] = bind;
+   j["info"] = group_info { {"Repasse"}, {"Carros."}};
+   send_msg(j.dump(), s);
 }
 
 void client_mgr::create_dropped_group(std::shared_ptr<client_session> s)

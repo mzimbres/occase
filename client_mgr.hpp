@@ -20,7 +20,8 @@ private:
    int number_of_dropped_logins = number_of_logins - 1;
 
    int number_of_ok_create_groups = 10;
-   int number_of_fail_create_groups = 0;
+   // Depends on the number configure on the server.
+   int number_of_fail_create_groups = 10;
    int number_of_dropped_create_groups = 7;
 
    int number_of_valid_joins = 10;

@@ -10,7 +10,7 @@ int main(int argc, char* argv[])
    auto const port = static_cast<unsigned short>(8080);
    auto const threads = 1;
    auto const users_size = 10;
-   auto const groups_size = 20;
+   auto const groups_size = 10;
 
    boost::asio::io_context ioc {threads};
    

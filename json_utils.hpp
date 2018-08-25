@@ -27,7 +27,6 @@ struct user_bind {
    int index = -1;
 };
 
-
 std::ostream& operator<<(std::ostream& os, group_info const& o);
 std::ostream& operator<<(std::ostream& os, group_bind const& o);
 std::ostream& operator<<(std::ostream& os, user_bind const& o);

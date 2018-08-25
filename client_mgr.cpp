@@ -4,8 +4,7 @@
 
 client_mgr::client_mgr(std::string tel_)
 : tel(tel_)
-{
-}
+{ }
 
 int client_mgr::on_read(json j, std::shared_ptr<client_session> s)
 {
@@ -30,6 +29,17 @@ int client_mgr::on_read(json j, std::shared_ptr<client_session> s)
 int client_mgr::on_fail_read(boost::system::error_code ec)
 {
    std::cerr << "client_mgr::on_fail_read: " << ec.message() << "\n";
+
+   if (number_of_logins > 0) {
+      --number_of_dropped_logins;
+      return 1;
+   }
+
+   if (number_of_create_groups > 0) {
+      --number_of_dropped_create_groups;
+      return 1;
+   }
+
    return 1;
 }
 
@@ -400,24 +410,23 @@ int client_mgr::on_handshake(std::shared_ptr<client_session> s)
 {
    if (number_of_logins > 0) {
       login(s);
-      --number_of_dropped_logins;
       return 1;
    }
 
    if (number_of_dropped_logins != 0) {
-      std::cout << "Error: number_of_dropped_logins != 0" << std::endl;
+      std::cout << "Error: client_mgr::on_handshake "
+                << number_of_dropped_logins <<  " != 0" << std::endl;
       return -1;
    }
 
    if (number_of_create_groups > 0) {
       create_group(s);
-      --number_of_dropped_create_groups;
       return 1;
    }
 
    if (number_of_dropped_create_groups != 0) {
-      std::cout << "Error: " << number_of_dropped_create_groups << " != 0"
-                << std::endl;
+      std::cout << "Error: client_mgr::on_handshake "
+                << number_of_dropped_create_groups << " != 0" << std::endl;
       return -1;
    }
 

@@ -19,9 +19,9 @@ private:
    int number_of_logins = 4;
    int number_of_dropped_logins = number_of_logins - 1;
 
-   int number_of_valid_create_groups = 10;
-   int number_of_create_groups = 8;
-   int number_of_dropped_create_groups = number_of_create_groups - 2;
+   int number_of_ok_create_groups = 10;
+   int number_of_fail_create_groups = 0;
+   int number_of_dropped_create_groups = 7;
 
    int number_of_valid_joins = 10;
    int number_of_joins = 4;
@@ -33,8 +33,15 @@ private:
    // Functions called when new message arrives. If any of these
    // functions return -1 it means the server returned something wrong
    // and we should make the test fail.
+
+   // Login 
    int on_login_ack(json j, std::shared_ptr<client_session> s);
+
+   // Create group.
    int on_create_group_ack(json j, std::shared_ptr<client_session> s);
+   int on_ok_create_group_ack(json j, std::shared_ptr<client_session> s);
+   int on_fail_create_group_ack(json j, std::shared_ptr<client_session> s);
+
    int on_chat_message(json j, std::shared_ptr<client_session> s);
    int on_join_group_ack(json j, std::shared_ptr<client_session> s);
    int on_send_group_msg_ack(json j, std::shared_ptr<client_session> s);
@@ -42,7 +49,12 @@ private:
    // Functions that create some random commands and sends them to the
    // server.
    void login(std::shared_ptr<client_session> s);
-   void create_group(std::shared_ptr<client_session> s);
+
+   // Create group
+   void create_ok_group(std::shared_ptr<client_session> s);
+   void create_fail_group(std::shared_ptr<client_session> s);
+   void create_dropped_group(std::shared_ptr<client_session> s);
+
    void join_group(std::shared_ptr<client_session> s);
    void send_group_msg(std::shared_ptr<client_session> s);
    void send_user_msg(std::shared_ptr<client_session> s);

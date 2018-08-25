@@ -65,34 +65,48 @@ int client_mgr::on_login_ack(json j, std::shared_ptr<client_session> s)
    // login command to see how the server responds. Let us do it
    // later, this will make the code even more complicated.
 
-   create_group(s);
+   create_dropped_group(s);
+   return 1;
+}
+
+int
+client_mgr::on_ok_create_group_ack(json j, std::shared_ptr<client_session> s)
+{
+   auto gbind = j["group_bind"].get<group_bind>();
+   groups.insert(gbind);
+
+   std::cout << "Create groups successfull: \n" << gbind
+             << std::endl;
+
+   if (number_of_ok_create_groups-- == 0) {
+      // Fix the server to send fail group and call it here. I will go
+      // directly to join_group.
+      join_group(s);
+      return 1;
+   }
+
+   create_ok_group(s);
+   return 1;
+}
+
+int
+client_mgr::on_fail_create_group_ack( json j
+                                    , std::shared_ptr<client_session> s)
+{
+   // This is not going to be triggered at the moment.
+   std::cout << "Create group failed." << std::endl;
    return 1;
 }
 
 int
 client_mgr::on_create_group_ack(json j, std::shared_ptr<client_session> s)
 {
-   // TODO: Split this in ok and fail conditions below.
-   if (number_of_create_groups > 0) {
-      create_group(s);
-   } else {
-      join_group(s);
-   }
-
    auto res = j["result"].get<std::string>();
-   if (res == "ok") {
-      auto gbind = j["group_bind"].get<group_bind>();
-      groups.insert(gbind);
-
-      std::cout << "Create groups successfull: \n" << gbind
-                << std::endl;
-      return 1;
-   }
+   if (res == "ok")
+      return on_ok_create_group_ack(j, s);
    
-   if (res == "fail") {
-      std::cout << "Create group failed." << std::endl;
-      return 1;
-   }
+   if (res == "fail")
+      return on_fail_create_group_ack(j, s);
 
    return -1;
 }
@@ -192,54 +206,50 @@ void client_mgr::login(std::shared_ptr<client_session> s)
    }
 }
 
-void client_mgr::create_group(std::shared_ptr<client_session> s)
+void client_mgr::create_ok_group(std::shared_ptr<client_session> s)
 {
-   //std::cout << "Create group: " << number_of_create_groups << std::endl;
+   json j;
+   j["cmd"] = "create_group";
+   j["from"] = bind;
+   j["info"] = group_info { {"Repasse"}, {"Carros."}};
+   send_msg(j.dump(), s);
+   //std::cout << "Just send a valid create group: " << j << std::endl;
+}
 
-   // Should be accepted by the server.
-   if (number_of_create_groups == 8) {
-      json j;
-      j["cmd"] = "create_group";
-      j["from"] = bind;
-      j["info"] = group_info { {"Repasse"}, {"Carros."}};
-      send_msg(j.dump(), s);
-      if (--number_of_valid_create_groups == 0)
-         --number_of_create_groups;
-      //std::cout << "Just send a valid create group: " << j << std::endl;
-      return;
-   }
+void client_mgr::create_fail_group(std::shared_ptr<client_session> s)
+{
+}
 
-   if (number_of_create_groups == 7) {
+void client_mgr::create_dropped_group(std::shared_ptr<client_session> s)
+{
+   if (number_of_dropped_create_groups == 7) {
       json j;
       j["cmud"] = "create_group";
       j["from"] = bind;
       j["info"] = group_info { {"Repasse"}, {"Carros."}};
       send_msg(j.dump(), s);
-      --number_of_create_groups;
       return;
    }
 
-   if (number_of_create_groups == 6) {
+   if (number_of_dropped_create_groups == 6) {
       json j;
       j["cmd"] = "craeate_group";
       j["from"] = bind;
       j["info"] = group_info { {"Repasse"}, {"Carros."}};
       send_msg(j.dump(), s);
-      --number_of_create_groups;
       return;
    }
 
-   if (number_of_create_groups == 5) {
+   if (number_of_dropped_create_groups == 5) {
       json j;
       j["cmd"] = "create_group";
       j["froim"] = bind;
       j["info"] = group_info { {"Repasse"}, {"Carros."}};
       send_msg(j.dump(), s);
-      --number_of_create_groups;
       return;
    }
 
-   if (number_of_create_groups == 4) {
+   if (number_of_dropped_create_groups == 4) {
       json j;
       j["cmd"] = "create_group";
       auto tmp = bind;
@@ -247,33 +257,29 @@ void client_mgr::create_group(std::shared_ptr<client_session> s)
       j["from"] = tmp;
       j["info"] = group_info { {"Repasse"}, {"Carros."}};
       send_msg(j.dump(), s);
-      --number_of_create_groups;
       return;
    }
 
-   if (number_of_create_groups == 3) {
+   if (number_of_dropped_create_groups == 3) {
       json j;
       j["cmd"] = "create_group";
       j["from"] = bind;
       j["inafo"] = group_info { {"Repasse"}, {"Carros."}};
       send_msg(j.dump(), s);
-      --number_of_create_groups;
       return;
    }
 
-   if (number_of_create_groups == 2) {
+   if (number_of_dropped_create_groups == 2) {
       json j;
       j["cmd"] = "create_group";
       j["from"] = bind;
       j["info"] = "aaaaa";
       send_msg(j.dump(), s);
-      --number_of_create_groups;
       return;
    }
 
-   if (number_of_create_groups == 1) {
+   if (number_of_dropped_create_groups == 1) {
       send_msg("alkdshfkjds", s);
-      --number_of_create_groups;
       return;
    }
 }
@@ -425,16 +431,14 @@ int client_mgr::on_handshake(std::shared_ptr<client_session> s)
       return -1;
    }
 
-   if (number_of_create_groups > 0) {
-      create_group(s);
+   if (number_of_dropped_create_groups > 0) {
+      create_dropped_group(s);
       return 1;
    }
 
-   if (number_of_dropped_create_groups != 0) {
-      std::cout
-       << "Error: client_mgr::on_handshake number_of_dropped_create_groups: "
-       << number_of_dropped_create_groups << " != 0" << std::endl;
-      return -1;
+   if (number_of_ok_create_groups > 0) {
+      create_ok_group(s);
+      return 1;
    }
 
    if (number_of_joins > 0) {

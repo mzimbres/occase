@@ -270,6 +270,10 @@ server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
       return -1;
    }
 
+   if (from.tel != users[from.index].get_id()) {
+      return -1;
+   }
+
    users[from.index].store_session(s);
 
    auto gbind = j["group_bind"].get<group_bind>();

@@ -69,7 +69,7 @@ void server_session::on_read( boost::system::error_code ec
       ss >> j;
       user_idx = sd->on_read(std::move(j), shared_from_this());
       if (user_idx == -1) {
-         std::cout << "Dropping connection." << std::endl;
+         std::cout << "Dropping connection." << tmp << std::endl;
          return;
       }
 

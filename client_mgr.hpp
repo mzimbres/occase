@@ -25,6 +25,7 @@ private:
 
    int number_of_valid_joins = 10;
    int number_of_joins = 4;
+   int number_of_dropped_joins = number_of_joins - 1;
 
    int number_of_valid_group_msgs = 10;
    int number_of_group_msgs = 4;

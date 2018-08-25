@@ -30,13 +30,18 @@ int client_mgr::on_fail_read(boost::system::error_code ec)
 {
    std::cerr << "client_mgr::on_fail_read: " << ec.message() << "\n";
 
-   if (number_of_logins > 0) {
+   if (number_of_dropped_logins != 0) {
       --number_of_dropped_logins;
       return 1;
    }
 
-   if (number_of_create_groups > 0) {
+   if (number_of_dropped_create_groups != 0) {
       --number_of_dropped_create_groups;
+      return 1;
+   }
+
+   if (number_of_dropped_joins > 0) {
+      --number_of_dropped_joins;
       return 1;
    }
 
@@ -238,8 +243,8 @@ void client_mgr::create_group(std::shared_ptr<client_session> s)
       json j;
       j["cmd"] = "create_group";
       auto tmp = bind;
-      ++bind.index;
-      j["from"] = bind;
+      ++tmp.index;
+      j["from"] = tmp;
       j["info"] = group_info { {"Repasse"}, {"Carros."}};
       send_msg(j.dump(), s);
       --number_of_create_groups;
@@ -414,8 +419,9 @@ int client_mgr::on_handshake(std::shared_ptr<client_session> s)
    }
 
    if (number_of_dropped_logins != 0) {
-      std::cout << "Error: client_mgr::on_handshake "
-                << number_of_dropped_logins <<  " != 0" << std::endl;
+      std::cout
+      << "Error: client_mgr::on_handshake number_of_dropped_logins: "
+      << number_of_dropped_logins <<  " != 0" << std::endl;
       return -1;
    }
 
@@ -425,14 +431,22 @@ int client_mgr::on_handshake(std::shared_ptr<client_session> s)
    }
 
    if (number_of_dropped_create_groups != 0) {
-      std::cout << "Error: client_mgr::on_handshake "
-                << number_of_dropped_create_groups << " != 0" << std::endl;
+      std::cout
+       << "Error: client_mgr::on_handshake number_of_dropped_create_groups: "
+       << number_of_dropped_create_groups << " != 0" << std::endl;
       return -1;
    }
 
    if (number_of_joins > 0) {
       join_group(s);
       return 1;
+   }
+
+   if (number_of_dropped_joins != 0) {
+      std::cout
+       << "Error: client_mgr::on_handshake number_of_dropped_joins: "
+       << number_of_dropped_joins << " != 0" << std::endl;
+      return -1;
    }
 
    if (number_of_group_msgs > 0) {

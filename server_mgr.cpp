@@ -39,7 +39,7 @@ index_type server_mgr::on_login(json j, std::shared_ptr<server_session> s)
       //    than one login.
       //
       // REVIEW: I think the best strategy here is to reset the user
-      // data to avoid leaking it to whatever person the numer
+      // data to avoid leaking it to whatever person the number
       // happened to be assigned to. If the user uninstalled the app
       // himself, them he may be ok with losing his data. 
       //
@@ -161,26 +161,24 @@ server_mgr::on_user_msg(json j, std::shared_ptr<server_session> s)
    return from.index;
 }
 
-index_type server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
+index_type
+server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
 {
    auto from = j["from"].get<user_bind>();
 
    // Before allocating a new group it is a good idea to check if
    // the owner passed is at least in a valid range.
    if (!users.is_valid_index(from.index)) {
-      // This is a non-existing user. Perhaps the json command was
-      // sent with the wrong information signaling a logic error in
-      // the app.
-      json resp;
-      resp["cmd"] = "create_group_ack";
-      resp["result"] = "fail";
-      //s->write(resp.dump());
-
-      // TODO: Review what should be returned here.
+      // This is not even an existing user. Perhaps the json command
+      // was sent with the wrong information signaling a logic error
+      // in the app. I do not think we have to report this problem.
       return -1;
    }
 
    if (from.tel != users[from.index].get_id()) {
+      // The user telephone number and its index do not match. Causes
+      // of this is unclear, maybe someone scanning all possible
+      // indexes to try hack the server?
       return -1;
    }
 
@@ -190,11 +188,12 @@ index_type server_mgr::on_create_group(json j, std::shared_ptr<server_session> s
 
    auto idx = groups.allocate();
    if (idx == -1) {
-      // We run out of memory in this server and this group must be
-      // created else where. This situation must be thought carefully
-      // I still donot know if this can happen. If so many groups will
-      // ever be created.
-
+      // In my current design the total number of groups we not grow
+      // dynamically but be set on startup. I may have to change this
+      // later or start the server with some room for dynamic creation
+      // of groups. However we can always restart the server, though
+      // this is very inconvenient. It is important to report this to
+      // the user, that in this case is probably the admin.
       json resp;
       resp["cmd"] = "create_group_ack";
       resp["result"] = "fail";
@@ -280,20 +279,20 @@ server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
 
    if (!groups.is_valid_index(gbind.index)) {
       // TODO: Clarify how this could happen.
-      json resp;
-      resp["cmd"] = "join_group_ack";
-      resp["result"] = "fail";
-      users[from.index].send_msg(resp.dump());
-      return from.index;
+      //json resp;
+      //resp["cmd"] = "join_group_ack";
+      //resp["result"] = "fail";
+      //users[from.index].send_msg(resp.dump());
+      return -1;
    }
 
    if (!groups[gbind.index].is_active()) {
       // TODO: Clarify how this could happen.
-      json resp;
-      resp["cmd"] = "join_group_ack";
-      resp["result"] = "fail";
-      users[from.index].send_msg(resp.dump());
-      return from.index;
+      //json resp;
+      //resp["cmd"] = "join_group_ack";
+      //resp["result"] = "fail";
+      //users[from.index].send_msg(resp.dump());
+      return -1;
    }
 
    groups[gbind.index].add_member(from.index);

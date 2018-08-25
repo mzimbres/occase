@@ -40,7 +40,7 @@ private:
 
    client_mgr& mgr;
 
-   void async_close();
+   void do_close();
    void on_resolve( boost::system::error_code ec
                   , tcp::resolver::results_type results);
    void on_connect( boost::system::error_code ec
@@ -55,7 +55,6 @@ private:
                , tcp::resolver::results_type results);
    void on_close(boost::system::error_code ec);
    void async_connect(tcp::resolver::results_type results);
-   void close();
 
 public:
    explicit

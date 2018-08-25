@@ -86,7 +86,7 @@ void client_session::write(std::string msg)
    ws.async_write(boost::asio::buffer(text), handler);
 }
 
-void client_session::async_close()
+void client_session::do_close()
 {
    auto handler = [p = shared_from_this()](auto ec)
    { p->on_close(ec); };

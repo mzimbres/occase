@@ -16,17 +16,34 @@ private:
    std::queue<std::string> msg_queue;
    std::string tel;
 
+   // login
    int number_of_logins = 4;
    int number_of_dropped_logins = number_of_logins - 1;
+   void login(std::shared_ptr<client_session> s);
 
+
+   // create_group
    int number_of_ok_create_groups = 10;
-   // Depends on the number configure on the server.
    int number_of_fail_create_groups = 10;
    int number_of_dropped_create_groups = 7;
 
-   int number_of_valid_joins = 10;
-   int number_of_joins = 4;
-   int number_of_dropped_joins = number_of_joins - 1;
+   int on_create_group_ack(json j, std::shared_ptr<client_session> s);
+   int on_ok_create_group_ack(json j, std::shared_ptr<client_session> s);
+   int on_fail_create_group_ack(json j, std::shared_ptr<client_session> s);
+
+   void ok_create_group(std::shared_ptr<client_session> s);
+   void fail_create_group(std::shared_ptr<client_session> s);
+   void dropped_create_group(std::shared_ptr<client_session> s);
+
+   // join_group
+   int number_of_ok_joins = 10;
+   int number_of_dropped_joins = 3;
+
+   void ok_join_group(std::shared_ptr<client_session> s);
+   void dropped_join_group(std::shared_ptr<client_session> s);
+
+   int on_join_group_ack(json j, std::shared_ptr<client_session> s);
+   int on_ok_join_group_ack(json j, std::shared_ptr<client_session> s);
 
    int number_of_valid_group_msgs = 10;
    int number_of_group_msgs = 4;
@@ -38,25 +55,9 @@ private:
    // Login 
    int on_login_ack(json j, std::shared_ptr<client_session> s);
 
-   // Create group.
-   int on_create_group_ack(json j, std::shared_ptr<client_session> s);
-   int on_ok_create_group_ack(json j, std::shared_ptr<client_session> s);
-   int on_fail_create_group_ack(json j, std::shared_ptr<client_session> s);
-
    int on_chat_message(json j, std::shared_ptr<client_session> s);
-   int on_join_group_ack(json j, std::shared_ptr<client_session> s);
    int on_send_group_msg_ack(json j, std::shared_ptr<client_session> s);
 
-   // Functions that create some random commands and sends them to the
-   // server.
-   void login(std::shared_ptr<client_session> s);
-
-   // Create group
-   void create_ok_group(std::shared_ptr<client_session> s);
-   void create_fail_group(std::shared_ptr<client_session> s);
-   void create_dropped_group(std::shared_ptr<client_session> s);
-
-   void join_group(std::shared_ptr<client_session> s);
    void send_group_msg(std::shared_ptr<client_session> s);
    void send_user_msg(std::shared_ptr<client_session> s);
 

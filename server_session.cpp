@@ -72,9 +72,11 @@ void server_session::on_read( boost::system::error_code ec
          std::cout << "Dropping connection." << tmp << std::endl;
          return;
       }
+      
+      if (user_idx == -2)
+         std::cout << "Waiting user sms." << tmp << std::endl;
 
       std::cout << "Accepted: " << tmp << std::endl;
-
    } catch (...) {
       std::cerr << "Exception from: " << tmp << std::endl;
       return;

@@ -29,7 +29,13 @@ private:
    void on_write( boost::system::error_code ec
                 , std::size_t bytes_transferred);
 
+   // A value greater than zero means a valid user index.
+   // -1: We should drop the conection.
+   // -2: We are waiting for an sms.
    int user_idx = -1;
+
+   // This is only non empty if we are waiting for a user sms.
+   std::string sms;
 
 public:
    explicit
@@ -38,5 +44,7 @@ public:
 
    void run();
    void write(std::string msg);
+   void set_sms(std::string sms_) {sms = std::move(sms_);}
+   auto const& get_sms() {return sms;}
 };
 

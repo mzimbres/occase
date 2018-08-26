@@ -26,9 +26,33 @@ server_mgr::on_read(json j, std::shared_ptr<server_session> s)
 
 index_type server_mgr::on_login(json j, std::shared_ptr<server_session> s)
 {
+   // When the user downloads the app and clicks something like login
+   // the app will send us the user phone.
    auto tel = j["tel"].get<std::string>();
 
-   index_type new_user_idx = -1;
+   // TODO: Set a timeout on the sms code.
+   // TODO: Study how should we behave if the client closes the
+   // connection here.
+   // TODO: Use a random number generator.
+   s->set_sms("8347");
+
+   json resp;
+   resp["cmd"] = "login_ack";
+   resp["result"] = "ok";
+
+   // TODO: Add a message queue in server client so that there is
+   // pending write when we send this message. This is not likely to
+   // happen but who knows.
+   s->write(resp.dump());
+   return -2;
+}
+
+index_type
+server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
+{
+   auto tel = j["tel"].get<std::string>();
+
+   auto idx = -1;
    auto new_user = id_to_idx_map.insert({tel, {}});
    if (!new_user.second) {
       // The user already exists in the system. This case can be
@@ -40,71 +64,32 @@ index_type server_mgr::on_login(json j, std::shared_ptr<server_session> s)
       // 3. There is an error in the app and it is sending us more
       //    than one login.
       //
-      // REVIEW: I think the best strategy here is to reset the user
-      // data to avoid leaking it to whatever person the number
-      // happened to be assigned to. If the user uninstalled the app
-      // himself, them he may be ok with losing his data. 
-      //
-      // This is where we will send the user an SMS for
-      // confirmation he is the owner of this number.
-      new_user_idx = new_user.first->second;
+      // I think the best strategy here is to reset the user data to
+      // avoid leaking it to whatever person the number happened to be
+      // assigned to. If the user uninstalled the app himself, them he
+      // may be ok with losing his data. 
+      idx = new_user.first->second;
+      users[idx].reset();
    } else {
-      // The user did not exist in the system. We have to allocate
-      // space for him.
-      new_user_idx = users.allocate();
+      // The user does no exist in the system we allocate an entry in
+      // the users array.
+      idx = users.allocate();
    }
-
-   if (new_user_idx == -1) {
-      // TODO: Send the user a message reporting some error.
-      return -1; // We run out of memory.
-   }
-
-   // TODO: Set a timeout on the sms code.
-   users[new_user_idx].store_session(s);
-   users[new_user_idx].set_sms("8347");
-
-   json resp;
-   resp["cmd"] = "login_ack";
-   resp["result"] = "ok";
-
-   // TODO: Study what how should we behave if the client closes the
-   // connection here.
-   users[new_user_idx].send_msg(resp.dump());
-   return new_user_idx;
-}
-
-index_type
-server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
-{
-   auto tel = j["tel"].get<std::string>();
-
-   auto new_user = id_to_idx_map.insert({tel, {}});
-   if (new_user.second) {
-      // This situation should not happen on a normal behaviour. If
-      // the user is confirming the sms he must already sent us login.
-      // If not, them it will be considered missuse and drop the
-      // connection.
-      std::cout << "aaaaaa" << std::endl;
-      return -1;
-   }
-
-   auto idx = new_user.first->second;
 
    // TODO: The following piece of code is very critical, if an
    // exception is thrown we will not release idx back to the users
-   // array causing a leak. We have to eleaborate some way to use
-   // RAII.
+   // array causing a leak.
    auto sms = j["sms"].get<std::string>();
 
-   if (sms != users[idx].get_sms()) {
+   if (sms != s->get_sms()) {
       // TODO: Resend and sms to the user (some more times). For now
       // we will simply drop the connection and release resources.
-      //json resp;
-      //resp["cmd"] = "sms_confirmation_ack";
-      //resp["result"] = "fail";
+      json resp;
+      resp["cmd"] = "sms_confirmation_ack";
+      resp["result"] = "fail";
       users.deallocate(idx);
       id_to_idx_map.erase(new_user.first);
-      std::cout << "bbbbbb" << std::endl;
+      s->write(resp.dump()); // Unsafe, implement a queue.
       return -1;
    }
 
@@ -355,7 +340,8 @@ server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
 void server_mgr::on_write(index_type user_idx)
 {
    if (!users.is_valid_index(user_idx)) {
-      // TODO: Clarify how this could happen.
+      // For example when we return -2 to the session for sms
+      // confirmation. We can safely ignore this case.
       return;
    }
 

@@ -79,5 +79,6 @@ void user::reset()
    own_groups = {};
    session = {};
    msg_queue = std::queue<std::string> {};
+   sms = {};
 }
 

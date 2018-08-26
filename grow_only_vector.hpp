@@ -55,8 +55,9 @@ public:
 
    auto is_valid_index(size_type idx) const noexcept
    {
-      return idx >= static_cast<size_type>(0)
-          && idx < static_cast<size_type>(items.size());
+      const auto a = idx >= static_cast<size_type>(0);
+      const auto b = idx < static_cast<size_type>(items.size());
+      return a && b;
    }
 };
 

@@ -51,10 +51,8 @@ void client_session::on_read( boost::system::error_code ec
       //auto str = ss.str();
       //std::cout << "Received: " << str << std::endl;
 
-      if (mgr.on_read(j, shared_from_this()) == -1) {
-         std::cerr << "Server error. Please fix." << std::endl;
+      if (mgr.on_read(j, shared_from_this()) == -1)
          return;
-      }
 
    } catch (std::exception const& e) {
       std::cerr << "Server error. Please fix." << std::endl;

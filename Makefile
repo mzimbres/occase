@@ -28,14 +28,14 @@ AUX = Makefile
 
 all: client server
 
-%.o: %.cpp %.hpp
+%.o: %.cpp $(headers)
 	$(CPP) -c -o $@ $< $(CPPFLAGS) $(LDFLAGS)
 
 client:  $(client_objs) $(common_objs)
 	$(CPP) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(boost_libs)
 
 server: $(server_objs) $(common_objs)
-	$(CPP) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(boost_libs)
+	$(CPP) -o $@ $(server_objs) $(common_objs) $(CPPFLAGS) $(LDFLAGS) $(boost_libs)
 
 .PHONY: clean
 clean:

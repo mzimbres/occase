@@ -31,6 +31,7 @@ public:
    // the app and sends the first message to the server.  It basically
    // allocates user entries internally.
    index_type on_login(json j, std::shared_ptr<server_session> s);
+   index_type on_sms_confirmation(json j, std::shared_ptr<server_session> s);
    index_type on_create_group(json j, std::shared_ptr<server_session> s);
 
    group remove_group(index_type idx);

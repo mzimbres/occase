@@ -17,10 +17,20 @@ private:
    std::string tel;
 
    // login
-   int number_of_logins = 4;
-   int number_of_dropped_logins = number_of_logins - 1;
-   void login(std::shared_ptr<client_session> s);
+   int number_of_ok_logins = 1;
+   int number_of_dropped_logins = 3;
 
+   void ok_login(std::shared_ptr<client_session> s);
+   void dropped_login(std::shared_ptr<client_session> s);
+   int on_login_ack(json j, std::shared_ptr<client_session> s);
+   int on_ok_login_ack(json j, std::shared_ptr<client_session> s);
+
+   // sms
+   int number_of_ok_sms = 1;
+
+   void ok_sms_confirmation(std::shared_ptr<client_session> s);
+   int on_sms_confirmation_ack(json j, std::shared_ptr<client_session> s);
+   int on_ok_sms_confirmation_ack(json j, std::shared_ptr<client_session> s);
 
    // create_group
    int number_of_ok_create_groups = 10;
@@ -51,9 +61,6 @@ private:
    // Functions called when new message arrives. If any of these
    // functions return -1 it means the server returned something wrong
    // and we should make the test fail.
-
-   // Login 
-   int on_login_ack(json j, std::shared_ptr<client_session> s);
 
    int on_chat_message(json j, std::shared_ptr<client_session> s);
    int on_send_group_msg_ack(json j, std::shared_ptr<client_session> s);

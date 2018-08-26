@@ -51,6 +51,8 @@ private:
 
    std::queue<std::string> msg_queue;
 
+   std::string sms;
+
 public:
    user() = default;
    ~user() = default;
@@ -70,5 +72,7 @@ public:
    void reset();
    void set_id(id_type id_) {id = std::move(id_);}
    auto const& get_id() const noexcept {return id;}
+   void set_sms(std::string sms_) {sms = sms_;}
+   auto const& get_sms() { return sms;}
 };
 

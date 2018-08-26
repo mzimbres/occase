@@ -2,20 +2,22 @@
 #include "server_session.hpp"
 
 index_type
-server_mgr::on_read(json j, std::shared_ptr<server_session> session)
+server_mgr::on_read(json j, std::shared_ptr<server_session> s)
 {
    //std::cout << j << std::endl;
    auto cmd = j["cmd"].get<std::string>();
    if (cmd == "login") {
-      return on_login(std::move(j), session);
+      return on_login(std::move(j), s);
+   } else if (cmd == "sms_confirmation") {
+      return on_sms_confirmation(std::move(j), s);
    } else if (cmd == "create_group") {
-      return on_create_group(std::move(j), session);
+      return on_create_group(std::move(j), s);
    } else if (cmd == "join_group") {
-      return on_join_group(std::move(j), session);
+      return on_join_group(std::move(j), s);
    } else if (cmd == "send_group_msg") {
-      return on_group_msg(std::move(j), session);
+      return on_group_msg(std::move(j), s);
    } else if (cmd == "send_user_msg") {
-      return on_user_msg(std::move(j), session);
+      return on_user_msg(std::move(j), s);
    } else {
       std::cerr << "Server: Unknown command " << cmd << std::endl;
       return -1;
@@ -43,10 +45,8 @@ index_type server_mgr::on_login(json j, std::shared_ptr<server_session> s)
       // happened to be assigned to. If the user uninstalled the app
       // himself, them he may be ok with losing his data. 
       //
-      // TODO: This is where we will send the user an SMS for
-      // confirmation he is the owner of this number. This function
-      // will have to be split in two, when the user confirms the SMS
-      // code. This behaviour must be taking care in the APP.
+      // This is where we will send the user an SMS for
+      // confirmation he is the owner of this number.
       new_user_idx = new_user.first->second;
    } else {
       // The user did not exist in the system. We have to allocate
@@ -59,21 +59,66 @@ index_type server_mgr::on_login(json j, std::shared_ptr<server_session> s)
       return -1; // We run out of memory.
    }
 
-   // TODO: The following piece of code is very critical, if an
-   // exception is thrown we will not release new_user_idx back to the
-   // users array causing a leak. We have to eleaborate some way to
-   // use RAII.
-
+   // TODO: Set a timeout on the sms code.
    users[new_user_idx].store_session(s);
-   users[new_user_idx].set_id(tel);
+   users[new_user_idx].set_sms("8347");
 
    json resp;
    resp["cmd"] = "login_ack";
    resp["result"] = "ok";
-   resp["user_bind"] = user_bind {tel, host, new_user_idx};
 
+   // TODO: Study what how should we behave if the client closes the
+   // connection here.
    users[new_user_idx].send_msg(resp.dump());
    return new_user_idx;
+}
+
+index_type
+server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
+{
+   auto tel = j["tel"].get<std::string>();
+
+   auto new_user = id_to_idx_map.insert({tel, {}});
+   if (new_user.second) {
+      // This situation should not happen on a normal behaviour. If
+      // the user is confirming the sms he must already sent us login.
+      // If not, them it will be considered missuse and drop the
+      // connection.
+      std::cout << "aaaaaa" << std::endl;
+      return -1;
+   }
+
+   auto idx = new_user.first->second;
+
+   // TODO: The following piece of code is very critical, if an
+   // exception is thrown we will not release idx back to the users
+   // array causing a leak. We have to eleaborate some way to use
+   // RAII.
+   auto sms = j["sms"].get<std::string>();
+
+   if (sms != users[idx].get_sms()) {
+      // TODO: Resend and sms to the user (some more times). For now
+      // we will simply drop the connection and release resources.
+      //json resp;
+      //resp["cmd"] = "sms_confirmation_ack";
+      //resp["result"] = "fail";
+      users.deallocate(idx);
+      id_to_idx_map.erase(new_user.first);
+      std::cout << "bbbbbb" << std::endl;
+      return -1;
+   }
+
+   users[idx].reset();
+   users[idx].set_id(tel);
+   users[idx].store_session(s);
+
+   json resp;
+   resp["cmd"] = "sms_confirmation_ack";
+   resp["result"] = "ok";
+   resp["user_bind"] = user_bind {tel, host, idx};
+
+   users[idx].send_msg(resp.dump());
+   return idx;
 }
 
 index_type
@@ -168,7 +213,8 @@ server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
 
    // Before allocating a new group it is a good idea to check if
    // the owner passed is at least in a valid range.
-   if (!users.is_valid_index(from.index)) {
+   auto b = users.is_valid_index(from.index);
+   if (!b) {
       // This is not even an existing user. Perhaps the json command
       // was sent with the wrong information signaling a logic error
       // in the app. I do not think we have to report this problem.

@@ -41,11 +41,13 @@ server: $(server_objs) $(common_objs)
 clean:
 	rm -f server client $(objects) $(DIST_NAME).tar.gz
 
-.PHONY: dist
-dist: $(SRCS) $(AUX)
-	rm -f $(DIST_NAME).tar.gz
+$(DIST_NAME).tar.gz: $(SRCS) $(AUX)
+	rm -f $@
 	mkdir $(DIST_NAME)
-	ln $(SRCS) $(AUX) $(DIST_NAME)
-	tar chzf $(DIST_NAME).tar.gz $(DIST_NAME)
+	ln $^ $(DIST_NAME)
+	tar chzf $@ $(DIST_NAME)
 	rm -rf $(DIST_NAME)
+
+.PHONY: dist
+dist: $(DIST_NAME).tar.gz
 

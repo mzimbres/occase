@@ -28,19 +28,19 @@ int client_mgr::on_read(json j, std::shared_ptr<client_session> s)
 
 int client_mgr::on_fail_read(boost::system::error_code ec)
 {
-   std::cerr << "client_mgr::on_fail_read: " << ec.message() << "\n";
+   //std::cerr << "client_mgr::on_fail_read: " << ec.message() << "\n";
 
-   if (number_of_dropped_logins != 0) {
+   if (number_of_dropped_logins > 0) {
       --number_of_dropped_logins;
       return 1;
    }
 
-   if (number_of_dropped_create_groups != 0) {
+   if (number_of_dropped_create_groups > 0) {
       --number_of_dropped_create_groups;
       return 1;
    }
 
-   if (number_of_dropped_joins != 0) {
+   if (number_of_dropped_joins > 0) {
       --number_of_dropped_joins;
       return 1;
    }
@@ -59,8 +59,9 @@ int client_mgr::on_login_ack(json j, std::shared_ptr<client_session> s)
    }
 
    bind = j["user_bind"].get<user_bind>();
-   std::cout << "Login successfull with bind: \n" << bind << std::endl;
-
+   std::cout << "login: ok."
+             //<< "\n" << bind
+             << std::endl;
    // TODO: Before we proceed with create group we could repost a
    // login command to see how the server responds. Let us do it
    // later, this will make the code even more complicated.
@@ -75,7 +76,8 @@ client_mgr::on_ok_create_group_ack(json j, std::shared_ptr<client_session> s)
    auto gbind = j["group_bind"].get<group_bind>();
    groups.insert(gbind);
 
-   std::cout << "Create groups successfull: \n" << gbind
+   std::cout << "create_group: ok."
+             //<< "\n" << gbind
              << std::endl;
 
    if (number_of_ok_create_groups-- == 0) {
@@ -91,6 +93,8 @@ int
 client_mgr::on_fail_create_group_ack( json j
                                     , std::shared_ptr<client_session> s)
 {
+   std::cout << "create_group: fail." << std::endl;
+
    if (number_of_fail_create_groups-- == 0) {
       ok_join_group(s);
       return 1;
@@ -115,8 +119,8 @@ client_mgr::on_create_group_ack(json j, std::shared_ptr<client_session> s)
 
 int client_mgr::on_chat_message(json j, std::shared_ptr<client_session>)
 {
-   auto msg = j["message"].get<std::string>();
-   std::cout << msg << std::endl;
+   //auto msg = j["message"].get<std::string>();
+   //std::cout << msg << std::endl;
    return 1;
 }
 
@@ -138,6 +142,8 @@ client_mgr::on_ok_join_group_ack(json j, std::shared_ptr<client_session> s)
 int
 client_mgr::on_join_group_ack(json j, std::shared_ptr<client_session> s)
 {
+   std::cout << "join_group: ok." << std::endl;
+
    auto res = j["result"].get<std::string>();
 
    if (res == "ok")
@@ -439,9 +445,19 @@ int client_mgr::on_handshake(std::shared_ptr<client_session> s)
       return 1;
    }
 
+   if (number_of_dropped_create_groups == 0) {
+      std::cout << "number_of_dropped_create_groups: Ok" << std::endl;
+      --number_of_dropped_create_groups;
+   }
+
    if (number_of_ok_create_groups > 0) {
       ok_create_group(s);
       return 1;
+   }
+
+   if (number_of_ok_create_groups == 0) {
+      std::cout << "number_of_ok_create_groups: Ok" << std::endl;
+      --number_of_ok_create_groups;
    }
 
    if (number_of_dropped_joins > 0) {

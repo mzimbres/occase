@@ -48,8 +48,8 @@ void client_session::on_read( boost::system::error_code ec
       ss << boost::beast::buffers(buffer.data());
       ss >> j;
       buffer.consume(buffer.size());
-      auto str = ss.str();
-      std::cout << "Received: " << str << std::endl;
+      //auto str = ss.str();
+      //std::cout << "Received: " << str << std::endl;
 
       if (mgr.on_read(j, shared_from_this()) == -1) {
          std::cerr << "Server error. Please fix." << std::endl;

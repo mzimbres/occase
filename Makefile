@@ -1,30 +1,30 @@
-CPP=g++
-CPPDEBUG = -g -ggdb3
-CPP_VERSION = c++17
-BOOST_LIBS = /opt/boost_1_67_0/lib/libboost_system.a
-BOOST_INCLUDE = /opt/boost_1_67_0/include
-JSON_INCLUDE = /opt/nlohmann_3_1_2
+boost_libs    = /opt/boost_1_67_0/lib/libboost_system.a
+boost_include = /opt/boost_1_67_0/include
+json_include  = /opt/nlohmann_3_1_2
 
-LDFLAGS = -g -lpthread
-CPPFLAGS = -I. -I$(BOOST_INCLUDE) -I$(JSON_INCLUDE) \
-           -std=$(CPP_VERSION) $(CPPDEBUG) -Wall -Werror
+CPP           = g++
+DEBUG         = -g -ggdb3
+LDFLAGS       = -g -lpthread
+CPPFLAGS      = -I. -I$(boost_include) -I$(json_include) \
+                -std=c++17 $(DEBUG) -Wall -Werror
+
+DIST_NAME    = sellit
 
 common_objs = json_utils.o
-
 server_objs = user.o group.o server_mgr.o server_session.o \
               listener.o server.o 
-
 client_objs = client_session.o client_mgr.o client.o
+objects     = $(server_objs) $(client_objs) $(common_objs)
 
-objects = $(server_objs) $(client_objs) $(common_objs)
+SRCS        = $(objects:.o=.cpp)
 
-srcs = $(objects:.o=.c)
+headers     = user.hpp group.hpp config.hpp server_mgr.hpp \
+              server_session.hpp client_session.hpp grow_only_vector.hpp \
+              listener.hpp json_utils.hpp client_mgr.hpp
 
-headers = user.hpp group.hpp config.hpp server_mgr.hpp \
-          server_session.hpp client_session.hpp grow_only_vector.hpp \
-          listener.hpp json_utils.hpp client_mgr.hpp
+SRCS += $(headers)
 
-srcs += $(headers)
+AUX = Makefile
 
 all: client server
 
@@ -32,13 +32,20 @@ all: client server
 	$(CPP) -c -o $@ $< $(CPPFLAGS) $(LDFLAGS)
 
 client:  $(client_objs) $(common_objs)
-	$(CPP) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(BOOST_LIBS)
+	$(CPP) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(boost_libs)
 
 server: $(server_objs) $(common_objs)
-	$(CPP) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(BOOST_LIBS)
+	$(CPP) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(boost_libs)
 
 .PHONY: clean
-
 clean:
-	rm -f server client $(objects)
+	rm -f server client $(objects) $(DIST_NAME).tar.gz
+
+.PHONY: dist
+dist: $(SRCS) $(AUX)
+	rm -f $(DIST_NAME).tar.gz
+	mkdir $(DIST_NAME)
+	ln $(SRCS) $(AUX) $(DIST_NAME)
+	tar chzf $(DIST_NAME).tar.gz $(DIST_NAME)
+	rm -rf $(DIST_NAME)
 

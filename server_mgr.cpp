@@ -30,10 +30,12 @@ index_type server_mgr::on_login(json j, std::shared_ptr<server_session> s)
    // the app will send us the user phone.
    auto tel = j["tel"].get<std::string>();
 
-   // TODO: Set a timeout on the sms code.
-   // TODO: Study how should we behave if the client closes the
-   // connection here.
-   // TODO: Use a random number generator.
+   // If the connection closes between the login and the SMS
+   // confirmation we should make the sms invalid and release the user
+   // entry.
+   // TODO: Use a random number generator with six digits.
+   // TODO: Allocate a user entry here so that the sms confirmation
+   // cannot fail for unavailable memory.
    s->set_sms("8347");
 
    json resp;
@@ -236,8 +238,6 @@ server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
    groups[idx].set_info(std::move(info));
    groups[idx].add_member(from.index);
 
-   users[from.index].add_group(idx);
-
    json resp;
    resp["cmd"] = "create_group_ack";
    resp["result"] = "ok";
@@ -260,28 +260,6 @@ void server_mgr::on_fail_read(index_type user_idx)
 void server_mgr::on_fail_write(index_type user_idx)
 {
    std::cout << "Fail write." << std::endl;
-}
-
-group server_mgr::remove_group(index_type idx)
-{
-   if (!groups.is_valid_index(idx))
-      return group {}; // Out of range? Logic error.
-
-   // To remove a group we have to inform its members the group has
-   // been removed, therefore we will make a copy before removing
-   // and return it.
-   const auto removed_group = std::move(groups[idx]);
-
-   // remove this line after implementing the swap idiom on the
-   // group class.
-   groups[idx].reset();
-
-   groups.deallocate(idx);
-
-   // Now we have to remove this group from the owners list.
-   const auto owner = removed_group.get_owner();
-   users[owner].remove_group(idx);
-   return removed_group; // Let RVO optimize this.
 }
 
 index_type

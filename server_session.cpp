@@ -76,8 +76,10 @@ void server_session::on_read( boost::system::error_code ec
          return;
       }
       
-      if (user_idx == -2)
+      if (user_idx == -2) {
+         // TODO: Set a timeout here.
          std::cout << "Waiting user sms." << tmp << std::endl;
+      }
 
       std::cout << "Accepted: " << tmp << std::endl;
    } catch (...) {

@@ -28,7 +28,6 @@ private:
    index_type on_join_group(json j, std::shared_ptr<server_session> session);
    index_type on_group_msg(json j, std::shared_ptr<server_session> session);
    index_type on_user_msg(json j, std::shared_ptr<server_session> session);
-   group remove_group(index_type idx);
 
 public:
    server_mgr(int users_size, int groups_size)

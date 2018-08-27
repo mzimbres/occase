@@ -8,6 +8,8 @@
 #include "json_utils.hpp"
 #include "grow_only_vector.hpp"
 
+// TODO: Review if we need group ownership.
+
 enum class group_membership
 {
    // Member is allowed to read posts and has no access to poster

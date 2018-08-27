@@ -247,6 +247,21 @@ server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
    return from.index;
 }
 
+void server_mgr::on_session_closed(index_type user_idx)
+{
+   std::cout << "Session closed." << std::endl;
+}
+
+void server_mgr::on_fail_read(index_type user_idx)
+{
+   std::cout << "Fail read." << std::endl;
+}
+
+void server_mgr::on_fail_write(index_type user_idx)
+{
+   std::cout << "Fail write." << std::endl;
+}
+
 group server_mgr::remove_group(index_type idx)
 {
    if (!groups.is_valid_index(idx))
@@ -267,28 +282,6 @@ group server_mgr::remove_group(index_type idx)
    const auto owner = removed_group.get_owner();
    users[owner].remove_group(idx);
    return removed_group; // Let RVO optimize this.
-}
-
-bool server_mgr::change_group_ownership( index_type from, index_type to
-                                        , index_type gid)
-{
-   if (!groups.is_valid_index(gid))
-      return false;
-
-   if (!groups[gid].is_owned_by(from))
-      return false; // Sorry, you are not allowed.
-
-   if (!users.is_valid_index(from))
-      return false;
-
-   if (!users.is_valid_index(to))
-      return false;
-
-   // The new owner exists.
-   groups[gid].set_owner(to);
-   users[to].add_group(gid);
-   users[from].remove_group(gid);
-   return true;
 }
 
 index_type

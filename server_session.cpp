@@ -50,12 +50,15 @@ void server_session::on_read( boost::system::error_code ec
 {
    boost::ignore_unused(bytes_transferred);
 
-   // This indicates that the session was closed
-   if (ec == websocket::error::closed)
+   if (ec == websocket::error::closed) {
+      sd->on_session_closed(user_idx);
       return;
+   }
 
    if (ec) {
-      fail(ec, "read");
+      // TODO: Should this function return a value to instruct what to
+      // do next or should we always drop the connection.
+      sd->on_fail_read(user_idx);
       return;
    }
 
@@ -103,8 +106,10 @@ void server_session::on_write( boost::system::error_code ec
 {
    boost::ignore_unused(bytes_transferred);
 
-   if (ec)
-      return fail(ec, "write");
+   if (ec) {
+      sd->on_fail_write(user_idx);
+      return;
+   }
 
    // Clear the buffer
    buffer.consume(buffer.size());

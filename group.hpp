@@ -8,44 +8,13 @@
 #include "json_utils.hpp"
 #include "grow_only_vector.hpp"
 
-// TODO: Review if we need group ownership.
-
-enum class group_membership
-{
-   // Member is allowed to read posts and has no access to poster
-   // contact. That means in practice he cannot buy anything but only
-   // see the traffic in the group and decide whether it is worth to
-   // updgrade.
-   WATCH
-
-   // Allowed to see posts, see poster contact and post. He gets posts
-   // with delay of some hours and his posts are subject to whether he
-   // has provided the bank details.
-,  DEFAULT
-   
-   // Like DEFAULT but get posts without any delay.
-,  PREMIUM
-};
-
 struct group_mem_info {
-   group_membership membership {group_membership::DEFAULT};
-   std::chrono::seconds delay {0};
-};
-
-enum class group_visibility
-{
-   // Members do not need auhorization to enter the group.
-   PUBLIC
-
-   // Only the owner can add members.
-,  PRIVATE
+   int info; // TODO: Do we need this?
 };
 
 class group {
 private:
-   group_visibility visibility {group_visibility::PUBLIC};
-   
-   index_type owner {-1}; // The user that owns this group.
+   index_type owner {-1}; // TODO: Review this
 
    // The number of members in a group is expected be on the
    // thousands, let us say 100k. The operations performed are

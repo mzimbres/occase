@@ -6,7 +6,7 @@ client_mgr::client_mgr(std::string tel_)
 : tel(tel_)
 { }
 
-int client_mgr::on_read(json j, std::shared_ptr<client_session> s)
+int client_mgr::on_read(json j, std::shared_ptr<client_type> s)
 {
    auto cmd = j["cmd"].get<std::string>();
 
@@ -51,7 +51,7 @@ int client_mgr::on_fail_read(boost::system::error_code ec)
    return 1;
 }
 
-int client_mgr::on_ok_login_ack(json j, std::shared_ptr<client_session> s)
+int client_mgr::on_ok_login_ack(json j, std::shared_ptr<client_type> s)
 {
    std::cout << "login_ack: ok." << std::endl;
 
@@ -64,7 +64,7 @@ int client_mgr::on_ok_login_ack(json j, std::shared_ptr<client_session> s)
    return 1;
 }
 
-int client_mgr::on_login_ack(json j, std::shared_ptr<client_session> s)
+int client_mgr::on_login_ack(json j, std::shared_ptr<client_type> s)
 {
    auto res = j["result"].get<std::string>();
    if (res == "ok")
@@ -78,7 +78,7 @@ int client_mgr::on_login_ack(json j, std::shared_ptr<client_session> s)
 
 int
 client_mgr::on_ok_sms_confirmation_ack( json j
-                                      , std::shared_ptr<client_session> s)
+                                      , std::shared_ptr<client_type> s)
 {
    bind = j["user_bind"].get<user_bind>();
    std::cout << "sms_confirmation_ack: ok."
@@ -91,7 +91,8 @@ client_mgr::on_ok_sms_confirmation_ack( json j
 }
 
 int
-client_mgr::on_sms_confirmation_ack(json j, std::shared_ptr<client_session> s)
+client_mgr::on_sms_confirmation_ack(json j,
+std::shared_ptr<client_type> s)
 {
    auto res = j["result"].get<std::string>();
    if (res == "ok")
@@ -105,7 +106,7 @@ client_mgr::on_sms_confirmation_ack(json j, std::shared_ptr<client_session> s)
 }
 
 int
-client_mgr::on_ok_create_group_ack(json j, std::shared_ptr<client_session> s)
+client_mgr::on_ok_create_group_ack(json j, std::shared_ptr<client_type> s)
 {
    auto gbind = j["group_bind"].get<group_bind>();
    groups.insert(gbind);
@@ -125,7 +126,7 @@ client_mgr::on_ok_create_group_ack(json j, std::shared_ptr<client_session> s)
 
 int
 client_mgr::on_fail_create_group_ack( json j
-                                    , std::shared_ptr<client_session> s)
+                                    , std::shared_ptr<client_type> s)
 {
    std::cout << "create_group: fail." << std::endl;
 
@@ -139,7 +140,7 @@ client_mgr::on_fail_create_group_ack( json j
 }
 
 int
-client_mgr::on_create_group_ack(json j, std::shared_ptr<client_session> s)
+client_mgr::on_create_group_ack(json j, std::shared_ptr<client_type> s)
 {
    auto res = j["result"].get<std::string>();
    if (res == "ok")
@@ -151,7 +152,7 @@ client_mgr::on_create_group_ack(json j, std::shared_ptr<client_session> s)
    return -1;
 }
 
-int client_mgr::on_chat_message(json j, std::shared_ptr<client_session>)
+int client_mgr::on_chat_message(json j, std::shared_ptr<client_type>)
 {
    //auto msg = j["message"].get<std::string>();
    //std::cout << msg << std::endl;
@@ -159,7 +160,7 @@ int client_mgr::on_chat_message(json j, std::shared_ptr<client_session>)
 }
 
 int
-client_mgr::on_ok_join_group_ack(json j, std::shared_ptr<client_session> s)
+client_mgr::on_ok_join_group_ack(json j, std::shared_ptr<client_type> s)
 {
    if (number_of_ok_joins-- == 0) {
       dropped_join_group(s);
@@ -174,7 +175,7 @@ client_mgr::on_ok_join_group_ack(json j, std::shared_ptr<client_session> s)
 }
 
 int
-client_mgr::on_join_group_ack(json j, std::shared_ptr<client_session> s)
+client_mgr::on_join_group_ack(json j, std::shared_ptr<client_type> s)
 {
    std::cout << "join_group: ok." << std::endl;
 
@@ -188,7 +189,7 @@ client_mgr::on_join_group_ack(json j, std::shared_ptr<client_session> s)
 }
 
 int
-client_mgr::on_send_group_msg_ack(json j, std::shared_ptr<client_session> s)
+client_mgr::on_send_group_msg_ack(json j, std::shared_ptr<client_type> s)
 {
    if (number_of_group_msgs > 0) {
       send_group_msg(s);
@@ -208,7 +209,7 @@ client_mgr::on_send_group_msg_ack(json j, std::shared_ptr<client_session> s)
    return -1;
 }
 
-void client_mgr::ok_login(std::shared_ptr<client_session> s)
+void client_mgr::ok_login(std::shared_ptr<client_type> s)
 {
    // What if we try more than one ok login?
    json j;
@@ -217,7 +218,7 @@ void client_mgr::ok_login(std::shared_ptr<client_session> s)
    send_msg(j.dump(), s);
 }
 
-void client_mgr::ok_sms_confirmation(std::shared_ptr<client_session> s)
+void client_mgr::ok_sms_confirmation(std::shared_ptr<client_type> s)
 {
    json j;
    j["cmd"] = "sms_confirmation";
@@ -226,7 +227,7 @@ void client_mgr::ok_sms_confirmation(std::shared_ptr<client_session> s)
    send_msg(j.dump(), s);
 }
 
-void client_mgr::dropped_login(std::shared_ptr<client_session> s)
+void client_mgr::dropped_login(std::shared_ptr<client_type> s)
 {
    json j;
    if (number_of_dropped_logins == 3) {
@@ -249,7 +250,7 @@ void client_mgr::dropped_login(std::shared_ptr<client_session> s)
    send_msg(j.dump(), s);
 }
 
-void client_mgr::ok_create_group(std::shared_ptr<client_session> s)
+void client_mgr::ok_create_group(std::shared_ptr<client_type> s)
 {
    json j;
    j["cmd"] = "create_group";
@@ -259,7 +260,7 @@ void client_mgr::ok_create_group(std::shared_ptr<client_session> s)
    //std::cout << "Just send a valid create group: " << j << std::endl;
 }
 
-void client_mgr::fail_create_group(std::shared_ptr<client_session> s)
+void client_mgr::fail_create_group(std::shared_ptr<client_type> s)
 {
    // This is a valid command but should exceed the server capacity.
    json j;
@@ -269,7 +270,7 @@ void client_mgr::fail_create_group(std::shared_ptr<client_session> s)
    send_msg(j.dump(), s);
 }
 
-void client_mgr::dropped_create_group(std::shared_ptr<client_session> s)
+void client_mgr::dropped_create_group(std::shared_ptr<client_type> s)
 {
    if (number_of_dropped_create_groups == 7) {
       json j;
@@ -333,7 +334,7 @@ void client_mgr::dropped_create_group(std::shared_ptr<client_session> s)
    }
 }
 
-void client_mgr::ok_join_group(std::shared_ptr<client_session> s)
+void client_mgr::ok_join_group(std::shared_ptr<client_type> s)
 {
    json j;
    j["cmd"] = "join_group";
@@ -342,7 +343,7 @@ void client_mgr::ok_join_group(std::shared_ptr<client_session> s)
    send_msg(j.dump(), s);
 }
 
-void client_mgr::dropped_join_group(std::shared_ptr<client_session> s)
+void client_mgr::dropped_join_group(std::shared_ptr<client_type> s)
 {
    if (number_of_dropped_joins == 3) {
       json j;
@@ -374,7 +375,7 @@ void client_mgr::dropped_join_group(std::shared_ptr<client_session> s)
    }
 }
 
-void client_mgr::send_group_msg(std::shared_ptr<client_session> s)
+void client_mgr::send_group_msg(std::shared_ptr<client_type> s)
 {
    if (number_of_group_msgs == 5) {
       json j;
@@ -430,7 +431,7 @@ void client_mgr::send_group_msg(std::shared_ptr<client_session> s)
    }
 }
 
-void client_mgr::send_user_msg(std::shared_ptr<client_session> s)
+void client_mgr::send_user_msg(std::shared_ptr<client_type> s)
 {
    json j;
    j["cmd"] = "send_user_msg";
@@ -441,7 +442,7 @@ void client_mgr::send_user_msg(std::shared_ptr<client_session> s)
    send_msg(j.dump(), s);
 }
 
-void client_mgr::send_msg(std::string msg, std::shared_ptr<client_session> s)
+void client_mgr::send_msg(std::string msg, std::shared_ptr<client_type> s)
 {
    auto is_empty = std::empty(msg_queue);
    msg_queue.push(std::move(msg));
@@ -450,18 +451,20 @@ void client_mgr::send_msg(std::string msg, std::shared_ptr<client_session> s)
       s->write(msg_queue.front());
 }
 
-void client_mgr::on_write(std::shared_ptr<client_session> s)
+int client_mgr::on_write(std::shared_ptr<client_type> s)
 {
    //std::cout << "on_write" << std::endl;
 
    msg_queue.pop();
    if (msg_queue.empty())
-      return; // No more message to send to the client.
+      return 1; // No more message to send to the client.
 
    s->write(msg_queue.front());
+
+   return 1;
 }
 
-int client_mgr::on_handshake(std::shared_ptr<client_session> s)
+int client_mgr::on_handshake(std::shared_ptr<client_type> s)
 {
    if (number_of_dropped_logins > 0) {
       --number_of_dropped_logins;
@@ -511,49 +514,3 @@ int client_mgr::on_handshake(std::shared_ptr<client_session> s)
    return 1;
 }
 
-//void client_session::prompt_login()
-//{
-//   auto handler = [p = shared_from_this()]() { p->login(); };
-//
-//   boost::asio::post(resolver.get_executor(), handler);
-//}
-//
-//void client_session::prompt_create_group()
-//{
-//   auto handler = [p = shared_from_this()]()
-//   { p->create_group(); };
-//
-//   boost::asio::post(resolver.get_executor(), handler);
-//}
-//
-//void client_session::prompt_join_group()
-//{
-//   auto handler = [p = shared_from_this()]()
-//   { p->join_group(); };
-//
-//   boost::asio::post(resolver.get_executor(), handler);
-//}
-//
-//void client_session::prompt_send_group_msg()
-//{
-//   auto handler = [p = shared_from_this()]()
-//   { p->send_group_msg(); };
-//
-//   boost::asio::post(resolver.get_executor(), handler);
-//}
-//
-//void client_session::prompt_send_user_msg()
-//{
-//   auto handler = [p = shared_from_this()]()
-//   { p->send_user_msg(); };
-//
-//   boost::asio::post(resolver.get_executor(), handler);
-//}
-//
-//void client_session::prompt_close()
-//{
-//   auto handler = [p = shared_from_this()]()
-//   { p->async_close(); };
-//
-//   boost::asio::post(resolver.get_executor(), handler);
-//}

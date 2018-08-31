@@ -3,6 +3,7 @@
 #include <set>
 #include <queue>
 #include <thread>
+#include <chrono>
 #include <vector>
 #include <chrono>
 #include <memory>
@@ -17,14 +18,15 @@
 
 #include "config.hpp"
 #include "json_utils.hpp"
-#include "client_mgr.hpp"
 
 struct client_options {
    std::string host;
    std::string port;
 };
 
-class client_session : public std::enable_shared_from_this<client_session> {
+template <class Mgr>
+class client_session :
+   public std::enable_shared_from_this<client_session<Mgr>> {
 private:
    using work_type =
       boost::asio::executor_work_guard<
@@ -38,7 +40,7 @@ private:
    std::string text;
    client_options op;
 
-   client_mgr& mgr;
+   Mgr& mgr;
 
    void do_close();
    void on_resolve( boost::system::error_code ec
@@ -60,9 +62,198 @@ public:
    explicit
    client_session( boost::asio::io_context& ioc
                  , client_options op_
-                 , client_mgr& m);
+                 , Mgr& m);
 
    void write(std::string msg);
    void run();
 };
+
+inline
+void fail_tmp(boost::system::error_code ec, char const* what)
+{
+   std::cerr << what << ": " << ec.message() << "\n";
+}
+
+template <class Mgr>
+void client_session<Mgr>::on_read( boost::system::error_code ec
+                                 , std::size_t bytes_transferred
+                                 , tcp::resolver::results_type results)
+{
+   try {
+      boost::ignore_unused(bytes_transferred);
+
+      if (ec) {
+         if (mgr.on_fail_read(ec) == -1)
+            return;
+
+         buffer.consume(buffer.size());
+         //std::cout << "Connection lost, trying to reconnect." << std::endl;
+
+         timer.expires_after(std::chrono::seconds{1});
+
+         auto handler = [results, p = this->shared_from_this()](auto ec)
+         { p->async_connect(results); };
+
+         timer.async_wait(handler);
+         return;
+      }
+
+      json j;
+      std::stringstream ss;
+      ss << boost::beast::buffers(buffer.data());
+      ss >> j;
+      buffer.consume(buffer.size());
+      //auto str = ss.str();
+      //std::cout << "Received: " << str << std::endl;
+
+      if (mgr.on_read(j, this->shared_from_this()) == -1) {
+         do_close();
+         return;
+      }
+
+   } catch (std::exception const& e) {
+      std::cerr << "Server error. Please fix." << std::endl;
+      std::cerr << "Error: " << e.what() << std::endl;
+   }
+
+   do_read(results);
+}
+
+template <class Mgr>
+client_session<Mgr>::client_session( boost::asio::io_context& ioc
+                                   , client_options op_
+                                   , Mgr& m)
+: resolver(ioc)
+, timer(ioc)
+, ws(ioc)
+, work(boost::asio::make_work_guard(ioc))
+, op(std::move(op_))
+, mgr(m)
+{ }
+
+template <class Mgr>
+void client_session<Mgr>::write(std::string msg)
+{
+   //std::cout << "Sending: " << msg << std::endl;
+   text = std::move(msg);
+
+   auto handler = [p = this->shared_from_this()](auto ec, auto res)
+   { p->on_write(ec, res); };
+
+   ws.async_write(boost::asio::buffer(text), handler);
+}
+
+template <class Mgr>
+void client_session<Mgr>::do_close()
+{
+   auto handler = [p = this->shared_from_this()](auto ec)
+   { p->on_close(ec); };
+
+   ws.async_close(websocket::close_code::normal, handler);
+}
+
+template <class Mgr>
+void client_session<Mgr>::on_resolve( boost::system::error_code ec
+                                    , tcp::resolver::results_type results)
+{
+   if (ec)
+      return fail_tmp(ec, "resolve");
+
+   async_connect(results);
+}
+
+template <class Mgr>
+void client_session<Mgr>::async_connect(tcp::resolver::results_type results)
+{
+   //std::cout  << "Trying to connect." << std::endl;
+   auto handler = [results, p = this->shared_from_this()](auto ec, auto Iterator)
+   { p->on_connect(ec, results); };
+
+   boost::asio::async_connect(ws.next_layer(), results.begin(),
+      results.end(), handler);
+}
+
+template <class Mgr>
+void
+client_session<Mgr>::on_connect( boost::system::error_code ec
+                               , tcp::resolver::results_type results)
+{
+   if (ec) {
+      timer.expires_after(std::chrono::seconds{1});
+
+      auto handler = [results, p = this->shared_from_this()](auto ec)
+      { p->async_connect(results); };
+
+      timer.async_wait(handler);
+      return;
+   }
+
+   //std::cout << "Connection stablished." << std::endl;
+
+   auto handler = [p = this->shared_from_this(), results](auto ec)
+   { p->on_handshake(ec, results); };
+
+   // Perform the websocket handshake
+   ws.async_handshake(op.host, "/", handler);
+}
+
+template <class Mgr>
+void
+client_session<Mgr>::on_handshake( boost::system::error_code ec
+                                 , tcp::resolver::results_type results)
+{
+   //std::cout << "on_handshake" << std::endl;
+   if (ec)
+      return fail_tmp(ec, "handshake");
+
+   // This function must be called before we begin to write commands
+   // so that we can receive a dropped connection on the server.
+   do_read(results);
+
+   // We still have no way to use the return value here. Think of a
+   // solution.
+   mgr.on_handshake(this->shared_from_this());
+}
+
+template <class Mgr>
+void client_session<Mgr>::do_read(tcp::resolver::results_type results)
+{
+   auto handler = [p = this->shared_from_this(), results](auto ec, auto res)
+   { p->on_read(ec, res, results); };
+
+   ws.async_read(buffer, handler);
+}
+
+template <class Mgr>
+void client_session<Mgr>::on_write( boost::system::error_code ec
+                                  , std::size_t bytes_transferred)
+{
+   boost::ignore_unused(bytes_transferred);
+
+   mgr.on_write(this->shared_from_this()); // TODO: Use the return value?
+
+   if (ec)
+      return fail_tmp(ec, "write");
+}
+
+template <class Mgr>
+void client_session<Mgr>::on_close(boost::system::error_code ec)
+{
+   if (ec)
+      return fail_tmp(ec, "close");
+
+   std::cout << "Connection closed gracefully"
+             << std::endl;
+   work.reset();
+}
+
+template <class Mgr>
+void client_session<Mgr>::run()
+{
+   auto handler = [p = this->shared_from_this()](auto ec, auto res)
+   { p->on_resolve(ec, res); };
+
+   // Look up the domain name
+   resolver.async_resolve(op.host, op.port, handler);
+}
 

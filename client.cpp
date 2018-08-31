@@ -5,6 +5,8 @@
 #include <iostream>
 
 #include "config.hpp"
+#include "client_mgr.hpp"
+#include "client_mgr_login.hpp"
 #include "client_session.hpp"
 
 //struct prompt_usr {
@@ -51,6 +53,34 @@
 //   }
 //};
 
+void test_login(client_options op, std::string tel)
+{
+   using mgr_type = client_mgr_login;
+   using client_type = client_session<mgr_type>;
+
+   boost::asio::io_context ioc;
+
+   mgr_type mgr(tel);
+   auto p = std::make_shared<client_type>(ioc, std::move(op), mgr);
+
+   p->run();
+   ioc.run();
+}
+
+void test_client(client_options op, std::string tel)
+{
+   using mgr_type = client_mgr;
+   using client_type = client_session<mgr_type>;
+
+   boost::asio::io_context ioc;
+
+   mgr_type mgr(tel);
+   auto p = std::make_shared<client_type>(ioc, std::move(op), mgr);
+
+   p->run();
+   ioc.run();
+}
+
 int main(int argc, char* argv[])
 {
    if (argc != 2) {
@@ -59,20 +89,14 @@ int main(int argc, char* argv[])
    }
 
    client_options op
-   { {"127.0.0.1"}                  // Host.
-   , {"8080"}                       // Port.
+   { {"127.0.0.1"} // Host.
+   , {"8080"}      // Port.
    };
 
-   boost::asio::io_context ioc;
-
-   client_mgr mgr(argv[1]);
-   auto p = std::make_shared<client_session>(ioc, std::move(op), mgr);
-
-   //std::thread thr {prompt_usr {p}};
-
-   p->run();
-   ioc.run();
-   //thr.join();
+   test_login(op, argv[1]);
+   std::cout << "_______________________________________________"
+             << std::endl;
+   test_client(op, argv[1]);
 
    return EXIT_SUCCESS;
 }

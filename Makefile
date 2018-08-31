@@ -13,14 +13,15 @@ DIST_NAME    = sellit
 common_objs = json_utils.o
 server_objs = user.o group.o server_mgr.o server_session.o \
               listener.o server.o 
-client_objs = client_session.o client_mgr.o client.o
+client_objs = client_mgr.o client_mgr_login.o client.o
 objects     = $(server_objs) $(client_objs) $(common_objs)
 
 SRCS        = $(objects:.o=.cpp)
 
 headers     = user.hpp group.hpp config.hpp server_mgr.hpp \
               server_session.hpp client_session.hpp grow_only_vector.hpp \
-              listener.hpp json_utils.hpp client_mgr.hpp
+              listener.hpp json_utils.hpp client_mgr.hpp \
+              client_mgr_login.hpp
 
 SRCS += $(headers)
 

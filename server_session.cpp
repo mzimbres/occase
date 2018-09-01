@@ -1,5 +1,7 @@
 #include "server_session.hpp"
 
+#include <boost/beast/websocket/rfc6455.hpp>
+
 namespace
 {
 
@@ -44,6 +46,23 @@ void server_session::do_read()
                      handler));
 }
 
+void server_session::on_close(boost::system::error_code ec)
+{
+   if (ec)
+      return fail(ec, "close");
+
+   std::cout << "Connection closed." << std::endl;
+}
+
+void server_session::do_close()
+{
+   auto handler = [p = shared_from_this()](auto ec)
+   { p->on_close(ec); };
+
+   websocket::close_reason reason {};
+   ws.async_close(reason, handler);
+}
+
 void server_session::on_read( boost::system::error_code ec
                             , std::size_t bytes_transferred)
 {
@@ -71,14 +90,13 @@ void server_session::on_read( boost::system::error_code ec
       ss >> j;
       user_idx = sd->on_read(std::move(j), shared_from_this());
       if (user_idx == -1) {
-         // TODO: post a do_close.
-         std::cout << "Dropping connection." << tmp << std::endl;
+         do_close();
          return;
       }
       
       if (user_idx == -2) {
          // TODO: Set a timeout here.
-         std::cout << "Waiting user sms." << tmp << std::endl;
+         std::cout << "Waiting for user sms." << tmp << std::endl;
       }
 
       std::cout << "Accepted: " << tmp << std::endl;

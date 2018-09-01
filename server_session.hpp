@@ -20,11 +20,15 @@ private:
    boost::beast::multi_buffer buffer;
    std::shared_ptr<server_mgr> sd;
 
-   void on_accept(boost::system::error_code ec);
    void do_read();
+   void do_close();
 
    void on_read( boost::system::error_code ec
                , std::size_t bytes_transferred);
+
+   void on_close(boost::system::error_code ec);
+
+   void on_accept(boost::system::error_code ec);
 
    void on_write( boost::system::error_code ec
                 , std::size_t bytes_transferred);

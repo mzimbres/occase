@@ -30,8 +30,8 @@ private:
                 , std::size_t bytes_transferred);
 
    // A value greater than zero means a valid user index.
-   // -1: We should drop the conection.
-   // -2: We are waiting for an sms.
+   // -1: We should close the conection.
+   // -2: We are awaiting for an sms.
    int user_idx = -1;
 
    // This is only non empty if we are waiting for a user sms.

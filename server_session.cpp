@@ -22,8 +22,7 @@ void server_session::run()
    auto handler = [p = shared_from_this()](auto ec)
    { p->on_accept(ec); };
 
-   ws.async_accept(
-      boost::asio::bind_executor(strand, handler));
+   ws.async_accept(boost::asio::bind_executor(strand, handler));
 }
 
 void server_session::on_accept(boost::system::error_code ec)
@@ -72,6 +71,7 @@ void server_session::on_read( boost::system::error_code ec
       ss >> j;
       user_idx = sd->on_read(std::move(j), shared_from_this());
       if (user_idx == -1) {
+         // TODO: post a do_close.
          std::cout << "Dropping connection." << tmp << std::endl;
          return;
       }

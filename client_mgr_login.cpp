@@ -30,13 +30,12 @@ int client_mgr_login::on_ok_login_ack( json j
    std::cout << "login_ack: ok." << std::endl;
 
    if (--number_of_ok_logins == 0) {
-      // TODO: Put more calls to send_ok_login here.
-      // We are done
       std::cout << "Test login: ok." << std::endl;
       return -1;
    }
 
-   return 1;
+   std::cout << "Test login: fail." << std::endl;
+   return -1;
 }
 
 int client_mgr_login::on_login_ack(json j, std::shared_ptr<client_type> s)

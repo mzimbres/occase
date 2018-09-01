@@ -1,0 +1,104 @@
+#include "client_mgr_sms.hpp"
+
+#include "client_session.hpp"
+
+client_mgr_sms::client_mgr_sms(std::string tel_)
+: tel(tel_)
+{ }
+
+int client_mgr_sms::on_read(json j, std::shared_ptr<client_type> s)
+{
+   auto cmd = j["cmd"].get<std::string>();
+
+   if (cmd == "login_ack")
+      return on_login_ack(std::move(j), s);
+
+   if (cmd == "sms_confirmation_ack")
+      return on_sms_confirmation_ack(std::move(j), s);
+
+   std::cout << "Server error: Unknown command." << std::endl;
+   return -1;
+}
+
+int client_mgr_sms::on_fail_read(boost::system::error_code ec)
+{
+   return 1;
+}
+
+int client_mgr_sms::on_login_ack(json j, std::shared_ptr<client_type> s)
+{
+   auto res = j["result"].get<std::string>();
+
+   if (res == "ok") {
+      std::cout << "login_ack: ok." << std::endl;
+      send_ok_sms_confirmation(s);
+      return 1;
+   }
+
+   std::cout << "client_mgr_sms::on_login_ack: SERVER ERROR. Please report."
+             << std::endl;
+   return 1;
+}
+
+int
+client_mgr_sms::on_sms_confirmation_ack( json j
+                                       , std::shared_ptr<client_type> s)
+{
+   auto res = j["result"].get<std::string>();
+
+   if (res == "ok") {
+      bind = j["user_bind"].get<user_bind>();
+      std::cout << "Test sms_confirmation: ok." << std::endl;
+      return -1;
+   }
+
+   std::cout << "Test sms_confirmation: fail." << std::endl;
+   return -1;
+}
+
+void client_mgr_sms::send_ok_login(std::shared_ptr<client_type> s)
+{
+   // What if we try more than one ok login?
+   json j;
+   j["cmd"] = "login";
+   j["tel"] = tel;
+   send_msg(j.dump(), s);
+}
+
+void client_mgr_sms::send_ok_sms_confirmation(std::shared_ptr<client_type> s)
+{
+   json j;
+   j["cmd"] = "sms_confirmation";
+   j["tel"] = tel;
+   j["sms"] = "8347";
+   send_msg(j.dump(), s);
+}
+
+void client_mgr_sms::send_msg(std::string msg, std::shared_ptr<client_type> s)
+{
+   auto is_empty = std::empty(msg_queue);
+   msg_queue.push(std::move(msg));
+
+   if (is_empty)
+      s->write(msg_queue.front());
+}
+
+int client_mgr_sms::on_write(std::shared_ptr<client_type> s)
+{
+   //std::cout << "on_write" << std::endl;
+
+   msg_queue.pop();
+   if (msg_queue.empty())
+      return 1; // No more message to send to the client.
+
+   s->write(msg_queue.front());
+
+   return 1;
+}
+
+int client_mgr_sms::on_handshake(std::shared_ptr<client_type> s)
+{
+   send_ok_login(s);
+   return 1;
+}
+

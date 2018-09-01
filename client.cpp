@@ -7,6 +7,7 @@
 #include "config.hpp"
 #include "client_mgr.hpp"
 #include "client_mgr_login.hpp"
+#include "client_mgr_sms.hpp"
 #include "client_session.hpp"
 
 //struct prompt_usr {
@@ -67,6 +68,20 @@ void test_login(client_options op, std::string tel)
    ioc.run();
 }
 
+void test_sms(client_options op, std::string tel)
+{
+   using mgr_type = client_mgr_sms;
+   using client_type = client_session<mgr_type>;
+
+   boost::asio::io_context ioc;
+
+   mgr_type mgr(tel);
+   auto p = std::make_shared<client_type>(ioc, std::move(op), mgr);
+
+   p->run();
+   ioc.run();
+}
+
 void test_client(client_options op, std::string tel)
 {
    using mgr_type = client_mgr;
@@ -94,8 +109,9 @@ int main(int argc, char* argv[])
    };
 
    test_login(op, argv[1]);
-   std::cout << "_______________________________________________"
-             << std::endl;
+   std::cout << "_________________________________" << std::endl;
+   test_sms(op, argv[1]);
+   std::cout << "_________________________________" << std::endl;
    test_client(op, argv[1]);
 
    return EXIT_SUCCESS;

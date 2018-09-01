@@ -10,24 +10,17 @@ int client_mgr_login::on_read(json j, std::shared_ptr<client_type> s)
 {
    auto cmd = j["cmd"].get<std::string>();
 
-   if (cmd == "login_ack") {
+   if (cmd == "login_ack")
       return on_login_ack(std::move(j), s);
-   } else {
-      std::cout << "Unknown command." << std::endl;
-      std::cerr << "Server error. Please fix." << std::endl;
-      return -1;
-   }
+
+   std::cout << "Unknown command." << std::endl;
+   std::cerr << "Server error. Please fix." << std::endl;
+
+   return -1;
 }
 
 int client_mgr_login::on_fail_read(boost::system::error_code ec)
 {
-   //std::cerr << "client_mgr_login::on_fail_read: " << ec.message() << "\n";
-
-   if (number_of_dropped_logins > 0) {
-      --number_of_dropped_logins;
-      return 1;
-   }
-
    return 1;
 }
 
@@ -37,12 +30,12 @@ int client_mgr_login::on_ok_login_ack( json j
    std::cout << "login_ack: ok." << std::endl;
 
    if (--number_of_ok_logins == 0) {
+      // TODO: Put more calls to send_ok_login here.
       // We are done
-      std::cout << "Login tests finished." << std::endl;
+      std::cout << "Test login: ok." << std::endl;
       return -1;
    }
 
-   // TODO: Put more calls to send_ok_login here.
    return 1;
 }
 
@@ -116,20 +109,13 @@ int client_mgr_login::on_write(std::shared_ptr<client_type> s)
 int client_mgr_login::on_handshake(std::shared_ptr<client_type> s)
 {
    if (number_of_dropped_logins > 0) {
-      --number_of_dropped_logins;
       send_dropped_login(s);
       return 1;
    }
 
    // We do not have fail login, so we proceed to ok.
 
-   if (number_of_dropped_logins == 0) {
-      send_ok_login(s);
-      // Now we decrement to not match any case above anymore.
-      --number_of_dropped_logins;
-      return 1;
-   }
-
+   send_ok_login(s);
    return 1;
 }
 

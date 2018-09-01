@@ -22,3 +22,9 @@ using json = nlohmann::json;
 using tcp = boost::asio::ip::tcp;
 namespace websocket = boost::beast::websocket;
 
+namespace timeouts
+{
+   constexpr std::chrono::seconds on_accept {10};
+   constexpr std::chrono::seconds sms {10};
+}
+

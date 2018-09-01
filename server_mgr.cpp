@@ -46,7 +46,7 @@ index_type server_mgr::on_login(json j, std::shared_ptr<server_session> s)
    // pending write when we send this message. This is not likely to
    // happen but who knows.
    s->write(resp.dump());
-   return -2;
+   return 1;
 }
 
 index_type
@@ -98,6 +98,7 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
    users[idx].reset();
    users[idx].set_id(tel);
    users[idx].store_session(s);
+   s->set_user(idx);
 
    json resp;
    resp["cmd"] = "sms_confirmation_ack";
@@ -105,7 +106,7 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
    resp["user_bind"] = user_bind {tel, host, idx};
 
    users[idx].send_msg(resp.dump());
-   return idx;
+   return 2;
 }
 
 index_type

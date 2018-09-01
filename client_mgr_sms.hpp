@@ -18,6 +18,7 @@ private:
    std::string tel;
 
    // login
+   int number_of_ok_logins = 1;
    void send_ok_login(std::shared_ptr<client_type> s);
    int on_login_ack(json j, std::shared_ptr<client_type> s);
 

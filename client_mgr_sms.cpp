@@ -44,6 +44,7 @@ int
 client_mgr_sms::on_sms_confirmation_ack( json j
                                        , std::shared_ptr<client_type> s)
 {
+   std::cout << j << std::endl;
    auto res = j["result"].get<std::string>();
 
    if (res == "ok") {
@@ -98,7 +99,12 @@ int client_mgr_sms::on_write(std::shared_ptr<client_type> s)
 
 int client_mgr_sms::on_handshake(std::shared_ptr<client_type> s)
 {
-   send_ok_login(s);
-   return 1;
+   if (number_of_ok_logins-- > 0) {
+      send_ok_login(s);
+      return 1;
+   }
+
+   std::cout << "Test sms_confirmation: failed." << std::endl;
+   return -1;
 }
 

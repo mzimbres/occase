@@ -89,7 +89,7 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
          buffer.consume(buffer.size());
          //std::cout << "Connection lost, trying to reconnect." << std::endl;
 
-         timer.expires_after(std::chrono::seconds{1});
+         timer.expires_after(std::chrono::milliseconds{100});
 
          auto handler = [results, p = this->shared_from_this()](auto ec)
          { p->async_connect(results); };
@@ -179,7 +179,7 @@ client_session<Mgr>::on_connect( boost::system::error_code ec
                                , tcp::resolver::results_type results)
 {
    if (ec) {
-      timer.expires_after(std::chrono::seconds{1});
+      timer.expires_after(std::chrono::milliseconds{10});
 
       auto handler = [results, p = this->shared_from_this()](auto ec)
       { p->async_connect(results); };

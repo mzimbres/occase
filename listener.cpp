@@ -76,7 +76,7 @@ void listener::on_accept(boost::system::error_code ec)
       fail(ec, "accept");
    } else {
       std::make_shared<server_session>( std::move(socket)
-                                      , sd)->run();
+                                      , sd)->do_accept();
    }
 
    do_accept();

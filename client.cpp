@@ -109,10 +109,10 @@ int main(int argc, char* argv[])
    };
 
    test_login(op, argv[1]);
-   std::cout << "_________________________________" << std::endl;
-   test_sms(op, argv[1]);
-   std::cout << "_________________________________" << std::endl;
-   test_client(op, argv[1]);
+   //std::cout << "_________________________________" << std::endl;
+   //test_sms(op, argv[1]);
+   //std::cout << "_________________________________" << std::endl;
+   //test_client(op, argv[1]);
 
    return EXIT_SUCCESS;
 }

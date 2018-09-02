@@ -37,11 +37,7 @@ public:
 
    // Functions to interact with the server_session.
    index_type on_read(json j, std::shared_ptr<server_session> session);
-   void on_fail_read(index_type user_idx);
 
    void on_write(index_type user_idx);
-   void on_fail_write(index_type user_idx);
-
-   void on_session_closed(index_type user_idx);
 };
 

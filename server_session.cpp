@@ -31,20 +31,36 @@ void server_session::do_accept()
    ws.async_accept(boost::asio::bind_executor(strand, handler));
 }
 
-void server_session::on_timeout(boost::system::error_code ec)
+void server_session::on_accept_timeout(boost::system::error_code ec)
 {
    // If we introduce a state we would be able to determine to which
    // action this timeout corresponds. Is it a connection timeout, a
    // login timeout etc. 
 
+   fail(ec, "on_accept_timeout");
    if (ec == boost::asio::error::operation_aborted) {
       // The user performed operation fast enough and we do not have
       // to take any action.
-      fail(ec, "on_timeout");
       return;
    }
 
-   fail(ec, "on_timeout");
+   // A timeout ocurred, we have to take some action. At the moment
+   // all timeouts should result in closing the connection.
+   do_close();
+}
+
+void server_session::on_sms_timeout(boost::system::error_code ec)
+{
+   // If we introduce a state we would be able to determine to which
+   // action this timeout corresponds. Is it a connection timeout, a
+   // login timeout etc. 
+
+   fail(ec, "on_sms_timeout");
+   if (ec == boost::asio::error::operation_aborted) {
+      // The user performed operation fast enough and we do not have
+      // to take any action.
+      return;
+   }
 
    // A timeout ocurred, we have to take some action. At the moment
    // all timeouts should result in closing the connection.
@@ -62,7 +78,7 @@ void server_session::on_accept(boost::system::error_code ec)
    timer.expires_after(timeouts::on_accept);
 
    auto const handler = [p = shared_from_this()](auto ec)
-   { p->on_timeout(ec); };
+   { p->on_accept_timeout(ec); };
 
    timer.async_wait(boost::asio::bind_executor(strand, handler));
 
@@ -90,6 +106,18 @@ void server_session::on_close(boost::system::error_code ec)
 
 void server_session::do_close()
 {
+   std::cout << "server_session::do_close()" << std::endl;
+   auto handler = [p = shared_from_this()](auto ec)
+   { p->on_close(ec); };
+
+   websocket::close_reason reason {};
+   ws.async_close(reason, handler);
+}
+
+void server_session::do_exit()
+{
+   timer.cancel();
+
    auto handler = [p = shared_from_this()](auto ec)
    { p->on_close(ec); };
 
@@ -103,14 +131,14 @@ void server_session::on_read( boost::system::error_code ec
    boost::ignore_unused(bytes_transferred);
 
    if (ec == websocket::error::closed) {
-      sd->on_session_closed(user_idx);
+      timer.cancel();
       return;
    }
 
    if (ec) {
       // TODO: Should this function return a value to instruct what to
       // do next or should we always drop the connection.
-      sd->on_fail_read(user_idx);
+      do_exit();
       return;
    }
 
@@ -127,7 +155,7 @@ void server_session::on_read( boost::system::error_code ec
       if (r == -1) {
          // -1 means that we should unconditionally close the
          // connection. 
-         do_close();
+         do_exit();
          return;
       }
 
@@ -137,7 +165,7 @@ void server_session::on_read( boost::system::error_code ec
          // This is where we have to set the sms timeout.
          if (timer.expires_after(timeouts::sms) > 0) {
             auto const handler = [p = shared_from_this()](auto ec)
-            { p->on_timeout(ec); };
+            { p->on_sms_timeout(ec); };
 
             timer.async_wait(boost::asio::bind_executor(strand, handler));
          } else {
@@ -146,7 +174,7 @@ void server_session::on_read( boost::system::error_code ec
             // an stablished session, this is non-sense. The
             // appropriate behaviour here seems to be to close the
             // connection.
-            do_close();
+            do_exit();
 
             // We do not have to async_read since we are closing the
             // connection so we can return.
@@ -162,7 +190,7 @@ void server_session::on_read( boost::system::error_code ec
       std::cout << "Accepted: " << tmp << std::endl;
    } catch (...) {
       std::cerr << "Exception for: " << tmp << std::endl;
-      do_close();
+      do_exit();
       return;
    }
 
@@ -188,7 +216,6 @@ void server_session::on_write( boost::system::error_code ec
    boost::ignore_unused(bytes_transferred);
 
    if (ec) {
-      sd->on_fail_write(user_idx);
       return;
    }
 

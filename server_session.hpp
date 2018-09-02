@@ -26,6 +26,7 @@ private:
 
    void do_read();
    void do_close();
+   void do_exit();
 
    void on_read( boost::system::error_code ec
                , std::size_t bytes_transferred);
@@ -37,7 +38,8 @@ private:
    void on_write( boost::system::error_code ec
                 , std::size_t bytes_transferred);
 
-   void on_timeout(boost::system::error_code ec);
+   void on_sms_timeout(boost::system::error_code ec);
+   void on_accept_timeout(boost::system::error_code ec);
 
    int user_idx = -1;
    std::string sms;

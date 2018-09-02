@@ -248,21 +248,6 @@ server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
    return from.index;
 }
 
-void server_mgr::on_session_closed(index_type user_idx)
-{
-   std::cout << "Session closed." << std::endl;
-}
-
-void server_mgr::on_fail_read(index_type user_idx)
-{
-   std::cout << "Fail read." << std::endl;
-}
-
-void server_mgr::on_fail_write(index_type user_idx)
-{
-   std::cout << "Fail write." << std::endl;
-}
-
 index_type
 server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
 {

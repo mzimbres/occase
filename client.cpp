@@ -1,5 +1,6 @@
 #include <thread>
 #include <memory>
+#include <vector>
 #include <string>
 #include <cstdlib>
 #include <iostream>
@@ -55,17 +56,18 @@
 //   }
 //};
 
-void test_accept_timer(client_options op)
+void test_accept_timer(client_options const& op)
 {
    using mgr_type = client_mgr_accept_timer;
    using client_type = client_session<mgr_type>;
 
    boost::asio::io_context ioc;
 
-   mgr_type mgr;
-   auto p = std::make_shared<client_type>(ioc, std::move(op), mgr);
+   std::vector<mgr_type> mgrs {10};
 
-   p->run();
+   for (auto& mgr : mgrs)
+      std::make_shared<client_type>(ioc, op, mgr)->run();
+
    ioc.run();
 }
 

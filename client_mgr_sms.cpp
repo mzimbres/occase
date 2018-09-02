@@ -30,7 +30,7 @@ int client_mgr_sms::on_login_ack(json j, std::shared_ptr<client_type> s)
    auto res = j["result"].get<std::string>();
 
    if (res == "ok") {
-      std::cout << "login_ack: ok." << std::endl;
+      //std::cout << "login_ack: ok." << std::endl;
       send_ok_sms_confirmation(s);
       return 1;
    }
@@ -44,7 +44,7 @@ int
 client_mgr_sms::on_sms_confirmation_ack( json j
                                        , std::shared_ptr<client_type> s)
 {
-   std::cout << j << std::endl;
+   //std::cout << j << std::endl;
    auto res = j["result"].get<std::string>();
 
    if (res == "ok") {

@@ -27,7 +27,7 @@ int client_mgr_login::on_fail_read(boost::system::error_code ec)
 int client_mgr_login::on_ok_login_ack( json j
                                      , std::shared_ptr<client_type> s)
 {
-   std::cout << "login_ack: ok." << std::endl;
+   //std::cout << "login_ack: ok." << std::endl;
 
    if (--number_of_ok_logins == 0) {
       std::cout << "Test login: ok." << std::endl;

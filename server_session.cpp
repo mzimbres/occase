@@ -21,7 +21,14 @@ server_session::server_session( tcp::socket socket
 , timer( ws.get_executor().context()
        , std::chrono::steady_clock::time_point::max())
 , sd(sd_)
-{ }
+{
+   std::cout << "__________________________" << std::endl;
+}
+
+server_session::~server_session()
+{
+   //std::cout << "__________________________" << std::endl;
+}
 
 void server_session::do_accept()
 {
@@ -116,6 +123,7 @@ void server_session::do_close()
 
 void server_session::do_exit()
 {
+   std::cout << "server_session::do_exit()" << std::endl;
    timer.cancel();
 
    auto handler = [p = shared_from_this()](auto ec)
@@ -131,6 +139,11 @@ void server_session::on_read( boost::system::error_code ec
    boost::ignore_unused(bytes_transferred);
 
    if (ec == websocket::error::closed) {
+      timer.cancel();
+      return;
+   }
+
+   if (ec == boost::asio::error::operation_aborted) {
       timer.cancel();
       return;
    }

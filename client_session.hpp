@@ -56,7 +56,7 @@ private:
                , std::size_t bytes_transferred
                , tcp::resolver::results_type results);
    void on_close(boost::system::error_code ec);
-   void async_connect(tcp::resolver::results_type results);
+   void do_connect(tcp::resolver::results_type results);
 
 public:
    explicit
@@ -83,18 +83,35 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
       boost::ignore_unused(bytes_transferred);
 
       if (ec) {
-         if (mgr.on_fail_read(ec) == -1)
+         if (ec == websocket::error::closed) {
+            if (mgr.on_fail_read(ec) == -1) {
+               //std::cout << "Leaving on read 1." << std::endl;
+               work.reset();
+               return;
+            }
+
+            buffer.consume(buffer.size());
+            //std::cout << "Connection lost, trying to reconnect." << std::endl;
+
+            timer.expires_after(std::chrono::milliseconds{100});
+
+            auto handler = [results, p = this->shared_from_this()](auto ec)
+            { p->do_connect(results); };
+
+            timer.async_wait(handler);
+            //std::cout << "Leaving on read 2." << std::endl;
             return;
+         }
 
-         buffer.consume(buffer.size());
-         //std::cout << "Connection lost, trying to reconnect." << std::endl;
+         if (ec == boost::asio::error::operation_aborted) {
+            //std::cout << "Leaving on read 3." << std::endl;
+            timer.cancel();
+            work.reset();
+            return;
+         }
 
-         timer.expires_after(std::chrono::milliseconds{100});
-
-         auto handler = [results, p = this->shared_from_this()](auto ec)
-         { p->async_connect(results); };
-
-         timer.async_wait(handler);
+         //std::cout << "Leaving on read 4." << std::endl;
+         work.reset();
          return;
       }
 
@@ -146,6 +163,7 @@ void client_session<Mgr>::write(std::string msg)
 template <class Mgr>
 void client_session<Mgr>::do_close()
 {
+   //std::cout << "do_close" << std::endl;
    auto handler = [p = this->shared_from_this()](auto ec)
    { p->on_close(ec); };
 
@@ -159,14 +177,15 @@ void client_session<Mgr>::on_resolve( boost::system::error_code ec
    if (ec)
       return fail_tmp(ec, "resolve");
 
-   async_connect(results);
+   do_connect(results);
 }
 
 template <class Mgr>
-void client_session<Mgr>::async_connect(tcp::resolver::results_type results)
+void client_session<Mgr>::do_connect(tcp::resolver::results_type results)
 {
    //std::cout  << "Trying to connect." << std::endl;
-   auto handler = [results, p = this->shared_from_this()](auto ec, auto Iterator)
+   auto handler =
+      [results, p = this->shared_from_this()](auto ec, auto Iterator)
    { p->on_connect(ec, results); };
 
    boost::asio::async_connect(ws.next_layer(), results.begin(),
@@ -182,7 +201,7 @@ client_session<Mgr>::on_connect( boost::system::error_code ec
       timer.expires_after(std::chrono::milliseconds{10});
 
       auto handler = [results, p = this->shared_from_this()](auto ec)
-      { p->async_connect(results); };
+      { p->do_connect(results); };
 
       timer.async_wait(handler);
       return;
@@ -207,12 +226,12 @@ client_session<Mgr>::on_handshake( boost::system::error_code ec
       return fail_tmp(ec, "handshake");
 
    // This function must be called before we begin to write commands
-   // so that we can receive a dropped connection on the server.
+   // so that we can receive the acks from the server.
    do_read(results);
 
-   // We still have no way to use the return value here. Think of a
-   // solution.
-   mgr.on_handshake(this->shared_from_this());
+   if (mgr.on_handshake(this->shared_from_this()) == -1) {
+      do_close();
+   }
 }
 
 template <class Mgr>
@@ -242,8 +261,7 @@ void client_session<Mgr>::on_close(boost::system::error_code ec)
    if (ec)
       return fail_tmp(ec, "close");
 
-   std::cout << "Connection closed gracefully"
-             << std::endl;
+   //std::cout << "Connection closed gracefully" << std::endl;
    work.reset();
 }
 

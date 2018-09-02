@@ -24,7 +24,7 @@ namespace websocket = boost::beast::websocket;
 
 namespace timeouts
 {
-   constexpr std::chrono::seconds on_accept {10};
-   constexpr std::chrono::seconds sms {10};
+   constexpr std::chrono::seconds on_accept {2};
+   constexpr std::chrono::seconds sms {2};
 }
 

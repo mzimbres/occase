@@ -6,9 +6,10 @@
 
 #include "config.hpp"
 #include "client_mgr.hpp"
-#include "client_mgr_login.hpp"
 #include "client_mgr_sms.hpp"
 #include "client_session.hpp"
+#include "client_mgr_login.hpp"
+#include "client_mgr_accept_timer.hpp"
 
 //struct prompt_usr {
 //   std::shared_ptr<client_session> p;
@@ -54,42 +55,56 @@
 //   }
 //};
 
-void test_login(client_options op, std::string tel)
+void test_accept_timer(client_options op)
+{
+   using mgr_type = client_mgr_accept_timer;
+   using client_type = client_session<mgr_type>;
+
+   boost::asio::io_context ioc;
+
+   mgr_type mgr;
+   auto p = std::make_shared<client_type>(ioc, std::move(op), mgr);
+
+   p->run();
+   ioc.run();
+}
+
+void test_login(client_options op)
 {
    using mgr_type = client_mgr_login;
    using client_type = client_session<mgr_type>;
 
    boost::asio::io_context ioc;
 
-   mgr_type mgr(tel);
+   mgr_type mgr("Rabanete");
    auto p = std::make_shared<client_type>(ioc, std::move(op), mgr);
 
    p->run();
    ioc.run();
 }
 
-void test_sms(client_options op, std::string tel)
+void test_sms(client_options op)
 {
    using mgr_type = client_mgr_sms;
    using client_type = client_session<mgr_type>;
 
    boost::asio::io_context ioc;
 
-   mgr_type mgr(tel);
+   mgr_type mgr("Melao");
    auto p = std::make_shared<client_type>(ioc, std::move(op), mgr);
 
    p->run();
    ioc.run();
 }
 
-void test_client(client_options op, std::string tel)
+void test_client(client_options op)
 {
    using mgr_type = client_mgr;
    using client_type = client_session<mgr_type>;
 
    boost::asio::io_context ioc;
 
-   mgr_type mgr(tel);
+   mgr_type mgr("Mandioca");
    auto p = std::make_shared<client_type>(ioc, std::move(op), mgr);
 
    p->run();
@@ -98,21 +113,28 @@ void test_client(client_options op, std::string tel)
 
 int main(int argc, char* argv[])
 {
-   if (argc != 2) {
-      std::cerr << "Please, provide a user id." << std::endl;
-      return EXIT_FAILURE;
-   }
+   //if (argc != 2) {
+   //   std::cerr << "Please, provide a user id." << std::endl;
+   //   return EXIT_FAILURE;
+   //}
 
    client_options op
    { {"127.0.0.1"} // Host.
    , {"8080"}      // Port.
    };
 
-   test_login(op, argv[1]);
-   //std::cout << "_________________________________" << std::endl;
-   //test_sms(op, argv[1]);
-   //std::cout << "_________________________________" << std::endl;
-   //test_client(op, argv[1]);
+   std::cout << "================================================"
+             << std::endl;
+   test_accept_timer(op);
+   std::cout << "================================================"
+             << std::endl;
+   test_login(op);
+   std::cout << "================================================"
+             << std::endl;
+   test_sms(op);
+   std::cout << "================================================"
+             << std::endl;
+   test_client(op);
 
    return EXIT_SUCCESS;
 }

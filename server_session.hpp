@@ -48,6 +48,7 @@ public:
    explicit
    server_session( tcp::socket socket
                  , std::shared_ptr<server_mgr> sd_);
+   ~server_session();
 
    void do_accept();
    void write(std::string msg);

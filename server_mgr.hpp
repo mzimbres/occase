@@ -39,5 +39,6 @@ public:
    index_type on_read(json j, std::shared_ptr<server_session> session);
 
    void on_write(index_type user_idx);
+   void release_login(index_type idx);
 };
 

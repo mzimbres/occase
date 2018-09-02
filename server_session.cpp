@@ -22,11 +22,16 @@ server_session::server_session( tcp::socket socket
        , std::chrono::steady_clock::time_point::max())
 , sd(sd_)
 {
-   std::cout << "__________________________" << std::endl;
+   //std::cout << "__________________________" << std::endl;
 }
 
 server_session::~server_session()
 {
+   if (login_idx != -1) {
+      //std::cout << "Releasing login index." << std::endl;
+      sd->release_login(login_idx);
+      login_idx = -1;
+   }
    //std::cout << "__________________________" << std::endl;
 }
 
@@ -56,8 +61,15 @@ void server_session::on_sms_timeout(boost::system::error_code ec)
 {
    fail(ec, "on_sms_timeout");
    if (ec == boost::asio::error::operation_aborted) {
-      // The user performed operation fast enough and we do not have
-      // to take any action.
+      // This means the timer will not be triggered. That can happen
+      // in two situations
+      //
+      // 1. The timer was canceled, in which case we have to release
+      //    the user index to the server_mgr.
+      // 2. expire_after was called to set another timer.
+      //
+      // We do not release the user index here and let it be handled
+      // where the timer was canceled.
       return;
    }
 

@@ -4,6 +4,11 @@
 index_type
 server_mgr::on_read(json j, std::shared_ptr<server_session> s)
 {
+   // TODO: Separate into commands for before and after
+   // authentication. Store session should be called only during
+   // authentication. The second group of commands can be called only
+   // on a session that is already authetified.
+
    //std::cout << j << std::endl;
    auto cmd = j["cmd"].get<std::string>();
    if (cmd == "login") {
@@ -28,31 +33,10 @@ index_type server_mgr::on_login(json j, std::shared_ptr<server_session> s)
 {
    // When the user downloads the app and clicks something like login
    // the app will send us the user phone.
-   auto tel = j["tel"].get<std::string>();
+   auto const tel = j["tel"].get<std::string>();
 
-   // If the connection closes between the login and the SMS
-   // confirmation we should make the sms invalid and release the user
-   // entry.
    // TODO: Use a random number generator with six digits.
-   // TODO: Allocate a user entry here so that the sms confirmation
-   // cannot fail for unavailable memory.
    s->set_sms("8347");
-
-   json resp;
-   resp["cmd"] = "login_ack";
-   resp["result"] = "ok";
-
-   // TODO: Add a message queue in server client so that there is
-   // pending write when we send this message. This is not likely to
-   // happen but who knows.
-   s->write(resp.dump());
-   return 1;
-}
-
-index_type
-server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
-{
-   auto tel = j["tel"].get<std::string>();
 
    auto idx = -1;
    auto new_user = id_to_idx_map.insert({tel, {}});
@@ -73,32 +57,76 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
       idx = new_user.first->second;
       users[idx].reset();
    } else {
-      // The user does no exist in the system we allocate an entry in
+      // The user does not exist in the system we allocate an entry in
       // the users array.
       idx = users.allocate();
    }
 
+   if (idx == -1) {
+      // We run out of memory.
+      json resp;
+      resp["cmd"] = "login_ack";
+      resp["result"] = "fail";
+      s->set_login_idx(-1);
+      s->write(resp.dump());
+      return -1;
+   }
+
+   s->set_login_idx(idx);
+   users[idx].set_id(tel);
+
+   json resp;
+   resp["cmd"] = "login_ack";
+   resp["result"] = "ok";
+
+   // TODO: Add a message queue in server client so that there is
+   // pending write when we send this message. This is not likely to
+   // happen but who knows.
+   s->write(resp.dump());
+   return 1;
+}
+
+void server_mgr::release_login(index_type idx)
+{
+   auto id = users[idx].get_id();
+   users.deallocate(idx);
+   id_to_idx_map.erase(id);
+}
+
+index_type
+server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
+{
+   // TODO: Should we check if idx is -1? If the login step was
+   // performed correctly then if there was no more memory available
+   // for a user the login should send a fail response and close the
+   // connection. On the safest side we would just check.
+   auto idx = s->get_login_idx();
+
    // TODO: The following piece of code is very critical, if an
    // exception is thrown we will not release idx back to the users
-   // array causing a leak.
-   auto sms = j["sms"].get<std::string>();
+   // array causing a leak. Implement a try and catch.
+   auto const sms = j["sms"].get<std::string>();
 
    if (sms != s->get_sms()) {
-      // TODO: Resend and sms to the user (some more times). For now
+      // TODO: Resend an sms to the user (some more times). For now
       // we will simply drop the connection and release resources.
       json resp;
       resp["cmd"] = "sms_confirmation_ack";
       resp["result"] = "fail";
-      users.deallocate(idx);
-      id_to_idx_map.erase(new_user.first);
+      release_login(idx);
+      s->set_login_idx(-1);
       s->write(resp.dump()); // Unsafe, implement a queue.
       return -1;
    }
 
-   users[idx].reset();
-   users[idx].set_id(tel);
-   users[idx].store_session(s);
+   // TODO: Implement this as a promotion from login user to valid
+   // user.
+   s->set_login_idx(-1);
    s->set_user(idx);
+   auto tel = j["tel"].get<std::string>();
+
+   users[idx].reset();
+   users[idx].store_session(s);
 
    json resp;
    resp["cmd"] = "sms_confirmation_ack";

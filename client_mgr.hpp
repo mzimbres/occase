@@ -1,7 +1,6 @@
 #pragma once
 
 #include <set>
-#include <queue>
 #include <string>
 #include <memory>
 
@@ -15,7 +14,6 @@ class client_mgr {
 private:
    using client_type = client_session<client_mgr>;
    std::set<group_bind> groups;
-   std::queue<std::string> msg_queue;
    std::string tel;
 
    // login

@@ -63,7 +63,7 @@ void test_accept_timer(client_options const& op)
 
    boost::asio::io_context ioc;
 
-   std::vector<mgr_type> mgrs {10};
+   std::vector<mgr_type> mgrs {15};
 
    for (auto& mgr : mgrs)
       std::make_shared<client_type>(ioc, op, mgr)->run();
@@ -82,7 +82,15 @@ void test_login(client_options op)
    { {"Rabanete"}
    , {"Acafrao"}
    , {"Salsinha"}
-   , {"Pimenta"}
+   , {"Pimenta1"}
+   , {"Pimenta2"}
+   , {"Pimenta3"}
+   , {"Pimenta4"}
+   , {"Pimenta5"}
+   , {"Pimenta6"}
+   , {"Pimenta7"}
+   , {"Pimenta8"}
+   , {"Pimenta9"}
    };
 
    for (auto& mgr : mgrs)
@@ -131,18 +139,18 @@ int main(int argc, char* argv[])
    , {"8080"}      // Port.
    };
 
-   std::cout << "================================================"
-             << std::endl;
-   test_accept_timer(op);
-   std::cout << "================================================"
-             << std::endl;
+   //std::cout << "================================================"
+   //          << std::endl;
+   //test_accept_timer(op);
+   //std::cout << "================================================"
+   //          << std::endl;
    test_login(op);
-   std::cout << "================================================"
-             << std::endl;
-   test_sms(op);
-   std::cout << "================================================"
-             << std::endl;
-   test_client(op);
+   //std::cout << "================================================"
+   //          << std::endl;
+   //test_sms(op);
+   //std::cout << "================================================"
+   //          << std::endl;
+   //test_client(op);
 
    return EXIT_SUCCESS;
 }

@@ -40,7 +40,8 @@ private:
    void on_sms_timeout(boost::system::error_code ec);
    void on_accept_timeout(boost::system::error_code ec);
 
-   int user_idx = -1;
+   index_type user_idx = -1;
+   index_type login_idx = -1;
    std::string sms;
 
 public:
@@ -52,7 +53,9 @@ public:
    void do_accept();
    void write(std::string msg);
    void set_sms(std::string sms_) {sms = std::move(sms_);}
-   auto const& get_sms() {return sms;}
+   auto const& get_sms() const { return sms; }
    void set_user(index_type idx) {user_idx = idx;};
+   void set_login_idx(index_type idx) {login_idx = idx;};
+   auto get_login_idx() const noexcept {return login_idx;}
 };
 

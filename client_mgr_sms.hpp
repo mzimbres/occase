@@ -1,7 +1,5 @@
 #pragma once
 
-#include <set>
-#include <queue>
 #include <string>
 #include <memory>
 
@@ -11,10 +9,11 @@
 template <class Mgr>
 class client_session;
 
+// Performs a login followed by an sms confirmation.
+
 class client_mgr_sms {
 private:
    using client_type = client_session<client_mgr_sms>;
-   std::queue<std::string> msg_queue;
    std::string tel;
 
    // login

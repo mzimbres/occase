@@ -39,6 +39,7 @@ private:
    work_type work;
    std::string text;
    client_options op;
+   std::queue<std::string> msg_queue;
 
    Mgr& mgr;
 
@@ -58,14 +59,16 @@ private:
    void on_close(boost::system::error_code ec);
    void do_connect(tcp::resolver::results_type results);
 
+   void do_write(std::string msg);
+
 public:
    explicit
    client_session( boost::asio::io_context& ioc
                  , client_options op_
                  , Mgr& m);
 
-   void write(std::string msg);
    void run();
+   void send_msg(std::string msg);
 };
 
 inline
@@ -158,7 +161,17 @@ client_session<Mgr>::client_session( boost::asio::io_context& ioc
 { }
 
 template <class Mgr>
-void client_session<Mgr>::write(std::string msg)
+void client_session<Mgr>::send_msg(std::string msg)
+{
+   auto is_empty = std::empty(msg_queue);
+   msg_queue.push(std::move(msg));
+
+   if (is_empty)
+      do_write(msg_queue.front());
+}
+
+template <class Mgr>
+void client_session<Mgr>::do_write(std::string msg)
 {
    //std::cout << "Sending: " << msg << std::endl;
    text = std::move(msg);
@@ -258,17 +271,21 @@ void client_session<Mgr>::on_write( boost::system::error_code ec
 {
    boost::ignore_unused(bytes_transferred);
 
-   mgr.on_write(this->shared_from_this()); // TODO: Use the return value?
+   msg_queue.pop();
+   if (msg_queue.empty())
+      return; // No more message to send to the client.
+
+   do_write(msg_queue.front());
 
    if (ec)
-      return fail_tmp(ec, "write");
+      fail_tmp(ec, "write");
 }
 
 template <class Mgr>
 void client_session<Mgr>::on_close(boost::system::error_code ec)
 {
    if (ec)
-      return fail_tmp(ec, "close");
+      fail_tmp(ec, "close");
 
    //std::cout << "Connection closed gracefully" << std::endl;
    work.reset();

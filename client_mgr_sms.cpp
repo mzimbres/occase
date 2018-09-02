@@ -63,7 +63,7 @@ void client_mgr_sms::send_ok_login(std::shared_ptr<client_type> s)
    json j;
    j["cmd"] = "login";
    j["tel"] = tel;
-   send_msg(j.dump(), s);
+   s->send_msg(j.dump());
 }
 
 void client_mgr_sms::send_ok_sms_confirmation(std::shared_ptr<client_type> s)
@@ -72,29 +72,7 @@ void client_mgr_sms::send_ok_sms_confirmation(std::shared_ptr<client_type> s)
    j["cmd"] = "sms_confirmation";
    j["tel"] = tel;
    j["sms"] = "8347";
-   send_msg(j.dump(), s);
-}
-
-void client_mgr_sms::send_msg(std::string msg, std::shared_ptr<client_type> s)
-{
-   auto is_empty = std::empty(msg_queue);
-   msg_queue.push(std::move(msg));
-
-   if (is_empty)
-      s->write(msg_queue.front());
-}
-
-int client_mgr_sms::on_write(std::shared_ptr<client_type> s)
-{
-   //std::cout << "on_write" << std::endl;
-
-   msg_queue.pop();
-   if (msg_queue.empty())
-      return 1; // No more message to send to the client.
-
-   s->write(msg_queue.front());
-
-   return 1;
+   s->send_msg(j.dump());
 }
 
 int client_mgr_sms::on_handshake(std::shared_ptr<client_type> s)

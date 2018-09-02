@@ -70,14 +70,11 @@ private:
    void send_group_msg(std::shared_ptr<client_type> s);
    void send_user_msg(std::shared_ptr<client_type> s);
 
-   void send_msg(std::string msg, std::shared_ptr<client_type> s);
-
 public:
    client_mgr(std::string tel_);
    user_bind bind;
    int on_read(json j, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec);
-   int on_write(std::shared_ptr<client_type> s);
    int on_handshake(std::shared_ptr<client_type> s);
    //void prompt_login();
    //void prompt_create_group();

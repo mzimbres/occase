@@ -10,25 +10,22 @@ int client_mgr_login::on_read(json j, std::shared_ptr<client_type> s)
 {
    auto cmd = j["cmd"].get<std::string>();
 
-   if (cmd == "login_ack")
-      return on_login_ack(std::move(j), s);
+   if (cmd != "login_ack") {
+      // Since we are only sending login commands only a login_ack is
+      // expected, anything else is an error.
+      std::cerr << "Server error. Please fix." << std::endl;
+      return -1;
+   }
 
-   std::cout << "Unknown command." << std::endl;
-   std::cerr << "Server error. Please fix." << std::endl;
+   auto res = j["result"].get<std::string>();
+   if (res != "ok") {
+      // We still have no fail login server ack.
+      std::cout << "SERVER ERROR: client_mgr_login::on_read.\n"
+                << "Please fix." << std::endl;
+      return 1;
+   }
 
-   return -1;
-}
-
-int client_mgr_login::on_closed(boost::system::error_code ec)
-{
-   return 1;
-}
-
-int client_mgr_login::on_ok_login_ack( json j
-                                     , std::shared_ptr<client_type> s)
-{
    //std::cout << "login_ack: ok." << std::endl;
-
    if (--number_of_ok_logins == 0) {
       std::cout << "Test login: ok." << std::endl;
       return -1;
@@ -38,15 +35,8 @@ int client_mgr_login::on_ok_login_ack( json j
    return -1;
 }
 
-int client_mgr_login::on_login_ack(json j, std::shared_ptr<client_type> s)
+int client_mgr_login::on_closed(boost::system::error_code ec)
 {
-   auto res = j["result"].get<std::string>();
-   if (res == "ok")
-      return on_ok_login_ack(std::move(j), s);
-
-   // We still have not fail login server ack.
-   std::cout << "SERVER ERROR: client_mgr_login::on_login_ack.\n"
-             << "Please report." << std::endl;
    return 1;
 }
 
@@ -56,7 +46,7 @@ void client_mgr_login::send_ok_login(std::shared_ptr<client_type> s)
    json j;
    j["cmd"] = "login";
    j["tel"] = tel;
-   send_msg(j.dump(), s);
+   s->send_msg(j.dump());
 }
 
 void client_mgr_login::send_dropped_login(std::shared_ptr<client_type> s)
@@ -79,30 +69,7 @@ void client_mgr_login::send_dropped_login(std::shared_ptr<client_type> s)
    }
 
    --number_of_dropped_logins;
-   send_msg(j.dump(), s);
-}
-
-void client_mgr_login::send_msg( std::string msg
-                               , std::shared_ptr<client_type> s)
-{
-   auto is_empty = std::empty(msg_queue);
-   msg_queue.push(std::move(msg));
-
-   if (is_empty)
-      s->write(msg_queue.front());
-}
-
-int client_mgr_login::on_write(std::shared_ptr<client_type> s)
-{
-   //std::cout << "on_write" << std::endl;
-
-   msg_queue.pop();
-   if (msg_queue.empty())
-      return 1; // No more message to send to the client.
-
-   s->write(msg_queue.front());
-
-   return 1;
+   s->send_msg(j.dump());
 }
 
 int client_mgr_login::on_handshake(std::shared_ptr<client_type> s)

@@ -215,7 +215,7 @@ void client_mgr::ok_login(std::shared_ptr<client_type> s)
    json j;
    j["cmd"] = "login";
    j["tel"] = tel;
-   send_msg(j.dump(), s);
+   s->send_msg(j.dump());
 }
 
 void client_mgr::ok_sms_confirmation(std::shared_ptr<client_type> s)
@@ -224,7 +224,7 @@ void client_mgr::ok_sms_confirmation(std::shared_ptr<client_type> s)
    j["cmd"] = "sms_confirmation";
    j["tel"] = tel;
    j["sms"] = "8347";
-   send_msg(j.dump(), s);
+   s->send_msg(j.dump());
 }
 
 void client_mgr::dropped_login(std::shared_ptr<client_type> s)
@@ -247,7 +247,7 @@ void client_mgr::dropped_login(std::shared_ptr<client_type> s)
    }
 
    --number_of_dropped_logins;
-   send_msg(j.dump(), s);
+   s->send_msg(j.dump());
 }
 
 void client_mgr::ok_create_group(std::shared_ptr<client_type> s)
@@ -256,7 +256,7 @@ void client_mgr::ok_create_group(std::shared_ptr<client_type> s)
    j["cmd"] = "create_group";
    j["from"] = bind;
    j["info"] = group_info { {"Repasse"}, {"Carros."}};
-   send_msg(j.dump(), s);
+   s->send_msg(j.dump());
    //std::cout << "Just send a valid create group: " << j << std::endl;
 }
 
@@ -267,7 +267,7 @@ void client_mgr::fail_create_group(std::shared_ptr<client_type> s)
    j["cmd"] = "create_group";
    j["from"] = bind;
    j["info"] = group_info { {"Repasse"}, {"Carros."}};
-   send_msg(j.dump(), s);
+   s->send_msg(j.dump());
 }
 
 void client_mgr::dropped_create_group(std::shared_ptr<client_type> s)
@@ -277,7 +277,7 @@ void client_mgr::dropped_create_group(std::shared_ptr<client_type> s)
       j["cmud"] = "create_group";
       j["from"] = bind;
       j["info"] = group_info { {"Repasse"}, {"Carros."}};
-      send_msg(j.dump(), s);
+      s->send_msg(j.dump());
       return;
    }
 
@@ -286,7 +286,7 @@ void client_mgr::dropped_create_group(std::shared_ptr<client_type> s)
       j["cmd"] = "craeate_group";
       j["from"] = bind;
       j["info"] = group_info { {"Repasse"}, {"Carros."}};
-      send_msg(j.dump(), s);
+      s->send_msg(j.dump());
       return;
    }
 
@@ -295,7 +295,7 @@ void client_mgr::dropped_create_group(std::shared_ptr<client_type> s)
       j["cmd"] = "create_group";
       j["froim"] = bind;
       j["info"] = group_info { {"Repasse"}, {"Carros."}};
-      send_msg(j.dump(), s);
+      s->send_msg(j.dump());
       return;
    }
 
@@ -306,7 +306,7 @@ void client_mgr::dropped_create_group(std::shared_ptr<client_type> s)
       ++tmp.index;
       j["from"] = tmp;
       j["info"] = group_info { {"Repasse"}, {"Carros."}};
-      send_msg(j.dump(), s);
+      s->send_msg(j.dump());
       return;
    }
 
@@ -315,7 +315,7 @@ void client_mgr::dropped_create_group(std::shared_ptr<client_type> s)
       j["cmd"] = "create_group";
       j["from"] = bind;
       j["inafo"] = group_info { {"Repasse"}, {"Carros."}};
-      send_msg(j.dump(), s);
+      s->send_msg(j.dump());
       return;
    }
 
@@ -324,12 +324,12 @@ void client_mgr::dropped_create_group(std::shared_ptr<client_type> s)
       j["cmd"] = "create_group";
       j["from"] = bind;
       j["info"] = "aaaaa";
-      send_msg(j.dump(), s);
+      s->send_msg(j.dump());
       return;
    }
 
    if (number_of_dropped_create_groups == 1) {
-      send_msg("alkdshfkjds", s);
+      s->send_msg("alkdshfkjds");
       return;
    }
 }
@@ -340,7 +340,7 @@ void client_mgr::ok_join_group(std::shared_ptr<client_type> s)
    j["cmd"] = "join_group";
    j["from"] = bind;
    j["group_bind"] = group_bind {"criatura", number_of_ok_joins};
-   send_msg(j.dump(), s);
+   s->send_msg(j.dump());
 }
 
 void client_mgr::dropped_join_group(std::shared_ptr<client_type> s)
@@ -350,7 +350,7 @@ void client_mgr::dropped_join_group(std::shared_ptr<client_type> s)
       j["cmd"] = "join_group";
       j["from"] = bind;
       j["group_iid"] = group_bind {"wwr", number_of_dropped_joins};
-      send_msg(j.dump(), s);
+      s->send_msg(j.dump());
       return;
    }
 
@@ -361,7 +361,7 @@ void client_mgr::dropped_join_group(std::shared_ptr<client_type> s)
       ++tmp.index;
       j["from"] = tmp;
       j["group_bind"] = group_bind {"criatura", number_of_dropped_joins};
-      send_msg(j.dump(), s);
+      s->send_msg(j.dump());
       return;
    }
 
@@ -370,7 +370,7 @@ void client_mgr::dropped_join_group(std::shared_ptr<client_type> s)
       j["cmd"] = "joiin_group";
       j["from"] = bind;
       j["group_bind"] = group_bind {"criatura", number_of_dropped_joins};
-      send_msg(j.dump(), s);
+      s->send_msg(j.dump());
       return;
    }
 }
@@ -385,7 +385,7 @@ void client_mgr::send_group_msg(std::shared_ptr<client_type> s)
       j["from"] = tmp;
       j["to"] = 0;
       j["msg"] = "Message to group";
-      send_msg(j.dump(), s);
+      s->send_msg(j.dump());
       --number_of_group_msgs;
    }
 
@@ -395,7 +395,7 @@ void client_mgr::send_group_msg(std::shared_ptr<client_type> s)
       j["friom"] = bind;
       j["to"] = 0;
       j["msg"] = "Message to group";
-      send_msg(j.dump(), s);
+      s->send_msg(j.dump());
       --number_of_group_msgs;
    }
 
@@ -405,7 +405,7 @@ void client_mgr::send_group_msg(std::shared_ptr<client_type> s)
       j["from"] = bind;
       j["to"] = 0;
       j["msg"] = "Message to group";
-      send_msg(j.dump(), s);
+      s->send_msg(j.dump());
       --number_of_group_msgs;
    }
 
@@ -415,7 +415,7 @@ void client_mgr::send_group_msg(std::shared_ptr<client_type> s)
       j["from"] = bind;
       j["to"] = 0;
       j["msg"] = "Message to group";
-      send_msg(j.dump(), s);
+      s->send_msg(j.dump());
       --number_of_group_msgs;
    }
 
@@ -425,7 +425,7 @@ void client_mgr::send_group_msg(std::shared_ptr<client_type> s)
       j["from"] = bind;
       j["to"] = number_of_valid_group_msgs;
       j["msg"] = "Message to group";
-      send_msg(j.dump(), s);
+      s->send_msg(j.dump());
       if (number_of_valid_group_msgs-- == 0)
          --number_of_group_msgs;
    }
@@ -439,29 +439,7 @@ void client_mgr::send_user_msg(std::shared_ptr<client_type> s)
    j["to"] = 0;
    j["msg"] = "Mensagem ao usuario.";
 
-   send_msg(j.dump(), s);
-}
-
-void client_mgr::send_msg(std::string msg, std::shared_ptr<client_type> s)
-{
-   auto is_empty = std::empty(msg_queue);
-   msg_queue.push(std::move(msg));
-
-   if (is_empty)
-      s->write(msg_queue.front());
-}
-
-int client_mgr::on_write(std::shared_ptr<client_type> s)
-{
-   //std::cout << "on_write" << std::endl;
-
-   msg_queue.pop();
-   if (msg_queue.empty())
-      return 1; // No more message to send to the client.
-
-   s->write(msg_queue.front());
-
-   return 1;
+   s->send_msg(j.dump());
 }
 
 int client_mgr::on_handshake(std::shared_ptr<client_type> s)

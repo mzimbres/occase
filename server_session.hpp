@@ -26,7 +26,6 @@ private:
 
    void do_read();
    void do_close();
-   void do_exit();
 
    void on_read( boost::system::error_code ec
                , std::size_t bytes_transferred);

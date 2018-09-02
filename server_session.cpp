@@ -40,10 +40,6 @@ void server_session::do_accept()
 
 void server_session::on_accept_timeout(boost::system::error_code ec)
 {
-   // If we introduce a state we would be able to determine to which
-   // action this timeout corresponds. Is it a connection timeout, a
-   // login timeout etc. 
-
    fail(ec, "on_accept_timeout");
    if (ec == boost::asio::error::operation_aborted) {
       // The user performed operation fast enough and we do not have
@@ -58,10 +54,6 @@ void server_session::on_accept_timeout(boost::system::error_code ec)
 
 void server_session::on_sms_timeout(boost::system::error_code ec)
 {
-   // If we introduce a state we would be able to determine to which
-   // action this timeout corresponds. Is it a connection timeout, a
-   // login timeout etc. 
-
    fail(ec, "on_sms_timeout");
    if (ec == boost::asio::error::operation_aborted) {
       // The user performed operation fast enough and we do not have
@@ -121,37 +113,36 @@ void server_session::do_close()
    ws.async_close(reason, handler);
 }
 
-void server_session::do_exit()
-{
-   std::cout << "server_session::do_exit()" << std::endl;
-   timer.cancel();
-
-   auto handler = [p = shared_from_this()](auto ec)
-   { p->on_close(ec); };
-
-   websocket::close_reason reason {};
-   ws.async_close(reason, handler);
-}
-
 void server_session::on_read( boost::system::error_code ec
                             , std::size_t bytes_transferred)
 {
    boost::ignore_unused(bytes_transferred);
 
    if (ec == websocket::error::closed) {
+      // The connection has been gracefully closed. The only possible
+      // pending operations now are the timers, and write (?).
       timer.cancel();
+
+      // Returning will release a reference and if it is the last the
+      // object will be killed.
       return;
    }
 
    if (ec == boost::asio::error::operation_aborted) {
+      // An aborting can be caused by a timer that has fire. For
+      // example if the sms confirmation was not fast enough. For
+      // precaution I will calcel any pending timer and release a
+      // reference to the session by returning.
       timer.cancel();
       return;
    }
 
    if (ec) {
-      // TODO: Should this function return a value to instruct what to
-      // do next or should we always drop the connection.
-      do_exit();
+      // I still do not know what other error should be handled here.
+      // I will take a default action, cance the timers and return
+      // releasing one session reference.
+      std::cout << "Stoping the read operation." << std::endl;
+      timer.cancel();
       return;
    }
 
@@ -168,14 +159,15 @@ void server_session::on_read( boost::system::error_code ec
       if (r == -1) {
          // -1 means that we should unconditionally close the
          // connection. 
-         do_exit();
+         timer.cancel();
+         do_close();
          return;
       }
 
       if (r == 1) {
-         // Successful login request. Our state is likely on_accept
-         // which means we have a timer running that we have to cancel.
-         // This is where we have to set the sms timeout.
+         // Successful login request which means the unknown
+         // connection timer  has to be canceled.  This is where we
+         // have to set the sms timeout.
          if (timer.expires_after(timeouts::sms) > 0) {
             auto const handler = [p = shared_from_this()](auto ec)
             { p->on_sms_timeout(ec); };
@@ -187,10 +179,12 @@ void server_session::on_read( boost::system::error_code ec
             // an stablished session, this is non-sense. The
             // appropriate behaviour here seems to be to close the
             // connection.
-            do_exit();
+            timer.cancel();
+            do_close();
 
             // We do not have to async_read since we are closing the
-            // connection so we can return.
+            // connection, just return and release the session
+            // reference.
             return;
          }
       } else if (r == 2) {
@@ -203,7 +197,8 @@ void server_session::on_read( boost::system::error_code ec
       std::cout << "Accepted: " << tmp << std::endl;
    } catch (...) {
       std::cerr << "Exception for: " << tmp << std::endl;
-      do_exit();
+      timer.cancel();
+      do_close();
       return;
    }
 
@@ -228,6 +223,7 @@ void server_session::on_write( boost::system::error_code ec
 {
    boost::ignore_unused(bytes_transferred);
 
+   // TODO: The error handling here should be similar to the on_read.
    if (ec) {
       return;
    }

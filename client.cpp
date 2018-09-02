@@ -63,7 +63,7 @@ void test_accept_timer(client_options const& op)
 
    boost::asio::io_context ioc;
 
-   std::vector<mgr_type> mgrs {10};
+   std::vector<mgr_type> mgrs {1};
 
    for (auto& mgr : mgrs)
       std::make_shared<client_type>(ioc, op, mgr)->run();

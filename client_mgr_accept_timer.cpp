@@ -8,10 +8,10 @@ int client_mgr_accept_timer::on_read(json j, std::shared_ptr<client_type> s)
    return -1;
 }
 
-int client_mgr_accept_timer::on_fail_read(boost::system::error_code ec)
+int client_mgr_accept_timer::on_closed(boost::system::error_code ec)
 {
    if (number_of_reconnects > 0) {
-      //std::cerr << "on_fail_read: continue." << std::endl;
+      //std::cerr << "on_closed: continue." << std::endl;
       return 1;
    }
 

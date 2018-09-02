@@ -129,10 +129,10 @@ void server_session::on_read( boost::system::error_code ec
    }
 
    if (ec == boost::asio::error::operation_aborted) {
-      // An aborting can be caused by a timer that has fire. For
-      // example if the sms confirmation was not fast enough. For
-      // precaution I will calcel any pending timer and release a
-      // reference to the session by returning.
+      // An aborting can be caused by a timer that has expired and
+      // triggered a do_close. For example if the sms confirmation was
+      // not fast enough. For precaution I will calcel any pending
+      // timer and release a reference to the session by returning.
       timer.cancel();
       return;
    }

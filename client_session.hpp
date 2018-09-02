@@ -84,15 +84,23 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
 
       if (ec) {
          if (ec == websocket::error::closed) {
-            if (mgr.on_fail_read(ec) == -1) {
+            // This means the session has been close, likely by the
+            // server. Now we ask the manager what to do, should we
+            // try to reconnect or are we done.
+            if (mgr.on_closed(ec) == -1) {
+               // We are done.
                //std::cout << "Leaving on read 1." << std::endl;
                work.reset();
                return;
             }
 
+            // The manager wants us to reconnect to continue with its
+            // tests.
             buffer.consume(buffer.size());
-            //std::cout << "Connection lost, trying to reconnect." << std::endl;
+            //std::cout << "Reconnecting." << std::endl;
 
+            // I am not seeing any need of a timer here. Perhaps it
+            // should be removed.
             timer.expires_after(std::chrono::milliseconds{100});
 
             auto handler = [results, p = this->shared_from_this()](auto ec)
@@ -104,6 +112,7 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
          }
 
          if (ec == boost::asio::error::operation_aborted) {
+            // I am unsure by this may be caused by a do_close.
             //std::cout << "Leaving on read 3." << std::endl;
             timer.cancel();
             work.reset();

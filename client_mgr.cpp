@@ -29,9 +29,9 @@ int client_mgr::on_read(json j, std::shared_ptr<client_type> s)
    }
 }
 
-int client_mgr::on_fail_read(boost::system::error_code ec)
+int client_mgr::on_closed(boost::system::error_code ec)
 {
-   //std::cerr << "client_mgr::on_fail_read: " << ec.message() << "\n";
+   //std::cerr << "client_mgr::on_closed: " << ec.message() << "\n";
 
    if (number_of_dropped_logins > 0) {
       --number_of_dropped_logins;

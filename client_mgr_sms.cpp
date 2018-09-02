@@ -20,7 +20,7 @@ int client_mgr_sms::on_read(json j, std::shared_ptr<client_type> s)
    return -1;
 }
 
-int client_mgr_sms::on_fail_read(boost::system::error_code ec)
+int client_mgr_sms::on_closed(boost::system::error_code ec)
 {
    return 1;
 }

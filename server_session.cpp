@@ -27,12 +27,7 @@ server_session::server_session( tcp::socket socket
 
 server_session::~server_session()
 {
-   if (login_idx != -1) {
-      //std::cout << "Releasing login index." << std::endl;
-      sd->release_login(login_idx);
-      login_idx = -1;
-   }
-   //std::cout << "__________________________" << std::endl;
+   assert(login_idx == -1);
 }
 
 void server_session::do_accept()
@@ -47,17 +42,17 @@ void server_session::on_accept_timeout(boost::system::error_code ec)
 {
    fail(ec, "on_accept_timeout");
 
-   // This also works
-   //if (ec == boost::asio::error::operation_aborted)
    if (timer.expiry() > std::chrono::steady_clock::now()) {
       // The deadline has move, this happens only if the user send any
       // of the authentification commands. We have nothing to do.
       return;
    }
 
-   // This deadline is not canceled. A moved deadline is caught in the
-   // condition above.
-   assert(!ec);
+   if (ec == boost::asio::error::operation_aborted) {
+      // The timer has been canceled. We let for the initiator to
+      // handle the situation.
+      return;
+   }
 
    // The timeout was triggered. That means the user did not sent us a
    // login or an authenticate command. We can either close the
@@ -76,15 +71,18 @@ void server_session::on_sms_timeout(boost::system::error_code ec)
       //
       // 1. The timer was canceled, in which case we have to release
       //    the user index to the server_mgr.
-      // 2. expire_after was called to set another timer.
+      // 2. expire_after moved the deadline.
       //
       // We do not release the user index here and let it be handled
       // where the timer was canceled.
+      assert(login_idx != -1);
+      std::cout << "Releasing login index." << std::endl;
+      // Move this to a promote function.
+      sd->release_login(login_idx);
+      login_idx = -1;
       return;
    }
 
-   // A timeout ocurred, we have to take some action. At the moment
-   // all timeouts should result in closing the connection.
    do_close();
 }
 
@@ -122,6 +120,7 @@ void server_session::on_close(boost::system::error_code ec)
    if (ec)
       return fail(ec, "close");
 
+   // TODO: Should we shutdown the socket here?
    std::cout << "Connection closed." << std::endl;
    // TODO: Set a timeout for the received close.
 }
@@ -163,22 +162,13 @@ void server_session::on_read( boost::system::error_code ec
    }
 
    if (ec == boost::asio::error::operation_aborted) {
-      // An aborting can be caused by a timer that has expired and
-      // triggered a do_close. For example if the sms confirmation was
-      // not fast enough. For precaution I will calcel any pending
-      // timer and release a reference to the session by returning.
-      timer.cancel();
+      // Abortion can be caused by a socket shutting down and closing.
+      // We have no cleanup to perform.
       return;
    }
 
-   if (ec) {
-      // I still do not know what other error should be handled here.
-      // I will take a default action, cance the timers and return
-      // releasing one session reference.
-      std::cout << "Stoping the read operation." << std::endl;
-      timer.cancel();
+   if (ec)
       return;
-   }
 
    std::string tmp;
    try {
@@ -210,16 +200,8 @@ void server_session::on_read( boost::system::error_code ec
          } else {
             // If we get here, it means that there was no ongoing timer.
             // But I do not see any reason for calling a login command on
-            // an stablished session, this is non-sense. The
-            // appropriate behaviour here seems to be to close the
-            // connection.
-            timer.cancel();
-            do_close();
-
-            // We do not have to async_read since we are closing the
-            // connection, just return and release the session
-            // reference.
-            return;
+            // an stablished session, this a login error.
+            assert(true);
          }
       } else if (r == 2) {
          // This means the sms authentification was successfull and

@@ -12,50 +12,6 @@
 #include "client_mgr_login.hpp"
 #include "client_mgr_accept_timer.hpp"
 
-//struct prompt_usr {
-//   std::shared_ptr<client_session> p;
-//   void operator()() const
-//   {
-//      for (;;) {
-//         std::cout << "Type a command: \n\n"
-//                   << "  0: Exit.\n"
-//                   << "  1: Create group.\n"
-//                   << "  2: Join group.\n"
-//                   << "  3: Send group message.\n"
-//                   << "  4: Send user message.\n"
-//                   << std::endl;
-//         auto cmd = -1;
-//         std::cin >> cmd;
-//         std::string str;
-//
-//         if (cmd == 0) {
-//            p->prompt_close();
-//            break;
-//         }
-//
-//         if (cmd == 1) {
-//            p->prompt_create_group();
-//            continue;
-//         }
-//         
-//         if (cmd == 2) {
-//            p->prompt_join_group();
-//            continue;
-//         }
-//         
-//         if (cmd == 3) {
-//            p->prompt_send_group_msg();
-//            continue;
-//         }
-//
-//         if (cmd == 4) {
-//            p->prompt_send_user_msg();
-//            continue;
-//         }
-//      }
-//   }
-//};
-
 void test_accept_timer(client_options const& op)
 {
    using mgr_type = client_mgr_accept_timer;
@@ -80,17 +36,17 @@ void test_login(client_options op)
 
    std::vector<mgr_type> mgrs
    { {"Rabanete"}
-   , {"Acafrao"}
-   , {"Salsinha"}
-   , {"Pimenta1"}
-   , {"Pimenta2"}
-   , {"Pimenta3"}
-   , {"Pimenta4"}
-   , {"Pimenta5"}
-   , {"Pimenta6"}
-   , {"Pimenta7"}
-   , {"Pimenta8"}
-   , {"Pimenta9"}
+   //, {"Acafrao"}
+   //, {"Salsinha"}
+   //, {"Pimenta1"}
+   //, {"Pimenta2"}
+   //, {"Pimenta3"}
+   //, {"Pimenta4"}
+   //, {"Pimenta5"}
+   //, {"Pimenta6"}
+   //, {"Pimenta7"}
+   //, {"Pimenta8"}
+   //, {"Pimenta9"}
    };
 
    for (auto& mgr : mgrs)
@@ -139,11 +95,11 @@ int main(int argc, char* argv[])
    , {"8080"}      // Port.
    };
 
-   //std::cout << "================================================"
-   //          << std::endl;
-   //test_accept_timer(op);
-   //std::cout << "================================================"
-   //          << std::endl;
+   std::cout << "================================================"
+             << std::endl;
+   test_accept_timer(op);
+   std::cout << "================================================"
+             << std::endl;
    test_login(op);
    //std::cout << "================================================"
    //          << std::endl;

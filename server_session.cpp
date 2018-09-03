@@ -46,14 +46,24 @@ void server_session::do_accept()
 void server_session::on_accept_timeout(boost::system::error_code ec)
 {
    fail(ec, "on_accept_timeout");
-   if (ec == boost::asio::error::operation_aborted) {
-      // The user performed operation fast enough and we do not have
-      // to take any action.
+
+   // This also works
+   //if (ec == boost::asio::error::operation_aborted)
+   if (timer.expiry() > std::chrono::steady_clock::now()) {
+      // The deadline has move, this happens only if the user send any
+      // of the authentification commands. We have nothing to do.
       return;
    }
 
-   // A timeout ocurred, we have to take some action. At the moment
-   // all timeouts should result in closing the connection.
+   // This deadline is not canceled. A moved deadline is caught in the
+   // condition above.
+   assert(!ec);
+
+   // The timeout was triggered. That means the user did not sent us a
+   // login or an authenticate command. We can either close the
+   // connection gracefully by sending a close frame with async_close
+   // or simply shutdown the socket, in which case the client wont be
+   // notified. Here we decide to inform the user.
    do_close();
 }
 
@@ -84,7 +94,7 @@ void server_session::on_accept(boost::system::error_code ec)
       return fail(ec, "accept");
 
    // The cancelling of this timer should happen when either
-   // 1. the user Identifies himself.
+   // 1. The user Identifies himself.
    // 2. The user requests a login.
    timer.expires_after(timeouts::on_accept);
 
@@ -113,6 +123,7 @@ void server_session::on_close(boost::system::error_code ec)
       return fail(ec, "close");
 
    std::cout << "Connection closed." << std::endl;
+   // TODO: Set a timeout for the received close.
 }
 
 void server_session::do_close()
@@ -132,11 +143,22 @@ void server_session::on_read( boost::system::error_code ec
 
    if (ec == websocket::error::closed) {
       // The connection has been gracefully closed. The only possible
-      // pending operations now are the timers, and write (?).
+      // pending operations now are the timers.
       timer.cancel();
 
-      // Returning will release a reference and if it is the last the
-      // object will be killed.
+      // We could also shutdown and close the socket but this is
+      // redundant since the socket destructor will be called anyway
+      // when we release the last reference upon return.
+
+      // Closing the socket cancels all outstanding
+      // operations. They will complete with
+      // boost::asio::error::operation_aborted
+      // We do not have to check the error code returned since these
+      // functions close the file descriptor even on failure.
+      //ws.next_layer().shutdown(tcp::socket::shutdown_both, ec);
+      //ws.next_layer().close(ec);
+      std::cout << "server_session::on_read: socket closed gracefully."
+                << std::endl;
       return;
    }
 

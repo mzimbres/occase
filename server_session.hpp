@@ -40,6 +40,8 @@ private:
    void on_sms_timeout(boost::system::error_code ec);
    void on_accept_timeout(boost::system::error_code ec);
 
+   void release_user_entry();
+
    index_type user_idx = -1;
    index_type login_idx = -1;
    std::string sms;

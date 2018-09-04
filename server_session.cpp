@@ -40,50 +40,72 @@ void server_session::do_accept()
 
 void server_session::on_accept_timeout(boost::system::error_code ec)
 {
-   fail(ec, "on_accept_timeout");
+   if (!ec) {
+      // The timeout was triggered. That means the user did not sent us a
+      // login or an authenticate command. We can either close the
+      // connection gracefully by sending a close frame with async_close
+      // or simply shutdown the socket, in which case the client wont be
+      // notified. Here we decide to inform the user.
+      do_close();
+      return;
+   }
 
+   if (ec != boost::asio::error::operation_aborted) {
+      // Some error, do we need to handle this?
+      fail(ec, "on_accept_timeout");
+      return;
+   }
+
+   // At this point we know ec = boost::asio::error::operation_aborted
+   // but we do not know what caused it. Was the timer canceled or the
+   // deadline has moved?
    if (timer.expiry() > std::chrono::steady_clock::now()) {
       // The deadline has move, this happens only if the user send any
       // of the authentification commands. We have nothing to do.
       return;
    }
 
-   if (ec == boost::asio::error::operation_aborted) {
-      // The timer has been canceled. We let for the initiator to
-      // handle the situation.
-      return;
-   }
+   // The timer has been cancelled. We let the inititator handle it.
+}
 
-   // The timeout was triggered. That means the user did not sent us a
-   // login or an authenticate command. We can either close the
-   // connection gracefully by sending a close frame with async_close
-   // or simply shutdown the socket, in which case the client wont be
-   // notified. Here we decide to inform the user.
-   do_close();
+void server_session::release_user_entry()
+{
+   assert(login_idx != -1);
+   std::cout << "Releasing user entry index." << std::endl;
+   // Move this to a promote function.
+   sd->release_login(login_idx);
+   login_idx = -1;
 }
 
 void server_session::on_sms_timeout(boost::system::error_code ec)
 {
-   fail(ec, "on_sms_timeout");
-   if (ec == boost::asio::error::operation_aborted) {
-      // This means the timer will not be triggered. That can happen
-      // in two situations
-      //
-      // 1. The timer was canceled, in which case we have to release
-      //    the user index to the server_mgr.
-      // 2. expire_after moved the deadline.
-      //
-      // We do not release the user index here and let it be handled
-      // where the timer was canceled.
-      assert(login_idx != -1);
-      std::cout << "Releasing login index." << std::endl;
-      // Move this to a promote function.
-      sd->release_login(login_idx);
-      login_idx = -1;
+   if (!ec) {
+      // The timer expired. We have to release the user entry
+      // allocated on the login and close the session. 
+      release_user_entry();
+      do_close();
       return;
    }
 
-   do_close();
+   if (ec != boost::asio::error::operation_aborted) {
+      // Some kind of error, I do not know how to handle this. I will
+      // anyway release the user handler and close the session.
+      release_user_entry();
+      do_close();
+   }
+
+   // At this point we know that ec == boost::asio::error::operation_aborted
+   // which means the timer has been canceled or the deadline has
+   // moved.
+   if (timer.expiry() > std::chrono::steady_clock::now()) {
+      // The deadline has move, this happens only if the user sends
+      // the correct sms. We have nothing to do, the session will be
+      // promoted to an authetified session.
+      return;
+   }
+
+   // This timer has been canceled, we have to release the user entry.
+   release_user_entry();
 }
 
 void server_session::on_accept(boost::system::error_code ec)
@@ -121,7 +143,7 @@ void server_session::on_close(boost::system::error_code ec)
       return fail(ec, "close");
 
    // TODO: Should we shutdown the socket here?
-   std::cout << "Connection closed." << std::endl;
+   //std::cout << "Connection closed." << std::endl;
    // TODO: Set a timeout for the received close.
 }
 
@@ -181,8 +203,7 @@ void server_session::on_read( boost::system::error_code ec
 
       auto r = sd->on_read(std::move(j), shared_from_this());
       if (r == -1) {
-         // -1 means that we should unconditionally close the
-         // connection. 
+         // We have to unconditionally close the connection. 
          timer.cancel();
          do_close();
          return;

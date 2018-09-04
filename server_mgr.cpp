@@ -102,27 +102,18 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
    // connection. On the safest side we would just check.
    auto idx = s->get_login_idx();
 
-   // TODO: The following piece of code is very critical, if an
-   // exception is thrown we will not release idx back to the users
-   // array causing a leak. Implement a try and catch.
    auto const sms = j["sms"].get<std::string>();
-
    if (sms != s->get_sms()) {
       // TODO: Resend an sms to the user (some more times). For now
       // we will simply drop the connection and release resources.
       json resp;
       resp["cmd"] = "sms_confirmation_ack";
       resp["result"] = "fail";
-      release_login(idx);
-      s->set_login_idx(-1);
       s->write(resp.dump()); // Unsafe, implement a queue.
       return -1;
    }
 
-   // TODO: Implement this as a promotion from login user to valid
-   // user.
-   s->set_login_idx(-1);
-   s->set_user(idx);
+   s->promote(idx);
    auto tel = j["tel"].get<std::string>();
 
    users[idx].reset();

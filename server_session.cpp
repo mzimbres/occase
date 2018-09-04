@@ -68,6 +68,12 @@ void server_session::on_accept_timeout(boost::system::error_code ec)
    // The timer has been cancelled. We let the inititator handle it.
 }
 
+void server_session::promote(index_type idx)
+{
+   user_idx = idx;
+   login_idx = -1;
+}
+
 void server_session::release_user_entry()
 {
    assert(login_idx != -1);
@@ -221,7 +227,7 @@ void server_session::on_read( boost::system::error_code ec
          } else {
             // If we get here, it means that there was no ongoing timer.
             // But I do not see any reason for calling a login command on
-            // an stablished session, this a login error.
+            // an stablished session, this is a logic error.
             assert(true);
          }
       } else if (r == 2) {

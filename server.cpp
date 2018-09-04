@@ -8,7 +8,7 @@ struct signal_handler {
    boost::asio::io_context& ioc;
    void operator()(boost::system::error_code const&, int)
    {
-      // TODO: Invertigate if we can simply destroy the work object
+      // TODO: Investigate if we can simply destroy the work object
       // and let the io_context exit cleanly. That would mean we have
       // to close each socket connection from each active user, that
       // may not be feasible. Other clean ups how however important,

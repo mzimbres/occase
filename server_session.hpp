@@ -41,6 +41,7 @@ private:
    void on_accept_timeout(boost::system::error_code ec);
 
    void release_user_entry();
+   void promote(index_type idx);
 
    index_type user_idx = -1;
    index_type login_idx = -1;

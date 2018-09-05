@@ -33,11 +33,6 @@ int client_mgr::on_closed(boost::system::error_code ec)
 {
    //std::cerr << "client_mgr::on_closed: " << ec.message() << "\n";
 
-   if (number_of_dropped_logins > 0) {
-      --number_of_dropped_logins;
-      return 1;
-   }
-
    if (number_of_dropped_create_groups > 0) {
       --number_of_dropped_create_groups;
       return 1;
@@ -51,24 +46,14 @@ int client_mgr::on_closed(boost::system::error_code ec)
    return 1;
 }
 
-int client_mgr::on_ok_login_ack(json j, std::shared_ptr<client_type> s)
-{
-   std::cout << "login_ack: ok." << std::endl;
-
-   if (--number_of_ok_logins == 0) {
-      ok_sms_confirmation(s);
-      return 1;
-   }
-
-   // TODO: Put more calls to ok_login here.
-   return 1;
-}
-
 int client_mgr::on_login_ack(json j, std::shared_ptr<client_type> s)
 {
    auto res = j["result"].get<std::string>();
-   if (res == "ok")
-      return on_ok_login_ack(std::move(j), s);
+   if (res == "ok") {
+      std::cout << "login_ack: ok." << std::endl;
+      ok_sms_confirmation(s);
+      return 1;
+   }
 
    // We still have not fail login server ack.
    std::cout << "SERVER ERROR: client_mgr::on_login_ack.\n"
@@ -77,26 +62,19 @@ int client_mgr::on_login_ack(json j, std::shared_ptr<client_type> s)
 }
 
 int
-client_mgr::on_ok_sms_confirmation_ack( json j
-                                      , std::shared_ptr<client_type> s)
-{
-   bind = j["user_bind"].get<user_bind>();
-   std::cout << "sms_confirmation_ack: ok."
-             //<< "\n" << bind
-             << std::endl;
-
-   // Now we begin to post the create groups that will be dropped.
-   dropped_create_group(s);
-   return 1;
-}
-
-int
-client_mgr::on_sms_confirmation_ack(json j,
-std::shared_ptr<client_type> s)
+client_mgr::on_sms_confirmation_ack(json j, std::shared_ptr<client_type> s)
 {
    auto res = j["result"].get<std::string>();
-   if (res == "ok")
-      return on_ok_sms_confirmation_ack(std::move(j), s);
+   if (res == "ok") {
+      bind = j["user_bind"].get<user_bind>();
+      std::cout << "sms_confirmation_ack: ok."
+                //<< "\n" << bind
+                << std::endl;
+
+      // Now we begin to post the create groups that will be dropped.
+      dropped_create_group(s);
+      return 1;
+   }
 
    std::cout << "LOGIN ERROR: client_mgr::on_sms_confirmation_ack.\n"
              << "Please report."
@@ -209,44 +187,12 @@ client_mgr::on_send_group_msg_ack(json j, std::shared_ptr<client_type> s)
    return -1;
 }
 
-void client_mgr::ok_login(std::shared_ptr<client_type> s)
-{
-   // What if we try more than one ok login?
-   json j;
-   j["cmd"] = "login";
-   j["tel"] = tel;
-   s->send_msg(j.dump());
-}
-
 void client_mgr::ok_sms_confirmation(std::shared_ptr<client_type> s)
 {
    json j;
    j["cmd"] = "sms_confirmation";
    j["tel"] = tel;
    j["sms"] = "8347";
-   s->send_msg(j.dump());
-}
-
-void client_mgr::dropped_login(std::shared_ptr<client_type> s)
-{
-   json j;
-   if (number_of_dropped_logins == 3) {
-      j["cmd"] = "logrn";
-      j["tel"] = tel;
-   } else if (number_of_dropped_logins == 2) {
-      j["crd"] = "login";
-      j["tel"] = tel;
-   } else if (number_of_dropped_logins == 1) {
-      j["crd"] = "login";
-      j["Teal"] = tel;
-   } else {
-      std::cout << "LOGIC ERROR in client_mgr::dropped_login.\n"
-                << "Please fix."
-                << std::endl;
-      return;
-   }
-
-   --number_of_dropped_logins;
    s->send_msg(j.dump());
 }
 
@@ -444,19 +390,12 @@ void client_mgr::send_user_msg(std::shared_ptr<client_type> s)
 
 int client_mgr::on_handshake(std::shared_ptr<client_type> s)
 {
-   if (number_of_dropped_logins > 0) {
-      --number_of_dropped_logins;
-      dropped_login(s);
-      return 1;
-   }
-
-   // We do not have fail login, so we proceed to ok.
-
-   if (number_of_dropped_logins == 0) {
-      ok_login(s);
-      // Now we decrement to not match any case above anymore.
-      --number_of_dropped_logins;
-      return 1;
+   if (!login) {
+      json j;
+      j["cmd"] = "login";
+      j["tel"] = tel;
+      s->send_msg(j.dump());
+      login = true;
    }
 
    if (number_of_dropped_create_groups > 0) {

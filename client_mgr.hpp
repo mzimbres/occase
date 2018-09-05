@@ -16,21 +16,11 @@ private:
    std::set<group_bind> groups;
    std::string tel;
 
-   // login
-   int number_of_ok_logins = 1;
-   int number_of_dropped_logins = 3;
-
-   void ok_login(std::shared_ptr<client_type> s);
-   void dropped_login(std::shared_ptr<client_type> s);
+   bool login = false;
    int on_login_ack(json j, std::shared_ptr<client_type> s);
-   int on_ok_login_ack(json j, std::shared_ptr<client_type> s);
-
-   // sms
-   int number_of_ok_sms = 1;
 
    void ok_sms_confirmation(std::shared_ptr<client_type> s);
    int on_sms_confirmation_ack(json j, std::shared_ptr<client_type> s);
-   int on_ok_sms_confirmation_ack(json j, std::shared_ptr<client_type> s);
 
    // create_group
    int number_of_ok_create_groups = 10;

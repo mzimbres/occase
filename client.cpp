@@ -19,7 +19,7 @@ void test_accept_timer(client_options const& op)
 
    boost::asio::io_context ioc;
 
-   std::vector<mgr_type> mgrs {15};
+   std::vector<mgr_type> mgrs {1};
 
    for (auto& mgr : mgrs)
       std::make_shared<client_type>(ioc, op, mgr)->run();
@@ -101,12 +101,12 @@ int main(int argc, char* argv[])
    std::cout << "================================================"
              << std::endl;
    test_login(op);
-   //std::cout << "================================================"
-   //          << std::endl;
-   //test_sms(op);
-   //std::cout << "================================================"
-   //          << std::endl;
-   //test_client(op);
+   std::cout << "================================================"
+             << std::endl;
+   test_sms(op);
+   std::cout << "================================================"
+             << std::endl;
+   test_client(op);
 
    return EXIT_SUCCESS;
 }

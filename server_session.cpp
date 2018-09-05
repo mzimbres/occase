@@ -27,7 +27,8 @@ server_session::server_session( tcp::socket socket
 
 server_session::~server_session()
 {
-   if (login_idx == -1) {
+   if (login_idx != -1) {
+      std::cout << "Releasing login index" << std::endl;
       sd->release_login(login_idx);
       login_idx = -1;
    }

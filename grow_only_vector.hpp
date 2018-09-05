@@ -50,6 +50,7 @@ public:
    // with its maximum size on construction.
    void deallocate(size_type idx) noexcept
    {
+      assert(idx >= 0);
       avail.push(idx);
    }
 

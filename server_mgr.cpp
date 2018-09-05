@@ -67,8 +67,7 @@ index_type server_mgr::on_login(json j, std::shared_ptr<server_session> s)
       json resp;
       resp["cmd"] = "login_ack";
       resp["result"] = "fail";
-      s->set_login_idx(-1);
-      s->write(resp.dump());
+      s->send_msg(resp.dump());
       return -1;
    }
 
@@ -82,7 +81,7 @@ index_type server_mgr::on_login(json j, std::shared_ptr<server_session> s)
    // TODO: Add a message queue in server client so that there is
    // pending write when we send this message. This is not likely to
    // happen but who knows.
-   s->write(resp.dump());
+   s->send_msg(resp.dump());
    return 1;
 }
 
@@ -109,11 +108,11 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
       json resp;
       resp["cmd"] = "sms_confirmation_ack";
       resp["result"] = "fail";
-      s->write(resp.dump()); // Unsafe, implement a queue.
+      s->send_msg(resp.dump()); // Unsafe, implement a queue.
       return -1;
    }
 
-   s->promote(idx);
+   s->promote();
    auto tel = j["tel"].get<std::string>();
 
    users[idx].reset();

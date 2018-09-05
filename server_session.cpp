@@ -27,7 +27,10 @@ server_session::server_session( tcp::socket socket
 
 server_session::~server_session()
 {
-   assert(login_idx == -1);
+   if (login_idx == -1) {
+      sd->release_login(login_idx);
+      login_idx = -1;
+   }
 }
 
 void server_session::do_accept()
@@ -68,27 +71,19 @@ void server_session::on_accept_timeout(boost::system::error_code ec)
    // The timer has been cancelled. We let the inititator handle it.
 }
 
-void server_session::promote(index_type idx)
+void server_session::promote()
 {
-   user_idx = idx;
-   login_idx = -1;
-}
-
-void server_session::release_user_entry()
-{
-   assert(login_idx != -1);
-   std::cout << "Releasing user entry index." << std::endl;
-   // Move this to a promote function.
-   sd->release_login(login_idx);
-   login_idx = -1;
+   std::cout << "Promoting session." << std::endl;
+   std::swap(user_idx, login_idx );
 }
 
 void server_session::on_sms_timeout(boost::system::error_code ec)
 {
+   // The user entry will be released in the destructor, since this is
+   // the (exception) safest to do it.
    if (!ec) {
       // The timer expired. We have to release the user entry
       // allocated on the login and close the session. 
-      release_user_entry();
       do_close();
       return;
    }
@@ -96,7 +91,6 @@ void server_session::on_sms_timeout(boost::system::error_code ec)
    if (ec != boost::asio::error::operation_aborted) {
       // Some kind of error, I do not know how to handle this. I will
       // anyway release the user handler and close the session.
-      release_user_entry();
       do_close();
    }
 
@@ -111,7 +105,6 @@ void server_session::on_sms_timeout(boost::system::error_code ec)
    }
 
    // This timer has been canceled, we have to release the user entry.
-   release_user_entry();
 }
 
 void server_session::on_accept(boost::system::error_code ec)
@@ -248,7 +241,33 @@ void server_session::on_read( boost::system::error_code ec
    do_read();
 }
 
-void server_session::write(std::string msg)
+void server_session::on_write( boost::system::error_code ec
+                             , std::size_t bytes_transferred)
+{
+   boost::ignore_unused(bytes_transferred);
+
+   if (ec) {
+      // The write operation failed for some reason. That means the
+      // last element in the queue could not be written. This is
+      // probably due to a timeout or a connection close. I will think
+      // more what to do here.
+      return;
+   }
+
+   buffer.consume(buffer.size()); // Clear the buffer
+
+   msg_queue.pop();
+
+   // TODO: Think if we will ever need this.
+   sd->on_write(user_idx);
+
+   if (msg_queue.empty())
+      return; // No more message to send to the client.
+
+   do_write(msg_queue.front());
+}
+
+void server_session::do_write(std::string msg)
 {
    ws.text(ws.got_text());
 
@@ -261,18 +280,15 @@ void server_session::write(std::string msg)
                       handler));
 }
 
-void server_session::on_write( boost::system::error_code ec
-                             , std::size_t bytes_transferred)
+void server_session::send_msg(std::string msg)
 {
-   boost::ignore_unused(bytes_transferred);
+   const auto is_empty = msg_queue.empty();
 
-   // TODO: The error handling here should be similar to the on_read.
-   if (ec) {
-      return;
-   }
+   // TODO: Impose a limit on how grow the queue can grow, perhaps by
+   // throwing away old messages.
+   msg_queue.push(std::move(msg));
 
-   // Clear the buffer
-   buffer.consume(buffer.size());
-   sd->on_write(user_idx);
+   if (is_empty)
+      do_write(msg_queue.front());
 }
 

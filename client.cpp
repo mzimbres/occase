@@ -36,17 +36,6 @@ void test_login(client_options op)
 
    std::vector<mgr_type> mgrs
    { {"Rabanete"}
-   //, {"Acafrao"}
-   //, {"Salsinha"}
-   //, {"Pimenta1"}
-   //, {"Pimenta2"}
-   //, {"Pimenta3"}
-   //, {"Pimenta4"}
-   //, {"Pimenta5"}
-   //, {"Pimenta6"}
-   //, {"Pimenta7"}
-   //, {"Pimenta8"}
-   //, {"Pimenta9"}
    };
 
    for (auto& mgr : mgrs)
@@ -55,6 +44,36 @@ void test_login(client_options op)
    ioc.run();
 }
 
+void test_login1(client_options op)
+{
+   using mgr_type = client_mgr_login1;
+   using client_type = client_session<mgr_type>;
+
+   boost::asio::io_context ioc;
+
+   json j1;
+   j1["cmd"] = "logrn";
+   j1["tel"] = "aaaa";
+
+   json j2;
+   j2["crd"] = "login";
+   j2["tel"] = "bbbb";
+
+   json j3;
+   j3["crd"] = "login";
+   j3["Teal"] = "cccc";
+
+   std::vector<mgr_type> mgrs
+   { {j1.dump()}
+   , {j2.dump()}
+   , {j3.dump()}
+   };
+
+   for (auto& mgr : mgrs)
+      std::make_shared<client_type>(ioc, op, mgr)->run();
+
+   ioc.run();
+}
 void test_sms(client_options op)
 {
    using mgr_type = client_mgr_sms;
@@ -101,6 +120,9 @@ int main(int argc, char* argv[])
    std::cout << "================================================"
              << std::endl;
    test_login(op);
+   std::cout << "================================================"
+             << std::endl;
+   test_login1(op);
    std::cout << "================================================"
              << std::endl;
    test_sms(op);

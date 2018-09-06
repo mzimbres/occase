@@ -11,10 +11,6 @@ class client_session;
 
 // Tests if the server drops a session that does not proceed with
 // authentication.
-//
-// TODO: Consider flooding the server with connections. Should it rely
-// on timeouts or should it check that the IP address has an ongoing
-// connection and block it?
 
 class client_mgr_accept_timer {
 private:

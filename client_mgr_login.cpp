@@ -85,3 +85,29 @@ int client_mgr_login::on_handshake(std::shared_ptr<client_type> s)
    return 1;
 }
 
+//___________________________________________________________________
+
+client_mgr_login1::client_mgr_login1(std::string cmd_)
+: cmd(cmd_)
+{ }
+
+int client_mgr_login1::on_read(json j, std::shared_ptr<client_type> s)
+{
+   // A dropped login should not receive any message.
+   std::cout << "Test login1: fail." << std::endl;
+   return -1;
+}
+
+int client_mgr_login1::on_closed(boost::system::error_code ec)
+{
+   std::cout << "Test login1: ok." << std::endl;
+   return -1;
+}
+
+int client_mgr_login1::on_handshake(std::shared_ptr<client_type> s)
+{
+   s->send_msg(cmd);
+   return 1;
+}
+
+

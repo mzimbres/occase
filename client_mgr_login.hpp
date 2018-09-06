@@ -23,13 +23,6 @@ private:
    using client_type = client_session<client_mgr_login>;
    std::string tel;
 
-   // login
-   int number_of_ok_logins = 1;
-   int number_of_dropped_logins = 3;
-
-   void send_ok_login(std::shared_ptr<client_type> s);
-   void send_dropped_login(std::shared_ptr<client_type> s);
-
 public:
    client_mgr_login(std::string tel_);
    int on_read(json j, std::shared_ptr<client_type> s);

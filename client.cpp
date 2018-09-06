@@ -35,7 +35,22 @@ void test_login(client_options op)
    boost::asio::io_context ioc;
 
    std::vector<mgr_type> mgrs
-   { {"Rabanete"}
+   { {"aaa"}
+   , {"bbb"}
+   , {"ccc"}
+   , {"ddd"}
+   , {"eee"}
+   , {"ddd"}
+   , {"fff"}
+   , {"ggg"}
+   , {"hhh"}
+   , {"iii"}
+   , {"kkk"}
+   , {"lll"}
+   , {"mmm"}
+   , {"nnn"}
+   , {"ooo"}
+   , {"ppp"}
    };
 
    for (auto& mgr : mgrs)

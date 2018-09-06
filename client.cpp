@@ -96,10 +96,23 @@ void test_sms(client_options op)
 
    boost::asio::io_context ioc;
 
-   mgr_type mgr("Melao");
-   auto p = std::make_shared<client_type>(ioc, std::move(op), mgr);
+   std::vector<mgr_type> mgrs
+   { {"Melao"}
+   , {"Fruta"}
+   , {"Poka"}
+   , {"Abobora"}
+   , {"ddda"}
+   , {"hjsjs"}
+   , {"9899"}
+   , {"87z"}
+   , {"7162"}
+   , {"2763333"}
+   , {"hkjsdh"}
+   };
 
-   p->run();
+   for (auto& mgr : mgrs)
+      std::make_shared<client_type>(ioc, op, mgr)->run();
+
    ioc.run();
 }
 
@@ -140,6 +153,8 @@ int main(int argc, char* argv[])
    test_login1(op);
    std::cout << "================================================"
              << std::endl;
+   std::cout << "Please, restart the server and type enter" << std::endl;
+   std::cin.ignore();
    test_sms(op);
    std::cout << "================================================"
              << std::endl;

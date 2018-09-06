@@ -20,7 +20,8 @@ std::ostream& operator<<(std::ostream& os, group_bind const& bind)
 
 std::ostream& operator<<(std::ostream& os, user_bind const& info)
 {
-   os << "   Tel:   " << info.tel   << "\n"
+   os << "\n"
+      << "   Tel:   " << info.tel   << "\n"
       << "   Host:  " << info.host  << "\n"
       << "   Index: " << info.index << "\n";
 

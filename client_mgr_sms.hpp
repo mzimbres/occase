@@ -16,20 +16,11 @@ private:
    using client_type = client_session<client_mgr_sms>;
    std::string tel;
 
-   // login
-   int number_of_ok_logins = 1;
-   void send_ok_login(std::shared_ptr<client_type> s);
-   int on_login_ack(json j, std::shared_ptr<client_type> s);
-
-   // sms
-   void send_ok_sms_confirmation(std::shared_ptr<client_type> s);
-   int on_sms_confirmation_ack(json j, std::shared_ptr<client_type> s);
-
 public:
    client_mgr_sms(std::string tel_);
    user_bind bind;
    int on_read(json j, std::shared_ptr<client_type> s);
-   int on_closed(boost::system::error_code ec);
+   int on_closed(boost::system::error_code ec) {return 1;};
    int on_handshake(std::shared_ptr<client_type> s);
 };
 

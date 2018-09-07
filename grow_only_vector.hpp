@@ -38,11 +38,14 @@ public:
    // for use.
    auto allocate() noexcept
    {
-      if (avail.empty())
+      if (avail.empty()) {
+         std::cout << "allocate: -1" << std::endl;
          return static_cast<size_type>(-1);
+      }
 
       auto i = avail.top();
       avail.pop();
+      std::cout << "allocate: " << i << std::endl;
       return i;
    }
 
@@ -50,6 +53,7 @@ public:
    // with its maximum size on construction.
    void deallocate(size_type idx) noexcept
    {
+      std::cout << "deallocate: " << idx << std::endl;
       assert(idx >= 0);
       avail.push(idx);
    }

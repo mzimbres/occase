@@ -28,7 +28,7 @@ server_session::server_session( tcp::socket socket
 server_session::~server_session()
 {
    if (login_idx != -1) {
-      std::cout << "Releasing login index" << std::endl;
+      //std::cout << "Releasing login index" << std::endl;
       sd->release_login(login_idx);
       login_idx = -1;
    }
@@ -70,12 +70,6 @@ void server_session::on_accept_timeout(boost::system::error_code ec)
    }
 
    // The timer has been cancelled. We let the inititator handle it.
-}
-
-void server_session::promote()
-{
-   std::cout << "Promoting session." << std::endl;
-   std::swap(user_idx, login_idx );
 }
 
 void server_session::on_sms_timeout(boost::system::error_code ec)
@@ -149,7 +143,7 @@ void server_session::on_close(boost::system::error_code ec)
 
 void server_session::do_close()
 {
-   std::cout << "server_session::do_close()" << std::endl;
+   //std::cout << "server_session::do_close()" << std::endl;
    auto handler = [p = shared_from_this()](auto ec)
    { p->on_close(ec); };
 
@@ -178,8 +172,8 @@ void server_session::on_read( boost::system::error_code ec
       // functions close the file descriptor even on failure.
       //ws.next_layer().shutdown(tcp::socket::shutdown_both, ec);
       //ws.next_layer().close(ec);
-      std::cout << "server_session::on_read: socket closed gracefully."
-                << std::endl;
+      //std::cout << "server_session::on_read: socket closed gracefully."
+      //          << std::endl;
       return;
    }
 

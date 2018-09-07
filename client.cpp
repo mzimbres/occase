@@ -156,9 +156,9 @@ int main(int argc, char* argv[])
    std::cout << "Please, restart the server and type enter" << std::endl;
    std::cin.ignore();
    test_sms(op);
-   std::cout << "================================================"
-             << std::endl;
-   test_client(op);
+   //std::cout << "================================================"
+   //          << std::endl;
+   //test_client(op);
 
    return EXIT_SUCCESS;
 }

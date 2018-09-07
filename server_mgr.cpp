@@ -35,11 +35,7 @@ index_type server_mgr::on_login(json j, std::shared_ptr<server_session> s)
    // the app will send us the user phone.
    auto const tel = j["tel"].get<std::string>();
 
-   // TODO: Use a random number generator with six digits.
-   s->set_sms("8347");
-
-   auto idx = -1;
-   auto new_user = id_to_idx_map.insert({tel, {}});
+   auto const new_user = id_to_idx_map.insert({tel, {}});
    if (!new_user.second) {
       // The user already exists in the system. This case can be
       // triggered by some conditions
@@ -50,20 +46,8 @@ index_type server_mgr::on_login(json j, std::shared_ptr<server_session> s)
       // 3. There is an error in the app and it is sending us more
       //    than one login.
       //
-      // I think the best strategy here is to reset the user data to
-      // avoid leaking it to whatever person the number happened to be
-      // assigned to. If the user uninstalled the app himself, them he
-      // may be ok with losing his data. 
-      idx = new_user.first->second;
-      users[idx].reset();
-   } else {
-      // The user does not exist in the system we allocate an entry in
-      // the users array.
-      idx = users.allocate();
-   }
-
-   if (idx == -1) {
-      // We run out of memory.
+      // I think the best strategy here is to refuse the login. Review
+      // this later.
       json resp;
       resp["cmd"] = "login_ack";
       resp["result"] = "fail";
@@ -71,23 +55,36 @@ index_type server_mgr::on_login(json j, std::shared_ptr<server_session> s)
       return -1;
    }
 
+   // The user does not exist in the system we allocate an entry in
+   // the users array.
+   new_user.first->second = users.allocate();
+   auto const idx = new_user.first->second; // Alias.
+
+   if (idx == -1) {
+      // We run out of memory. We have to release the element we just
+      // inserted in the map.
+      id_to_idx_map.erase(new_user.first);
+      json resp;
+      resp["cmd"] = "login_ack";
+      resp["result"] = "fail";
+      s->send_msg(resp.dump());
+      return -1;
+   }
+
+   // TODO: Use a random number generator with six digits.
+   s->set_sms("8347");
    s->set_login_idx(idx);
-   users[idx].set_id(tel);
 
    json resp;
    resp["cmd"] = "login_ack";
    resp["result"] = "ok";
-
-   // TODO: Add a message queue in server client so that there is
-   // pending write when we send this message. This is not likely to
-   // happen but who knows.
    s->send_msg(resp.dump());
    return 1;
 }
 
 void server_mgr::release_login(index_type idx)
 {
-   auto id = users[idx].get_id();
+   auto const id = users[idx].get_id();
    users.deallocate(idx);
    id_to_idx_map.erase(id);
 }
@@ -95,27 +92,31 @@ void server_mgr::release_login(index_type idx)
 index_type
 server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
 {
-   // TODO: Should we check if idx is -1? If the login step was
-   // performed correctly then if there was no more memory available
-   // for a user the login should send a fail response and close the
-   // connection. On the safest side we would just check.
-   auto idx = s->get_login_idx();
+   if (!s->is_waiting_sms()) {
+      // This session did not perform the login first. Insident should
+      // be reported perhaps.
+      return -1;
+   }
 
+   auto const tel = j["tel"].get<std::string>();
    auto const sms = j["sms"].get<std::string>();
+
    if (sms != s->get_sms()) {
       // TODO: Resend an sms to the user (some more times). For now
       // we will simply drop the connection and release resources.
+      // First we remove this user from the index map.
+      id_to_idx_map.erase(tel);
       json resp;
       resp["cmd"] = "sms_confirmation_ack";
       resp["result"] = "fail";
-      s->send_msg(resp.dump()); // Unsafe, implement a queue.
+      s->send_msg(resp.dump());
+      // We do not release the login index here but let the session
+      // destructor do it for us.
       return -1;
    }
 
    s->promote();
-   auto tel = j["tel"].get<std::string>();
-
-   users[idx].reset();
+   auto const idx = s->get_user_idx();
    users[idx].store_session(s);
 
    json resp;

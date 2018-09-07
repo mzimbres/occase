@@ -24,7 +24,7 @@ private:
    std::queue<std::string> msg_queue;
 
 public:
-   user() = default;
+   user(std::string id_ = {}) : id(std::move(id_)) {}
    ~user() = default;
 
    void add_friend(index_type uid);
@@ -38,7 +38,6 @@ public:
    void send_msg(std::string msg);
    void on_write();
    void reset();
-   void set_id(id_type id_) {id = std::move(id_);}
    auto const& get_id() const noexcept {return id;}
 };
 

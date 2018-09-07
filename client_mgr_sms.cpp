@@ -23,7 +23,7 @@ int client_mgr_sms::on_read(json j, std::shared_ptr<client_type> s)
 
       std::cout << "Test sms_confirmation: ok (depends on server config)"
                 << std::endl;
-      return 1;
+      return -1;
    }
 
    if (cmd == "sms_confirmation_ack") {

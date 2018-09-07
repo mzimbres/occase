@@ -59,8 +59,12 @@ public:
    auto const& get_sms() const { return sms; }
    void set_user(index_type idx) {user_idx = idx;};
    void set_login_idx(index_type idx) {login_idx = idx;};
-   auto get_login_idx() const noexcept {return login_idx;}
+   auto get_user_idx() const noexcept {return user_idx;}
    void send_msg(std::string msg);
-   void promote();
+   void promote() { std::swap(user_idx, login_idx ); }
+   auto is_waiting_sms() const noexcept
+   {return login_idx != -1 && user_idx == -1;};
+   auto is_auth() const noexcept
+   {return login_idx == -1 && user_idx != -1;};
 };
 

@@ -107,13 +107,25 @@ void test_sms(client_options op)
    , {"87z"}
    , {"7162"}
    , {"2763333"}
-   , {"hkjsdh"}
+   , {"hkjsdh1"}
+   , {"hkjsdh2"}
+   , {"hkjsdh3"}
+   , {"hkjsdh4"}
+   , {"hkjsdh5"}
+   , {"hkjsdh6"}
    };
 
+   std::vector<std::shared_ptr<client_type>> sessions;
    for (auto& mgr : mgrs)
-      std::make_shared<client_type>(ioc, op, mgr)->run();
+      sessions.push_back(std::make_shared<client_type>(ioc, op, mgr));
+
+   for (auto& session : sessions)
+      session->run();
 
    ioc.run();
+
+   for (auto const& session : sessions)
+      std::cout << session->get_mgr().bind << std::endl;
 }
 
 void test_client(client_options op)

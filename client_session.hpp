@@ -69,6 +69,7 @@ public:
 
    void run();
    void send_msg(std::string msg);
+   auto const& get_mgr() const noexcept {return mgr;}
 };
 
 inline

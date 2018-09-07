@@ -32,7 +32,7 @@ int client_mgr_sms::on_read(json j, std::shared_ptr<client_type> s)
 
       if (res == "ok") {
          bind = j["user_bind"].get<user_bind>();
-         std::cout << "Test sms_confirmation: ok." << bind
+         std::cout << "Test sms_confirmation: ok."// << bind
                    << std::endl;
          return -1;
       }

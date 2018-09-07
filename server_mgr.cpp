@@ -4,29 +4,39 @@
 index_type
 server_mgr::on_read(json j, std::shared_ptr<server_session> s)
 {
-   // TODO: Separate into commands for before and after
-   // authentication. Store session should be called only during
-   // authentication. The second group of commands can be called only
-   // on a session that is already authetified.
-
    //std::cout << j << std::endl;
    auto cmd = j["cmd"].get<std::string>();
-   if (cmd == "login") {
-      return on_login(std::move(j), s);
-   } else if (cmd == "sms_confirmation") {
-      return on_sms_confirmation(std::move(j), s);
-   } else if (cmd == "create_group") {
-      return on_create_group(std::move(j), s);
-   } else if (cmd == "join_group") {
-      return on_join_group(std::move(j), s);
-   } else if (cmd == "send_group_msg") {
-      return on_group_msg(std::move(j), s);
-   } else if (cmd == "send_user_msg") {
-      return on_user_msg(std::move(j), s);
-   } else {
+
+   if (s->is_waiting_auth()) {
+      if (cmd == "login")
+         return on_login(std::move(j), s);
+
       std::cerr << "Server: Unknown command " << cmd << std::endl;
       return -1;
    }
+
+   if (s->is_waiting_sms()) {
+      if (cmd == "sms_confirmation")
+         return on_sms_confirmation(std::move(j), s);
+
+      std::cerr << "Server: Unknown command " << cmd << std::endl;
+      return -1;
+   }
+
+   if (cmd == "create_group")
+      return on_create_group(std::move(j), s);
+
+   if (cmd == "join_group")
+      return on_join_group(std::move(j), s);
+
+   if (cmd == "send_group_msg")
+      return on_group_msg(std::move(j), s);
+
+   if (cmd == "send_user_msg")
+      return on_user_msg(std::move(j), s);
+
+   std::cerr << "Server: Unknown command " << cmd << std::endl;
+   return -1;
 }
 
 index_type server_mgr::on_login(json j, std::shared_ptr<server_session> s)
@@ -92,12 +102,6 @@ void server_mgr::release_login(index_type idx)
 index_type
 server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
 {
-   if (!s->is_waiting_sms()) {
-      // This session did not perform the login first. Insident should
-      // be reported perhaps.
-      return -1;
-   }
-
    auto const tel = j["tel"].get<std::string>();
    auto const sms = j["sms"].get<std::string>();
 

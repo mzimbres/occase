@@ -66,5 +66,7 @@ public:
    {return login_idx != -1 && user_idx == -1;};
    auto is_auth() const noexcept
    {return login_idx == -1 && user_idx != -1;};
+   auto is_waiting_auth() const noexcept
+   {return login_idx == -1 && user_idx == -1;};
 };
 

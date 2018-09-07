@@ -2,21 +2,17 @@
 
 #include "client_session.hpp"
 
-client_mgr_sms::client_mgr_sms(std::string tel_)
-: tel(tel_)
-{ }
-
 int client_mgr_sms::on_read(json j, std::shared_ptr<client_type> s)
 {
    auto cmd = j["cmd"].get<std::string>();
 
    if (cmd == "login_ack") {
       auto res = j["result"].get<std::string>();
-      if (res == "ok") {
+      if (res == expected) {
          json j1;
          j1["cmd"] = "sms_confirmation";
          j1["tel"] = tel;
-         j1["sms"] = "8347";
+         j1["sms"] = sms;
          s->send_msg(j1.dump());
          return 1;
       }
@@ -30,10 +26,9 @@ int client_mgr_sms::on_read(json j, std::shared_ptr<client_type> s)
       //std::cout << j << std::endl;
       auto res = j["result"].get<std::string>();
 
-      if (res == "ok") {
+      if (res == expected) {
          bind = j["user_bind"].get<user_bind>();
-         std::cout << "Test sms_confirmation: ok."// << bind
-                   << std::endl;
+         std::cout << "Test sms_confirmation: ok." << std::endl;
          return -1;
       }
 

@@ -15,9 +15,18 @@ class client_mgr_sms {
 private:
    using client_type = client_session<client_mgr_sms>;
    std::string tel;
+   std::string expected;
+   std::string sms;
 
 public:
-   client_mgr_sms(std::string tel_);
+   client_mgr_sms( std::string tel_
+                 , std::string expected_
+                 , std::string sms_)
+   : tel(tel_)
+   , expected(expected_)
+   , sms(sms_)
+   { }
+
    user_bind bind;
    int on_read(json j, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec) {return 1;};
@@ -29,7 +38,7 @@ public:
 
 class client_mgr_auth {
 private:
-   using client_type = client_session<client_mgr_sms>;
+   using client_type = client_session<client_mgr_auth>;
 
 public:
    user_bind bind;

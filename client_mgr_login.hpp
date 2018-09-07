@@ -22,9 +22,10 @@ class client_mgr_login {
 private:
    using client_type = client_session<client_mgr_login>;
    std::string tel;
+   std::string expected;
 
 public:
-   client_mgr_login(std::string tel_);
+   client_mgr_login(std::string tel_, std::string expected);
    int on_read(json j, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec);
    int on_handshake(std::shared_ptr<client_type> s);

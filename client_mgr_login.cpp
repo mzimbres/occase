@@ -2,8 +2,10 @@
 
 #include "client_session.hpp"
 
-client_mgr_login::client_mgr_login(std::string tel_)
+client_mgr_login::client_mgr_login( std::string tel_
+                                  , std::string expected_)
 : tel(tel_)
+, expected(expected_)
 { }
 
 int client_mgr_login::on_read(json j, std::shared_ptr<client_type> s)
@@ -16,18 +18,12 @@ int client_mgr_login::on_read(json j, std::shared_ptr<client_type> s)
    }
 
    auto res = j["result"].get<std::string>();
-   if (res == "ok") {
+   if (res == expected) {
       std::cout << "Test login: ok." << std::endl;
       return -1;
    }
 
-   if (res == "fail") {
-      std::cout << "Test login: ok (if users in server exausted)."
-                << std::endl;
-      return -1;
-   }
-
-   std::cerr << "Server error. Please fix." << std::endl;
+   std::cout << "Test login: fail." << std::endl;
    return -1;
 }
 

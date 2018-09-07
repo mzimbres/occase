@@ -24,3 +24,18 @@ public:
    int on_handshake(std::shared_ptr<client_type> s);
 };
 
+// Tries to authenticate a session with the user bind provided on the
+// sms commands.
+
+class client_mgr_auth {
+private:
+   using client_type = client_session<client_mgr_sms>;
+
+public:
+   user_bind bind;
+   std::string expected;
+   int on_read(json j, std::shared_ptr<client_type> s);
+   int on_closed(boost::system::error_code ec) {return 1;};
+   int on_handshake(std::shared_ptr<client_type> s);
+};
+

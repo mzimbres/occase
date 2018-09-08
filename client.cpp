@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <sstream>
 #include <cstdlib>
 #include <iostream>
 
@@ -153,6 +154,69 @@ auto test_auth(client_options op, std::vector<user_bind> binds)
    ioc.run();
 }
 
+auto gen_menu_json()
+{
+   std::vector<json> j1 =
+   { {{"name", "Centro"},               {"sub", {}}}
+   , {{"name", "Alvinópolis"},          {"sub", {}}}
+   , {{"name", "Jardim Siriema"},       {"sub", {}}}
+   , {{"name", "Vila Santista"},        {"sub", {}}}
+   , {{"name", "Parque dos Coqueiros"}, {"sub", {}}}
+   , {{"name", "Terceiro Centenário"},  {"sub", {}}}
+   };
+
+   std::vector<json> j2 =
+   { {{"name", "Vila Leopoldina"}, {"sub", {}}}
+   , {{"name", "Lapa"},            {"sub", {}}}
+   , {{"name", "Pinheiros"},       {"sub", {}}}
+   , {{"name", "Moema"},           {"sub", {}}}
+   , {{"name", "Jardim Paulista"}, {"sub", {}}}
+   , {{"name", "Mooca"},           {"sub", {}}}
+   , {{"name", "Tatuapé"},         {"sub", {}}}
+   , {{"name", "Penha"},           {"sub", {}}}
+   , {{"name", "Ipiranga"},        {"sub", {}}}
+   , {{"name", "Vila Madalena"},   {"sub", {}}}
+   , {{"name", "Vila Mariana"},    {"sub", {}}}
+   , {{"name", "Vila Formosa"},    {"sub", {}}}
+   , {{"name", "Bixiga"},          {"sub", {}}}
+   };
+
+   std::vector<json> j3 =
+   { {{"name", "Atibaia"},  {"sub", j1}}
+   , {{"name", "Sao Paulo"},{"sub", j2}}
+   };
+
+   json j;
+   j["name"] = "SP";
+   j["sub"] = j3;
+
+   return j.dump();
+}
+
+void parse_menu_json(std::string menu)
+{
+   std::cout << menu << std::endl;
+
+   json j;
+   std::stringstream ss;
+   ss << menu;
+   ss >> j;
+
+   while (!std::empty(j)) {
+      auto name = j["name"].get<std::string>();
+      std::cout << name;
+      if (j["sub"].is_null())
+         break;
+      std::cout << " ===> ";
+      std::vector<json> vec = j["sub"].get<std::vector<json>>();
+      //std::cout << std::size(vec) << std::endl;
+      if (std::empty(vec))
+         break;
+      j = vec.back();
+   }
+   std::cout << std::endl;
+}
+
 auto test_cg(client_options op, user_bind bind)
 {
    using mgr_type = client_mgr_cg;
@@ -203,6 +267,8 @@ int main(int argc, char* argv[])
    //   std::cerr << "Please, provide a user id." << std::endl;
    //   return EXIT_FAILURE;
    //}
+
+   parse_menu_json(gen_menu_json());
 
    client_options op
    { {"127.0.0.1"} // Host.

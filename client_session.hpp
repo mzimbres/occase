@@ -144,6 +144,7 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
    } catch (std::exception const& e) {
       std::cerr << "Server error. Please fix." << std::endl;
       std::cerr << "Error: " << e.what() << std::endl;
+      return;
    }
 
    do_read(results);

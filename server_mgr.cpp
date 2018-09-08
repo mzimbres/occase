@@ -62,7 +62,6 @@ index_type server_mgr::on_login(json j, std::shared_ptr<server_session> s)
       resp["cmd"] = "login_ack";
       resp["result"] = "fail";
       s->send_msg(resp.dump());
-      std::cout << "bbbbbbbbbbbbbbbbbbbbb" << std::endl;
       return -1;
    }
 
@@ -79,7 +78,6 @@ index_type server_mgr::on_login(json j, std::shared_ptr<server_session> s)
       resp["cmd"] = "login_ack";
       resp["result"] = "fail";
       s->send_msg(resp.dump());
-      std::cout << "aaaaaaaaaaaaaaaaaaaaa" << std::endl;
       return -1;
    }
 

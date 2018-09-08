@@ -8,17 +8,18 @@ int client_mgr_sms::on_read(json j, std::shared_ptr<client_type> s)
 
    if (cmd == "login_ack") {
       auto res = j["result"].get<std::string>();
-      if (res == expected) {
+      if (res == "ok") {
          json j1;
          j1["cmd"] = "sms_confirmation";
          j1["tel"] = tel;
          j1["sms"] = sms;
          s->send_msg(j1.dump());
+         //std::cout << "login_ack ok: " << tel << std::endl;
          return 1;
       }
 
-      std::cout << "Test sms_confirmation: ok (depends on server config)"
-                << std::endl;
+      std::cout << j << std::endl;
+      std::cout << "Test fail: " << tel << std::endl;
       return -1;
    }
 
@@ -26,8 +27,10 @@ int client_mgr_sms::on_read(json j, std::shared_ptr<client_type> s)
       //std::cout << j << std::endl;
       auto res = j["result"].get<std::string>();
 
-      if (res == expected) {
+      if (res == "ok")
          bind = j["user_bind"].get<user_bind>();
+
+      if (res == expected) {
          std::cout << "Test sms_confirmation: ok." << std::endl;
          return -1;
       }

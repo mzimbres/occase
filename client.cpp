@@ -89,6 +89,7 @@ void test_login1(client_options op)
 
    ioc.run();
 }
+
 void test_sms(client_options op)
 {
    using mgr_type = client_mgr_sms;

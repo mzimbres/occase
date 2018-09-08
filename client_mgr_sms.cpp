@@ -82,3 +82,9 @@ int client_mgr_auth::on_handshake(std::shared_ptr<client_type> s)
    return 1;
 }
 
+int client_mgr_auth::on_closed(boost::system::error_code ec)
+{
+   std::cout << "Test auth: fail." << std::endl;
+   return -1;
+};
+

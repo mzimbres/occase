@@ -88,9 +88,9 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
 
       if (ec) {
          if (ec == websocket::error::closed) {
-            // This means the session has been close, likely by the
-            // server. Now we ask the manager what to do, should we
-            // try to reconnect or are we done.
+            // This means the session has been closed by the server.
+            // Now we ask the manager what to do, should we try to
+            // reconnect or are we done.
             if (mgr.on_closed(ec) == -1) {
                // We are done.
                //std::cout << "Leaving on read 1." << std::endl;

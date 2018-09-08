@@ -90,7 +90,7 @@ void test_login1(client_options op)
    ioc.run();
 }
 
-void test_sms(client_options op)
+auto test_sms(client_options op)
 {
    using mgr_type = client_mgr_sms;
    using client_type = client_session<mgr_type>;
@@ -119,9 +119,34 @@ void test_sms(client_options op)
 
    ioc.run();
 
+   std::vector<user_bind> binds;
    for (auto const& session : sessions)
-      std::cout << session->get_mgr().bind << std::endl;
+      binds.push_back(session->get_mgr().bind);
+
+   return binds;
 }
+
+void test_auth(client_options op, std::vector<user_bind> binds)
+{
+   using mgr_type = client_mgr_auth;
+   using client_type = client_session<mgr_type>;
+
+   boost::asio::io_context ioc;
+
+   std::vector<mgr_type> mgrs;
+   for (auto& bind : binds)
+      mgrs.emplace_back(bind, "ok");
+
+   std::vector<std::shared_ptr<client_type>> sessions;
+   for (auto& mgr : mgrs)
+      sessions.push_back(std::make_shared<client_type>(ioc, op, mgr));
+
+   for (auto& session : sessions)
+      session->run();
+
+   ioc.run();
+}
+
 
 void test_client(client_options op)
 {
@@ -160,9 +185,12 @@ int main(int argc, char* argv[])
    test_login1(op);
    std::cout << "================================================"
              << std::endl;
-   std::cout << "Please, restart the server and type enter" << std::endl;
-   std::cin.ignore();
-   test_sms(op);
+   //std::cout << "Please, restart the server and type enter" << std::endl;
+   //std::cin.ignore();
+   auto binds = test_sms(op);
+   std::cout << "================================================"
+             << std::endl;
+   test_auth(op, binds);
    //std::cout << "================================================"
    //          << std::endl;
    //test_client(op);

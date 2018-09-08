@@ -6,20 +6,13 @@
 #include "config.hpp"
 
 struct group_info {
-   std::string title;
-   std::string description;
+   std::string city;
+   std::string part;
 };
 
 struct group_bind {
    std::string host;
-   int index;
 };
-
-inline
-auto operator<(group_bind const& a, group_bind const& b)
-{
-   return a.index < b.index;
-}
 
 struct user_bind {
    std::string tel;

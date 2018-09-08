@@ -26,17 +26,22 @@ server_mgr::on_read(json j, std::shared_ptr<server_session> s)
       return -1;
    }
 
-   if (cmd == "create_group")
-      return on_create_group(std::move(j), s);
+   if (s->is_auth()) {
+      if (cmd == "create_group")
+         return on_create_group(std::move(j), s);
 
-   if (cmd == "join_group")
-      return on_join_group(std::move(j), s);
+      if (cmd == "join_group")
+         return on_join_group(std::move(j), s);
 
-   if (cmd == "send_group_msg")
-      return on_group_msg(std::move(j), s);
+      if (cmd == "send_group_msg")
+         return on_group_msg(std::move(j), s);
 
-   if (cmd == "send_user_msg")
-      return on_user_msg(std::move(j), s);
+      if (cmd == "send_user_msg")
+         return on_user_msg(std::move(j), s);
+
+      std::cerr << "Server: Unknown command " << cmd << std::endl;
+      return -1;
+   }
 
    std::cerr << "Server: Unknown command " << cmd << std::endl;
    return -1;
@@ -179,26 +184,26 @@ server_mgr::on_group_msg(json j, std::shared_ptr<server_session> s)
 
    users[from.index].store_session(s);
 
-   auto to = j["to"].get<int>();
+   //auto to = j["to"].get<int>();
 
-   if (!groups.is_valid_index(to)) {
-      // This is a non-existing group. Perhaps the json command was
-      // sent with the wrong information signaling a logic error in
-      // the app.
+   //if (!groups.is_valid_index(to)) {
+   //   // This is a non-existing group. Perhaps the json command was
+   //   // sent with the wrong information signaling a logic error in
+   //   // the app.
 
-      json resp;
-      resp["cmd"] = "send_group_msg_ack";
-      resp["result"] = "fail";
-      resp["reason"] = "Non existing group";
-      users[from.index].send_msg(resp.dump());
-      return from.index;
-   }
+   //   json resp;
+   //   resp["cmd"] = "send_group_msg_ack";
+   //   resp["result"] = "fail";
+   //   resp["reason"] = "Non existing group";
+   //   users[from.index].send_msg(resp.dump());
+   //   return from.index;
+   //}
 
    json resp;
    resp["cmd"] = "message";
    resp["message"] = j["msg"].get<std::string>();
 
-   groups[to].broadcast_msg(resp.dump(), users);
+   //groups[to].broadcast_msg(resp.dump(), users);
 
    // We also have to acknowledge the broadcast of the message.
    // Perhaps this is only for debugging purposes as the user can
@@ -259,13 +264,11 @@ server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
    }
 
    auto const info = j["info"].get<group_info>();
+   auto const hash = j["hash"].get<std::string>();
 
-   auto const idx = groups.allocate();
-   if (idx == -1) {
-      // In my current design the total number of groups do not grow
-      // dynamically but be set on startup. I may have to change this
-      // later. It is important to report this to the user, that in
-      // this case is probably the admin.
+   auto const new_group = groups.insert({hash, info});
+   if (!new_group.second) {
+      // Group already exists.
       json resp;
       resp["cmd"] = "create_group_ack";
       resp["result"] = "fail";
@@ -273,12 +276,10 @@ server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
       return from.index;
    }
 
-   groups[idx].set_info(std::move(info));
-
    json resp;
    resp["cmd"] = "create_group_ack";
    resp["result"] = "ok";
-   resp["group_bind"] = group_bind {host, idx};
+   resp["group_bind"] = group_bind {host};
 
    users[from.index].send_msg(resp.dump());
    return 4;
@@ -301,21 +302,12 @@ server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
 
    auto gbind = j["group_bind"].get<group_bind>();
 
-   if (!groups.is_valid_index(gbind.index)) {
-      // TODO: Clarify how this could happen.
-      //json resp;
-      //resp["cmd"] = "join_group_ack";
-      //resp["result"] = "fail";
-      //users[from.index].send_msg(resp.dump());
-      return -1;
-   }
-
-   groups[gbind.index].add_member(from.index);
+   //groups[gbind.index].add_member(from.index);
 
    json resp;
    resp["cmd"] = "join_group_ack";
    resp["result"] = "ok";
-   resp["info"] = groups[gbind.index].get_info(),
+   //resp["info"] = groups[gbind.index].get_info(),
 
    users[from.index].send_msg(resp.dump());
    return from.index;

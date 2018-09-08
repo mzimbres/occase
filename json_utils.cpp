@@ -4,16 +4,15 @@
 
 std::ostream& operator<<(std::ostream& os, group_info const& info)
 {
-   os << "   Title:       " << info.title << "\n"
-      << "   Description: " << info.description << "\n";
+   os << "   City: " << info.city << "\n"
+      << "   Part: " << info.part << "\n";
 
    return os;
 }
 
 std::ostream& operator<<(std::ostream& os, group_bind const& bind)
 {
-   os << "   Host:  " << bind.host << "\n"
-      << "   Index: " << bind.index << "\n";
+   os << "   Host:  " << bind.host << "\n";
 
    return os;
 }
@@ -30,12 +29,12 @@ std::ostream& operator<<(std::ostream& os, user_bind const& info)
 
 void to_json(json& j, group_info const& g)
 {
-  j = json{{"title", g.title}, {"description", g.description}};
+  j = json{{"city", g.city}, {"part", g.part}};
 }
 
 void to_json(json& j, group_bind const& g)
 {
-  j = json{{"host", g.host}, {"index", g.index}};
+  j = json{{"host", g.host}};
 }
 
 void to_json(json& j, user_bind const& u)
@@ -45,14 +44,12 @@ void to_json(json& j, user_bind const& u)
 
 void from_json(json const& j, group_info& g)
 {
-  g.title = j.at("title").get<std::string>();
-  g.description = j.at("description").get<std::string>();
+  g.city = j.at("city").get<std::string>();
+  g.part = j.at("part").get<std::string>();
 }
-
 void from_json(json const& j, group_bind& g)
 {
   g.host = j.at("host").get<std::string>();
-  g.index = j.at("index").get<int>();
 }
 
 void from_json(json const& j, user_bind& u)

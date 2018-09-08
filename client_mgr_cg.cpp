@@ -4,10 +4,26 @@
 
 int client_mgr_cg::on_read(json j, std::shared_ptr<client_type> s)
 {
-   auto cmd = j["cmd"].get<std::string>();
+   auto const cmd = j["cmd"].get<std::string>();
 
    if (cmd == "auth_ack") {
-      auto res = j["result"].get<std::string>();
+      auto const res = j["result"].get<std::string>();
+      if (res == "ok") {
+         json cg;
+         cg["cmd"] = "create_group";
+         cg["from"] = bind;
+         cg["hash"] = "000.000.000.000";
+         cg["info"] = group_info {"Atibaia", "Centro"};
+         s->send_msg(cg.dump());
+         return 1;
+      }
+
+      std::cout << "Test cg: fail." << std::endl;
+      return -1;
+   }
+
+   if (cmd == "create_group_ack") {
+      auto const res = j["result"].get<std::string>();
       if (res == expected) {
          std::cout << "Test cg: ok." << std::endl;
          return -1;

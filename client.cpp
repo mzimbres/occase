@@ -208,9 +208,9 @@ int main(int argc, char* argv[])
    test_auth(op, binds);
    std::cout << "==========================================" << std::endl;
    test_cg(op, binds.front());
-   //std::cout << "================================================"
-   //          << std::endl;
+   std::cout << "==========================================" << std::endl;
    //test_client(op);
+   //std::cout << "==========================================" << std::endl;
 
    return EXIT_SUCCESS;
 }

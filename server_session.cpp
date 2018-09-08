@@ -87,6 +87,7 @@ void server_session::on_sms_timeout(boost::system::error_code ec)
       // Some kind of error, I do not know how to handle this. I will
       // anyway release the user handler and close the session.
       do_close();
+      return;
    }
 
    // At this point we know that ec == boost::asio::error::operation_aborted
@@ -229,7 +230,7 @@ void server_session::on_read( boost::system::error_code ec
          timer.cancel();
       }
 
-      std::cout << "Accepted: " << tmp << std::endl;
+      //std::cout << "Accepted: " << tmp << std::endl;
    } catch (...) {
       std::cerr << "Exception for: " << tmp << std::endl;
       timer.cancel();

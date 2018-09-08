@@ -13,7 +13,6 @@ class client_session;
 class client_mgr {
 private:
    using client_type = client_session<client_mgr>;
-   std::set<group_bind> groups;
    std::string tel;
 
    bool login = false;

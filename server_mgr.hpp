@@ -14,14 +14,10 @@ class server_session;
 class server_mgr {
 private:
    std::string host = "criatura";
-
-   grow_only_vector<user> users;
-   grow_only_vector<group> groups;
-
-   // May grow up to millions of users.
    std::unordered_map<id_type, index_type> id_to_idx_map;
+   grow_only_vector<user> users;
+   std::unordered_map<std::string, group> groups;
 
-   // Commond handlers.
    index_type on_login(json j, std::shared_ptr<server_session> s);
    index_type on_auth(json j, std::shared_ptr<server_session> s);
    index_type on_sms_confirmation(json j, std::shared_ptr<server_session> s);
@@ -33,7 +29,6 @@ private:
 public:
    server_mgr(int users_size, int groups_size)
    : users(users_size)
-   , groups(groups_size)
    {}
 
    // Functions to interact with the server_session.

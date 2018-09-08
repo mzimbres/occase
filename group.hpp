@@ -28,6 +28,7 @@ private:
    group_info info;
 
 public:
+   group(group_info info_) : info({std::move(info_)}) {}
    void set_info(group_info info_) {info = std::move(info_);}
    auto const& get_info() const noexcept {return info;}
 

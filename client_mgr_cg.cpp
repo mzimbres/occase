@@ -9,16 +9,12 @@ int client_mgr_cg::on_read(json j, std::shared_ptr<client_type> s)
    if (cmd == "auth_ack") {
       auto const res = j["result"].get<std::string>();
       if (res == "ok") {
-         json cg;
-         cg["cmd"] = "create_group";
-         cg["from"] = bind;
-         cg["hash"] = "000.000.000.000";
-         cg["info"] = group_info {"Atibaia", "Centro"};
-         s->send_msg(cg.dump());
+         //std::cout << "sending " << cmds.top() << std::endl;
+         s->send_msg(cmds.top());
          return 1;
       }
 
-      std::cout << "Test cg: fail." << std::endl;
+      std::cout << "Test cg: Error." << std::endl;
       return -1;
    }
 
@@ -26,7 +22,13 @@ int client_mgr_cg::on_read(json j, std::shared_ptr<client_type> s)
       auto const res = j["result"].get<std::string>();
       if (res == expected) {
          std::cout << "Test cg: ok." << std::endl;
-         return -1;
+         //std::cout << "poping " << cmds.top() << std::endl;
+         cmds.pop();
+         if (std::empty(cmds))
+            return -1;
+         //std::cout << "sending " << cmds.top() << std::endl;
+         s->send_msg(cmds.top());
+         return 1;
       }
 
       std::cout << "Test cg: fail." << std::endl;

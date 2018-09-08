@@ -1,3 +1,4 @@
+#include <stack>
 #include <thread>
 #include <memory>
 #include <vector>
@@ -159,7 +160,23 @@ auto test_cg(client_options op, user_bind bind)
 
    boost::asio::io_context ioc;
 
-   mgr_type mgr {bind, "ok"};
+   std::stack<std::string> st;
+
+   json cg1;
+   cg1["cmd"] = "create_group";
+   cg1["from"] = bind;
+   cg1["hash"] = "000.000.000.000";
+   cg1["info"] = group_info {"Atibaia", "Centro"};
+   st.push(cg1.dump());
+
+   json cg2;
+   cg2["cmd"] = "create_group";
+   cg2["from"] = bind;
+   cg2["hash"] = "000.000.000.001";
+   cg2["info"] = group_info {"Atibaia", "Alvinopolis"};
+   st.push(cg2.dump());
+
+   mgr_type mgr {"ok", std::move(st), bind};
 
    std::make_shared<client_type>(ioc, op, mgr)->run();
 

@@ -273,9 +273,11 @@ server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
       resp["cmd"] = "create_group_ack";
       resp["result"] = "fail";
       users[from.index].send_msg(resp.dump());
+      //std::cout << "fail" << j << std::endl;
       return from.index;
    }
 
+   //std::cout << "ok" << j << std::endl;
    json resp;
    resp["cmd"] = "create_group_ack";
    resp["result"] = "ok";

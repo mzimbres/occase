@@ -54,3 +54,7 @@ $(DIST_NAME).tar.gz: $(SRCS) $(AUX)
 .PHONY: dist
 dist: $(DIST_NAME).tar.gz
 
+.PHONY: backup
+backup: $(DIST_NAME).tar.gz
+	echo "Backup" | mutt -s "Backup" -a $< -- mzimbres@gmail.com bobkahnn@gmail.com coolcatlookingforakitty@gmail.com
+

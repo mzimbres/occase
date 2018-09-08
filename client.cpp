@@ -7,6 +7,7 @@
 
 #include "config.hpp"
 #include "client_mgr.hpp"
+#include "client_mgr_cg.hpp"
 #include "client_mgr_sms.hpp"
 #include "client_session.hpp"
 #include "client_mgr_login.hpp"
@@ -151,6 +152,20 @@ auto test_auth(client_options op, std::vector<user_bind> binds)
    ioc.run();
 }
 
+auto test_cg(client_options op, user_bind bind)
+{
+   using mgr_type = client_mgr_cg;
+   using client_type = client_session<mgr_type>;
+
+   boost::asio::io_context ioc;
+
+   mgr_type mgr {bind, "ok"};
+
+   std::make_shared<client_type>(ioc, op, mgr)->run();
+
+   ioc.run();
+}
+
 void test_client(client_options op)
 {
    using mgr_type = client_mgr;
@@ -177,23 +192,22 @@ int main(int argc, char* argv[])
    , {"8080"}      // Port.
    };
 
-   std::cout << "================================================"
-             << std::endl;
+   std::cout << "==========================================" << std::endl;
    test_accept_timer(op);
-   std::cout << "================================================"
-             << std::endl;
+   std::cout << "==========================================" << std::endl;
    test_login(op);
-   std::cout << "================================================"
-             << std::endl;
+   std::cout << "==========================================" << std::endl;
    test_login1(op);
-   std::cout << "================================================"
-             << std::endl;
-   //std::cout << "Please, restart the server and type enter" << std::endl;
-   //std::cin.ignore();
+   std::cout << "==========================================" << std::endl;
    auto binds = test_sms(op);
-   std::cout << "================================================"
-             << std::endl;
+   if (std::empty(binds)) {
+      std::cerr << "Binds array empty." << std::endl;
+      return EXIT_FAILURE;
+   }
+   std::cout << "==========================================" << std::endl;
    test_auth(op, binds);
+   std::cout << "==========================================" << std::endl;
+   test_cg(op, binds.front());
    //std::cout << "================================================"
    //          << std::endl;
    //test_client(op);

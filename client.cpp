@@ -34,6 +34,9 @@ void test_login(client_options op)
 
    boost::asio::io_context ioc;
 
+   // Assumes all the commands arrive at the server before the first
+   // ones begin to timeout. The fail means no more user entries
+   // available.
    std::vector<mgr_type> mgrs
    { {"aaa", "ok"}
    , {"bbb", "ok"}
@@ -121,12 +124,13 @@ auto test_sms(client_options op)
 
    std::vector<user_bind> binds;
    for (auto const& session : sessions)
-      binds.push_back(session->get_mgr().bind);
+      if (session->get_mgr().bind.index != -1)
+         binds.push_back(session->get_mgr().bind);
 
    return binds;
 }
 
-void test_auth(client_options op, std::vector<user_bind> binds)
+auto test_auth(client_options op, std::vector<user_bind> binds)
 {
    using mgr_type = client_mgr_auth;
    using client_type = client_session<mgr_type>;
@@ -146,7 +150,6 @@ void test_auth(client_options op, std::vector<user_bind> binds)
 
    ioc.run();
 }
-
 
 void test_client(client_options op)
 {

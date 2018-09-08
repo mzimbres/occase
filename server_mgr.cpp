@@ -194,12 +194,6 @@ server_mgr::on_group_msg(json j, std::shared_ptr<server_session> s)
       return from.index;
    }
 
-   if (!groups[to].is_active()) {
-      // TODO: Report back to the user that this groups does no exist
-      // anymore.
-      return from.index;
-   }
-
    json resp;
    resp["cmd"] = "message";
    resp["message"] = j["msg"].get<std::string>();
@@ -257,33 +251,21 @@ server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
 
    // Before allocating a new group it is a good idea to check if
    // the owner passed is at least in a valid range.
-   auto b = users.is_valid_index(from.index);
-   if (!b) {
+   if (!users.is_valid_index(from.index)) {
       // This is not even an existing user. Perhaps the json command
       // was sent with the wrong information signaling a logic error
       // in the app. I do not think we have to report this problem.
       return -1;
    }
 
-   if (from.tel != users[from.index].get_id()) {
-      // The user telephone number and its index do not match. Causes
-      // of this is unclear, maybe someone scanning all possible
-      // indexes to try hack the server?
-      return -1;
-   }
+   auto const info = j["info"].get<group_info>();
 
-   users[from.index].store_session(s);
-
-   auto info = j["info"].get<group_info>();
-
-   auto idx = groups.allocate();
+   auto const idx = groups.allocate();
    if (idx == -1) {
-      // In my current design the total number of groups we not grow
+      // In my current design the total number of groups do not grow
       // dynamically but be set on startup. I may have to change this
-      // later or start the server with some room for dynamic creation
-      // of groups. However we can always restart the server, though
-      // this is very inconvenient. It is important to report this to
-      // the user, that in this case is probably the admin.
+      // later. It is important to report this to the user, that in
+      // this case is probably the admin.
       json resp;
       resp["cmd"] = "create_group_ack";
       resp["result"] = "fail";
@@ -291,9 +273,7 @@ server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
       return from.index;
    }
 
-   groups[idx].set_owner(from.index);
    groups[idx].set_info(std::move(info));
-   groups[idx].add_member(from.index);
 
    json resp;
    resp["cmd"] = "create_group_ack";
@@ -301,7 +281,7 @@ server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
    resp["group_bind"] = group_bind {host, idx};
 
    users[from.index].send_msg(resp.dump());
-   return from.index;
+   return 4;
 }
 
 index_type
@@ -322,15 +302,6 @@ server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
    auto gbind = j["group_bind"].get<group_bind>();
 
    if (!groups.is_valid_index(gbind.index)) {
-      // TODO: Clarify how this could happen.
-      //json resp;
-      //resp["cmd"] = "join_group_ack";
-      //resp["result"] = "fail";
-      //users[from.index].send_msg(resp.dump());
-      return -1;
-   }
-
-   if (!groups[gbind.index].is_active()) {
       // TODO: Clarify how this could happen.
       //json resp;
       //resp["cmd"] = "join_group_ack";

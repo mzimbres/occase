@@ -77,7 +77,7 @@ int client_mgr_auth::on_handshake(std::shared_ptr<client_type> s)
 {
    json j;
    j["cmd"] = "auth";
-   j["bind"] = bind;
+   j["from"] = bind;
    s->send_msg(j.dump());
    return 1;
 }

@@ -23,6 +23,7 @@ private:
 
    // Commond handlers.
    index_type on_login(json j, std::shared_ptr<server_session> s);
+   index_type on_auth(json j, std::shared_ptr<server_session> s);
    index_type on_sms_confirmation(json j, std::shared_ptr<server_session> s);
    index_type on_create_group(json j, std::shared_ptr<server_session> s);
    index_type on_join_group(json j, std::shared_ptr<server_session> session);

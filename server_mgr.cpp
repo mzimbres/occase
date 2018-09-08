@@ -11,6 +11,9 @@ server_mgr::on_read(json j, std::shared_ptr<server_session> s)
       if (cmd == "login")
          return on_login(std::move(j), s);
 
+      if (cmd == "auth")
+         return on_auth(std::move(j), s);
+
       std::cerr << "Server: Unknown command " << cmd << std::endl;
       return -1;
    }
@@ -92,6 +95,35 @@ index_type server_mgr::on_login(json j, std::shared_ptr<server_session> s)
    return 1;
 }
 
+index_type server_mgr::on_auth(json j, std::shared_ptr<server_session> s)
+{
+   auto const from = j["from"].get<user_bind>();
+
+   if (!users.is_valid_index(from.index)) {
+      // Not even a valid user. Just drop the connection.
+      return -1;
+   }
+
+   if (from.tel != users[from.index].get_id()) {
+      // Incorrect id.
+      json resp;
+      resp["cmd"] = "auth_ack";
+      resp["result"] = "fail";
+      s->send_msg(resp.dump());
+      return -1;
+   }
+
+   s->set_login_idx(from.index);
+   s->promote();
+   users[from.index].store_session(s);
+
+   json resp;
+   resp["cmd"] = "auth_ack";
+   resp["result"] = "ok";
+   s->send_msg(resp.dump());
+   return 3;
+}
+
 void server_mgr::release_login(index_type idx)
 {
    auto const id = users[idx].get_id();
@@ -122,6 +154,7 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
    s->promote();
    auto const idx = s->get_user_idx();
    users[idx].store_session(s);
+   users[idx].set_id(tel);
 
    json resp;
    resp["cmd"] = "sms_confirmation_ack";

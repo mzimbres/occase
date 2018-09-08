@@ -39,5 +39,6 @@ public:
    void on_write();
    void reset();
    auto const& get_id() const noexcept {return id;}
+   void set_id(std::string id_) {id = std::move(id_);}
 };
 

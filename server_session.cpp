@@ -223,6 +223,10 @@ void server_session::on_read( boost::system::error_code ec
          // that we have to cancel the sms timer. TODO: At this point
          // we can begin to play with websockets ping pong frames.
          timer.cancel();
+      } else if (r == 3) {
+         // Successful authentication. We have to cancel the on accept
+         // timeout.
+         timer.cancel();
       }
 
       std::cout << "Accepted: " << tmp << std::endl;

@@ -183,7 +183,9 @@ auto gen_menu_json()
 
    std::vector<json> j3 =
    { {{"name", "Atibaia"},  {"sub", j1}}
+   , {{"name", "Campinas"}, {"sub", {}}}
    , {{"name", "Sao Paulo"},{"sub", j2}}
+   , {{"name", "Piracaia"}, {"sub", {}}}
    };
 
    json j;
@@ -197,24 +199,42 @@ void parse_menu_json(std::string menu)
 {
    std::cout << menu << std::endl;
 
+   if (std::empty(menu))
+      return;
+
    json j;
    std::stringstream ss;
    ss << menu;
    ss >> j;
 
-   while (!std::empty(j)) {
-      auto name = j["name"].get<std::string>();
-      std::cout << name;
-      if (j["sub"].is_null())
+   std::stack<json> st;
+   st.push(j);
+   std::stack<int> sidx;
+   while (!std::empty(st)) {
+      while (!st.top()["sub"].is_null()) {
+         auto const vec = st.top()["sub"].get<std::vector<json>>();
+         for (auto o : vec)
+            st.push(o);
+         sidx.push(std::size(vec));
+      }
+
+      auto tj = st.top();
+      st.pop();
+      auto const name = tj["name"].get<std::string>();
+      std::cout << name << std::endl;
+
+      if (--sidx.top() == 0) {
+         auto tj = st.top();
+         st.pop();
+         sidx.pop();
+         --sidx.top();
+         auto const name = tj["name"].get<std::string>();
+         std::cout << name << std::endl;
+      }
+
+      if (std::size(sidx) == 1 && sidx.top() == 0)
          break;
-      std::cout << " ===> ";
-      std::vector<json> vec = j["sub"].get<std::vector<json>>();
-      //std::cout << std::size(vec) << std::endl;
-      if (std::empty(vec))
-         break;
-      j = vec.back();
    }
-   std::cout << std::endl;
 }
 
 auto test_cg(client_options op, user_bind bind)
@@ -269,6 +289,7 @@ int main(int argc, char* argv[])
    //}
 
    parse_menu_json(gen_menu_json());
+   return 0;
 
    client_options op
    { {"127.0.0.1"} // Host.

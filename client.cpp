@@ -10,6 +10,7 @@
 
 #include "config.hpp"
 #include "client_mgr.hpp"
+#include "menu_parser.hpp"
 #include "client_mgr_cg.hpp"
 #include "client_mgr_sms.hpp"
 #include "client_session.hpp"
@@ -155,122 +156,23 @@ auto test_auth(client_options op, std::vector<user_bind> binds)
    ioc.run();
 }
 
-auto gen_menu_json()
-{
-   std::vector<json> j1 =
-   { {{"name", "Centro"},               {"sub", {}}}
-   , {{"name", "Alvinópolis"},          {"sub", {}}}
-   , {{"name", "Jardim Siriema"},       {"sub", {}}}
-   , {{"name", "Vila Santista"},        {"sub", {}}}
-   , {{"name", "Parque dos Coqueiros"}, {"sub", {}}}
-   , {{"name", "Terceiro Centenário"},  {"sub", {}}}
-   };
-
-   std::vector<json> j2 =
-   { {{"name", "Vila Leopoldina"}, {"sub", {}}}
-   , {{"name", "Lapa"},            {"sub", {}}}
-   , {{"name", "Pinheiros"},       {"sub", {}}}
-   , {{"name", "Moema"},           {"sub", {}}}
-   , {{"name", "Jardim Paulista"}, {"sub", {}}}
-   , {{"name", "Mooca"},           {"sub", {}}}
-   , {{"name", "Tatuapé"},         {"sub", {}}}
-   , {{"name", "Penha"},           {"sub", {}}}
-   , {{"name", "Ipiranga"},        {"sub", {}}}
-   , {{"name", "Vila Madalena"},   {"sub", {}}}
-   , {{"name", "Vila Mariana"},    {"sub", {}}}
-   , {{"name", "Vila Formosa"},    {"sub", {}}}
-   , {{"name", "Bixiga"},          {"sub", {}}}
-   };
-
-   std::vector<json> j3 =
-   { {{"name", "Atibaia"},  {"sub", j1}}
-   , {{"name", "Campinas"}, {"sub", {}}}
-   , {{"name", "Sao Paulo"},{"sub", j2}}
-   , {{"name", "Piracaia"}, {"sub", {}}}
-   };
-
-   json j;
-   j["name"] = "SP";
-   j["sub"] = j3;
-
-   return j.dump();
-}
-
-void parse_menu_json(std::string menu)
-{
-   //std::cout << menu << std::endl;
-
-   if (std::empty(menu))
-      return;
-
-   json j;
-   std::stringstream ss;
-   ss << menu;
-   ss >> j;
-
-   std::stack<std::vector<std::pair<std::string, json>>> st;
-   st.push({{"000", j}});
-   do {
-      while (!st.top().back().second["sub"].is_null()) {
-         auto const vec = st.top().back().second["sub"].get<std::vector<json>>();
-         std::vector<std::pair<std::string, json>> tmp;
-         int i = 0;
-         for (auto const& o : vec) {
-            auto pp = std::make_pair(st.top().back().first, o);
-            pp.first.append(".");
-            pp.first.append(std::to_string(i++));
-            tmp.push_back(pp);
-         }
-         st.push(tmp);
-      }
-
-      auto const name1 = st.top().back().second["name"].get<std::string>();
-      std::cout << name1 << ": " << st.top().back().first << std::endl;
-      st.top().pop_back();
-
-      if (!std::empty(st.top()))
-         continue;
-      
-      st.pop();
-
-      auto const name2 = st.top().back().second["name"].get<std::string>();
-      std::cout << name2 << std::endl;
-
-      st.top().pop_back();
-
-      if (std::empty(st.top()))
-         st.pop();
-
-   } while (std::size(st) != 1);
-}
-
 auto test_cg(client_options op, user_bind bind)
 {
    using mgr_type = client_mgr_cg;
    using client_type = client_session<mgr_type>;
 
+   auto menu = gen_menu_json();
+   auto cmds = parse_menu_json(std::move(menu), bind);
+
+   //while (!std::empty(cmds)) {
+   //   std::cout << cmds.top() << std::endl;
+   //   cmds.pop();
+   //}
+
+   mgr_type mgr {"ok", std::move(cmds), bind};
+
    boost::asio::io_context ioc;
-
-   std::stack<std::string> st;
-
-   json cg1;
-   cg1["cmd"] = "create_group";
-   cg1["from"] = bind;
-   cg1["hash"] = "000.000.000.000";
-   cg1["info"] = group_info {"Atibaia", "Centro"};
-   st.push(cg1.dump());
-
-   json cg2;
-   cg2["cmd"] = "create_group";
-   cg2["from"] = bind;
-   cg2["hash"] = "000.000.000.001";
-   cg2["info"] = group_info {"Atibaia", "Alvinopolis"};
-   st.push(cg2.dump());
-
-   mgr_type mgr {"ok", std::move(st), bind};
-
    std::make_shared<client_type>(ioc, op, mgr)->run();
-
    ioc.run();
 }
 
@@ -294,9 +196,6 @@ int main(int argc, char* argv[])
    //   std::cerr << "Please, provide a user id." << std::endl;
    //   return EXIT_FAILURE;
    //}
-
-   parse_menu_json(gen_menu_json());
-   return 0;
 
    client_options op
    { {"127.0.0.1"} // Host.

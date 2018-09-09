@@ -14,7 +14,8 @@ common_objs = json_utils.o
 server_objs = user.o group.o server_mgr.o server_session.o \
               listener.o server.o 
 client_objs = client_mgr.o client_mgr_login.o client_mgr_sms.o \
-              client_mgr_cg.o client.o client_mgr_accept_timer.o
+              client_mgr_cg.o client.o client_mgr_accept_timer.o \
+              menu_parser.o
 objects     = $(server_objs) $(client_objs) $(common_objs)
 
 SRCS        = $(objects:.o=.cpp)
@@ -23,7 +24,8 @@ headers     = user.hpp group.hpp config.hpp server_mgr.hpp \
               server_session.hpp client_session.hpp grow_only_vector.hpp \
               listener.hpp json_utils.hpp client_mgr.hpp \
               client_mgr_login.hpp client_mgr_sms.hpp \
-              client_mgr_accept_timer.hpp client_mgr_cg.hpp
+              client_mgr_accept_timer.hpp client_mgr_cg.hpp \
+              menu_parser.hpp
 
 SRCS += $(headers)
 

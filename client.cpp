@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <utility>
 #include <sstream>
 #include <cstdlib>
 #include <iostream>
@@ -207,16 +208,24 @@ void parse_menu_json(std::string menu)
    ss << menu;
    ss >> j;
 
-   std::stack<std::vector<json>> st;
-   st.push({j});
+   std::stack<std::vector<std::pair<std::string, json>>> st;
+   st.push({{"000", j}});
    do {
-      while (!st.top().back()["sub"].is_null()) {
-         auto const vec = st.top().back()["sub"].get<std::vector<json>>();
-         st.push(std::move(vec));
+      while (!st.top().back().second["sub"].is_null()) {
+         auto const vec = st.top().back().second["sub"].get<std::vector<json>>();
+         std::vector<std::pair<std::string, json>> tmp;
+         int i = 0;
+         for (auto const& o : vec) {
+            auto pp = std::make_pair(st.top().back().first, o);
+            pp.first.append(".");
+            pp.first.append(std::to_string(i++));
+            tmp.push_back(pp);
+         }
+         st.push(tmp);
       }
 
-      auto const name1 = st.top().back()["name"].get<std::string>();
-      std::cout << name1 << std::endl;
+      auto const name1 = st.top().back().second["name"].get<std::string>();
+      std::cout << name1 << ": " << st.top().back().first << std::endl;
       st.top().pop_back();
 
       if (!std::empty(st.top()))
@@ -224,7 +233,7 @@ void parse_menu_json(std::string menu)
       
       st.pop();
 
-      auto const name2 = st.top().back()["name"].get<std::string>();
+      auto const name2 = st.top().back().second["name"].get<std::string>();
       std::cout << name2 << std::endl;
 
       st.top().pop_back();

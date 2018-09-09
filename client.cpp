@@ -197,7 +197,7 @@ auto gen_menu_json()
 
 void parse_menu_json(std::string menu)
 {
-   std::cout << menu << std::endl;
+   //std::cout << menu << std::endl;
 
    if (std::empty(menu))
       return;
@@ -207,34 +207,32 @@ void parse_menu_json(std::string menu)
    ss << menu;
    ss >> j;
 
-   std::stack<json> st;
-   st.push(j);
-   std::stack<int> sidx;
-   while (!std::empty(st)) {
-      while (!st.top()["sub"].is_null()) {
-         auto const vec = st.top()["sub"].get<std::vector<json>>();
-         for (auto o : vec)
-            st.push(o);
-         sidx.push(std::size(vec));
+   std::stack<std::vector<json>> st;
+   st.push({j});
+   do {
+      while (!st.top().back()["sub"].is_null()) {
+         auto const vec = st.top().back()["sub"].get<std::vector<json>>();
+         st.push(std::move(vec));
       }
 
-      auto tj = st.top();
+      auto const name1 = st.top().back()["name"].get<std::string>();
+      std::cout << name1 << std::endl;
+      st.top().pop_back();
+
+      if (!std::empty(st.top()))
+         continue;
+      
       st.pop();
-      auto const name = tj["name"].get<std::string>();
-      std::cout << name << std::endl;
 
-      if (--sidx.top() == 0) {
-         auto tj = st.top();
+      auto const name2 = st.top().back()["name"].get<std::string>();
+      std::cout << name2 << std::endl;
+
+      st.top().pop_back();
+
+      if (std::empty(st.top()))
          st.pop();
-         sidx.pop();
-         --sidx.top();
-         auto const name = tj["name"].get<std::string>();
-         std::cout << name << std::endl;
-      }
 
-      if (std::size(sidx) == 1 && sidx.top() == 0)
-         break;
-   }
+   } while (std::size(st) != 1);
 }
 
 auto test_cg(client_options op, user_bind bind)

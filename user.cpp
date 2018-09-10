@@ -4,6 +4,19 @@
 
 #include "server_session.hpp"
 
+void user::on_group_msg(std::string msg)
+{
+   if (auto s = session.lock()) {
+      // The user is online. We can just forward his message.
+      s->send_msg(std::move(msg));
+      return;
+   }
+
+   // The user is offline. When he gets online again we have to
+   // traverse all his groups to send him the latest message of each
+   // one.
+}
+
 void user::store_session(std::shared_ptr<server_session> s)
 {
    session = s; // Creates a weak reference to the session.

@@ -48,7 +48,7 @@ all: $(exes)
 $(lib_objs): %.o : %.cpp %.hpp
 	$(CPP) -c -o $@ $< $(CPPFLAGS) $(LDFLAGS)
 
-$(exe_objs): %.o : %.cpp 
+$(exe_objs): %.o : %.cpp
 	$(CPP) -c -o $@ $< $(CPPFLAGS) $(LDFLAGS)
 
 client: % : %.o $(client_objs) $(common_objs)

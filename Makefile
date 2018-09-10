@@ -8,43 +8,63 @@ LDFLAGS       = -g -lpthread
 CPPFLAGS      = -I. -I$(boost_include) -I$(json_include) \
                 -std=c++17 $(DEBUG) -Wall -Werror
 
-DIST_NAME    = sellit
+DIST_NAME   = sellit
+
+exes = client server
 
 common_objs = json_utils.o
-server_objs = user.o group.o server_mgr.o server_session.o \
-              listener.o server.o 
-client_objs = client_mgr.o client_mgr_login.o client_mgr_sms.o \
-              client_mgr_cg.o client.o client_mgr_accept_timer.o \
-              menu_parser.o
-objects     = $(server_objs) $(client_objs) $(common_objs)
 
-SRCS        = $(objects:.o=.cpp)
+server_objs =
+server_objs += user.o
+server_objs += group.o
+server_objs += server_mgr.o
+server_objs += server_session.o
+server_objs += listener.o
 
-headers     = user.hpp group.hpp config.hpp server_mgr.hpp \
-              server_session.hpp client_session.hpp grow_only_vector.hpp \
-              listener.hpp json_utils.hpp client_mgr.hpp \
-              client_mgr_login.hpp client_mgr_sms.hpp \
-              client_mgr_accept_timer.hpp client_mgr_cg.hpp \
-              menu_parser.hpp
+client_objs =
+client_objs += client_mgr.o
+client_objs += client_mgr_login.o
+client_objs += client_mgr_sms.o
+client_objs += client_mgr_cg.o
+client_objs += client_mgr_accept_timer.o
+client_objs += menu_parser.o
+
+exe_objs = $(addsuffix .o, $(exes))
+
+lib_objs = $(server_objs) $(client_objs) $(common_objs)
+
+SRCS =
+SRCS += $(lib_objs:.o=.cpp)
+SRCS += $(exe_objs:.o=.cpp)
+
+headers = user.hpp group.hpp config.hpp server_mgr.hpp \
+          server_session.hpp client_session.hpp grow_only_vector.hpp \
+          listener.hpp json_utils.hpp client_mgr.hpp \
+          client_mgr_login.hpp client_mgr_sms.hpp \
+          client_mgr_accept_timer.hpp client_mgr_cg.hpp \
+          menu_parser.hpp
 
 SRCS += $(headers)
 
 AUX = Makefile
 
-all: client server
+all: $(exes)
 
-%.o: %.cpp $(headers)
+$(lib_objs): %.o : %.cpp %.hpp
 	$(CPP) -c -o $@ $< $(CPPFLAGS) $(LDFLAGS)
 
-client:  $(client_objs) $(common_objs)
+$(exe_objs): %.o : %.cpp 
+	$(CPP) -c -o $@ $< $(CPPFLAGS) $(LDFLAGS)
+
+client: % : %.o $(client_objs) $(common_objs)
 	$(CPP) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(boost_libs)
 
-server: $(server_objs) $(common_objs)
-	$(CPP) -o $@ $(server_objs) $(common_objs) $(CPPFLAGS) $(LDFLAGS) $(boost_libs)
+server: % : %.o $(server_objs) $(common_objs)
+	$(CPP) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(boost_libs)
 
 .PHONY: clean
 clean:
-	rm -f server client $(objects) $(DIST_NAME).tar.gz
+	rm -f $(exes) $(exe_objs) $(lib_objs) $(DIST_NAME).tar.gz
 
 $(DIST_NAME).tar.gz: $(SRCS) $(AUX)
 	rm -f $@

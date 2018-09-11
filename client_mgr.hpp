@@ -15,12 +15,6 @@ private:
    using client_type = client_session<client_mgr>;
    std::string tel;
 
-   bool login = false;
-   int on_login_ack(json j, std::shared_ptr<client_type> s);
-
-   void ok_sms_confirmation(std::shared_ptr<client_type> s);
-   int on_sms_confirmation_ack(json j, std::shared_ptr<client_type> s);
-
    // create_group
    int number_of_ok_create_groups = 10;
    int number_of_fail_create_groups = 10;
@@ -61,7 +55,7 @@ public:
    client_mgr(std::string tel_);
    user_bind bind;
    int on_read(json j, std::shared_ptr<client_type> s);
-   int on_closed(boost::system::error_code ec);
+   int on_closed(boost::system::error_code ec) { return -1; }
    int on_handshake(std::shared_ptr<client_type> s);
    //void prompt_login();
    //void prompt_create_group();

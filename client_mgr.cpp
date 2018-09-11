@@ -11,10 +11,41 @@ int client_mgr::on_read(json j, std::shared_ptr<client_type> s)
    auto cmd = j["cmd"].get<std::string>();
 
    if (cmd == "login_ack") {
-      return on_login_ack(std::move(j), s);
-   } else if (cmd == "sms_confirmation_ack") {
-      return on_sms_confirmation_ack(std::move(j), s);
-   } else if (cmd == "create_group_ack") {
+      auto res = j["result"].get<std::string>();
+      if (res == "ok") {
+         json j;
+         j["cmd"] = "sms_confirmation";
+         j["tel"] = tel;
+         j["sms"] = "8347";
+         s->send_msg(j.dump());
+         return 1;
+      }
+
+      std::cout << "SERVER ERROR: client_mgr::on_login_ack.\n"
+                << "Please report." << std::endl;
+      return -1;
+   }
+   
+   if (cmd == "sms_confirmation_ack") {
+      auto res = j["result"].get<std::string>();
+      if (res == "ok") {
+         bind = j["user_bind"].get<user_bind>();
+         //std::cout << "sms_confirmation_ack: ok."
+         //          << "\n" << bind
+         //          << std::endl;
+         // Now we begin to post the create groups that will be dropped.
+         dropped_create_group(s);
+         return 1;
+      }
+
+      std::cout << "LOGIN ERROR: client_mgr::on_sms_confirmation_ack.\n"
+                << "Please report."
+                << std::endl;
+
+      return 1;
+   } 
+   
+   if (cmd == "create_group_ack") {
       return on_create_group_ack(std::move(j), s);
    } else if (cmd == "join_group_ack") {
       return on_join_group_ack(std::move(j), s);
@@ -29,68 +60,14 @@ int client_mgr::on_read(json j, std::shared_ptr<client_type> s)
    }
 }
 
-int client_mgr::on_closed(boost::system::error_code ec)
-{
-   //std::cerr << "client_mgr::on_closed: " << ec.message() << "\n";
-
-   if (number_of_dropped_create_groups > 0) {
-      --number_of_dropped_create_groups;
-      return 1;
-   }
-
-   if (number_of_dropped_joins > 0) {
-      --number_of_dropped_joins;
-      return 1;
-   }
-
-   return 1;
-}
-
-int client_mgr::on_login_ack(json j, std::shared_ptr<client_type> s)
-{
-   auto res = j["result"].get<std::string>();
-   if (res == "ok") {
-      std::cout << "login_ack: ok." << std::endl;
-      ok_sms_confirmation(s);
-      return 1;
-   }
-
-   // We still have not fail login server ack.
-   std::cout << "SERVER ERROR: client_mgr::on_login_ack.\n"
-             << "Please report." << std::endl;
-   return 1;
-}
-
-int
-client_mgr::on_sms_confirmation_ack(json j, std::shared_ptr<client_type> s)
-{
-   auto res = j["result"].get<std::string>();
-   if (res == "ok") {
-      bind = j["user_bind"].get<user_bind>();
-      std::cout << "sms_confirmation_ack: ok."
-                //<< "\n" << bind
-                << std::endl;
-
-      // Now we begin to post the create groups that will be dropped.
-      dropped_create_group(s);
-      return 1;
-   }
-
-   std::cout << "LOGIN ERROR: client_mgr::on_sms_confirmation_ack.\n"
-             << "Please report."
-             << std::endl;
-
-   return 1;
-}
-
 int
 client_mgr::on_ok_create_group_ack(json j, std::shared_ptr<client_type> s)
 {
    //auto gbind = j["group_bind"].get<group_bind>();
 
-   std::cout << "create_group: ok."
-             //<< "\n" << gbind
-             << std::endl;
+   //std::cout << "create_group: ok."
+   //          << "\n" << gbind
+   //          << std::endl;
 
    if (number_of_ok_create_groups-- == 0) {
       fail_create_group(s);
@@ -184,15 +161,6 @@ client_mgr::on_send_group_msg_ack(json j, std::shared_ptr<client_type> s)
    }
 
    return -1;
-}
-
-void client_mgr::ok_sms_confirmation(std::shared_ptr<client_type> s)
-{
-   json j;
-   j["cmd"] = "sms_confirmation";
-   j["tel"] = tel;
-   j["sms"] = "8347";
-   s->send_msg(j.dump());
 }
 
 void client_mgr::ok_create_group(std::shared_ptr<client_type> s)
@@ -389,13 +357,11 @@ void client_mgr::send_user_msg(std::shared_ptr<client_type> s)
 
 int client_mgr::on_handshake(std::shared_ptr<client_type> s)
 {
-   if (!login) {
-      json j;
-      j["cmd"] = "login";
-      j["tel"] = tel;
-      s->send_msg(j.dump());
-      login = true;
-   }
+   json j;
+   j["cmd"] = "login";
+   j["tel"] = tel;
+   s->send_msg(j.dump());
+   return 1;
 
    if (number_of_dropped_create_groups > 0) {
       dropped_create_group(s);

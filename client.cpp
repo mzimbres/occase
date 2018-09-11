@@ -164,11 +164,6 @@ auto test_cg(client_options op, user_bind bind)
    auto menu = gen_menu_json();
    auto cmds = parse_menu_json(std::move(menu), bind);
 
-   //while (!std::empty(cmds)) {
-   //   std::cout << cmds.top() << std::endl;
-   //   cmds.pop();
-   //}
-
    mgr_type mgr {"ok", std::move(cmds), bind};
 
    boost::asio::io_context ioc;
@@ -211,7 +206,7 @@ int main(int argc, char* argv[])
    std::cout << "==========================================" << std::endl;
    auto binds = test_sms(op);
    if (std::empty(binds)) {
-      std::cerr << "Binds array empty." << std::endl;
+      std::cerr << "Error: Binds array empty." << std::endl;
       return EXIT_FAILURE;
    }
    std::cout << "==========================================" << std::endl;

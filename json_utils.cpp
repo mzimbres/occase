@@ -10,13 +10,6 @@ std::ostream& operator<<(std::ostream& os, group_info const& info)
    return os;
 }
 
-std::ostream& operator<<(std::ostream& os, group_bind const& bind)
-{
-   os << "   Host:  " << bind.host << "\n";
-
-   return os;
-}
-
 std::ostream& operator<<(std::ostream& os, user_bind const& info)
 {
    os << "\n"
@@ -32,11 +25,6 @@ void to_json(json& j, group_info const& g)
   j = json{{"city", g.city}, {"part", g.part}};
 }
 
-void to_json(json& j, group_bind const& g)
-{
-  j = json{{"host", g.host}};
-}
-
 void to_json(json& j, user_bind const& u)
 {
   j = json{{"tel", u.tel}, {"host", u.host}, {"index", u.index}};
@@ -46,10 +34,6 @@ void from_json(json const& j, group_info& g)
 {
   g.city = j.at("city").get<std::string>();
   g.part = j.at("part").get<std::string>();
-}
-void from_json(json const& j, group_bind& g)
-{
-  g.host = j.at("host").get<std::string>();
 }
 
 void from_json(json const& j, user_bind& u)

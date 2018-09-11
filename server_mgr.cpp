@@ -254,8 +254,6 @@ server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
 {
    auto from = j["from"].get<user_bind>();
 
-   // Before allocating a new group it is a good idea to check if
-   // the owner passed is at least in a valid range.
    if (!users.is_valid_index(from.index)) {
       // This is not even an existing user. Perhaps the json command
       // was sent with the wrong information signaling a logic error
@@ -281,7 +279,6 @@ server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
    json resp;
    resp["cmd"] = "create_group_ack";
    resp["result"] = "ok";
-   resp["group_bind"] = group_bind {host};
 
    users[from.index].send_msg(resp.dump());
    return 4;
@@ -292,20 +289,22 @@ server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
 {
    auto from = j["from"].get<user_bind>();
    if (!users.is_valid_index(from.index)) {
-      // TODO: Clarify how this could happen.
+      // TODO: Clarify how this could happen. Should we drop the
+      // connection?
       return -1;
    }
 
-   auto gbind = j["group_bind"].get<group_bind>();
+   auto const hash = j["hash"].get<std::string>();
 
-   //groups[gbind.index].add_member(from.index);
+   auto const g = groups.find(hash);
+
+   g->second.add_member(from.index);
 
    json resp;
    resp["cmd"] = "join_group_ack";
    resp["result"] = "ok";
-   //resp["info"] = groups[gbind.index].get_info(),
 
-   users[from.index].send_msg(resp.dump());
+   s->send_msg(resp.dump());
    return from.index;
 }
 

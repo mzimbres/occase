@@ -86,7 +86,7 @@ client_mgr::on_sms_confirmation_ack(json j, std::shared_ptr<client_type> s)
 int
 client_mgr::on_ok_create_group_ack(json j, std::shared_ptr<client_type> s)
 {
-   auto gbind = j["group_bind"].get<group_bind>();
+   //auto gbind = j["group_bind"].get<group_bind>();
 
    std::cout << "create_group: ok."
              //<< "\n" << gbind
@@ -284,7 +284,7 @@ void client_mgr::ok_join_group(std::shared_ptr<client_type> s)
    json j;
    j["cmd"] = "join_group";
    j["from"] = bind;
-   j["group_bind"] = group_bind {"criatura"};
+   //j["group_bind"] = group_bind {"criatura"};
    s->send_msg(j.dump());
 }
 
@@ -294,7 +294,7 @@ void client_mgr::dropped_join_group(std::shared_ptr<client_type> s)
       json j;
       j["cmd"] = "join_group";
       j["from"] = bind;
-      j["group_iid"] = group_bind {"wwr"};
+      //j["group_iid"] = group_bind {"wwr"};
       s->send_msg(j.dump());
       return;
    }
@@ -305,7 +305,7 @@ void client_mgr::dropped_join_group(std::shared_ptr<client_type> s)
       auto tmp = bind;
       ++tmp.index;
       j["from"] = tmp;
-      j["group_bind"] = group_bind {"criatura"};
+      //j["group_bind"] = group_bind {"criatura"};
       s->send_msg(j.dump());
       return;
    }
@@ -314,7 +314,7 @@ void client_mgr::dropped_join_group(std::shared_ptr<client_type> s)
       json j;
       j["cmd"] = "joiin_group";
       j["from"] = bind;
-      j["group_bind"] = group_bind {"criatura"};
+      //j["group_bind"] = group_bind {"criatura"};
       s->send_msg(j.dump());
       return;
    }

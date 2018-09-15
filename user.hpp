@@ -35,7 +35,6 @@ public:
    auto is_active() const {return std::empty(id);}
    void add_group(index_type gid);
    void store_session(std::shared_ptr<server_session> s);
-   void on_group_msg(std::string msg);
    void send_msg(std::string msg);
    void on_write();
    void reset();

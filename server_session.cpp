@@ -189,12 +189,9 @@ void server_session::on_read( boost::system::error_code ec
 
    std::string tmp;
    try {
-      std::stringstream ss;
-      ss << boost::beast::buffers(buffer.data());
-      tmp = ss.str();
+      auto const str = boost::beast::buffers_to_string(buffer.data());
       buffer.consume(std::size(buffer));
-      json j;
-      ss >> j;
+      json j = json::parse(str);
 
       auto r = sd->on_read(std::move(j), shared_from_this());
       if (r == -1) {

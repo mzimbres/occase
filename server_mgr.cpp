@@ -182,10 +182,9 @@ server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
       return -1;
    }
 
-   auto const info = j["info"].get<group_info>();
    auto const hash = j["hash"].get<std::string>();
 
-   auto const new_group = groups.insert({hash, info});
+   auto const new_group = groups.insert({hash, {}});
    if (!new_group.second) {
       // Group already exists.
       json resp;

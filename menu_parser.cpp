@@ -109,7 +109,6 @@ parse_menu_json(json j, user_bind bind, std::string prefix)
       jcmd["cmd"] = "create_group";
       jcmd["from"] = bind;
       jcmd["hash"] = iter.current.first;
-      jcmd["info"] = group_info {"Atibaia", "Centro"};
 
       hashes.push(jcmd.dump());
    };

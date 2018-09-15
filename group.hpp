@@ -24,13 +24,7 @@ private:
    // appropriate.
    std::unordered_map< id_type
                      , std::weak_ptr<server_session>> local_members;
-   group_info info;
-
 public:
-   group(group_info info_) : info({std::move(info_)}) {}
-   void set_info(group_info info_) {info = std::move(info_);}
-   auto const& get_info() const noexcept {return info;}
-
    void reset()
    {
       local_members = {};

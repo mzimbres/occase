@@ -54,20 +54,18 @@ std::string to_str(int i, int width, char fill_char)
    return oss.str();
 }
 
-std::stack<std::string>
-parse_menu_json(std::string menu, user_bind bind, std::string prefix)
-{
-   //std::cout << menu << std::endl;
-
-   if (std::empty(menu))
-      return {};
-
-   json j = json::parse(menu);
-
+struct menu_leaf_iter {
    std::stack<std::vector<std::pair<std::string, json>>> st;
-   st.push({{prefix, j}});
-   std::stack<std::string> hashes;
-   do {
+   std::pair<std::string, json> current;
+
+   menu_leaf_iter(json j, std::string prefix)
+   {
+      st.push({{prefix, j}});
+      next();
+   }
+
+   void next()
+   {
       while (!st.top().back().second["sub"].is_null()) {
          auto const sub = st.top().back().second["sub"];
          std::vector<std::pair<std::string, json>> tmp;
@@ -81,18 +79,12 @@ parse_menu_json(std::string menu, user_bind bind, std::string prefix)
          st.push(std::move(tmp));
       }
 
-      json jcmd;
-      jcmd["cmd"] = "create_group";
-      jcmd["from"] = bind;
-      jcmd["hash"] = st.top().back().first;
-      jcmd["info"] = group_info {"Atibaia", "Centro"};
-
-      hashes.push(jcmd.dump());
+      current = st.top().back();
 
       st.top().pop_back();
 
       if (!std::empty(st.top()))
-         continue;
+         return;
       
       st.pop();
 
@@ -103,8 +95,33 @@ parse_menu_json(std::string menu, user_bind bind, std::string prefix)
 
       if (std::empty(st.top()))
          st.pop();
+   }
 
-   } while (std::size(st) != 1);
+   bool end() const noexcept {return std::size(st) == 1;}
+};
+
+std::stack<std::string>
+parse_menu_json(std::string menu, user_bind bind, std::string prefix)
+{
+   //std::cout << menu << std::endl;
+
+   if (std::empty(menu))
+      return {};
+
+   json j = json::parse(menu);
+
+   menu_leaf_iter iter(j, prefix);
+   std::stack<std::string> hashes;
+   while (!iter.end()) {
+      iter.next();
+      json jcmd;
+      jcmd["cmd"] = "create_group";
+      jcmd["from"] = bind;
+      jcmd["hash"] = iter.current.first;
+      jcmd["info"] = group_info {"Atibaia", "Centro"};
+
+      hashes.push(jcmd.dump());
+   };
 
    return hashes;
 }

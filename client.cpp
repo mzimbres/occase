@@ -161,7 +161,7 @@ auto test_cg(client_options op, user_bind bind)
    using client_type = client_session<mgr_type>;
 
    auto menu = gen_menu_json(0);
-   auto cmds = parse_menu_json(std::move(menu), bind);
+   auto cmds = parse_menu_json(std::move(menu), bind, "00");
 
    mgr_type mgr {"ok", std::move(cmds), bind};
 

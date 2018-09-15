@@ -45,8 +45,17 @@ std::string gen_menu_json(int indentation)
    return j.dump(indentation);
 }
 
+std::string to_str(int i, int width, char fill_char)
+{
+   std::ostringstream oss;
+   oss.fill(fill_char);
+   oss.width(width);
+   oss << i;
+   return oss.str();
+}
+
 std::stack<std::string>
-parse_menu_json( std::string menu, user_bind bind)
+parse_menu_json(std::string menu, user_bind bind, std::string prefix)
 {
    //std::cout << menu << std::endl;
 
@@ -59,24 +68,22 @@ parse_menu_json( std::string menu, user_bind bind)
    ss >> j;
 
    std::stack<std::vector<std::pair<std::string, json>>> st;
-   st.push({{"000", j}});
+   st.push({{prefix, j}});
    std::stack<std::string> hashes;
    do {
       while (!st.top().back().second["sub"].is_null()) {
-         auto const vec = st.top().back().second["sub"].get<std::vector<json>>();
+         auto const vec =
+            st.top().back().second["sub"].get<std::vector<json>>();
          std::vector<std::pair<std::string, json>> tmp;
          int i = 0;
          for (auto const& o : vec) {
             auto str = st.top().back().first;
             str.append(".");
-            str.append(std::to_string(i++));
+            str.append(to_str(i++, 2, '0'));
             tmp.push_back({std::move(str), o});
          }
          st.push(std::move(tmp));
       }
-
-      //auto const name1 = st.top().back().second["name"].get<std::string>();
-      //std::cout << name1 << ": " << st.top().back().first << std::endl;
 
       json jcmd;
       jcmd["cmd"] = "create_group";

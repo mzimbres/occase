@@ -4,8 +4,14 @@
 
 int main()
 {
-   auto menu = gen_menu_json(4);
-   std::cout << menu << std::endl;
+   auto menu = gen_location_menu();
+   std::cout << menu.dump(4) << std::endl;
+   std::cout << "__________________________________________" << std::endl;
+
+   auto patches = json_patches(menu);
+   menu = menu.patch(patches);
+
+   std::cout << menu.dump(4) << std::endl;
    std::cout << "__________________________________________" << std::endl;
 
    user_bind bind {"Marcelo", "Criatura", -1};
@@ -14,17 +20,5 @@ int main()
       std::cout << cg_cmds.top() << std::endl;
       cg_cmds.pop();
    }
-
-   json j_patch = R"([
-     { "op": "replace", "path": "/sub/0/sub/0/hash", "value": "00.02.03" },
-     { "op": "replace", "path": "/sub/0/sub/1/hash", "value": "00.02.03" }
-   ])"_json;
-
-   // apply the patch
-   json jj = json::parse(menu);
-   json result = jj.patch(j_patch);
-   std::cout << result.dump(4) << std::endl;
-
-   json_patches(menu);
 }
 

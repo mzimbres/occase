@@ -4,7 +4,7 @@
 #include <vector>
 #include <iostream>
 
-std::string gen_menu_json(int indentation)
+json gen_location_menu()
 {
    std::vector<json> j1 =
    { {{"status", "off"}, {"hash", ""}, {"sub", {}}, {"name", "Centro"}               }
@@ -41,7 +41,7 @@ std::string gen_menu_json(int indentation)
    j["sub_desc"] = "Cidades";
    j["sub"] = j3;
 
-   return j.dump(indentation);
+   return j;
 }
 
 std::string to_str(int i, int width, char fill_char)
@@ -96,14 +96,10 @@ struct menu_leaf_iter {
 };
 
 std::stack<std::string>
-parse_menu_json(std::string menu, user_bind bind, std::string prefix)
+parse_menu_json(json j, user_bind bind, std::string prefix)
 {
-   //std::cout << menu << std::endl;
-
-   if (std::empty(menu))
+   if (std::empty(j))
       return {};
-
-   json j = json::parse(menu);
 
    menu_leaf_iter iter(j, prefix);
    std::stack<std::string> hashes;
@@ -174,13 +170,12 @@ struct hashfy_iter {
    bool end() const noexcept {return std::size(st) == 1;}
 };
 
-void json_patches(std::string menu)
+std::vector<json> json_patches(json j)
 {
-   if (std::empty(menu))
-      return;
+   if (std::empty(j))
+      return {};
 
-   json j = json::parse(menu);
-
+   std::vector<json> patches;
    hashfy_iter iter(j);
    while (!iter.end()) {
       iter.next();
@@ -188,7 +183,9 @@ void json_patches(std::string menu)
       patch["op"] = "replace";
       patch["path"] = iter.current.path_prefix + "/hash";
       patch["value"] = iter.current.value_prefix;
-      std::cout << patch.dump() << std::endl;
+      patches.push_back(patch);
    };
+
+   return patches;
 }
 

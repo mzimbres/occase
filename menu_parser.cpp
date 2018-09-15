@@ -2,8 +2,9 @@
 
 #include <stack>
 #include <vector>
+#include <iostream>
 
-std::string gen_menu_json()
+std::string gen_menu_json(int indentation)
 {
    std::vector<json> j1 =
    { {{"name", "Centro"},               {"sub", {}}}
@@ -41,7 +42,7 @@ std::string gen_menu_json()
    j["name"] = "SP";
    j["sub"] = j3;
 
-   return j.dump();
+   return j.dump(indentation);
 }
 
 std::stack<std::string>

@@ -3,7 +3,8 @@
 #include <ostream>
 #include <string>
 
-#include "config.hpp"
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 
 struct group_info {
    std::string city;

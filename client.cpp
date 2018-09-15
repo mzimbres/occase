@@ -9,7 +9,6 @@
 #include <iostream>
 
 #include "config.hpp"
-#include "client_mgr.hpp"
 #include "menu_parser.hpp"
 #include "client_mgr_cg.hpp"
 #include "client_mgr_sms.hpp"
@@ -171,20 +170,6 @@ auto test_cg(client_options op, user_bind bind)
    ioc.run();
 }
 
-void test_client(client_options op)
-{
-   using mgr_type = client_mgr;
-   using client_type = client_session<mgr_type>;
-
-   boost::asio::io_context ioc;
-
-   mgr_type mgr("Mandioca");
-   auto p = std::make_shared<client_type>(ioc, std::move(op), mgr);
-
-   p->run();
-   ioc.run();
-}
-
 int main(int argc, char* argv[])
 {
    //if (argc != 2) {
@@ -214,8 +199,6 @@ int main(int argc, char* argv[])
    std::cout << "==========================================" << std::endl;
    test_cg(op, binds.front());
    std::cout << "==========================================" << std::endl;
-   //test_client(op);
-   //std::cout << "==========================================" << std::endl;
 
    return EXIT_SUCCESS;
 }

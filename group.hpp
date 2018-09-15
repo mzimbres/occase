@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <memory>
 #include <unordered_map>
 
 #include "config.hpp"
@@ -8,23 +9,21 @@
 #include "json_utils.hpp"
 #include "grow_only_vector.hpp"
 
-struct group_mem_info {
-   int info; // TODO: Do we need this?
-};
+class server_session;
 
 class group {
 private:
    // The number of members in a group is expected be on the
    // thousands, let us say 10k. The operations performed are
    //
-   // 1. Insert: Quite often. To avoid inserting twice we have search
-   //            before inserting.
+   // 1. Insert: Quite often. To avoid inserting twice we have to
+   //            search before inserting.
    // 2. Remove: Once in a while, also requires searching.
    // 
    // Given those requirements above, I think a hash table is more
    // appropriate.
-   std::unordered_map< index_type
-                     , group_mem_info> members;
+   std::unordered_map< id_type
+                     , std::weak_ptr<server_session>> local_members;
    group_info info;
 
 public:
@@ -34,20 +33,19 @@ public:
 
    void reset()
    {
-      members = {};
+      local_members = {};
    }
 
-   void add_member(index_type uid)
+   void add_member(id_type id, std::shared_ptr<server_session> s)
    {
-      members.insert({uid, {}});
+      local_members.insert({id, s});
    }
 
-   void remove_member(index_type uid)
+   void remove_member(id_type uid)
    {
-      members.erase(uid);
+      local_members.erase(uid);
    }
 
-   void broadcast_msg( std::string msg
-                     , grow_only_vector<user>& users) const;
+   void broadcast_msg(std::string msg);
 };
 

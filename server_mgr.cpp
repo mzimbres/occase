@@ -171,6 +171,65 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
 }
 
 index_type
+server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
+{
+   auto from = j["from"].get<user_bind>();
+
+   if (!users.is_valid_index(from.index)) {
+      // This is not even an existing user. Perhaps the json command
+      // was sent with the wrong information signaling a logic error
+      // in the app. I do not think we have to report this problem.
+      return -1;
+   }
+
+   auto const info = j["info"].get<group_info>();
+   auto const hash = j["hash"].get<std::string>();
+
+   auto const new_group = groups.insert({hash, info});
+   if (!new_group.second) {
+      // Group already exists.
+      json resp;
+      resp["cmd"] = "create_group_ack";
+      resp["result"] = "fail";
+      users[from.index].send_msg(resp.dump());
+      //std::cout << "fail" << j << std::endl;
+      return from.index;
+   }
+
+   //std::cout << "ok" << j << std::endl;
+   json resp;
+   resp["cmd"] = "create_group_ack";
+   resp["result"] = "ok";
+
+   users[from.index].send_msg(resp.dump());
+   return 4;
+}
+
+index_type
+server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
+{
+   auto from = j["from"].get<user_bind>();
+   if (!users.is_valid_index(from.index)) {
+      // TODO: Clarify how this could happen. Should we drop the
+      // connection?
+      return -1;
+   }
+
+   auto const hash = j["hash"].get<std::string>();
+
+   auto const g = groups.find(hash);
+
+   g->second.add_member(from.tel, s);
+
+   json resp;
+   resp["cmd"] = "join_group_ack";
+   resp["result"] = "ok";
+
+   s->send_msg(resp.dump());
+   return from.index;
+}
+
+index_type
 server_mgr::on_group_msg(json j, std::shared_ptr<server_session> s)
 {
    auto from = j["from"].get<user_bind>();
@@ -246,65 +305,6 @@ server_mgr::on_user_msg(json j, std::shared_ptr<server_session> s)
    resp["message"] = j["msg"].get<std::string>();
 
    users[to].send_msg(resp.dump());
-   return from.index;
-}
-
-index_type
-server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
-{
-   auto from = j["from"].get<user_bind>();
-
-   if (!users.is_valid_index(from.index)) {
-      // This is not even an existing user. Perhaps the json command
-      // was sent with the wrong information signaling a logic error
-      // in the app. I do not think we have to report this problem.
-      return -1;
-   }
-
-   auto const info = j["info"].get<group_info>();
-   auto const hash = j["hash"].get<std::string>();
-
-   auto const new_group = groups.insert({hash, info});
-   if (!new_group.second) {
-      // Group already exists.
-      json resp;
-      resp["cmd"] = "create_group_ack";
-      resp["result"] = "fail";
-      users[from.index].send_msg(resp.dump());
-      //std::cout << "fail" << j << std::endl;
-      return from.index;
-   }
-
-   //std::cout << "ok" << j << std::endl;
-   json resp;
-   resp["cmd"] = "create_group_ack";
-   resp["result"] = "ok";
-
-   users[from.index].send_msg(resp.dump());
-   return 4;
-}
-
-index_type
-server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
-{
-   auto from = j["from"].get<user_bind>();
-   if (!users.is_valid_index(from.index)) {
-      // TODO: Clarify how this could happen. Should we drop the
-      // connection?
-      return -1;
-   }
-
-   auto const hash = j["hash"].get<std::string>();
-
-   auto const g = groups.find(hash);
-
-   g->second.add_member(from.index);
-
-   json resp;
-   resp["cmd"] = "join_group_ack";
-   resp["result"] = "ok";
-
-   s->send_msg(resp.dump());
    return from.index;
 }
 

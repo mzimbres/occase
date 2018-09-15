@@ -62,21 +62,17 @@ parse_menu_json(std::string menu, user_bind bind, std::string prefix)
    if (std::empty(menu))
       return {};
 
-   json j;
-   std::stringstream ss;
-   ss << menu;
-   ss >> j;
+   json j = json::parse(menu);
 
    std::stack<std::vector<std::pair<std::string, json>>> st;
    st.push({{prefix, j}});
    std::stack<std::string> hashes;
    do {
       while (!st.top().back().second["sub"].is_null()) {
-         auto const vec =
-            st.top().back().second["sub"].get<std::vector<json>>();
+         auto const sub = st.top().back().second["sub"];
          std::vector<std::pair<std::string, json>> tmp;
          int i = 0;
-         for (auto const& o : vec) {
+         for (auto o : sub) {
             auto str = st.top().back().first;
             str.append(".");
             str.append(to_str(i++, 2, '0'));

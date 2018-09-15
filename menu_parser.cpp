@@ -4,6 +4,21 @@
 #include <vector>
 #include <iostream>
 
+json gen_location_menu1()
+{
+   std::vector<json> j3 =
+   { {{"status", "off"}, {"hash", ""}, {"name", "Atibaia"},   {"sub", {}}}
+   , {{"status", "off"}, {"hash", ""}, {"name", "Sao Paulo"}, {"sub", {}}}
+   };
+
+   json j;
+   j["name"] = "SP";
+   j["sub_desc"] = "Cidades";
+   j["sub"] = j3;
+
+   return j;
+}
+
 json gen_location_menu()
 {
    std::vector<json> j1 =
@@ -122,31 +137,46 @@ struct patch_helper {
    std::string value_prefix;
 };
 
-struct hashfy_iter {
+struct hash_gen_iter {
    std::stack<std::vector<patch_helper>> st;
    patch_helper current;
 
-   hashfy_iter(json j)
+   hash_gen_iter(json j)
    {
       st.push({{j, "", "00"}});
-      next();
+      advance();
    }
 
    void next()
    {
+      if (!std::empty(st.top())) {
+         advance();
+         return;
+      }
+
+      for (;;) {
+         st.pop();
+         if (std::empty(st))
+            return;
+         st.top().pop_back();
+         if (!std::empty(st.top()))
+            break;
+      }
+   }
+
+   void advance()
+   {
       while (!st.top().back().j["sub"].is_null()) {
-         auto const sub = st.top().back().j["sub"];
          std::vector<patch_helper> tmp;
          auto i = 0;
-         auto const path_prefix = st.top().back().path_prefix + "/sub/";
-         auto const value_prefix = st.top().back().value_prefix;
-         for (auto o : sub) {
-            auto path_copy = path_prefix;
-            auto value_copy = value_prefix;
-            path_copy += std::to_string(i);
-            value_copy += ".";
-            value_copy += to_str(i, 2, '0');
-            tmp.push_back({o, path_copy, value_copy});
+         for (auto o : st.top().back().j["sub"]) {
+            auto const path = st.top().back().path_prefix
+                            + "/sub/"
+                            + std::to_string(i);
+            auto const value = st.top().back().value_prefix
+                             + "."
+                             + to_str(i, 2, '0');
+            tmp.push_back({o, path, value});
             ++i;
          }
 
@@ -155,18 +185,12 @@ struct hashfy_iter {
 
       current = st.top().back();
       st.top().pop_back();
-
-      if (!std::empty(st.top()))
-         return;
-      
-      st.pop();
-      st.top().pop_back();
-
-      if (std::empty(st.top()))
-         st.pop();
    }
 
-   bool end() const noexcept {return std::size(st) == 1;}
+   bool end() const noexcept
+   {
+      return std::empty(st);
+   }
 };
 
 std::vector<json> json_patches(json j)
@@ -175,14 +199,14 @@ std::vector<json> json_patches(json j)
       return {};
 
    std::vector<json> patches;
-   hashfy_iter iter(j);
+   hash_gen_iter iter(j);
    while (!iter.end()) {
-      iter.next();
       json patch;
       patch["op"] = "replace";
       patch["path"] = iter.current.path_prefix + "/hash";
       patch["value"] = iter.current.value_prefix;
       patches.push_back(patch);
+      iter.next();
    };
 
    return patches;

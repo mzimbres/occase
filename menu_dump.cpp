@@ -2,7 +2,7 @@
 
 #include "menu_parser.hpp"
 
-int main()
+void test()
 {
    auto menu = gen_location_menu();
    std::cout << menu.dump(4) << std::endl;
@@ -22,3 +22,52 @@ int main()
    }
 }
 
+void test1()
+{
+   std::cout << "__________________________________________" << std::endl;
+   auto menu = gen_location_menu1();
+   std::cout << menu.dump(4) << std::endl;
+   std::cout << "__________________________________________" << std::endl;
+
+   auto patches = json_patches(menu);
+   json j = patches;
+   std::cout << j.dump(4) << std::endl;
+   std::cout << "__________________________________________" << std::endl;
+   menu = menu.patch(patches);
+   std::cout << menu.dump(4) << std::endl;
+}
+
+json gen_location_menu0()
+{
+   json j;
+   j["name"] = "SP";
+   j["sub_desc"] = "Cidades";
+   j["sub"] = {};
+   j["status"] = "off";
+   j["hash"] = "";
+
+   return j;
+}
+
+void test0()
+{
+   std::cout << "__________________________________________" << std::endl;
+   auto menu = gen_location_menu0();
+   std::cout << menu.dump(4) << std::endl;
+   std::cout << "__________________________________________" << std::endl;
+
+   auto patches = json_patches(menu);
+   json j = patches;
+   std::cout << j.dump(4) << std::endl;
+   std::cout << "__________________________________________" << std::endl;
+
+   menu = menu.patch(patches);
+   std::cout << menu.dump(4) << std::endl;
+}
+
+int main()
+{
+   test0();
+   test1();
+   test();
+}

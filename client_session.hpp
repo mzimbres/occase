@@ -128,12 +128,9 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
          return;
       }
 
-      json j;
-      std::stringstream ss;
-      ss << boost::beast::buffers(buffer.data());
-      ss >> j;
-      buffer.consume(buffer.size());
-      //auto str = ss.str();
+      auto const str = boost::beast::buffers_to_string(buffer.data());
+      buffer.consume(std::size(buffer));
+      json j = json::parse(str);
       //std::cout << "Received: " << str << std::endl;
 
       if (mgr.on_read(j, this->shared_from_this()) == -1) {

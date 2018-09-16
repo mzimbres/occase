@@ -31,7 +31,7 @@ int client_mgr_cg::on_read(json j, std::shared_ptr<client_type> s)
          return 1;
       }
 
-      std::cout << "Test cg: fail." << std::endl;
+      std::cout << "Test cg: create_group_ack fail." << std::endl;
       return -1;
    }
 

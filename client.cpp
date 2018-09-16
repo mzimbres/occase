@@ -161,7 +161,12 @@ auto test_cg(client_options op, user_bind bind)
    using client_type = client_session<mgr_type>;
 
    auto menu = gen_location_menu();
-   auto cmds = parse_menu_json(std::move(menu), bind, "00");
+   auto hash_patches = gen_hash_patches(menu);
+   menu = menu.patch(hash_patches);
+   auto const tmp = gen_create_groups(menu, bind);
+   std::stack<std::string> cmds;
+   for (auto const& o : tmp)
+      cmds.push(o);
 
    mgr_type mgr {"ok", std::move(cmds), bind};
 

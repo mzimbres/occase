@@ -4,21 +4,6 @@
 #include <vector>
 #include <iostream>
 
-json gen_location_menu1()
-{
-   std::vector<json> j3 =
-   { {{"status", "off"}, {"hash", ""}, {"name", "Atibaia"},   {"sub", {}}}
-   , {{"status", "off"}, {"hash", ""}, {"name", "Sao Paulo"}, {"sub", {}}}
-   };
-
-   json j;
-   j["name"] = "SP";
-   j["sub_desc"] = "Cidades";
-   j["sub"] = j3;
-
-   return j;
-}
-
 json gen_location_menu()
 {
    std::vector<json> j1 =
@@ -66,69 +51,6 @@ std::string to_str(int i, int width, char fill_char)
    oss.width(width);
    oss << i;
    return oss.str();
-}
-
-struct menu_leaf_iter {
-   std::stack<std::vector<std::pair<std::string, json>>> st;
-   std::pair<std::string, json> current;
-
-   menu_leaf_iter(json j, std::string prefix)
-   {
-      st.push({{prefix, j}});
-      next();
-   }
-
-   void next()
-   {
-      while (!st.top().back().second["sub"].is_null()) {
-         auto const sub = st.top().back().second["sub"];
-         std::vector<std::pair<std::string, json>> tmp;
-         int i = 0;
-         for (auto o : sub) {
-            auto str = st.top().back().first;
-            str.append(".");
-            str.append(to_str(i++, 2, '0'));
-            tmp.push_back({std::move(str), o});
-         }
-         st.push(std::move(tmp));
-      }
-
-      current = st.top().back();
-
-      st.top().pop_back();
-
-      if (!std::empty(st.top()))
-         return;
-      
-      st.pop();
-      st.top().pop_back();
-
-      if (std::empty(st.top()))
-         st.pop();
-   }
-
-   bool end() const noexcept {return std::size(st) == 1;}
-};
-
-std::stack<std::string>
-parse_menu_json(json j, user_bind bind, std::string prefix)
-{
-   if (std::empty(j))
-      return {};
-
-   menu_leaf_iter iter(j, prefix);
-   std::stack<std::string> hashes;
-   while (!iter.end()) {
-      iter.next();
-      json jcmd;
-      jcmd["cmd"] = "create_group";
-      jcmd["from"] = bind;
-      jcmd["hash"] = iter.current.first;
-
-      hashes.push(jcmd.dump());
-   };
-
-   return hashes;
 }
 
 struct patch_helper {
@@ -193,7 +115,7 @@ struct hash_gen_iter {
    }
 };
 
-std::vector<json> json_patches(json j)
+std::vector<json> gen_hash_patches(json j)
 {
    if (std::empty(j))
       return {};
@@ -210,5 +132,24 @@ std::vector<json> json_patches(json j)
    };
 
    return patches;
+}
+
+std::vector<std::string> gen_create_groups(json menu, user_bind bind)
+{
+   if (std::empty(menu))
+      return {};
+
+   std::vector<std::string> cmds;
+   hash_gen_iter iter(menu);
+   while (!iter.end()) {
+      json cmd;
+      cmd["cmd"] = "create_group";
+      cmd["from"] = bind;
+      cmd["hash"] = iter.current.value_prefix;
+      cmds.push_back(cmd.dump());
+      iter.next();
+   };
+
+   return cmds;
 }
 

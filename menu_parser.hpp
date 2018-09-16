@@ -6,10 +6,12 @@
 #include "json_utils.hpp"
 
 json gen_location_menu();
-json gen_location_menu1();
 
-std::stack<std::string>
-parse_menu_json(json menu, user_bind bind, std::string prefix);
+// Returns a vector with patches that will add hashes to all leaf
+// nodes in the menu.
+std::vector<json> gen_hash_patches(json menu);
 
-std::vector<json> json_patches(json menu);
+// Generates a vector with all create_group command for a given menu.
+// The menu must have already be hashfied by gen_hash_patches.
+std::vector<std::string> gen_create_groups(json menu, user_bind bind);
 

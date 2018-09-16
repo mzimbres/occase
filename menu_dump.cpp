@@ -15,6 +15,8 @@ void test2()
    auto const cmds = gen_create_groups(menu, {"Marcelo", "Criatura", -1});
    for (auto const& o : cmds)
       std::cout << o << std::endl;
+
+   gen_group_info(menu);
 }
 
 json gen_location_menu1()

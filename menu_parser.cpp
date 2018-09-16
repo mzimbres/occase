@@ -32,13 +32,13 @@ json gen_location_menu()
    };
 
    std::vector<json> j3 =
-   { {{"name", "Atibaia"},  {"sub_desc", "Bairros"}, {"sub", j1}}
-   , {{"name", "Sao Paulo"},{"sub_desc", "Bairros"}, {"sub", j2}}
+   { {{"name", "Atibaia"},  {"sub_desc", "Bairro"}, {"sub", j1}}
+   , {{"name", "Sao Paulo"},{"sub_desc", "Bairro"}, {"sub", j2}}
    };
 
    json j;
    j["name"] = "SP";
-   j["sub_desc"] = "Cidades";
+   j["sub_desc"] = "Cidade";
    j["sub"] = j3;
 
    return j;
@@ -57,6 +57,7 @@ struct patch_helper {
    json j;
    std::string path_prefix;
    std::string value_prefix;
+   std::vector<std::string> header;
 };
 
 struct hash_gen_iter {
@@ -65,7 +66,7 @@ struct hash_gen_iter {
 
    hash_gen_iter(json j)
    {
-      st.push({{j, "", "00"}});
+      st.push({{j, "", "00", {}}});
       advance();
    }
 
@@ -89,6 +90,8 @@ struct hash_gen_iter {
    void advance()
    {
       while (!st.top().back().j["sub"].is_null()) {
+         auto const sub_desc =
+            st.top().back().j["sub_desc"].get<std::string>();
          std::vector<patch_helper> tmp;
          auto i = 0;
          for (auto o : st.top().back().j["sub"]) {
@@ -98,7 +101,10 @@ struct hash_gen_iter {
             auto const value = st.top().back().value_prefix
                              + "."
                              + to_str(i, 2, '0');
-            tmp.push_back({o, path, value});
+            auto header = st.top().back().header;
+            auto const category = sub_desc + " : " + o["name"].get<std::string>();
+            header.push_back(category);
+            tmp.push_back({o, path, value, header});
             ++i;
          }
 
@@ -151,5 +157,26 @@ std::vector<std::string> gen_create_groups(json menu, user_bind bind)
    };
 
    return cmds;
+}
+
+void gen_group_info(json menu)
+{
+   if (std::empty(menu))
+      return;
+
+   std::vector<json> infos;
+   hash_gen_iter iter(menu);
+   while (!iter.end()) {
+      json tmp;
+      tmp["header"] = iter.current.header;
+      tmp["hash"] = iter.current.value_prefix;
+      infos.push_back(tmp);
+      iter.next();
+   };
+
+   json j_infos;
+   j_infos["cmd"] = "group_infos";
+   j_infos["infos"] = infos;
+   std::cout << j_infos.dump() << std::endl;
 }
 

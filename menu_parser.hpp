@@ -15,3 +15,4 @@ std::vector<json> gen_hash_patches(json menu);
 // The menu must have already be hashfied by gen_hash_patches.
 std::vector<std::string> gen_create_groups(json menu, user_bind bind);
 
+void gen_group_info(json menu);

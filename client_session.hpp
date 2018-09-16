@@ -83,6 +83,7 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
                                  , std::size_t bytes_transferred
                                  , tcp::resolver::results_type results)
 {
+   std::string str;
    try {
       boost::ignore_unused(bytes_transferred);
 
@@ -128,7 +129,7 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
          return;
       }
 
-      auto const str = boost::beast::buffers_to_string(buffer.data());
+      str = boost::beast::buffers_to_string(buffer.data());
       buffer.consume(std::size(buffer));
       json j = json::parse(str);
       //std::cout << "Received: " << str << std::endl;
@@ -139,7 +140,7 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
       }
 
    } catch (std::exception const& e) {
-      std::cerr << "Server error. Please fix." << std::endl;
+      std::cerr << "Server error, please fix: " << str << std::endl;
       std::cerr << "Error: " << e.what() << std::endl;
       return;
    }

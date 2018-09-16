@@ -21,9 +21,9 @@ int client_mgr_sim::on_read(json j, std::shared_ptr<client_type> s)
    if (cmd == "join_group_ack") {
       auto const res = j["result"].get<std::string>();
       if (res == expected) {
-         std::cout << "Test sim: ok." << std::endl;
          cmds.pop();
          if (std::empty(cmds)) {
+            std::cout << "Test sim: join groups ok." << std::endl;
             send_group_msg(s);
             return 1;
          }
@@ -39,7 +39,7 @@ int client_mgr_sim::on_read(json j, std::shared_ptr<client_type> s)
       if (res == expected) {
          hashes.pop();
          if (std::empty(hashes)) {
-            std::cout << "Test sim: ok." << std::endl;
+            std::cout << "Test sim: send_group_msg_ack ok." << std::endl;
             return -1;
          }
          send_group_msg(s);
@@ -52,8 +52,7 @@ int client_mgr_sim::on_read(json j, std::shared_ptr<client_type> s)
 
    if (cmd == "group_msg") {
       auto const body = j["body"].get<std::string>();
-      std::cout << "Group msg: " << body << std::endl;
-      std::cout << "Test sim: ok." << std::endl;
+      //std::cout << "Group msg: " << body << std::endl;
       return 1;
    }
 

@@ -251,7 +251,7 @@ void server_session::on_write( boost::system::error_code ec
       return;
    }
 
-   buffer.consume(buffer.size()); // Clear the buffer
+   buffer.consume(std::size(buffer)); // Clear the buffer
 
    msg_queue.pop();
 
@@ -279,6 +279,10 @@ void server_session::do_write(std::string msg)
 
 void server_session::send_msg(std::string msg)
 {
+   assert(!std::empty(msg));
+   //if (std::empty(msg))
+   //   throw "";
+
    const auto is_empty = msg_queue.empty();
 
    // TODO: Impose a limit on how grow the queue can grow, perhaps by

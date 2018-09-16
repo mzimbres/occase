@@ -279,7 +279,7 @@ server_mgr::on_group_msg(json j, std::shared_ptr<server_session> s)
    ack["result"] = "ok";
    users[from.index].send_msg(ack.dump());
 
-   return from.index;
+   return 6;
 }
 
 index_type

@@ -21,7 +21,7 @@ void group::broadcast_msg(std::string msg)
          //    between them.
          // This is perhaps unlikely but should be avoided in the
          // future.
-         s->send_msg(std::move(msg));
+         s->send_msg(msg);
          ++begin;
          continue;
       }

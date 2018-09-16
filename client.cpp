@@ -176,28 +176,40 @@ auto test_cg(client_options op, user_bind bind)
    ioc.run();
 }
 
-auto test_sim(client_options op, user_bind bind)
+void test_sim(client_options op, std::vector<user_bind> binds)
 {
+   std::cout << "Binds size: " << std::size(binds) << std::endl;
    using mgr_type = client_mgr_sim;
    using client_type = client_session<mgr_type>;
 
    auto menu = gen_location_menu();
    auto hash_patches = gen_hash_patches(menu);
    menu = menu.patch(hash_patches);
-   auto const tmp = gen_join_groups(menu, bind);
-   std::stack<std::string> cmds;
-   for (auto const& o : tmp)
-      cmds.push(o);
 
    auto const hashes = get_hashes(menu);
    std::stack<std::string> hashes_st;
    for (auto const& o : hashes)
       hashes_st.push(o);
 
-   mgr_type mgr {"ok", std::move(cmds), std::move(hashes_st), bind};
+   std::vector<mgr_type> mgrs;
+   for (auto const& bind : binds) {
+      auto const tmp = gen_join_groups(menu, bind);
+      std::stack<std::string> cmds;
+      for (auto const& o : tmp)
+         cmds.push(o);
+
+      mgrs.emplace_back("ok", cmds, hashes_st, bind);
+   }
 
    boost::asio::io_context ioc;
-   std::make_shared<client_type>(ioc, op, mgr)->run();
+
+   std::vector<std::shared_ptr<client_type>> sessions;
+   for (auto& mgr : mgrs)
+      sessions.push_back(std::make_shared<client_type>(ioc, op, mgr));
+
+   for (auto& session : sessions)
+      session->run();
+
    ioc.run();
 }
 
@@ -230,7 +242,7 @@ int main(int argc, char* argv[])
    std::cout << "==========================================" << std::endl;
    test_cg(op, binds.front());
    std::cout << "==========================================" << std::endl;
-   test_sim(op, binds.front());
+   test_sim(op, binds);
    std::cout << "==========================================" << std::endl;
 
    return EXIT_SUCCESS;

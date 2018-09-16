@@ -18,6 +18,10 @@ void test2()
 
    auto j_infos = gen_group_info(menu);
    std::cout << j_infos.dump(4) << std::endl;
+
+   auto cmds2 = gen_join_groups(menu, {"Marcelo", "Criatura", -1});
+   for (auto const& o : cmds2)
+      std::cout << o << std::endl;
 }
 
 json gen_location_menu1()

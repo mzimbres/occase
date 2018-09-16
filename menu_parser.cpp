@@ -179,3 +179,21 @@ json gen_group_info(json menu)
    return j_infos;
 }
 
+std::vector<std::string> gen_join_groups(json menu, user_bind bind)
+{
+   if (std::empty(menu))
+      return {};
+
+   std::vector<std::string> cmds;
+   hash_gen_iter iter(menu);
+   while (!iter.end()) {
+      json cmd;
+      cmd["cmd"] = "join_group";
+      cmd["from"] = bind;
+      cmd["hash"] = iter.current.value_prefix;
+      cmds.push_back(cmd.dump());
+      iter.next();
+   };
+
+   return cmds;
+}

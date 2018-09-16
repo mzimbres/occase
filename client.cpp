@@ -12,6 +12,7 @@
 #include "menu_parser.hpp"
 #include "client_mgr_cg.hpp"
 #include "client_mgr_sms.hpp"
+#include "client_mgr_sim.hpp"
 #include "client_session.hpp"
 #include "client_mgr_login.hpp"
 #include "client_mgr_accept_timer.hpp"
@@ -175,6 +176,26 @@ auto test_cg(client_options op, user_bind bind)
    ioc.run();
 }
 
+auto test_sim(client_options op, user_bind bind)
+{
+   using mgr_type = client_mgr_sim;
+   using client_type = client_session<mgr_type>;
+
+   auto menu = gen_location_menu();
+   auto hash_patches = gen_hash_patches(menu);
+   menu = menu.patch(hash_patches);
+   auto const tmp = gen_join_groups(menu, bind);
+   std::stack<std::string> cmds;
+   for (auto const& o : tmp)
+      cmds.push(o);
+
+   mgr_type mgr {"ok", std::move(cmds), bind};
+
+   boost::asio::io_context ioc;
+   std::make_shared<client_type>(ioc, op, mgr)->run();
+   ioc.run();
+}
+
 int main(int argc, char* argv[])
 {
    //if (argc != 2) {
@@ -203,6 +224,8 @@ int main(int argc, char* argv[])
    test_auth(op, binds);
    std::cout << "==========================================" << std::endl;
    test_cg(op, binds.front());
+   std::cout << "==========================================" << std::endl;
+   test_sim(op, binds.front());
    std::cout << "==========================================" << std::endl;
 
    return EXIT_SUCCESS;

@@ -26,6 +26,7 @@ client_objs += client_mgr_login.o
 client_objs += client_mgr_sms.o
 client_objs += client_mgr_cg.o
 client_objs += client_mgr_accept_timer.o
+client_objs += client_mgr_sim.o
 
 exe_objs = $(addsuffix .o, $(exes))
 

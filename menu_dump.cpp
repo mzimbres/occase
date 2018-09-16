@@ -16,7 +16,8 @@ void test2()
    for (auto const& o : cmds)
       std::cout << o << std::endl;
 
-   gen_group_info(menu);
+   auto j_infos = gen_group_info(menu);
+   std::cout << j_infos.dump(4) << std::endl;
 }
 
 json gen_location_menu1()

@@ -4,6 +4,8 @@
 #include <vector>
 #include <iostream>
 
+#include "json_utils.hpp"
+
 json gen_location_menu()
 {
    std::vector<json> j1 =
@@ -159,24 +161,21 @@ std::vector<std::string> gen_create_groups(json menu, user_bind bind)
    return cmds;
 }
 
-void gen_group_info(json menu)
+json gen_group_info(json menu)
 {
    if (std::empty(menu))
-      return;
+      return {};
 
-   std::vector<json> infos;
+   std::vector<group_info> infos;
    hash_gen_iter iter(menu);
    while (!iter.end()) {
-      json tmp;
-      tmp["header"] = iter.current.header;
-      tmp["hash"] = iter.current.value_prefix;
-      infos.push_back(tmp);
+      infos.push_back({iter.current.header, iter.current.value_prefix});
       iter.next();
    };
 
    json j_infos;
    j_infos["cmd"] = "group_infos";
    j_infos["infos"] = infos;
-   std::cout << j_infos.dump() << std::endl;
+   return j_infos;
 }
 

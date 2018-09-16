@@ -22,13 +22,18 @@ void test2()
    auto cmds2 = gen_join_groups(menu, {"Marcelo", "Criatura", -1});
    for (auto const& o : cmds2)
       std::cout << o << std::endl;
+
+   auto cmds3 = get_hashes(menu);
+   for (auto const& o : cmds3)
+      std::cout << o << " ";
+   std::cout << std::endl;
 }
 
 json gen_location_menu1()
 {
    std::vector<json> j3 =
-   { {{"status", "off"}, {"hash", ""}, {"name", "Atibaia"},   {"sub", {}}}
-   , {{"status", "off"}, {"hash", ""}, {"name", "Sao Paulo"}, {"sub", {}}}
+   { {{"hash", ""}, {"name", "Atibaia"},   {"sub", {}}}
+   , {{"hash", ""}, {"name", "Sao Paulo"}, {"sub", {}}}
    };
 
    json j;
@@ -59,10 +64,10 @@ void test1()
 json gen_location_menu3()
 {
    std::vector<json> j1 =
-   { {{"status", "off"}, {"hash", ""}, {"sub", {}}, {"name", "Centro"}}};
+   { {{"hash", ""}, {"sub", {}}, {"name", "Centro"}}};
 
    std::vector<json> j2 =
-   { {{"status", "off"}, {"hash", ""}, {"sub", {}}, {"name", "Vila Leopoldina"}, } };
+   { {{"hash", ""}, {"sub", {}}, {"name", "Vila Leopoldina"}, } };
 
    std::vector<json> j3 =
    { {{"name", "Atibaia"},  {"sub_desc", "Bairros"}, {"sub", j1}}
@@ -100,7 +105,6 @@ json gen_location_menu0()
    j["name"] = "SP";
    j["sub_desc"] = "Cidades";
    j["sub"] = {};
-   j["status"] = "off";
    j["hash"] = "";
 
    return j;

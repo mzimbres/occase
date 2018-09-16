@@ -24,14 +24,7 @@ int client_mgr_sim::on_read(json j, std::shared_ptr<client_type> s)
          std::cout << "Test sim: ok." << std::endl;
          cmds.pop();
          if (std::empty(cmds)) {
-            // Now we begin to send some messages to the group we just
-            // joined.
-            json j_msg;
-            j_msg["cmd"] = "send_group_msg";
-            j_msg["from"] = bind;
-            j_msg["to"] = "00.01.05"; // TODO: Fix this
-            j_msg["msg"] = "Some random message to the group.";
-            s->send_msg(j_msg.dump());
+            send_group_msg(s);
             return 1;
          }
          s->send_msg(cmds.top());
@@ -44,7 +37,12 @@ int client_mgr_sim::on_read(json j, std::shared_ptr<client_type> s)
    if (cmd == "send_group_msg_ack") {
       auto const res = j["result"].get<std::string>();
       if (res == expected) {
-         std::cout << "Test sim: ok." << std::endl;
+         hashes.pop();
+         if (std::empty(hashes)) {
+            std::cout << "Test sim: ok." << std::endl;
+            return -1;
+         }
+         send_group_msg(s);
          return 1;
       }
 
@@ -56,7 +54,7 @@ int client_mgr_sim::on_read(json j, std::shared_ptr<client_type> s)
       auto const body = j["body"].get<std::string>();
       std::cout << "Group msg: " << body << std::endl;
       std::cout << "Test sim: ok." << std::endl;
-      return -1;
+      return 1;
    }
 
    std::cout << "Server error: Unknown command." << std::endl;
@@ -77,4 +75,14 @@ int client_mgr_sim::on_closed(boost::system::error_code ec)
    std::cout << "Test sim: fail." << std::endl;
    return -1;
 };
+
+void client_mgr_sim::send_group_msg(std::shared_ptr<client_type> s)
+{
+   json j_msg;
+   j_msg["cmd"] = "send_group_msg";
+   j_msg["from"] = bind;
+   j_msg["to"] = hashes.top();
+   j_msg["msg"] = "Group message to: " + hashes.top();
+   s->send_msg(j_msg.dump());
+}
 

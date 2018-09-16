@@ -9,28 +9,28 @@
 json gen_location_menu()
 {
    std::vector<json> j1 =
-   { {{"status", "off"}, {"hash", ""}, {"sub", {}}, {"name", "Centro"}               }
-   , {{"status", "off"}, {"hash", ""}, {"sub", {}}, {"name", "Alvinópolis"}          }
-   , {{"status", "off"}, {"hash", ""}, {"sub", {}}, {"name", "Jardim Siriema"}       }
-   , {{"status", "off"}, {"hash", ""}, {"sub", {}}, {"name", "Vila Santista"}        }
-   , {{"status", "off"}, {"hash", ""}, {"sub", {}}, {"name", "Parque dos Coqueiros"} }
-   , {{"status", "off"}, {"hash", ""}, {"sub", {}}, {"name", "Terceiro Centenário"}  }
+   { {{"hash", ""}, {"sub", {}}, {"name", "Centro"}               }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Alvinópolis"}          }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Jardim Siriema"}       }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Vila Santista"}        }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Parque dos Coqueiros"} }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Terceiro Centenário"}  }
    };
 
    std::vector<json> j2 =
-   { {{"status", "off"}, {"hash", ""}, {"sub", {}}, {"name", "Vila Leopoldina"}, }
-   , {{"status", "off"}, {"hash", ""}, {"sub", {}}, {"name", "Lapa"},            }
-   , {{"status", "off"}, {"hash", ""}, {"sub", {}}, {"name", "Pinheiros"},       }
-   , {{"status", "off"}, {"hash", ""}, {"sub", {}}, {"name", "Moema"},           }
-   , {{"status", "off"}, {"hash", ""}, {"sub", {}}, {"name", "Jardim Paulista"}, }
-   , {{"status", "off"}, {"hash", ""}, {"sub", {}}, {"name", "Mooca"},           }
-   , {{"status", "off"}, {"hash", ""}, {"sub", {}}, {"name", "Tatuapé"},         }
-   , {{"status", "off"}, {"hash", ""}, {"sub", {}}, {"name", "Penha"},           }
-   , {{"status", "off"}, {"hash", ""}, {"sub", {}}, {"name", "Ipiranga"},        }
-   , {{"status", "off"}, {"hash", ""}, {"sub", {}}, {"name", "Vila Madalena"},   }
-   , {{"status", "off"}, {"hash", ""}, {"sub", {}}, {"name", "Vila Mariana"},    }
-   , {{"status", "off"}, {"hash", ""}, {"sub", {}}, {"name", "Vila Formosa"},    }
-   , {{"status", "off"}, {"hash", ""}, {"sub", {}}, {"name", "Bixiga"},          }
+   { {{"hash", ""}, {"sub", {}}, {"name", "Vila Leopoldina"}, }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Lapa"},            }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Pinheiros"},       }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Moema"},           }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Jardim Paulista"}, }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Mooca"},           }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Tatuapé"},         }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Penha"},           }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Ipiranga"},        }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Vila Madalena"},   }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Vila Mariana"},    }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Vila Formosa"},    }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Bixiga"},          }
    };
 
    std::vector<json> j3 =
@@ -197,3 +197,19 @@ std::vector<std::string> gen_join_groups(json menu, user_bind bind)
 
    return cmds;
 }
+
+std::vector<std::string> get_hashes(json menu)
+{
+   if (std::empty(menu))
+      return {};
+
+   std::vector<std::string> hashes;
+   hash_gen_iter iter(menu);
+   while (!iter.end()) {
+      hashes.push_back(iter.current.value_prefix);
+      iter.next();
+   };
+
+   return hashes;
+}
+

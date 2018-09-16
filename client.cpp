@@ -189,7 +189,12 @@ auto test_sim(client_options op, user_bind bind)
    for (auto const& o : tmp)
       cmds.push(o);
 
-   mgr_type mgr {"ok", std::move(cmds), bind};
+   auto const hashes = get_hashes(menu);
+   std::stack<std::string> hashes_st;
+   for (auto const& o : hashes)
+      hashes_st.push(o);
+
+   mgr_type mgr {"ok", std::move(cmds), std::move(hashes_st), bind};
 
    boost::asio::io_context ioc;
    std::make_shared<client_type>(ioc, op, mgr)->run();

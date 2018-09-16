@@ -19,16 +19,21 @@ private:
    user_bind bind;
    std::string expected;
    std::stack<std::string> cmds;
+   std::stack<std::string> hashes;
+
+   void send_group_msg(std::shared_ptr<client_type> s);
 
 public:
    client_mgr_sim( std::string exp
                  , std::stack<std::string> cmds_
+                 , std::stack<std::string> hashes_
                  , user_bind bind_)
    : bind(bind_)
    , expected(exp)
    , cmds(std::move(cmds_))
+   , hashes(std::move(hashes_))
    {
-      if (std::empty(cmds))
+      if (std::empty(cmds) || std::empty(hashes))
          throw std::runtime_error("client_mgr_sim: Stack is empty.");
    }
    int on_read(json j, std::shared_ptr<client_type> s);

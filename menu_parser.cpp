@@ -76,14 +76,14 @@ struct hash_gen_iter {
          return;
       }
 
-      for (;;) {
+      do {
          st.pop();
          if (std::empty(st))
             return;
          st.top().pop_back();
-         if (!std::empty(st.top()))
-            break;
-      }
+      } while (std::empty(st.top()));
+
+      advance();
    }
 
    void advance()

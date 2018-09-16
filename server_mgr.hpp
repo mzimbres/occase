@@ -14,8 +14,12 @@ class server_session;
 class server_mgr {
 private:
    std::string host = "criatura";
+
+   // Maps a user id (telephone, email, etc.) to a user object.
    std::unordered_map<id_type, index_type> id_to_idx_map;
    grow_only_vector<user> users;
+
+   // Maps a group hash to a group object.
    std::unordered_map<std::string, group> groups;
 
    index_type on_login(json j, std::shared_ptr<server_session> s);
@@ -33,7 +37,6 @@ public:
 
    // Functions to interact with the server_session.
    index_type on_read(json j, std::shared_ptr<server_session> session);
-
    void on_write(index_type user_idx);
    void release_login(index_type idx);
 };

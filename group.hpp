@@ -16,12 +16,7 @@ private:
    // The number of members in a group is expected be on the
    // thousands, let us say 10k. The operations performed are
    //
-   // 1. Insert: Quite often. To avoid inserting twice we have to
-   //            search before inserting.
-   // 2. Remove: Once in a while, also requires searching.
-   // 
-   // Given those requirements above, I think a hash table is more
-   // appropriate.
+   // 1. Remove: Once in a while, also requires searching.
    std::unordered_map< id_type
                      , std::weak_ptr<server_session>> local_members;
 public:

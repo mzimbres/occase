@@ -36,7 +36,7 @@ server_mgr::on_read(json j, std::shared_ptr<server_session> s)
       if (cmd == "send_group_msg")
          return on_group_msg(std::move(j), s);
 
-      if (cmd == "send_user_msg")
+      if (cmd == "user_msg")
          return on_user_msg(std::move(j), s);
 
       std::cerr << "Server: Unknown command " << cmd << std::endl;
@@ -209,14 +209,22 @@ server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
 {
    auto from = j["from"].get<user_bind>();
    if (!users.is_valid_index(from.index)) {
-      // TODO: Clarify how this could happen. Should we drop the
-      // connection?
+      // TODO: This indicates a section was athetified but has somehow
+      // the wrong user bind. There a logic error somewhere. It should
+      // be logged.
       return -1;
    }
 
    auto const hash = j["hash"].get<std::string>();
 
    auto const g = groups.find(hash);
+   if (g == std::end(groups)) {
+      json resp;
+      resp["cmd"] = "join_group_ack";
+      resp["result"] = "fail";
+      s->send_msg(resp.dump());
+      return 5;
+   }
 
    g->second.add_member(from.tel, s);
 
@@ -231,42 +239,41 @@ server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
 index_type
 server_mgr::on_group_msg(json j, std::shared_ptr<server_session> s)
 {
-   auto from = j["from"].get<user_bind>();
+   // TODO: On all messages that have a "from" field we should check
+   // if this field matches the one stored in the session. This can be
+   // used to avoid some kind of hacking like sending a message with
+   // an identity that is different from the one checked in the
+   // aithentification.
+   auto const from = j["from"].get<user_bind>();
    if (!users.is_valid_index(from.index)) {
-      // This is a non-existing user. Perhaps the json command was
-      // sent with the wrong information signaling a logic error in
-      // the app.
-      // TODO: Decide what to do here.
+      // TODO: This indicates a section was athetified but has somehow
+      // the wrong user bind. There a logic error somewhere. It should
+      // be logged.
       return -1;
    }
 
-   users[from.index].store_session(s);
+   auto const to = j["to"].get<std::string>();
+   auto const g = groups.find(to);
+   if (g == std::end(groups)) {
+      // This is a non-existing group. Perhaps the json command was
+      // sent with the wrong information signaling a logic error in
+      // the app.
 
-   //auto to = j["to"].get<int>();
-
-   //if (!groups.is_valid_index(to)) {
-   //   // This is a non-existing group. Perhaps the json command was
-   //   // sent with the wrong information signaling a logic error in
-   //   // the app.
-
-   //   json resp;
-   //   resp["cmd"] = "send_group_msg_ack";
-   //   resp["result"] = "fail";
-   //   resp["reason"] = "Non existing group";
-   //   users[from.index].send_msg(resp.dump());
-   //   return from.index;
-   //}
+      json resp;
+      resp["cmd"] = "send_group_msg_ack";
+      resp["result"] = "fail";
+      users[from.index].send_msg(resp.dump());
+      return 6;
+   }
 
    json resp;
-   resp["cmd"] = "message";
-   resp["message"] = j["msg"].get<std::string>();
+   resp["cmd"] = "group_msg";
+   resp["body"] = j["msg"].get<std::string>();
 
-   //groups[to].broadcast_msg(resp.dump(), users);
+   // TODO: Change broadcast to return the number of users that the
+   // message has reached.
+   g->second.broadcast_msg(resp.dump());
 
-   // We also have to acknowledge the broadcast of the message.
-   // Perhaps this is only for debugging purposes as the user can
-   // inferr himself if the message was sent by looking if the message
-   // arrived in the corresponding group.
    json ack;
    ack["cmd"] = "send_group_msg_ack";
    ack["result"] = "ok";

@@ -31,7 +31,7 @@ private:
    index_type on_user_msg(json j, std::shared_ptr<server_session> session);
 
 public:
-   server_mgr(int users_size, int groups_size)
+   server_mgr(int users_size)
    : users(users_size)
    {}
 

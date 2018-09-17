@@ -23,3 +23,5 @@ std::vector<std::string> gen_join_groups(json menu, user_bind bind);
 // Puts all group hashes into a vector.
 std::vector<std::string> get_hashes(json menu);
 
+std::string to_str(int i, int width, char fill_char);
+

@@ -11,6 +11,8 @@ class client_session;
 
 // Tests if the server drops a session that does not proceed with
 // authentication.
+// TODO: Add a timer here after which we should emit an error if the
+// server do not drop the connection.
 
 class client_mgr_accept_timer {
 private:

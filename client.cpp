@@ -24,7 +24,7 @@ void test_accept_timer(client_options const& op)
 
    boost::asio::io_context ioc;
 
-   std::vector<mgr_type> mgrs {10};
+   std::vector<mgr_type> mgrs {1000};
 
    for (auto& mgr : mgrs)
       std::make_shared<client_type>(ioc, op, mgr)->run();
@@ -32,34 +32,18 @@ void test_accept_timer(client_options const& op)
    ioc.run();
 }
 
-void test_login(client_options op)
+void test_login_ok(client_options op)
 {
    using mgr_type = client_mgr_login;
    using client_type = client_session<mgr_type>;
 
    boost::asio::io_context ioc;
 
-   // Assumes all the commands arrive at the server before the first
-   // ones begin to timeout. The fail means no more user entries
-   // available.
-   std::vector<mgr_type> mgrs
-   { {"aaa", "ok"}
-   , {"bbb", "ok"}
-   , {"ccc", "ok"}
-   , {"ddd", "ok"}
-   , {"eee", "ok"}
-   , {"ddd", "fail"}
-   , {"fff", "ok"}
-   , {"ggg", "ok"}
-   , {"hhh", "ok"}
-   , {"iii", "ok"}
-   , {"kkk", "ok"}
-   , {"lll", "fail"}
-   , {"mmm", "fail"}
-   , {"nnn", "fail"}
-   , {"ooo", "fail"}
-   , {"ppp", "fail"}
-   };
+   std::vector<mgr_type> mgrs;
+
+   // Fills the vector with unique ids. All these calls should succeed.
+   for (auto i = 0; i < users_size; ++i)
+      mgrs.push_back({to_str(i, 4, 0), "ok"});
 
    for (auto& mgr : mgrs)
       std::make_shared<client_type>(ioc, op, mgr)->run();
@@ -67,7 +51,47 @@ void test_login(client_options op)
    ioc.run();
 }
 
-void test_login1(client_options op)
+void test_login_fail(client_options op)
+{
+   using mgr_type = client_mgr_login;
+   using client_type = client_session<mgr_type>;
+
+   boost::asio::io_context ioc;
+
+   std::vector<mgr_type> mgrs;
+
+   // Now we clear the mgrs and try to register with the same login.
+   // They should all fail.
+   for (auto i = 0; i < users_size; ++i)
+      mgrs.push_back({to_str(i, 4, 0), "fail"});
+
+   for (auto& mgr : mgrs)
+      std::make_shared<client_type>(ioc, op, mgr)->run();
+
+   ioc.run();
+}
+
+void test_login_fail_mem(client_options op)
+{
+   using mgr_type = client_mgr_login;
+   using client_type = client_session<mgr_type>;
+
+   boost::asio::io_context ioc;
+
+   std::vector<mgr_type> mgrs;
+
+   // Now we try to register more users then the system is configured
+   // to accept and they should all fail.
+   for (auto i = users_size; i < users_size + 100; ++i)
+      mgrs.push_back({to_str(i, 4, 0), "fail"});
+
+   for (auto& mgr : mgrs)
+      std::make_shared<client_type>(ioc, op, mgr)->run();
+
+   ioc.run();
+}
+
+void test_login_typo(client_options op)
 {
    using mgr_type = client_mgr_login1;
    using client_type = client_session<mgr_type>;
@@ -228,9 +252,14 @@ int main(int argc, char* argv[])
    std::cout << "==========================================" << std::endl;
    test_accept_timer(op);
    std::cout << "==========================================" << std::endl;
-   test_login(op);
+   test_login_ok(op);
    std::cout << "==========================================" << std::endl;
-   test_login1(op);
+   test_login_fail(op);
+   std::cout << "==========================================" << std::endl;
+   // Move this to after the sms_confirmation.
+   //test_login_fail_mem(op);
+   //std::cout << "==========================================" << std::endl;
+   test_login_typo(op);
    std::cout << "==========================================" << std::endl;
    auto binds = test_sms(op);
    if (std::empty(binds)) {

@@ -8,7 +8,7 @@ int client_mgr_accept_timer::on_read(json j, std::shared_ptr<client_type> s)
 {
    // We should not receive any message from the server in this test.
    std::cerr << "Error: client_mgr_accept_timer::on_read." << std::endl;
-   err = true;
+   throw std::runtime_error("client_mgr_accept_timer::on_read");
    return -1;
 }
 
@@ -22,8 +22,7 @@ int client_mgr_accept_timer::on_write(std::shared_ptr<client_type> s)
 {
    // We will not write any message and therefore this function should
    // not be called.
-   std::cerr << "Error: client_mgr_accept_timer::on_write." << std::endl;
-   err = true;
+   throw std::runtime_error("client_mgr_accept_timer::on_write");
    return 1;
 }
 

@@ -17,14 +17,6 @@
 #include "client_mgr_login.hpp"
 #include "client_mgr_accept_timer.hpp"
 
-template <class T>
-void check_mgrs(std::vector<T> const& mgrs, char const* msg)
-{
-   for (auto const& mgr : mgrs)
-      if (mgr.error())
-         throw std::runtime_error(msg);
-}
-
 void test_accept_timer(client_options const& op)
 {
    using mgr_type = client_mgr_accept_timer;
@@ -38,10 +30,6 @@ void test_accept_timer(client_options const& op)
       std::make_shared<client_type>(ioc, op, mgr)->run();
 
    ioc.run();
-
-   check_mgrs(mgrs, "test_accept_timer");
-
-   std::cout << "test_accept_timer: ok" << std::endl;
 }
 
 void test_login_ok(client_options op)
@@ -105,7 +93,7 @@ void test_login_fail_mem(client_options op)
 
 void test_login_typo(client_options op)
 {
-   using mgr_type = client_mgr_login1;
+   using mgr_type = client_mgr_login_typo;
    using client_type = client_session<mgr_type>;
 
    boost::asio::io_context ioc;
@@ -264,21 +252,22 @@ int main(int argc, char* argv[])
 
       std::cout << "==========================================" << std::endl;
       test_accept_timer(op);
-      std::cout << "==========================================" << std::endl;
+      std::cout << "test_accept_timer: ok" << std::endl;
       test_login_ok(op);
-      std::cout << "==========================================" << std::endl;
+      std::cout << "test_login_ok:     ok" << std::endl;
       test_login_fail(op);
-      std::cout << "==========================================" << std::endl;
-      // Move this to after the sms_confirmation.
-      //test_login_fail_mem(op);
-      //std::cout << "==========================================" << std::endl;
+      std::cout << "test_login_fail:   ok" << std::endl;
       test_login_typo(op);
+      std::cout << "test_login_typo:   ok" << std::endl;
       std::cout << "==========================================" << std::endl;
       auto binds = test_sms(op);
       if (std::empty(binds)) {
          std::cerr << "Error: Binds array empty." << std::endl;
          return EXIT_FAILURE;
       }
+      // Move this to after the sms_confirmation.
+      //test_login_fail_mem(op);
+      //std::cout << "==========================================" << std::endl;
       std::cout << "==========================================" << std::endl;
       test_auth(op, binds);
       std::cout << "==========================================" << std::endl;

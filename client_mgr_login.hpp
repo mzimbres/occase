@@ -27,7 +27,7 @@ private:
 public:
    client_mgr_login(std::string tel_, std::string expected);
    int on_read(json j, std::shared_ptr<client_type> s);
-   int on_closed(boost::system::error_code ec);
+   int on_closed(boost::system::error_code ec) { return -1; }
    int on_handshake(std::shared_ptr<client_type> s);
 };
 
@@ -35,13 +35,13 @@ public:
 
 // Sends logins that will be dropped.
 
-class client_mgr_login1 {
+class client_mgr_login_typo {
 private:
-   using client_type = client_session<client_mgr_login1>;
+   using client_type = client_session<client_mgr_login_typo>;
    std::string cmd;
 
 public:
-   client_mgr_login1(std::string cmd);
+   client_mgr_login_typo(std::string cmd);
    int on_read(json j, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec);
    int on_handshake(std::shared_ptr<client_type> s);

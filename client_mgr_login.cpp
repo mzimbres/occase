@@ -14,21 +14,18 @@ int client_mgr_login::on_read(json j, std::shared_ptr<client_type> s)
 
    if (cmd != "login_ack") {
       std::cerr << "Server error. Please fix." << std::endl;
+      throw std::runtime_error("client_mgr_login::on_read");
       return -1;
    }
 
    auto res = j["result"].get<std::string>();
    if (res == expected) {
-      std::cout << "Test login: ok." << std::endl;
+      //std::cout << "Test login: ok." << std::endl;
       return -1;
    }
 
    std::cout << "Test login: fail." << std::endl;
-   return -1;
-}
-
-int client_mgr_login::on_closed(boost::system::error_code ec)
-{
+   throw std::runtime_error("client_mgr_login::on_read");
    return -1;
 }
 
@@ -43,24 +40,25 @@ int client_mgr_login::on_handshake(std::shared_ptr<client_type> s)
 
 //___________________________________________________________________
 
-client_mgr_login1::client_mgr_login1(std::string cmd_)
+client_mgr_login_typo::client_mgr_login_typo(std::string cmd_)
 : cmd(cmd_)
 { }
 
-int client_mgr_login1::on_read(json j, std::shared_ptr<client_type> s)
+int client_mgr_login_typo::on_read(json j, std::shared_ptr<client_type> s)
 {
    // A dropped login should not receive any message.
    std::cout << "Test login1: fail." << std::endl;
+   throw std::runtime_error("client_mgr_login_typo::on_read");
    return -1;
 }
 
-int client_mgr_login1::on_closed(boost::system::error_code ec)
+int client_mgr_login_typo::on_closed(boost::system::error_code ec)
 {
-   std::cout << "Test login1: ok." << std::endl;
+   //std::cout << "Test login1: ok." << std::endl;
    return -1;
 }
 
-int client_mgr_login1::on_handshake(std::shared_ptr<client_type> s)
+int client_mgr_login_typo::on_handshake(std::shared_ptr<client_type> s)
 {
    s->send_msg(cmd);
    return 1;

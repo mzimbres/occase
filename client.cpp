@@ -259,17 +259,17 @@ int main(int argc, char* argv[])
       std::cout << "test_login_fail:   ok" << std::endl;
       test_login_typo(op);
       std::cout << "test_login_typo:   ok" << std::endl;
-      std::cout << "==========================================" << std::endl;
       auto binds = test_sms(op);
       if (std::empty(binds)) {
          std::cerr << "Error: Binds array empty." << std::endl;
          return EXIT_FAILURE;
       }
+      std::cout << "test_sms:          ok" << std::endl;
       // Move this to after the sms_confirmation.
       //test_login_fail_mem(op);
       //std::cout << "==========================================" << std::endl;
-      std::cout << "==========================================" << std::endl;
       test_auth(op, binds);
+      std::cout << "test_auth:         ok" << std::endl;
       std::cout << "==========================================" << std::endl;
       test_cg(op, binds.front());
       std::cout << "==========================================" << std::endl;

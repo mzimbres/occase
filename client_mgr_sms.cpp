@@ -20,6 +20,7 @@ int client_mgr_sms::on_read(json j, std::shared_ptr<client_type> s)
 
       std::cout << j << std::endl;
       std::cout << "Test fail: " << tel << std::endl;
+      throw std::runtime_error("client_mgr_sms::on_read");
       return -1;
    }
 
@@ -31,15 +32,16 @@ int client_mgr_sms::on_read(json j, std::shared_ptr<client_type> s)
          bind = j["user_bind"].get<user_bind>();
 
       if (res == expected) {
-         std::cout << "Test sms_confirmation: ok." << std::endl;
+         //std::cout << "Test sms_confirmation: ok." << std::endl;
          return -1;
       }
 
-      std::cout << "Test sms_confirmation: fail." << std::endl;
+      throw std::runtime_error("client_mgr_sms::on_read");
       return -1;
    }
 
    std::cout << "Server error: Unknown command." << std::endl;
+   throw std::runtime_error("client_mgr_sms::on_read");
    return -1;
 }
 
@@ -61,15 +63,16 @@ int client_mgr_auth::on_read(json j, std::shared_ptr<client_type> s)
    if (cmd == "auth_ack") {
       auto res = j["result"].get<std::string>();
       if (res == expected) {
-         std::cout << "Test auth: ok." << std::endl;
+         //std::cout << "Test auth: ok." << std::endl;
          return -1;
       }
 
-      std::cout << "Test auth: fail." << std::endl;
+      throw std::runtime_error("client_mgr_auth::on_read");
       return -1;
    }
 
    std::cout << "Server error: Unknown command." << std::endl;
+   throw std::runtime_error("client_mgr_auth::on_read");
    return -1;
 }
 
@@ -84,7 +87,7 @@ int client_mgr_auth::on_handshake(std::shared_ptr<client_type> s)
 
 int client_mgr_auth::on_closed(boost::system::error_code ec)
 {
-   std::cout << "Test auth: fail." << std::endl;
+   throw std::runtime_error("client_mgr_auth::on_closed");
    return -1;
 };
 

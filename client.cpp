@@ -17,6 +17,14 @@
 #include "client_mgr_login.hpp"
 #include "client_mgr_accept_timer.hpp"
 
+template <class T>
+void check_mgrs(std::vector<T> const& mgrs, char const* msg)
+{
+   for (auto const& mgr : mgrs)
+      if (mgr.error())
+         throw std::runtime_error(msg);
+}
+
 void test_accept_timer(client_options const& op)
 {
    using mgr_type = client_mgr_accept_timer;
@@ -30,6 +38,10 @@ void test_accept_timer(client_options const& op)
       std::make_shared<client_type>(ioc, op, mgr)->run();
 
    ioc.run();
+
+   check_mgrs(mgrs, "test_accept_timer");
+
+   std::cout << "test_accept_timer: ok" << std::endl;
 }
 
 void test_login_ok(client_options op)
@@ -239,41 +251,46 @@ void test_sim(client_options op, std::vector<user_bind> binds)
 
 int main(int argc, char* argv[])
 {
-   //if (argc != 2) {
-   //   std::cerr << "Please, provide a user id." << std::endl;
-   //   return EXIT_FAILURE;
-   //}
+   try {
+      //if (argc != 2) {
+      //   std::cerr << "Please, provide a user id." << std::endl;
+      //   return EXIT_FAILURE;
+      //}
 
-   client_options op
-   { {"127.0.0.1"} // Host.
-   , {"8080"}      // Port.
-   };
+      client_options op
+      { {"127.0.0.1"} // Host.
+      , {"8080"}      // Port.
+      };
 
-   std::cout << "==========================================" << std::endl;
-   test_accept_timer(op);
-   std::cout << "==========================================" << std::endl;
-   test_login_ok(op);
-   std::cout << "==========================================" << std::endl;
-   test_login_fail(op);
-   std::cout << "==========================================" << std::endl;
-   // Move this to after the sms_confirmation.
-   //test_login_fail_mem(op);
-   //std::cout << "==========================================" << std::endl;
-   test_login_typo(op);
-   std::cout << "==========================================" << std::endl;
-   auto binds = test_sms(op);
-   if (std::empty(binds)) {
-      std::cerr << "Error: Binds array empty." << std::endl;
+      std::cout << "==========================================" << std::endl;
+      test_accept_timer(op);
+      std::cout << "==========================================" << std::endl;
+      test_login_ok(op);
+      std::cout << "==========================================" << std::endl;
+      test_login_fail(op);
+      std::cout << "==========================================" << std::endl;
+      // Move this to after the sms_confirmation.
+      //test_login_fail_mem(op);
+      //std::cout << "==========================================" << std::endl;
+      test_login_typo(op);
+      std::cout << "==========================================" << std::endl;
+      auto binds = test_sms(op);
+      if (std::empty(binds)) {
+         std::cerr << "Error: Binds array empty." << std::endl;
+         return EXIT_FAILURE;
+      }
+      std::cout << "==========================================" << std::endl;
+      test_auth(op, binds);
+      std::cout << "==========================================" << std::endl;
+      test_cg(op, binds.front());
+      std::cout << "==========================================" << std::endl;
+      test_sim(op, binds);
+      std::cout << "==========================================" << std::endl;
+
+      return EXIT_SUCCESS;
+   } catch (std::exception const& e) {
+      std::cerr << e.what() << std::endl;
       return EXIT_FAILURE;
    }
-   std::cout << "==========================================" << std::endl;
-   test_auth(op, binds);
-   std::cout << "==========================================" << std::endl;
-   test_cg(op, binds.front());
-   std::cout << "==========================================" << std::endl;
-   test_sim(op, binds);
-   std::cout << "==========================================" << std::endl;
-
-   return EXIT_SUCCESS;
 }
 

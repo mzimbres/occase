@@ -15,13 +15,14 @@ int client_mgr_cg::on_read(json j, std::shared_ptr<client_type> s)
       }
 
       std::cout << "Test cg: Error." << std::endl;
+      throw std::runtime_error("client_mgr_cg::on_read");
       return -1;
    }
 
    if (cmd == "create_group_ack") {
       auto const res = j["result"].get<std::string>();
       if (res == expected) {
-         std::cout << "Test cg: ok." << std::endl;
+         //std::cout << "Test cg: ok." << std::endl;
          //std::cout << "poping " << cmds.top() << std::endl;
          cmds.pop();
          if (std::empty(cmds))
@@ -32,10 +33,12 @@ int client_mgr_cg::on_read(json j, std::shared_ptr<client_type> s)
       }
 
       std::cout << "Test cg: create_group_ack fail." << std::endl;
+      throw std::runtime_error("client_mgr_cg::on_read");
       return -1;
    }
 
    std::cout << "Server error: Unknown command." << std::endl;
+   throw std::runtime_error("client_mgr_cg::on_read");
    return -1;
 }
 
@@ -51,6 +54,7 @@ int client_mgr_cg::on_handshake(std::shared_ptr<client_type> s)
 int client_mgr_cg::on_closed(boost::system::error_code ec)
 {
    std::cout << "Test cg: fail." << std::endl;
+   throw std::runtime_error("client_mgr_cg::on_read");
    return -1;
 };
 

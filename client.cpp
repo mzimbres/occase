@@ -180,7 +180,7 @@ auto test_auth(client_options op, std::vector<user_bind> binds)
    ioc.run();
 }
 
-auto test_cg(client_options op, user_bind bind)
+auto test_create_group(client_options op, user_bind bind)
 {
    using mgr_type = client_mgr_cg;
    using client_type = client_session<mgr_type>;
@@ -270,8 +270,8 @@ int main(int argc, char* argv[])
       //std::cout << "==========================================" << std::endl;
       test_auth(op, binds);
       std::cout << "test_auth:         ok" << std::endl;
-      std::cout << "==========================================" << std::endl;
-      test_cg(op, binds.front());
+      test_create_group(op, binds.front());
+      std::cout << "test_create_group: ok" << std::endl;
       std::cout << "==========================================" << std::endl;
       test_sim(op, binds);
       std::cout << "==========================================" << std::endl;

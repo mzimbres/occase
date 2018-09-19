@@ -109,18 +109,21 @@ auto test_sms(client_options op)
 
    boost::asio::io_context ioc;
 
-   std::vector<mgr_type> mgrs
-   { {"Melao",   "ok",   "8347"}
-   , {"Fruta",   "fail", "8337"}
-   , {"Poka",    "ok",   "8347"}
-   , {"Abobora", "ok",   "8347"}
-   , {"ddda",    "fail", "8947"}
-   , {"hjsjs",   "ok",   "8347"}
-   , {"9899",    "ok",   "8347"}
-   , {"87z",     "ok",   "8347"}
-   , {"7162",    "fail", "1347"}
-   , {"2763333", "ok",   "8347"}
-   };
+   std::vector<mgr_type> mgrs;
+   //{ {"Melao",   "ok",   "8347"}
+   //, {"Fruta",   "fail", "8337"}
+   //, {"Poka",    "ok",   "8347"}
+   //, {"Abobora", "ok",   "8347"}
+   //, {"ddda",    "fail", "8947"}
+   //, {"hjsjs",   "ok",   "8347"}
+   //, {"9899",    "ok",   "8347"}
+   //, {"87z",     "ok",   "8347"}
+   //, {"7162",    "fail", "1347"}
+   //, {"2763333", "ok",   "8347"}
+   //};
+
+   for (auto i = 0; i < users_size; ++i)
+      mgrs.push_back({to_str(i, 4, 0), "ok", "8347"});
 
    std::vector<std::shared_ptr<client_type>> sessions;
    for (auto& mgr : mgrs)

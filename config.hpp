@@ -24,5 +24,5 @@ namespace timeouts
 }
 
 constexpr auto user_msg_max_queue_size = 10;
-constexpr auto users_size = 100;
+constexpr auto users_size = 400;
 

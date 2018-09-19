@@ -32,7 +32,10 @@ void test_accept_timer(client_options const& op)
    ioc.run();
 }
 
-void test_login_ok(client_options op, char const* expected)
+void test_login( client_options op
+               , char const* expected
+               , int begin
+               , int end)
 {
    using mgr_type = client_mgr_login;
    using client_type = client_session<mgr_type>;
@@ -41,9 +44,32 @@ void test_login_ok(client_options op, char const* expected)
 
    std::vector<mgr_type> mgrs;
 
-   // Fills the vector with unique ids. All these calls should succeed.
-   for (auto i = 0; i < users_size; ++i)
+   for (auto i = begin; i < end; ++i)
       mgrs.push_back({to_str(i, 4, 0), expected});
+
+   for (auto& mgr : mgrs)
+      std::make_shared<client_type>(ioc, op, mgr)->run();
+
+   ioc.run();
+}
+
+void test_flood_login( client_options op
+                     , int begin
+                     , int end
+                     , int more)
+{
+   using mgr_type = client_mgr_login;
+   using client_type = client_session<mgr_type>;
+
+   boost::asio::io_context ioc;
+
+   std::vector<mgr_type> mgrs;
+
+   for (auto i = begin; i < end; ++i)
+      mgrs.push_back({to_str(i, 4, 0), "ok"});
+
+   for (auto i = end; i < more; ++i)
+      mgrs.push_back({to_str(i, 4, 0), "fail"});
 
    for (auto& mgr : mgrs)
       std::make_shared<client_type>(ioc, op, mgr)->run();
@@ -234,22 +260,45 @@ int main(int argc, char* argv[])
       };
 
       std::cout << "==========================================" << std::endl;
+
+      // Tests if the server drops connections that connect by do not
+      // register or authenticate.
       test_accept_timer(op);
       std::cout << "test_accept_timer: ok" << std::endl;
-      test_login_ok(op, "ok");
+
+      // Tests the sms timeout. Connections should be dropped if the
+      // users tries to register but do not send the sms on time.
+      test_login(op, "ok", 0, users_size);
       std::cout << "test1_login_ok:    ok" << std::endl;
-      // TODO: Check why the server does not seem to release the last
-      // index.
-      test_login_ok(op, "ok");
+
+      // TODO: Check why the server does not release the 0 index in
+      // order.
+
+      // Tests if the previous login commands were all released. That
+      // means if we send again users_size registrations there should
+      // be enough indexes for them.
+      test_login(op, "ok", 0, users_size);
       std::cout << "test2_login_ok:    ok" << std::endl;
+
+      // Sends more logins than the server has available user entries.
+      // Assumes all messages will arrive in the server before the
+      // first one begins to timeout.
+      test_flood_login(op, 0, users_size, 50);
+      std::cout << "test_flood_login:  ok" << std::endl;
+
+      // Sends commands with typos.
       test_login_typo(op);
       std::cout << "test_login_typo:   ok" << std::endl;
+
+
       auto binds = test_sms(op);
       if (std::empty(binds)) {
          std::cerr << "Error: Binds array empty." << std::endl;
          return EXIT_FAILURE;
       }
       std::cout << "test_sms:          ok" << std::endl;
+
+
       //test_login_fail_mem(op); // TODO: uncomment when ready.
       test_auth(op, binds);
       std::cout << "test_auth:         ok" << std::endl;

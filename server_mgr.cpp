@@ -49,12 +49,9 @@ server_mgr::on_read(json j, std::shared_ptr<server_session> s)
 
 index_type server_mgr::on_login(json j, std::shared_ptr<server_session> s)
 {
-   // When the user downloads the app and clicks something like login
-   // the app will send us the user phone.
    auto const tel = j["tel"].get<std::string>();
 
-   auto const new_user = id_to_idx_map.insert({tel, {}});
-   if (!new_user.second) {
+   if (id_to_idx_map.find(tel) != std::end(id_to_idx_map)) {
       // The user already exists in the system. This case can be
       // triggered by some conditions
       //
@@ -73,15 +70,13 @@ index_type server_mgr::on_login(json j, std::shared_ptr<server_session> s)
       return -1;
    }
 
-   // The user does not exist in the system we allocate an entry in
-   // the users array.
-   new_user.first->second = users.allocate();
-   auto const idx = new_user.first->second; // Alias.
+   // The user does not exist in the system so we allocate an entry in
+   // the users array and wait for sms confirmation. If confirmation
+   // does not happen (we timeout first) then this index should be
+   // released. This happens on session destruction.
+   auto const idx = users.allocate();
 
    if (idx == -1) {
-      // We run out of memory. We have to release the element we just
-      // inserted in the map.
-      id_to_idx_map.erase(new_user.first);
       json resp;
       resp["cmd"] = "login_ack";
       resp["result"] = "fail";
@@ -131,9 +126,9 @@ index_type server_mgr::on_auth(json j, std::shared_ptr<server_session> s)
 
 void server_mgr::release_login(index_type idx)
 {
-   auto const id = users[idx].get_id();
+   // Releases back the index allocated on the login. This is caused
+   // by a timeout of the sms confirmation.
    users.deallocate(idx);
-   id_to_idx_map.erase(id);
 }
 
 index_type
@@ -145,8 +140,6 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
    if (sms != s->get_sms()) {
       // TODO: Resend an sms to the user (some more times). For now
       // we will simply drop the connection and release resources.
-      // First we remove this user from the index map.
-      id_to_idx_map.erase(tel);
       json resp;
       resp["cmd"] = "sms_confirmation_ack";
       resp["result"] = "fail";
@@ -156,8 +149,18 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
       return -1;
    }
 
+   // Before we call s->get_user_idx() we have to promete the session.
    s->promote();
+
+   // Inserts the user in the system.
    auto const idx = s->get_user_idx();
+   assert(idx != -1);
+   auto const new_user = id_to_idx_map.insert({tel, idx});
+
+   // This is odd. The entry already exists on the index map which
+   // means we did something wrong in the login command.
+   assert(new_user.second);
+
    users[idx].store_session(s);
    users[idx].set_id(tel);
 

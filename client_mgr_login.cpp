@@ -14,7 +14,7 @@ int client_mgr_login::on_read(json j, std::shared_ptr<client_type> s)
 
    if (cmd != "login_ack") {
       std::cerr << "Server error. Please fix." << std::endl;
-      throw std::runtime_error("client_mgr_login::on_read");
+      throw std::runtime_error("client_mgr_login::on_read2");
       return -1;
    }
 
@@ -24,8 +24,8 @@ int client_mgr_login::on_read(json j, std::shared_ptr<client_type> s)
       return -1;
    }
 
-   std::cout << "Test login: fail." << std::endl;
-   throw std::runtime_error("client_mgr_login::on_read");
+   std::cerr << "Test login: fail. Unexpected: " << cmd << std::endl;
+   throw std::runtime_error("client_mgr_login::on_read2");
    return -1;
 }
 

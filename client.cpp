@@ -32,7 +32,7 @@ void test_accept_timer(client_options const& op)
    ioc.run();
 }
 
-void test_login_ok(client_options op)
+void test_login_ok(client_options op, char const* expected)
 {
    using mgr_type = client_mgr_login;
    using client_type = client_session<mgr_type>;
@@ -43,27 +43,7 @@ void test_login_ok(client_options op)
 
    // Fills the vector with unique ids. All these calls should succeed.
    for (auto i = 0; i < users_size; ++i)
-      mgrs.push_back({to_str(i, 4, 0), "ok"});
-
-   for (auto& mgr : mgrs)
-      std::make_shared<client_type>(ioc, op, mgr)->run();
-
-   ioc.run();
-}
-
-void test_login_fail(client_options op)
-{
-   using mgr_type = client_mgr_login;
-   using client_type = client_session<mgr_type>;
-
-   boost::asio::io_context ioc;
-
-   std::vector<mgr_type> mgrs;
-
-   // Now we clear the mgrs and try to register with the same login.
-   // They should all fail.
-   for (auto i = 0; i < users_size; ++i)
-      mgrs.push_back({to_str(i, 4, 0), "fail"});
+      mgrs.push_back({to_str(i, 4, 0), expected});
 
    for (auto& mgr : mgrs)
       std::make_shared<client_type>(ioc, op, mgr)->run();
@@ -253,10 +233,12 @@ int main(int argc, char* argv[])
       std::cout << "==========================================" << std::endl;
       test_accept_timer(op);
       std::cout << "test_accept_timer: ok" << std::endl;
-      test_login_ok(op);
-      std::cout << "test_login_ok:     ok" << std::endl;
-      test_login_fail(op);
-      std::cout << "test_login_fail:   ok" << std::endl;
+      test_login_ok(op, "ok");
+      std::cout << "test1_login_ok:    ok" << std::endl;
+      // TODO: Check why the server does not seem to release the last
+      // index.
+      test_login_ok(op, "ok");
+      std::cout << "test2_login_ok:    ok" << std::endl;
       test_login_typo(op);
       std::cout << "test_login_typo:   ok" << std::endl;
       auto binds = test_sms(op);
@@ -276,7 +258,7 @@ int main(int argc, char* argv[])
 
       return EXIT_SUCCESS;
    } catch (std::exception const& e) {
-      std::cerr << e.what() << std::endl;
+      std::cerr << "Error: " << e.what() << std::endl;
       return EXIT_FAILURE;
    }
 }

@@ -84,7 +84,7 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
                                  , tcp::resolver::results_type results)
 {
    std::string str;
-   try {
+   //try {
       boost::ignore_unused(bytes_transferred);
 
       if (ec) {
@@ -139,11 +139,11 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
          return;
       }
 
-   } catch (std::exception const& e) {
-      std::cerr << "Server error, please fix: " << str << std::endl;
-      std::cerr << "Error: " << e.what() << std::endl;
-      return;
-   }
+   //} catch (std::exception const& e) {
+   //   std::cerr << "Server error, please fix: " << str << std::endl;
+   //   std::cerr << "Error: " << e.what() << std::endl;
+   //   return;
+   //}
 
    do_read(results);
 }

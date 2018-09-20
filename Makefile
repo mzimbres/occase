@@ -20,6 +20,7 @@ server_objs += group.o
 server_objs += server_mgr.o
 server_objs += server_session.o
 server_objs += listener.o
+server_objs += idx_mgr.o
 
 client_objs =
 client_objs += client_mgr_login.o
@@ -38,7 +39,6 @@ SRCS += $(lib_objs:.o=.hpp)
 SRCS += $(addsuffix .cpp, $(exes))
 SRCS += config.hpp
 SRCS += client_session.hpp
-SRCS += grow_only_vector.hpp
 
 AUX = Makefile
 

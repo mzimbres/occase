@@ -7,7 +7,6 @@
 #include "config.hpp"
 #include "user.hpp"
 #include "json_utils.hpp"
-#include "grow_only_vector.hpp"
 
 class server_session;
 

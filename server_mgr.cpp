@@ -74,7 +74,7 @@ index_type server_mgr::on_login(json j, std::shared_ptr<server_session> s)
    // the users array and wait for sms confirmation. If confirmation
    // does not happen (we timeout first) then this index should be
    // released. This happens on session destruction.
-   auto const idx = users.allocate();
+   auto const idx = user_idx_mgr.allocate();
 
    if (idx == -1) {
       json resp;
@@ -99,12 +99,7 @@ index_type server_mgr::on_auth(json j, std::shared_ptr<server_session> s)
 {
    auto const from = j["from"].get<user_bind>();
 
-   if (!users.is_valid_index(from.index)) {
-      // Not even a valid user. Just drop the connection.
-      return -1;
-   }
-
-   if (from.tel != users[from.index].get_id()) {
+   if (from.tel != users.at(from.index).get_id()) {
       // Incorrect id.
       json resp;
       resp["cmd"] = "auth_ack";
@@ -128,7 +123,7 @@ void server_mgr::release_login(index_type idx)
 {
    // Releases back the index allocated on the login. This is caused
    // by a timeout of the sms confirmation.
-   users.deallocate(idx);
+   user_idx_mgr.deallocate(idx);
 }
 
 index_type
@@ -176,15 +171,7 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
 index_type
 server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
 {
-   auto from = j["from"].get<user_bind>();
-
-   if (!users.is_valid_index(from.index)) {
-      // This is not even an existing user. Perhaps the json command
-      // was sent with the wrong information signaling a logic error
-      // in the app. I do not think we have to report this problem.
-      return -1;
-   }
-
+   auto const from = j["from"].get<user_bind>();
    auto const hash = j["hash"].get<std::string>();
 
    auto const new_group = groups.insert({hash, {}});
@@ -193,9 +180,9 @@ server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
       json resp;
       resp["cmd"] = "create_group_ack";
       resp["result"] = "fail";
-      users[from.index].send_msg(resp.dump());
+      users.at(from.index).send_msg(resp.dump());
       //std::cout << "fail" << j << std::endl;
-      return from.index;
+      return 4;
    }
 
    //std::cout << "ok" << j << std::endl;
@@ -203,21 +190,14 @@ server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
    resp["cmd"] = "create_group_ack";
    resp["result"] = "ok";
 
-   users[from.index].send_msg(resp.dump());
+   users.at(from.index).send_msg(resp.dump());
    return 4;
 }
 
 index_type
 server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
 {
-   auto from = j["from"].get<user_bind>();
-   if (!users.is_valid_index(from.index)) {
-      // TODO: This indicates a section was athetified but has somehow
-      // the wrong user bind. There a logic error somewhere. It should
-      // be logged.
-      return -1;
-   }
-
+   auto const from = j["from"].get<user_bind>();
    auto const hash = j["hash"].get<std::string>();
 
    auto const g = groups.find(hash);
@@ -248,12 +228,6 @@ server_mgr::on_group_msg(json j, std::shared_ptr<server_session> s)
    // an identity that is different from the one checked in the
    // aithentification.
    auto const from = j["from"].get<user_bind>();
-   if (!users.is_valid_index(from.index)) {
-      // TODO: This indicates a section was athetified but has somehow
-      // the wrong user bind. There a logic error somewhere. It should
-      // be logged.
-      return -1;
-   }
 
    auto const to = j["to"].get<std::string>();
    auto const g = groups.find(to);
@@ -265,7 +239,7 @@ server_mgr::on_group_msg(json j, std::shared_ptr<server_session> s)
       json resp;
       resp["cmd"] = "send_group_msg_ack";
       resp["result"] = "fail";
-      users[from.index].send_msg(resp.dump());
+      users.at(from.index).send_msg(resp.dump());
       return 6;
    }
 
@@ -280,7 +254,7 @@ server_mgr::on_group_msg(json j, std::shared_ptr<server_session> s)
    json ack;
    ack["cmd"] = "send_group_msg_ack";
    ack["result"] = "ok";
-   users[from.index].send_msg(ack.dump());
+   users.at(from.index).send_msg(ack.dump());
 
    return 6;
 }
@@ -288,43 +262,22 @@ server_mgr::on_group_msg(json j, std::shared_ptr<server_session> s)
 index_type
 server_mgr::on_user_msg(json j, std::shared_ptr<server_session> s)
 {
-   auto from = j["from"].get<user_bind>();
-   if (!users.is_valid_index(from.index)) {
-      // This is a non-existing user. Perhaps the json command was
-      // sent with the wrong information signaling a logic error in
-      // the app.
-      // TODO: Decide what to do here.
-      return -1;
-   }
+   auto const from = j["from"].get<user_bind>();
 
-   auto to = j["to"].get<int>();
+   auto const to = j["to"].get<int>();
 
-   if (!users.is_valid_index(to)) {
-      // This is a non-existing user. Perhaps the json command was
-      // sent with the wrong information signaling a logic error in
-      // the app.
-      // TODO: Decide what to do here.
-      return from.index;
-   }
-
-   users[from.index].store_session(s);
+   users.at(from.index).store_session(s);
 
    json resp;
    resp["cmd"] = "message";
    resp["message"] = j["msg"].get<std::string>();
 
-   users[to].send_msg(resp.dump());
+   users.at(to).send_msg(resp.dump());
    return from.index;
 }
 
 void server_mgr::on_write(index_type user_idx)
 {
-   if (!users.is_valid_index(user_idx)) {
-      // For example when we return -2 to the session for sms
-      // confirmation. We can safely ignore this case.
-      return;
-   }
-
    users[user_idx].on_write();
 }
 

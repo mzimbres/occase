@@ -15,9 +15,11 @@ class server_mgr {
 private:
    std::string host = "criatura";
 
-   // Maps a user id (telephone, email, etc.) to a user object.
+   // Maps a user id (telephone, email, etc.) to a user index in the
+   // users vector.
    std::unordered_map<id_type, index_type> id_to_idx_map;
-   grow_only_vector<user> users;
+   std::vector<user> users;
+   idx_mgr user_idx_mgr;;
 
    // Maps a group hash to a group object.
    std::unordered_map<std::string, group> groups;
@@ -33,6 +35,7 @@ private:
 public:
    server_mgr(int users_size)
    : users(users_size)
+   , user_idx_mgr(users_size)
    {}
 
    // Functions to interact with the server_session.

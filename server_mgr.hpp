@@ -11,6 +11,45 @@
 
 class server_session;
 
+enum class ev_res
+{ LOGIN_OK
+, LOGIN_FAIL
+, AUTH_OK
+, AUTH_FAIL
+, SMS_CONFIRMATION_OK
+, SMS_CONFIRMATION_FAIL
+, CREATE_GROUP_OK
+, CREATE_GROUP_FAIL
+, JOIN_GROUP_OK
+, JOIN_GROUP_FAIL
+, SEND_GROUP_MSG_OK
+, SEND_GROUP_MSG_FAIL
+, USER_MSG_OK
+, USER_MSG_FAIL
+, UNKNOWN
+};
+
+inline auto drop_session(ev_res r) noexcept
+{
+   switch (r) {
+   case ev_res::LOGIN_OK:              return false;
+   case ev_res::LOGIN_FAIL:            return true;
+   case ev_res::AUTH_OK:               return false;
+   case ev_res::AUTH_FAIL:             return true;
+   case ev_res::SMS_CONFIRMATION_OK:   return false;
+   case ev_res::SMS_CONFIRMATION_FAIL: return true;
+   case ev_res::CREATE_GROUP_OK:       return false;
+   case ev_res::CREATE_GROUP_FAIL:     return false;
+   case ev_res::JOIN_GROUP_OK:         return false;
+   case ev_res::JOIN_GROUP_FAIL:       return false;
+   case ev_res::SEND_GROUP_MSG_OK:     return false;
+   case ev_res::SEND_GROUP_MSG_FAIL:   return false;
+   case ev_res::USER_MSG_OK:           return false;
+   case ev_res::USER_MSG_FAIL:         return false;
+   default:                            return true;
+   }
+}
+
 class server_mgr {
 private:
    std::string host = "criatura";
@@ -19,18 +58,18 @@ private:
    // users vector.
    std::unordered_map<id_type, index_type> id_to_idx_map;
    std::vector<user> users;
-   idx_mgr user_idx_mgr;;
+   idx_mgr user_idx_mgr;
 
    // Maps a group hash to a group object.
    std::unordered_map<std::string, group> groups;
 
-   index_type on_login(json j, std::shared_ptr<server_session> s);
-   index_type on_auth(json j, std::shared_ptr<server_session> s);
-   index_type on_sms_confirmation(json j, std::shared_ptr<server_session> s);
-   index_type on_create_group(json j, std::shared_ptr<server_session> s);
-   index_type on_join_group(json j, std::shared_ptr<server_session> session);
-   index_type on_group_msg(json j, std::shared_ptr<server_session> session);
-   index_type on_user_msg(json j, std::shared_ptr<server_session> session);
+   ev_res on_login(json j, std::shared_ptr<server_session> s);
+   ev_res on_auth(json j, std::shared_ptr<server_session> s);
+   ev_res on_sms_confirmation(json j, std::shared_ptr<server_session> s);
+   ev_res on_create_group(json j, std::shared_ptr<server_session> s);
+   ev_res on_join_group(json j, std::shared_ptr<server_session> session);
+   ev_res on_group_msg(json j, std::shared_ptr<server_session> session);
+   ev_res on_user_msg(json j, std::shared_ptr<server_session> session);
 
 public:
    server_mgr(int users_size)
@@ -39,7 +78,7 @@ public:
    {}
 
    // Functions to interact with the server_session.
-   index_type on_read(json j, std::shared_ptr<server_session> session);
+   ev_res on_read(json j, std::shared_ptr<server_session> session);
    void on_write(index_type user_idx);
    void release_login(index_type idx);
 };

@@ -193,15 +193,15 @@ void server_session::on_read( boost::system::error_code ec
       buffer.consume(std::size(buffer));
       json j = json::parse(str);
 
-      auto r = sd->on_read(std::move(j), shared_from_this());
-      if (r == -1) {
+      auto const r = sd->on_read(std::move(j), shared_from_this());
+      if (drop_session(r)) {
          // We have to unconditionally close the connection. 
          timer.cancel();
          do_close();
          return;
       }
 
-      if (r == 1) {
+      if (r == ev_res::LOGIN_OK) {
          // Successful login request which means the unknown
          // connection timer  has to be canceled.  This is where we
          // have to set the sms timeout.
@@ -216,12 +216,12 @@ void server_session::on_read( boost::system::error_code ec
             // an stablished session, this is a logic error.
             assert(true);
          }
-      } else if (r == 2) {
+      } else if (r == ev_res::SMS_CONFIRMATION_OK) {
          // This means the sms authentification was successfull and
          // that we have to cancel the sms timer. TODO: At this point
          // we can begin to play with websockets ping pong frames.
          timer.cancel();
-      } else if (r == 3) {
+      } else if (r == ev_res::AUTH_OK) {
          // Successful authentication. We have to cancel the on accept
          // timeout.
          timer.cancel();

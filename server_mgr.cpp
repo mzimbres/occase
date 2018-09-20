@@ -1,7 +1,7 @@
 #include "server_mgr.hpp"
 #include "server_session.hpp"
 
-index_type
+ev_res
 server_mgr::on_read(json j, std::shared_ptr<server_session> s)
 {
    //std::cout << j << std::endl;
@@ -15,7 +15,7 @@ server_mgr::on_read(json j, std::shared_ptr<server_session> s)
          return on_auth(std::move(j), s);
 
       std::cerr << "Server: Unknown command " << cmd << std::endl;
-      return -1;
+      return ev_res::UNKNOWN;
    }
 
    if (s->is_waiting_sms()) {
@@ -23,7 +23,7 @@ server_mgr::on_read(json j, std::shared_ptr<server_session> s)
          return on_sms_confirmation(std::move(j), s);
 
       std::cerr << "Server: Unknown command " << cmd << std::endl;
-      return -1;
+      return ev_res::UNKNOWN;
    }
 
    if (s->is_auth()) {
@@ -40,14 +40,14 @@ server_mgr::on_read(json j, std::shared_ptr<server_session> s)
          return on_user_msg(std::move(j), s);
 
       std::cerr << "Server: Unknown command " << cmd << std::endl;
-      return -1;
+      return ev_res::UNKNOWN;
    }
 
    std::cerr << "Server: Unknown command " << cmd << std::endl;
-   return -1;
+   return ev_res::UNKNOWN;
 }
 
-index_type server_mgr::on_login(json j, std::shared_ptr<server_session> s)
+ev_res server_mgr::on_login(json j, std::shared_ptr<server_session> s)
 {
    auto const tel = j["tel"].get<std::string>();
 
@@ -67,7 +67,7 @@ index_type server_mgr::on_login(json j, std::shared_ptr<server_session> s)
       resp["cmd"] = "login_ack";
       resp["result"] = "fail";
       s->send_msg(resp.dump());
-      return -1;
+      return ev_res::LOGIN_FAIL;
    }
 
    // The user does not exist in the system so we allocate an entry in
@@ -81,7 +81,7 @@ index_type server_mgr::on_login(json j, std::shared_ptr<server_session> s)
       resp["cmd"] = "login_ack";
       resp["result"] = "fail";
       s->send_msg(resp.dump());
-      return -1;
+      return ev_res::LOGIN_FAIL;
    }
 
    // TODO: Use a random number generator with six digits.
@@ -92,10 +92,10 @@ index_type server_mgr::on_login(json j, std::shared_ptr<server_session> s)
    resp["cmd"] = "login_ack";
    resp["result"] = "ok";
    s->send_msg(resp.dump());
-   return 1;
+   return ev_res::LOGIN_OK;
 }
 
-index_type server_mgr::on_auth(json j, std::shared_ptr<server_session> s)
+ev_res server_mgr::on_auth(json j, std::shared_ptr<server_session> s)
 {
    auto const from = j["from"].get<user_bind>();
 
@@ -105,7 +105,7 @@ index_type server_mgr::on_auth(json j, std::shared_ptr<server_session> s)
       resp["cmd"] = "auth_ack";
       resp["result"] = "fail";
       s->send_msg(resp.dump());
-      return -1;
+      return ev_res::AUTH_FAIL;
    }
 
    s->set_login_idx(from.index);
@@ -116,7 +116,7 @@ index_type server_mgr::on_auth(json j, std::shared_ptr<server_session> s)
    resp["cmd"] = "auth_ack";
    resp["result"] = "ok";
    s->send_msg(resp.dump());
-   return 3;
+   return ev_res::AUTH_OK;
 }
 
 void server_mgr::release_login(index_type idx)
@@ -126,7 +126,7 @@ void server_mgr::release_login(index_type idx)
    user_idx_mgr.deallocate(idx);
 }
 
-index_type
+ev_res
 server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
 {
    auto const tel = j["tel"].get<std::string>();
@@ -141,7 +141,7 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
       s->send_msg(resp.dump());
       // We do not release the login index here but let the session
       // destructor do it for us.
-      return -1;
+      return ev_res::SMS_CONFIRMATION_FAIL;
    }
 
    // Before we call s->get_user_idx() we have to promete the session.
@@ -165,10 +165,10 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
    resp["user_bind"] = user_bind {tel, host, idx};
 
    users[idx].send_msg(resp.dump());
-   return 2;
+   return ev_res::SMS_CONFIRMATION_OK;
 }
 
-index_type
+ev_res
 server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
 {
    auto const from = j["from"].get<user_bind>();
@@ -182,7 +182,7 @@ server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
       resp["result"] = "fail";
       users.at(from.index).send_msg(resp.dump());
       //std::cout << "fail" << j << std::endl;
-      return 4;
+      return ev_res::CREATE_GROUP_FAIL;
    }
 
    //std::cout << "ok" << j << std::endl;
@@ -191,10 +191,10 @@ server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
    resp["result"] = "ok";
 
    users.at(from.index).send_msg(resp.dump());
-   return 4;
+   return ev_res::CREATE_GROUP_OK;
 }
 
-index_type
+ev_res
 server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
 {
    auto const from = j["from"].get<user_bind>();
@@ -206,7 +206,7 @@ server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
       resp["cmd"] = "join_group_ack";
       resp["result"] = "fail";
       s->send_msg(resp.dump());
-      return 5;
+      return ev_res::JOIN_GROUP_FAIL;
    }
 
    g->second.add_member(from.tel, s);
@@ -216,10 +216,10 @@ server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
    resp["result"] = "ok";
 
    s->send_msg(resp.dump());
-   return from.index;
+   return ev_res::JOIN_GROUP_OK;
 }
 
-index_type
+ev_res
 server_mgr::on_group_msg(json j, std::shared_ptr<server_session> s)
 {
    // TODO: On all messages that have a "from" field we should check
@@ -240,7 +240,7 @@ server_mgr::on_group_msg(json j, std::shared_ptr<server_session> s)
       resp["cmd"] = "send_group_msg_ack";
       resp["result"] = "fail";
       users.at(from.index).send_msg(resp.dump());
-      return 6;
+      return ev_res::SEND_GROUP_MSG_FAIL;
    }
 
    json resp;
@@ -256,10 +256,10 @@ server_mgr::on_group_msg(json j, std::shared_ptr<server_session> s)
    ack["result"] = "ok";
    users.at(from.index).send_msg(ack.dump());
 
-   return 6;
+   return ev_res::SEND_GROUP_MSG_OK;
 }
 
-index_type
+ev_res
 server_mgr::on_user_msg(json j, std::shared_ptr<server_session> s)
 {
    auto const from = j["from"].get<user_bind>();
@@ -273,7 +273,7 @@ server_mgr::on_user_msg(json j, std::shared_ptr<server_session> s)
    resp["message"] = j["msg"].get<std::string>();
 
    users.at(to).send_msg(resp.dump());
-   return from.index;
+   return ev_res::USER_MSG_OK;
 }
 
 void server_mgr::on_write(index_type user_idx)

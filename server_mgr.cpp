@@ -256,16 +256,9 @@ ev_res
 server_mgr::on_user_msg(json j, std::shared_ptr<server_session> s)
 {
    auto const from = j["from"].get<user_bind>();
+   auto const to = j["to"].get<user_bind>();
 
-   auto const to = j["to"].get<int>();
-
-   users.at(from.index).store_session(s);
-
-   json resp;
-   resp["cmd"] = "message";
-   resp["message"] = j["msg"].get<std::string>();
-
-   users.at(to).send_msg(resp.dump());
+   users.at(to.index).send_msg(j.dump());
    return ev_res::USER_MSG_OK;
 }
 

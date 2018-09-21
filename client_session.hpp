@@ -43,6 +43,9 @@ private:
 
    Mgr& mgr;
 
+   int sent_msgs = 0;
+   int recv_msgs = 0;
+
    void do_close();
    void on_resolve( boost::system::error_code ec
                   , tcp::resolver::results_type results);
@@ -70,6 +73,8 @@ public:
    void run();
    void send_msg(std::string msg);
    auto const& get_mgr() const noexcept {return mgr;}
+   auto get_sent_msgs() const noexcept {return sent_msgs;}
+   auto get_recv_msgs() const noexcept {return recv_msgs;}
 };
 
 inline
@@ -129,6 +134,7 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
          return;
       }
 
+      ++recv_msgs;
       str = boost::beast::buffers_to_string(buffer.data());
       buffer.consume(std::size(buffer));
       json j = json::parse(str);
@@ -163,6 +169,7 @@ client_session<Mgr>::client_session( boost::asio::io_context& ioc
 template <class Mgr>
 void client_session<Mgr>::send_msg(std::string msg)
 {
+   ++sent_msgs;
    auto is_empty = std::empty(msg_queue);
    msg_queue.push(std::move(msg));
 

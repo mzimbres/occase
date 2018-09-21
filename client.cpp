@@ -1,4 +1,5 @@
 #include <stack>
+#include <chrono>
 #include <thread>
 #include <memory>
 #include <vector>
@@ -215,7 +216,35 @@ void test_simulation(client_options op, std::vector<user_bind> binds)
       session->run();
 
    ioc.run();
+
+   int sent = 0;
+   int recv = 0;
+   for (auto& session : sessions) {
+      sent += session->get_sent_msgs();
+      recv += session->get_recv_msgs();
+   }
+
+   std::cout << "Sent:     " << sent << std::endl;
+   std::cout << "Received: " << recv << std::endl;
 }
+
+class timer {
+private:
+  std::chrono::time_point<std::chrono::system_clock> m_start;
+public:
+  timer() : m_start(std::chrono::system_clock::now()) {}
+  auto get_count() const
+  { 
+    auto const end = std::chrono::system_clock::now();
+    auto diff = end - m_start;
+    auto diff2 = std::chrono::duration_cast<std::chrono::seconds>(diff);
+    return diff2.count();
+  }
+  ~timer()
+  {
+    std::cout << "Time elapsed: " << get_count() << "s" << std::endl;
+  }
+};
 
 int main(int argc, char* argv[])
 {
@@ -294,6 +323,7 @@ int main(int argc, char* argv[])
       test_create_group(op, binds.front());
       std::cout << "test_create_group: ok" << std::endl;
 
+      timer t;
       test_simulation(op, binds);
       std::cout << "test_simulation:   ok" << std::endl;
       std::cout << "==========================================" << std::endl;

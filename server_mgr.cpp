@@ -5,7 +5,7 @@ ev_res
 server_mgr::on_read(json j, std::shared_ptr<server_session> s)
 {
    //std::cout << j << std::endl;
-   auto cmd = j["cmd"].get<std::string>();
+   auto const cmd = j["cmd"].get<std::string>();
 
    if (s->is_waiting_auth()) {
       if (cmd == "login")
@@ -33,7 +33,7 @@ server_mgr::on_read(json j, std::shared_ptr<server_session> s)
       if (cmd == "join_group")
          return on_join_group(std::move(j), s);
 
-      if (cmd == "send_group_msg")
+      if (cmd == "group_msg")
          return on_group_msg(std::move(j), s);
 
       if (cmd == "user_msg")
@@ -84,9 +84,11 @@ ev_res server_mgr::on_login(json j, std::shared_ptr<server_session> s)
       return ev_res::LOGIN_FAIL;
    }
 
+   // WARNING: Ensure the release of idx is exception safe.
+   s->set_login_idx(idx);
+
    // TODO: Use a random number generator with six digits.
    s->set_sms("8347");
-   s->set_login_idx(idx);
 
    json resp;
    resp["cmd"] = "login_ack";
@@ -152,8 +154,8 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
    assert(idx != -1);
    auto const new_user = id_to_idx_map.insert({tel, idx});
 
-   // This is odd. The entry already exists on the index map which
-   // means we did something wrong in the login command.
+   // This would be odd. The entry already exists on the index map
+   // which means we did something wrong in the login command.
    assert(new_user.second);
 
    users[idx].store_session(s);
@@ -222,14 +224,9 @@ server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
 ev_res
 server_mgr::on_group_msg(json j, std::shared_ptr<server_session> s)
 {
-   // TODO: On all messages that have a "from" field we should check
-   // if this field matches the one stored in the session. This can be
-   // used to avoid some kind of hacking like sending a message with
-   // an identity that is different from the one checked in the
-   // aithentification.
    auto const from = j["from"].get<user_bind>();
-
    auto const to = j["to"].get<std::string>();
+
    auto const g = groups.find(to);
    if (g == std::end(groups)) {
       // This is a non-existing group. Perhaps the json command was
@@ -237,26 +234,22 @@ server_mgr::on_group_msg(json j, std::shared_ptr<server_session> s)
       // the app.
 
       json resp;
-      resp["cmd"] = "send_group_msg_ack";
+      resp["cmd"] = "group_msg_ack";
       resp["result"] = "fail";
       users.at(from.index).send_msg(resp.dump());
-      return ev_res::SEND_GROUP_MSG_FAIL;
+      return ev_res::GROUP_MSG_FAIL;
    }
-
-   json resp;
-   resp["cmd"] = "group_msg";
-   resp["body"] = j["msg"].get<std::string>();
 
    // TODO: Change broadcast to return the number of users that the
    // message has reached.
-   g->second.broadcast_msg(resp.dump());
+   g->second.broadcast_msg(j.dump());
 
    json ack;
-   ack["cmd"] = "send_group_msg_ack";
+   ack["cmd"] = "group_msg_ack";
    ack["result"] = "ok";
    users.at(from.index).send_msg(ack.dump());
 
-   return ev_res::SEND_GROUP_MSG_OK;
+   return ev_res::GROUP_MSG_OK;
 }
 
 ev_res

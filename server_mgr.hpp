@@ -22,8 +22,8 @@ enum class ev_res
 , CREATE_GROUP_FAIL
 , JOIN_GROUP_OK
 , JOIN_GROUP_FAIL
-, SEND_GROUP_MSG_OK
-, SEND_GROUP_MSG_FAIL
+, GROUP_MSG_OK
+, GROUP_MSG_FAIL
 , USER_MSG_OK
 , USER_MSG_FAIL
 , UNKNOWN
@@ -42,8 +42,8 @@ inline auto drop_session(ev_res r) noexcept
    case ev_res::CREATE_GROUP_FAIL:     return false;
    case ev_res::JOIN_GROUP_OK:         return false;
    case ev_res::JOIN_GROUP_FAIL:       return false;
-   case ev_res::SEND_GROUP_MSG_OK:     return false;
-   case ev_res::SEND_GROUP_MSG_FAIL:   return false;
+   case ev_res::GROUP_MSG_OK:          return false;
+   case ev_res::GROUP_MSG_FAIL:        return false;
    case ev_res::USER_MSG_OK:           return false;
    case ev_res::USER_MSG_FAIL:         return false;
    default:                            return true;

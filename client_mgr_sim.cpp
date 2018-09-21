@@ -15,7 +15,7 @@ int client_mgr_sim::on_read(json j, std::shared_ptr<client_type> s)
       }
 
       std::cout << "Test cg: Error." << std::endl;
-      throw std::runtime_error("client_mgr_sim::on_read");
+      throw std::runtime_error("client_mgr_sim::on_read1");
       return -1;
    }
 
@@ -33,10 +33,10 @@ int client_mgr_sim::on_read(json j, std::shared_ptr<client_type> s)
       }
 
       std::cout << "Test sim: join_group_ack fail." << std::endl;
-      throw std::runtime_error("client_mgr_sim::on_read");
+      throw std::runtime_error("client_mgr_sim::on_read2");
       return -1;
    }
-   if (cmd == "send_group_msg_ack") {
+   if (cmd == "group_msg_ack") {
       auto const res = j["result"].get<std::string>();
       if (res == expected) {
          hashes.pop();
@@ -49,20 +49,20 @@ int client_mgr_sim::on_read(json j, std::shared_ptr<client_type> s)
       }
 
       std::cout << "Test sim: send_group_msg_ack: fail." << std::endl;
-      throw std::runtime_error("client_mgr_sim::on_read");
+      throw std::runtime_error("client_mgr_sim::on_read3");
       return -1;
    }
 
    if (cmd == "group_msg") {
       // TODO: Output some error if the number of messages received is
       // wrong.
-      auto const body = j["body"].get<std::string>();
+      auto const body = j["msg"].get<std::string>();
       //std::cout << "Group msg: " << body << std::endl;
       return 1;
    }
 
    std::cout << "Server error: Unknown command." << std::endl;
-   throw std::runtime_error("client_mgr_sim::on_read");
+   throw std::runtime_error("client_mgr_sim::on_read4");
    return -1;
 }
 
@@ -78,14 +78,14 @@ int client_mgr_sim::on_handshake(std::shared_ptr<client_type> s)
 int client_mgr_sim::on_closed(boost::system::error_code ec)
 {
    std::cout << "Test sim: fail." << std::endl;
-   throw std::runtime_error("client_mgr_sim::on_read");
+   throw std::runtime_error("client_mgr_sim::on_closed");
    return -1;
 };
 
 void client_mgr_sim::send_group_msg(std::shared_ptr<client_type> s)
 {
    json j_msg;
-   j_msg["cmd"] = "send_group_msg";
+   j_msg["cmd"] = "group_msg";
    j_msg["from"] = bind;
    j_msg["to"] = hashes.top();
    j_msg["msg"] = "Group message to: " + hashes.top();

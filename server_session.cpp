@@ -105,8 +105,12 @@ void server_session::do_read()
 
 void server_session::on_close(boost::system::error_code ec)
 {
-   if (ec)
-      return fail(ec, "close");
+   if (ec) {
+      // TODO: What should be done here?
+      closing = false;
+      fail(ec, "close");
+      return;
+   }
 
    // TODO: Should we shutdown the socket here?
    //std::cout << "Connection closed." << std::endl;
@@ -115,6 +119,11 @@ void server_session::on_close(boost::system::error_code ec)
 
 void server_session::do_close()
 {
+    if (closing)
+       return;
+
+    closing = true;
+
    //std::cout << "server_session::do_close()" << std::endl;
    auto handler = [p = shared_from_this()](auto ec)
    { p->on_close(ec); };
@@ -239,6 +248,8 @@ void server_session::on_write( boost::system::error_code ec
    if (msg_queue.empty())
       return; // No more message to send to the client.
 
+   // Do not move the front msg. If the write fail we will want to
+   // save the message in the database or whatever.
    do_write(msg_queue.front());
 }
 
@@ -258,16 +269,13 @@ void server_session::do_write(std::string msg)
 void server_session::send_msg(std::string msg)
 {
    assert(!std::empty(msg));
-   //if (std::empty(msg))
-   //   throw "";
 
-   const auto is_empty = msg_queue.empty();
+   auto const is_empty = msg_queue.empty();
 
-   // TODO: Impose a limit on how grow the queue can grow, perhaps by
-   // throwing away old messages.
+   // TODO: Impose a limit on how grow the queue can grow.
    msg_queue.push(std::move(msg));
 
-   if (is_empty)
+   if (is_empty && !closing)
       do_write(msg_queue.front());
 }
 

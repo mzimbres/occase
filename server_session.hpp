@@ -37,10 +37,10 @@ private:
    index_type login_idx = -1;
    std::string sms;
    std::queue<std::string> msg_queue;
+   bool closing = false;
 
    void do_read();
    void do_write(std::string msg);
-   void do_close();
    void on_read( boost::system::error_code ec
                , std::size_t bytes_transferred);
    void on_close(boost::system::error_code ec);
@@ -71,5 +71,6 @@ public:
    {return login_idx == -1 && user_idx != -1;};
    auto is_waiting_auth() const noexcept
    {return login_idx == -1 && user_idx == -1;};
+   void do_close();
 };
 

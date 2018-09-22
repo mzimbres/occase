@@ -1,11 +1,14 @@
-boost_libs    = /opt/boost_1_67_0/lib/libboost_system.a
+boost_lib     = /opt/boost_1_67_0/lib
+boost_libs    =
+boost_libs    += $(boost_lib)/libboost_system.a
+boost_libs    += $(boost_lib)/libboost_program_options.a
 boost_include = /opt/boost_1_67_0/include
 json_include  = /opt/nlohmann_3_1_2
 
 DEBUG         = -g -ggdb3
 LDFLAGS       = -lpthread
 CPPFLAGS      = -I. -I$(boost_include) -I$(json_include) \
-                -std=c++17 $(DEBUG) -Wall -Werror
+                -std=c++17 $(DEBUG) -Wall # -Werror
 
 DIST_NAME   = sellit
 

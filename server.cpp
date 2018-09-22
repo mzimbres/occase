@@ -1,6 +1,11 @@
 #include <memory>
+#include <string>
+#include <iterator>
 
 #include <boost/asio/signal_set.hpp>
+#include <boost/program_options/options_description.hpp>
+#include <boost/program_options/parsers.hpp>
+#include <boost/program_options/variables_map.hpp>
 
 #include "listener.hpp"
 
@@ -22,23 +27,51 @@ struct signal_handler {
    }
 };
 
+namespace po = boost::program_options;
+
 int main(int argc, char* argv[])
 {
-   auto const address = boost::asio::ip::make_address("127.0.0.1");
-   auto const port = static_cast<unsigned short>(8080);
+   try {
+      std::string ip;
+      unsigned short port;
+      po::options_description desc("Allowed options");
+      desc.add_options()
+         ("help", "produce help message")
+         ( "port,p"
+         , po::value<unsigned short>(&port)->default_value(8080)
+         , "Port")
+         ("ip-address,p"
+         , po::value<std::string>(&ip)->default_value("127.0.0.1")
+         , "Port")
+         ;
 
-   boost::asio::io_context ioc {1};
+      po::variables_map vm;        
+      po::store(po::parse_command_line(argc, argv, desc), vm);
+      po::notify(vm);    
 
-   auto sd = std::make_shared<server_mgr>(users_size);
+      if (vm.count("help")) {
+         std::cout << desc << "\n";
+         return 0;
+      }
 
-   std::make_shared<listener>( ioc , tcp::endpoint {address, port}
-                             , sd)->run();
+      auto const address = boost::asio::ip::make_address(ip);
 
-   // Capture SIGINT and SIGTERM to perform a clean shutdown
-   boost::asio::signal_set signals(ioc, SIGINT, SIGTERM);
-   signals.async_wait(signal_handler {ioc});
+      boost::asio::io_context ioc {1};
 
-   ioc.run();
-   return EXIT_SUCCESS;
+      auto sd = std::make_shared<server_mgr>(users_size);
+
+      std::make_shared<listener>( ioc , tcp::endpoint {address, port}
+                                , sd)->run();
+
+      // Capture SIGINT and SIGTERM to perform a clean shutdown
+      boost::asio::signal_set signals(ioc, SIGINT, SIGTERM);
+      signals.async_wait(signal_handler {ioc});
+
+      ioc.run();
+      return 0;
+   } catch(std::exception const& e) {
+       std::cerr << "error: " << e.what() << "\n";
+       return 1;
+   }
 }
 

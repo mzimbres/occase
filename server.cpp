@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
       server_op op;
       po::options_description desc("Options");
       desc.add_options()
-         ("help, h", "produce help message")
+         ("help,h", "produce help message")
          ( "port,p"
          , po::value<unsigned short>(&op.port)->default_value(8080)
          , "Server port.")

@@ -29,6 +29,7 @@ public:
    int on_read(json j, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec) { return -1; }
    int on_handshake(std::shared_ptr<client_type> s);
+   int on_connect() const noexcept { return 1;}
 };
 
 //___________________________________________________________________
@@ -45,5 +46,6 @@ public:
    int on_read(json j, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec);
    int on_handshake(std::shared_ptr<client_type> s);
+   int on_connect() const noexcept { return 1;}
 };
 

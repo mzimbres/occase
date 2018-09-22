@@ -23,5 +23,6 @@ public:
    int on_closed(boost::system::error_code ec);
    int on_write(std::shared_ptr<client_type> s);
    int on_handshake(std::shared_ptr<client_type> s) { return 1;}
+   int on_connect() const noexcept { return 1;}
 };
 

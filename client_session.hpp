@@ -196,13 +196,12 @@ void client_session<Mgr>::on_resolve( boost::system::error_code ec
    if (ec)
       return fail_tmp(ec, "resolve");
 
-   //std::cout  << "Trying to connect." << std::endl;
-   auto handler =
-      [results, p = this->shared_from_this()](auto ec, auto Iterator)
+   auto this_obj = this->shared_from_this();
+   auto handler = [results, p = this_obj](auto ec, auto Iterator)
    { p->on_connect(ec, results); };
 
-   boost::asio::async_connect(ws.next_layer(), results.begin(),
-      results.end(), handler);
+   boost::asio::async_connect( ws.next_layer(), results.begin()
+                             , results.end(), handler);
 }
 
 template <class Mgr>
@@ -213,7 +212,8 @@ client_session<Mgr>::on_connect( boost::system::error_code ec
    if (ec)
       return fail_tmp(ec, "resolve");
 
-   //std::cout << "Connection stablished." << std::endl;
+   if (mgr.on_connect() == -1)
+      return;
 
    auto handler = [p = this->shared_from_this(), results](auto ec)
    { p->on_handshake(ec, results); };
@@ -235,9 +235,8 @@ client_session<Mgr>::on_handshake( boost::system::error_code ec
    // so that we can receive the acks from the server.
    do_read(results);
 
-   if (mgr.on_handshake(this->shared_from_this()) == -1) {
+   if (mgr.on_handshake(this->shared_from_this()) == -1)
       do_close();
-   }
 }
 
 template <class Mgr>

@@ -1,5 +1,6 @@
 #include <memory>
 #include <string>
+#include <chrono>
 #include <iterator>
 
 #include <boost/asio/signal_set.hpp>
@@ -29,21 +30,44 @@ struct signal_handler {
 
 namespace po = boost::program_options;
 
+struct server_op {
+   std::string ip;
+   unsigned short port;
+   int n_init_users;
+   int on_acc_timeout;
+   int sms_timeout;
+
+   auto session_config() const noexcept
+   {
+      return server_session_config
+      { std::chrono::seconds {on_acc_timeout}
+      , std::chrono::seconds {sms_timeout}};
+   }
+};
+
 int main(int argc, char* argv[])
 {
    try {
-      std::string ip;
-      unsigned short port;
-      po::options_description desc("Allowed options");
+      server_op op;
+      po::options_description desc("Options");
       desc.add_options()
          ("help", "produce help message")
          ( "port,p"
-         , po::value<unsigned short>(&port)->default_value(8080)
-         , "Port")
-         ("ip-address,p"
-         , po::value<std::string>(&ip)->default_value("127.0.0.1")
-         , "Port")
-         ;
+         , po::value<unsigned short>(&op.port)->default_value(8080)
+         , "Server port.")
+         ("ip-address,d"
+         , po::value<std::string>(&op.ip)->default_value("127.0.0.1")
+         , "Server ip address.")
+         ("init-users,u"
+         , po::value<int>(&op.n_init_users)->default_value(100)
+         , "Initial number of users.")
+         ("sms-timeout,s"
+         , po::value<int>(&op.sms_timeout)->default_value(2)
+         , "SMS confirmation timeout in seconds.")
+         ("accept-timeout,a"
+         , po::value<int>(&op.on_acc_timeout)->default_value(2)
+         , "On accept timeout in seconds.")
+      ;
 
       po::variables_map vm;        
       po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -54,14 +78,15 @@ int main(int argc, char* argv[])
          return 0;
       }
 
-      auto const address = boost::asio::ip::make_address(ip);
+      auto const address = boost::asio::ip::make_address(op.ip);
 
       boost::asio::io_context ioc {1};
 
-      auto sd = std::make_shared<server_mgr>(users_size);
+      auto sd = std::make_shared<server_mgr>(op.n_init_users);
 
-      std::make_shared<listener>( ioc , tcp::endpoint {address, port}
-                                , sd)->run();
+      std::make_shared<listener>( ioc 
+                                , tcp::endpoint {address, op.port}
+                                , sd, op.session_config())->run();
 
       // Capture SIGINT and SIGTERM to perform a clean shutdown
       boost::asio::signal_set signals(ioc, SIGINT, SIGTERM);

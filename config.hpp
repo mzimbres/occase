@@ -17,12 +17,5 @@ using id_type = std::string;
 using tcp = boost::asio::ip::tcp;
 namespace websocket = boost::beast::websocket;
 
-namespace timeouts
-{
-   constexpr std::chrono::seconds on_accept {2};
-   constexpr std::chrono::seconds sms {2};
-}
-
 constexpr auto user_msg_max_queue_size = 10;
-constexpr auto users_size = 100;
 

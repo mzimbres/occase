@@ -15,11 +15,13 @@ void fail(boost::system::error_code ec, char const* what)
 }
 
 server_session::server_session( tcp::socket socket
-                              , std::shared_ptr<server_mgr> sd_)
+                              , std::shared_ptr<server_mgr> sd_
+                              , server_session_config cf_)
 : ws(std::move(socket))
 , strand(ws.get_executor())
 , timer( ws.get_executor().context()
        , std::chrono::steady_clock::time_point::max())
+, cf(cf_)
 , sd(sd_)
 { }
 
@@ -80,7 +82,7 @@ void server_session::on_accept(boost::system::error_code ec)
    // The cancelling of this timer should happen when either
    // 1. The user Identifies himself.
    // 2. The user requests a login.
-   timer.expires_after(timeouts::on_accept);
+   timer.expires_after(cf.on_acc_timeout);
 
    auto const handler = [p = shared_from_this()](auto ec)
    { p->on_timer(ec); };
@@ -135,7 +137,7 @@ void server_session::handle_ev(ev_res r)
       // Successful login request which means the unknown
       // connection timer  has to be canceled.  This is where we
       // have to set the sms timeout.
-      if (timer.expires_after(timeouts::sms) > 0) {
+      if (timer.expires_after(cf.sms_timeout) > 0) {
          auto const handler = [p = shared_from_this()](auto ec)
          { p->on_timer(ec); };
 

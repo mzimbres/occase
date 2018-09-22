@@ -18,6 +18,8 @@
 #include "client_mgr_login.hpp"
 #include "client_mgr_accept_timer.hpp"
 
+constexpr auto users_size = 100;
+
 void test_accept_timer(client_options const& op)
 {
    using mgr_type = client_mgr_accept_timer;

@@ -13,9 +13,7 @@
 #include "config.hpp"
 #include "server_mgr.hpp"
 
-// TODO: Remove the strand.
-// TODO: Think of implementing control frames as in Beast advanced
-//       example.
+// TODO: Implementing control frames as in Beast advanced example.
 class server_session :
    public std::enable_shared_from_this<server_session> {
 private:
@@ -39,8 +37,7 @@ private:
    void on_write( boost::system::error_code ec
                 , std::size_t bytes_transferred);
 
-   void on_sms_timeout(boost::system::error_code ec);
-   void on_accept_timeout(boost::system::error_code ec);
+   void on_timer(boost::system::error_code ec);
 
    index_type user_idx = -1;
    index_type login_idx = -1;

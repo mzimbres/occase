@@ -21,14 +21,11 @@ server_session::server_session( tcp::socket socket
 , timer( ws.get_executor().context()
        , std::chrono::steady_clock::time_point::max())
 , sd(sd_)
-{
-   //std::cout << "__________________________" << std::endl;
-}
+{ }
 
 server_session::~server_session()
 {
    if (login_idx != -1) {
-      //std::cout << "Releasing login index" << std::endl;
       sd->release_login(login_idx);
       login_idx = -1;
    }
@@ -42,21 +39,22 @@ void server_session::do_accept()
    ws.async_accept(boost::asio::bind_executor(strand, handler));
 }
 
-void server_session::on_accept_timeout(boost::system::error_code ec)
+void server_session::on_timer(boost::system::error_code ec)
 {
    if (!ec) {
-      // The timeout was triggered. That means the user did not sent us a
-      // login or an authenticate command. We can either close the
-      // connection gracefully by sending a close frame with async_close
-      // or simply shutdown the socket, in which case the client wont be
-      // notified. Here we decide to inform the user.
+      // The timeout was triggered. That means the user did not sent
+      // us a login, an authenticate command or the sms confirmation.
+      // We can either close the connection gracefully by sending a
+      // close frame with async_close or simply shutdown the socket,
+      // in which case the client wont be notified. Here we decide to
+      // inform the user.
       do_close();
       return;
    }
 
    if (ec != boost::asio::error::operation_aborted) {
       // Some error, do we need to handle this?
-      fail(ec, "on_accept_timeout");
+      fail(ec, "on_timer");
       return;
    }
 
@@ -72,37 +70,6 @@ void server_session::on_accept_timeout(boost::system::error_code ec)
    // The timer has been cancelled. We let the inititator handle it.
 }
 
-void server_session::on_sms_timeout(boost::system::error_code ec)
-{
-   // The user entry will be released in the destructor, since this is
-   // the (exception) safest to do it.
-   if (!ec) {
-      // The timer expired. We have to release the user entry
-      // allocated on the login and close the session. 
-      do_close();
-      return;
-   }
-
-   if (ec != boost::asio::error::operation_aborted) {
-      // Some kind of error, I do not know how to handle this. I will
-      // anyway release the user handler and close the session.
-      do_close();
-      return;
-   }
-
-   // At this point we know that ec == boost::asio::error::operation_aborted
-   // which means the timer has been canceled or the deadline has
-   // moved.
-   if (timer.expiry() > std::chrono::steady_clock::now()) {
-      // The deadline has move, this happens only if the user sends
-      // the correct sms. We have nothing to do, the session will be
-      // promoted to an authetified session.
-      return;
-   }
-
-   // This timer has been canceled, we have to release the user entry.
-}
-
 void server_session::on_accept(boost::system::error_code ec)
 {
    if (ec)
@@ -114,7 +81,7 @@ void server_session::on_accept(boost::system::error_code ec)
    timer.expires_after(timeouts::on_accept);
 
    auto const handler = [p = shared_from_this()](auto ec)
-   { p->on_accept_timeout(ec); };
+   { p->on_timer(ec); };
 
    timer.async_wait(boost::asio::bind_executor(strand, handler));
 
@@ -207,7 +174,7 @@ void server_session::on_read( boost::system::error_code ec
          // have to set the sms timeout.
          if (timer.expires_after(timeouts::sms) > 0) {
             auto const handler = [p = shared_from_this()](auto ec)
-            { p->on_sms_timeout(ec); };
+            { p->on_timer(ec); };
 
             timer.async_wait(boost::asio::bind_executor(strand, handler));
          } else {

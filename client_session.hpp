@@ -28,15 +28,10 @@ template <class Mgr>
 class client_session :
    public std::enable_shared_from_this<client_session<Mgr>> {
 private:
-   using work_type =
-      boost::asio::executor_work_guard<
-         boost::asio::io_context::executor_type>;
-
    tcp::resolver resolver;
    boost::asio::steady_timer timer;
    websocket::stream<tcp::socket> ws;
    boost::beast::multi_buffer buffer;
-   work_type work;
    std::string text;
    client_options op;
    std::queue<std::string> msg_queue;
@@ -99,7 +94,6 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
             if (mgr.on_closed(ec) == -1) {
                // We are done.
                //std::cout << "Leaving on read 1." << std::endl;
-               work.reset();
                return;
             }
 
@@ -115,12 +109,10 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
             // I am unsure by this may be caused by a do_close.
             //std::cout << "Leaving on read 3." << std::endl;
             timer.cancel();
-            work.reset();
             return;
          }
 
          //std::cout << "Leaving on read 4." << std::endl;
-         work.reset();
          return;
       }
 
@@ -151,7 +143,6 @@ client_session<Mgr>::client_session( boost::asio::io_context& ioc
 : resolver(ioc)
 , timer(ioc)
 , ws(ioc)
-, work(boost::asio::make_work_guard(ioc))
 , op(std::move(op_))
 , mgr(m)
 { }
@@ -271,7 +262,6 @@ void client_session<Mgr>::on_close(boost::system::error_code ec)
       fail_tmp(ec, "close");
 
    //std::cout << "Connection closed gracefully" << std::endl;
-   work.reset();
 }
 
 template <class Mgr>

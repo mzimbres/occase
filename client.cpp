@@ -18,6 +18,14 @@
 #include "client_mgr_login.hpp"
 #include "client_mgr_accept_timer.hpp"
 
+//using work_type =
+//   boost::asio::executor_work_guard<
+//      boost::asio::io_context::executor_type>;
+//
+//work_type work;
+//work.reset();
+// work(boost::asio::make_work_guard(ioc))
+
 constexpr auto users_size = 100;
 
 void test_on_connect_timer(client_options const& op)
@@ -282,17 +290,17 @@ int main(int argc, char* argv[])
       // TODO: Add a timer in the client so that an error message is
       // output. At this moment the io context will not return.
       test_on_connect_timer(op);
-      std::cout << "test_on_connect_timer: ok" << std::endl;
+      std::cout << "test_connect_timer: ok" << std::endl;
 
       // Tests if the server drops connections that connect by do not
       // register or authenticate.
       test_accept_timer(op);
-      std::cout << "test_accept_timer: ok" << std::endl;
+      std::cout << "test_accept_timer:  ok" << std::endl;
 
       // Tests the sms timeout. Connections should be dropped if the
       // users tries to register but do not send the sms on time.
       test_login(op, "ok", 0, users_size);
-      std::cout << "test_login_ok_1:   ok" << std::endl;
+      std::cout << "test_login_ok_1:    ok" << std::endl;
 
       // TODO: Check why the server does not release the 0 index in
       // order.
@@ -301,17 +309,17 @@ int main(int argc, char* argv[])
       // means if we send again users_size registrations there should
       // be enough indexes for them.
       test_login(op, "ok", 0, users_size);
-      std::cout << "test_login_ok_2:   ok" << std::endl;
+      std::cout << "test_login_ok_2:    ok" << std::endl;
 
       // Sends more logins than the server has available user entries.
       // Assumes all messages will arrive in the server before the
       // first one begins to timeout.
       test_flood_login(op, 0, users_size, 50);
-      std::cout << "test_flood_login:  ok" << std::endl;
+      std::cout << "test_flood_login:   ok" << std::endl;
 
       // Sends commands with typos.
       test_login_typo(op);
-      std::cout << "test_login_typo:   ok" << std::endl;
+      std::cout << "test_login_typo:    ok" << std::endl;
 
       // Sends sms on time but the wrong one and expects the server to
       // release indexes correctly.
@@ -320,7 +328,7 @@ int main(int argc, char* argv[])
          std::cerr << "Error: Binds array not empty." << std::endl;
          return EXIT_FAILURE;
       }
-      std::cout << "test_wrong_sms:    ok" << std::endl;
+      std::cout << "test_wrong_sms:     ok" << std::endl;
 
       // Sends correct sms on time.
       binds = test_sms(op, "ok", "8347");
@@ -328,27 +336,27 @@ int main(int argc, char* argv[])
          std::cerr << "Error: Binds array empty." << std::endl;
          return EXIT_FAILURE;
       }
-      std::cout << "test_correct_sms:  ok" << std::endl;
+      std::cout << "test_correct_sms:   ok" << std::endl;
 
       // Test if the server refuses all logins after we occupied all
       // indexes in the last sms test. First using non-existing users.
       test_login(op, "fail", users_size, 2 * users_size);
-      std::cout << "test_login_ok_3:   ok" << std::endl;
+      std::cout << "test_login_ok_3:    ok" << std::endl;
 
       // Same as above but for already registered users.
       test_login(op, "fail", 0, users_size);
-      std::cout << "test_login_ok_4:   ok" << std::endl;
+      std::cout << "test_login_ok_4:    ok" << std::endl;
 
       // Test authentication with binds obtained in the sms step.
       test_auth(op, binds);
-      std::cout << "test_auth:         ok" << std::endl;
+      std::cout << "test_auth:          ok" << std::endl;
 
       test_create_group(op, binds.front());
-      std::cout << "test_create_group: ok" << std::endl;
+      std::cout << "test_create_group:  ok" << std::endl;
 
       timer t;
       test_simulation(op, binds);
-      std::cout << "test_simulation:   ok" << std::endl;
+      std::cout << "test_simulation:    ok" << std::endl;
       std::cout << "==========================================" << std::endl;
 
       return EXIT_SUCCESS;

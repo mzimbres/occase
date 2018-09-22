@@ -60,7 +60,6 @@ private:
                , std::size_t bytes_transferred
                , tcp::resolver::results_type results);
    void on_close(boost::system::error_code ec);
-   void do_connect(tcp::resolver::results_type results);
 
    void do_write(std::string msg);
 
@@ -107,16 +106,7 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
             // The manager wants us to reconnect to continue with its
             // tests.
             buffer.consume(buffer.size());
-            //std::cout << "Reconnecting." << std::endl;
 
-            // I am not seeing any need of a timer here. Perhaps it
-            // should be removed.
-            timer.expires_after(std::chrono::milliseconds{100});
-
-            auto handler = [results, p = this->shared_from_this()](auto ec)
-            { p->do_connect(results); };
-
-            timer.async_wait(handler);
             //std::cout << "Leaving on read 2." << std::endl;
             return;
          }
@@ -206,12 +196,6 @@ void client_session<Mgr>::on_resolve( boost::system::error_code ec
    if (ec)
       return fail_tmp(ec, "resolve");
 
-   do_connect(results);
-}
-
-template <class Mgr>
-void client_session<Mgr>::do_connect(tcp::resolver::results_type results)
-{
    //std::cout  << "Trying to connect." << std::endl;
    auto handler =
       [results, p = this->shared_from_this()](auto ec, auto Iterator)
@@ -226,15 +210,8 @@ void
 client_session<Mgr>::on_connect( boost::system::error_code ec
                                , tcp::resolver::results_type results)
 {
-   if (ec) {
-      timer.expires_after(std::chrono::milliseconds{10});
-
-      auto handler = [results, p = this->shared_from_this()](auto ec)
-      { p->do_connect(results); };
-
-      timer.async_wait(handler);
-      return;
-   }
+   if (ec)
+      return fail_tmp(ec, "resolve");
 
    //std::cout << "Connection stablished." << std::endl;
 

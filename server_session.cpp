@@ -33,6 +33,8 @@ server_session::~server_session()
 
 void server_session::do_accept()
 {
+   // TODO: Add a timer here also for the case the hanshake takes too
+   // long.
    auto handler = [p = shared_from_this()](auto ec)
    { p->on_accept(ec); };
 

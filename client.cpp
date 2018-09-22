@@ -20,6 +20,21 @@
 
 constexpr auto users_size = 100;
 
+void test_on_connect_timer(client_options const& op)
+{
+   using mgr_type = client_mgr_on_connect_timer;
+   using client_type = client_session<mgr_type>;
+
+   boost::asio::io_context ioc;
+
+   std::vector<mgr_type> mgrs {1000};
+
+   for (auto& mgr : mgrs)
+      std::make_shared<client_type>(ioc, op, mgr)->run();
+
+   ioc.run();
+}
+
 void test_accept_timer(client_options const& op)
 {
    using mgr_type = client_mgr_accept_timer;
@@ -262,6 +277,12 @@ int main(int argc, char* argv[])
       };
 
       std::cout << "==========================================" << std::endl;
+
+      // Tests if the ser sets a timeout after a connection.
+      // TODO: Add a timer in the client so that an error message is
+      // output. At this moment the io context will not return.
+      test_on_connect_timer(op);
+      std::cout << "test_on_connect_timer: ok" << std::endl;
 
       // Tests if the server drops connections that connect by do not
       // register or authenticate.

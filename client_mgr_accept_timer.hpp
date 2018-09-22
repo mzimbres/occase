@@ -14,6 +14,22 @@ class client_session;
 // TODO: Add a timer here after which we should emit an error if the
 // server do not drop the connection.
 
+class client_mgr_on_connect_timer {
+private:
+   using client_type = client_session<client_mgr_on_connect_timer>;
+
+public:
+   int on_read(json j, std::shared_ptr<client_type> s) const noexcept
+   {return 1;}
+   int on_closed(boost::system::error_code ec) const noexcept
+   { return 1;}
+   int on_write(std::shared_ptr<client_type> s) const noexcept
+   { return 1;}
+   int on_handshake(std::shared_ptr<client_type> s) const noexcept
+   { return 1;}
+   int on_connect() const noexcept { return -1;}
+};
+
 class client_mgr_accept_timer {
 private:
    using client_type = client_session<client_mgr_accept_timer>;

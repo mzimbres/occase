@@ -39,6 +39,8 @@ private:
 
    void on_timer(boost::system::error_code ec);
 
+   void handle_ev(ev_res r);
+
    index_type user_idx = -1;
    index_type login_idx = -1;
    std::string sms;

@@ -119,6 +119,51 @@ void server_session::do_close()
    ws.async_close(reason, handler);
 }
 
+void server_session::handle_ev(ev_res r)
+{
+   // TODO: Replace with a switch to avoid the search.
+   if (drop_session(r)) {
+      // We have to unconditionally close the connection. 
+      timer.cancel();
+      do_close();
+      return;
+   }
+
+   if (r == ev_res::LOGIN_OK) {
+      // Successful login request which means the unknown
+      // connection timer  has to be canceled.  This is where we
+      // have to set the sms timeout.
+      if (timer.expires_after(timeouts::sms) > 0) {
+         auto const handler = [p = shared_from_this()](auto ec)
+         { p->on_timer(ec); };
+
+         timer.async_wait(boost::asio::bind_executor(strand, handler));
+         return;
+      }
+      
+      // If we get here, it means that there was no ongoing timer.
+      // But I do not see any reason for calling a login command on
+      // an stablished session, this is a logic error.
+      assert(true);
+      return;
+   }
+   
+   if (r == ev_res::SMS_CONFIRMATION_OK) {
+      // This means the sms authentification was successfull and
+      // that we have to cancel the sms timer. TODO: At this point
+      // we can begin to play with websockets ping pong frames.
+      timer.cancel();
+      return;
+   }
+   
+   if (r == ev_res::AUTH_OK) {
+      // Successful authentication. We have to cancel the on accept
+      // timeout.
+      timer.cancel();
+      return;
+   }
+}
+
 void server_session::on_read( boost::system::error_code ec
                             , std::size_t bytes_transferred)
 {
@@ -158,49 +203,13 @@ void server_session::on_read( boost::system::error_code ec
       auto const msg = boost::beast::buffers_to_string(buffer.data());
       buffer.consume(std::size(buffer));
       auto const r = sd->on_read(std::move(msg), shared_from_this());
-
-      if (drop_session(r)) {
-         // We have to unconditionally close the connection. 
-         timer.cancel();
-         do_close();
-         return;
-      }
-
-      if (r == ev_res::LOGIN_OK) {
-         // Successful login request which means the unknown
-         // connection timer  has to be canceled.  This is where we
-         // have to set the sms timeout.
-         if (timer.expires_after(timeouts::sms) > 0) {
-            auto const handler = [p = shared_from_this()](auto ec)
-            { p->on_timer(ec); };
-
-            timer.async_wait(boost::asio::bind_executor(strand, handler));
-         } else {
-            // If we get here, it means that there was no ongoing timer.
-            // But I do not see any reason for calling a login command on
-            // an stablished session, this is a logic error.
-            assert(true);
-         }
-      } else if (r == ev_res::SMS_CONFIRMATION_OK) {
-         // This means the sms authentification was successfull and
-         // that we have to cancel the sms timer. TODO: At this point
-         // we can begin to play with websockets ping pong frames.
-         timer.cancel();
-      } else if (r == ev_res::AUTH_OK) {
-         // Successful authentication. We have to cancel the on accept
-         // timeout.
-         timer.cancel();
-      }
-
-      //std::cout << "Accepted: " << tmp << std::endl;
+      handle_ev(r);
+      do_read();
    } catch (...) {
-      std::cerr << "Exception for: " << std::endl;
+      std::cerr << "Exception captured." << std::endl;
       timer.cancel();
       do_close();
-      return;
    }
-
-   do_read();
 }
 
 void server_session::on_write( boost::system::error_code ec

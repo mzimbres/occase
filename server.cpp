@@ -12,19 +12,23 @@
 
 struct signal_handler {
    boost::asio::io_context& ioc;
+   std::shared_ptr<listener> lst;
+
    void operator()(boost::system::error_code const&, int)
    {
+      std::cout << "\nBeginning shutdown operations." << std::endl;
       // TODO: Investigate if we can simply destroy the work object
       // and let the io_context exit cleanly. That would mean we have
       // to close each socket connection from each active user, that
       // may not be feasible. Other clean ups how however important,
       // like pushing some data to the database.
 
+      lst->stop();
+
       // Stop the io_context. This will cause run() to return
       // immediately, eventually destroying the io_context and all of
       // the sockets in it.
-      std::cout << "\nI am cleaning up some operations." << std::endl;
-      ioc.stop();
+      //ioc.stop();
    }
 };
 
@@ -84,13 +88,15 @@ int main(int argc, char* argv[])
 
       auto sd = std::make_shared<server_mgr>(op.n_init_users);
 
-      std::make_shared<listener>( ioc 
-                                , tcp::endpoint {address, op.port}
-                                , sd, op.session_config())->run();
+      auto lst =
+         std::make_shared<listener>( ioc 
+                                   , tcp::endpoint {address, op.port}
+                                   , sd, op.session_config());
+      lst->run();
 
       // Capture SIGINT and SIGTERM to perform a clean shutdown
       boost::asio::signal_set signals(ioc, SIGINT, SIGTERM);
-      signals.async_wait(signal_handler {ioc});
+      signals.async_wait(signal_handler {ioc, lst});
 
       ioc.run();
       return 0;

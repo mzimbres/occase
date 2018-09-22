@@ -75,11 +75,17 @@ void listener::do_accept()
 void listener::on_accept(boost::system::error_code ec)
 {
    if (ec) {
+      if (ec == boost::asio::error::operation_aborted) {
+         std::cout << "Stopping accepting connections ..." << std::endl;
+         return;
+      }
+
       fail(ec, "accept");
-   } else {
-      std::make_shared<server_session>( std::move(socket)
-                                      , sd, cf)->do_accept();
+      return;
    }
+
+   std::make_shared<server_session>( std::move(socket)
+                                   , sd, cf)->do_accept();
 
    do_accept();
 }

@@ -26,5 +26,6 @@ public:
    void run();
    void do_accept();
    void on_accept(boost::system::error_code ec);
+   void stop() {acceptor.cancel();}
 };
 

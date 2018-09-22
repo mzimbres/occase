@@ -2,10 +2,11 @@
 #include "server_session.hpp"
 
 ev_res
-server_mgr::on_read(json j, std::shared_ptr<server_session> s)
+server_mgr::on_read(std::string msg, std::shared_ptr<server_session> s)
 {
+   auto const j = json::parse(msg);
    //std::cout << j << std::endl;
-   auto const cmd = j["cmd"].get<std::string>();
+   auto const cmd = j.at("cmd").get<std::string>();
 
    if (s->is_waiting_auth()) {
       if (cmd == "login")
@@ -34,7 +35,7 @@ server_mgr::on_read(json j, std::shared_ptr<server_session> s)
          return on_join_group(std::move(j), s);
 
       if (cmd == "group_msg")
-         return on_group_msg(std::move(j), s);
+         return on_group_msg(std::move(msg), std::move(j), s);
 
       if (cmd == "user_msg")
          return on_user_msg(std::move(j), s);
@@ -49,7 +50,7 @@ server_mgr::on_read(json j, std::shared_ptr<server_session> s)
 
 ev_res server_mgr::on_login(json j, std::shared_ptr<server_session> s)
 {
-   auto const tel = j["tel"].get<std::string>();
+   auto const tel = j.at("tel").get<std::string>();
 
    if (id_to_idx_map.find(tel) != std::end(id_to_idx_map)) {
       // The user already exists in the system. This case can be
@@ -99,7 +100,7 @@ ev_res server_mgr::on_login(json j, std::shared_ptr<server_session> s)
 
 ev_res server_mgr::on_auth(json j, std::shared_ptr<server_session> s)
 {
-   auto const from = j["from"].get<user_bind>();
+   auto const from = j.at("from").get<user_bind>();
 
    if (from.tel != users.at(from.index).get_id()) {
       // Incorrect id.
@@ -131,8 +132,8 @@ void server_mgr::release_login(index_type idx)
 ev_res
 server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
 {
-   auto const tel = j["tel"].get<std::string>();
-   auto const sms = j["sms"].get<std::string>();
+   auto const tel = j.at("tel").get<std::string>();
+   auto const sms = j.at("sms").get<std::string>();
 
    if (sms != s->get_sms()) {
       // TODO: Resend an sms to the user (some more times). For now
@@ -173,8 +174,8 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
 ev_res
 server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
 {
-   auto const from = j["from"].get<user_bind>();
-   auto const hash = j["hash"].get<std::string>();
+   auto const from = j.at("from").get<user_bind>();
+   auto const hash = j.at("hash").get<std::string>();
 
    auto const new_group = groups.insert({hash, {}});
    if (!new_group.second) {
@@ -199,8 +200,8 @@ server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
 ev_res
 server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
 {
-   auto const from = j["from"].get<user_bind>();
-   auto const hash = j["hash"].get<std::string>();
+   auto const from = j.at("from").get<user_bind>();
+   auto const hash = j.at("hash").get<std::string>();
 
    auto const g = groups.find(hash);
    if (g == std::end(groups)) {
@@ -222,10 +223,12 @@ server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
 }
 
 ev_res
-server_mgr::on_group_msg(json j, std::shared_ptr<server_session> s)
+server_mgr::on_group_msg( std::string msg
+                        , json j
+                        , std::shared_ptr<server_session> s)
 {
-   auto const from = j["from"].get<user_bind>();
-   auto const to = j["to"].get<std::string>();
+   auto const from = j.at("from").get<user_bind>();
+   auto const to = j.at("to").get<std::string>();
 
    auto const g = groups.find(to);
    if (g == std::end(groups)) {
@@ -242,7 +245,7 @@ server_mgr::on_group_msg(json j, std::shared_ptr<server_session> s)
 
    // TODO: Change broadcast to return the number of users that the
    // message has reached.
-   g->second.broadcast_msg(j.dump());
+   g->second.broadcast_msg(std::move(msg));
 
    json ack;
    ack["cmd"] = "group_msg_ack";
@@ -255,10 +258,10 @@ server_mgr::on_group_msg(json j, std::shared_ptr<server_session> s)
 ev_res
 server_mgr::on_user_msg(json j, std::shared_ptr<server_session> s)
 {
-   auto const from = j["from"].get<user_bind>();
-   auto const to = j["to"].get<user_bind>();
+   //auto const from = j["from"].get<user_bind>();
+   //auto const to = j["to"].get<user_bind>();
 
-   users.at(to.index).send_msg(j.dump());
+   //users.at(to.index).send_msg(j.dump());
    return ev_res::USER_MSG_OK;
 }
 

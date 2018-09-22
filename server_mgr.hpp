@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <memory>
+#include <string>
 #include <unordered_map>
 
 #include "config.hpp"
@@ -68,7 +69,9 @@ private:
    ev_res on_sms_confirmation(json j, std::shared_ptr<server_session> s);
    ev_res on_create_group(json j, std::shared_ptr<server_session> s);
    ev_res on_join_group(json j, std::shared_ptr<server_session> session);
-   ev_res on_group_msg(json j, std::shared_ptr<server_session> session);
+   ev_res on_group_msg( std::string msg
+                      , json j // To avoid parsing it again.
+                      , std::shared_ptr<server_session> session);
    ev_res on_user_msg(json j, std::shared_ptr<server_session> session);
 
 public:
@@ -77,8 +80,8 @@ public:
    , user_idx_mgr(users_size)
    {}
 
-   // Functions to interact with the server_session.
-   ev_res on_read(json j, std::shared_ptr<server_session> session);
+   ev_res on_read( std::string msg
+                 , std::shared_ptr<server_session> session);
    void on_write(index_type user_idx);
    void release_login(index_type idx);
 };

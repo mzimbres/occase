@@ -154,13 +154,11 @@ void server_session::on_read( boost::system::error_code ec
    if (ec)
       return;
 
-   std::string tmp;
    try {
-      tmp = boost::beast::buffers_to_string(buffer.data());
+      auto const msg = boost::beast::buffers_to_string(buffer.data());
       buffer.consume(std::size(buffer));
-      auto j = json::parse(tmp);
+      auto const r = sd->on_read(std::move(msg), shared_from_this());
 
-      auto const r = sd->on_read(std::move(j), shared_from_this());
       if (drop_session(r)) {
          // We have to unconditionally close the connection. 
          timer.cancel();
@@ -196,7 +194,7 @@ void server_session::on_read( boost::system::error_code ec
 
       //std::cout << "Accepted: " << tmp << std::endl;
    } catch (...) {
-      std::cerr << "Exception for: " << tmp << std::endl;
+      std::cerr << "Exception for: " << std::endl;
       timer.cancel();
       do_close();
       return;

@@ -44,6 +44,11 @@ AUX = Makefile
 
 all: $(exes)
 
+Makefile.dep:
+	-$(CXX) -MM *.cpp > $@
+
+-include Makefile.dep
+
 client: % : %.o $(client_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(boost_libs)
 
@@ -55,7 +60,7 @@ menu_dump: % : %.o $(common_objs)
 
 .PHONY: clean
 clean:
-	rm -f $(exes) $(exe_objs) $(lib_objs) $(DIST_NAME).tar.gz
+	rm -f $(exes) $(exe_objs) $(lib_objs) $(DIST_NAME).tar.gz Makefile.dep
 
 $(DIST_NAME).tar.gz: $(SRCS) $(AUX)
 	rm -f $@

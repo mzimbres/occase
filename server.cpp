@@ -34,12 +34,14 @@ struct server_op {
    int n_init_users;
    int on_acc_timeout;
    int sms_timeout;
+   int handshake_timeout;
 
    auto session_config() const noexcept
    {
       return server_session_config
       { std::chrono::seconds {on_acc_timeout}
-      , std::chrono::seconds {sms_timeout}};
+      , std::chrono::seconds {sms_timeout}
+      , std::chrono::seconds {handshake_timeout}};
    }
 };
 
@@ -65,6 +67,9 @@ int main(int argc, char* argv[])
          ("accept-timeout,a"
          , po::value<int>(&op.on_acc_timeout)->default_value(2)
          , "On accept timeout in seconds.")
+         ("handshake-timeout,k"
+         , po::value<int>(&op.handshake_timeout)->default_value(2)
+         , "Handshake timeout in seconds.")
       ;
 
       po::variables_map vm;        

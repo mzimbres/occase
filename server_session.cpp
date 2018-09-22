@@ -35,22 +35,42 @@ server_session::~server_session()
 
 void server_session::do_accept()
 {
-   // TODO: Add a timer here also for the case the hanshake takes too
-   // long.
-   auto handler = [p = shared_from_this()](auto ec)
+   timer.expires_after(cf.handshake_timeout);
+
+   auto const handler1 = [p = shared_from_this()](auto ec)
+   { p->on_timer(ec); };
+
+   timer.async_wait(boost::asio::bind_executor(strand, handler1));
+
+   auto handler2 = [p = shared_from_this()](auto ec)
    { p->on_accept(ec); };
 
-   ws.async_accept(boost::asio::bind_executor(strand, handler));
+   ws.async_accept(boost::asio::bind_executor(strand, handler2));
 }
 
 void server_session::on_timer(boost::system::error_code ec)
 {
-   if (!ec) {
-      // The timeout was triggered. That means the user did not sent
-      // us a login, an authenticate command or the sms confirmation.
-      // We can either close the connection gracefully by sending a
-      // close frame with async_close or simply shutdown the socket,
-      // in which case the client wont be notified. Here we decide to
+   if (!ec) { // No error
+      // The timeout was fired. This can be caused by many reasons
+      // depending on our current state.
+      // 
+      // 1. The timer expired while the client was (expected to be)
+      //    trying the handshake. 
+      // 2. The client did not sent us a login or an authentication
+      //    command after the handshake
+      // 3. The client did not send the sms confirmation on time.
+      //
+      // In case 1. the websocket will not be yet open.
+
+      if (!ws.is_open()) {
+         ws.next_layer().shutdown(tcp::socket::shutdown_both, ec);
+         ws.next_layer().close(ec);
+         return;
+      }
+      
+      // If we get here than the websocket is open.  We can either
+      // close the connection gracefully by sending a close frame with
+      // async_close or simply shutdown the socket.  Here we decide to
       // inform the user.
       do_close();
       return;
@@ -76,8 +96,17 @@ void server_session::on_timer(boost::system::error_code ec)
 
 void server_session::on_accept(boost::system::error_code ec)
 {
-   if (ec)
-      return fail(ec, "accept");
+   if (ec) {
+      if (ec == boost::asio::error::operation_aborted) {
+         // The handshake laste too long and the timer fired. We give
+         // up.
+         //std::cout << "Giving up handshake." << std::endl;
+         return;
+      }
+
+      fail(ec, "accept");
+      return;
+   }
 
    // The cancelling of this timer should happen when either
    // 1. The user Identifies himself.

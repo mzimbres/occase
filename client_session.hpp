@@ -244,6 +244,7 @@ client_session<Mgr>::on_timer(boost::system::error_code ec)
    }
 
    // The timer was canceled.
+   std::cout << "Timer successfully canceled." << std::endl;
 }
 
 template <class Mgr>
@@ -257,12 +258,29 @@ client_session<Mgr>::on_connect( boost::system::error_code ec
    if (mgr.on_connect() == -1) {
       // The -1 means we are are testing if the server will timeout
       // our connection if the handshake lasts too long.
-      timer.expires_after(std::chrono::seconds {2});
+      timer.expires_after(std::chrono::seconds {3});
 
       auto const handler = [p = this->shared_from_this()](auto ec)
       { p->on_timer(ec); };
 
       timer.async_wait(handler);
+
+      // Now we post the handler that will cancel the timer when the
+      // server gives up on the handshake.
+      auto const handler2 =
+         [p = this->shared_from_this()](auto ec, auto n)
+      {
+         if (ec == boost::asio::error::eof) {
+            p->timer.cancel();
+            std::cout << "Timer canceled, thanks." << std::endl;
+         }
+
+         std::cout << "Bytes transferred: " << n << std::endl;
+      };
+      char dummy[32];
+      ws.next_layer().async_receive( boost::asio::buffer( &dummy[0]
+                                                        , std::size(dummy))
+                                   , 0, handler2);
       return;
    }
 

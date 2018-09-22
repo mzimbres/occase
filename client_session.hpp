@@ -35,6 +35,7 @@ private:
    std::string text;
    client_options op;
    std::queue<std::string> msg_queue;
+   bool closing = false;
 
    Mgr& mgr;
 
@@ -55,14 +56,19 @@ private:
                , std::size_t bytes_transferred
                , tcp::resolver::results_type results);
    void on_close(boost::system::error_code ec);
-
    void do_write(std::string msg);
+   void on_timer(boost::system::error_code ec);
 
 public:
    explicit
    client_session( boost::asio::io_context& ioc
                  , client_options op_
                  , Mgr& m);
+
+   ~client_session()
+   {
+      //std::cout << "Session in destruction." << std::endl;
+   }
 
    void run();
    void send_msg(std::string msg);
@@ -101,13 +107,13 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
             // tests.
             buffer.consume(buffer.size());
 
-            //std::cout << "Leaving on read 2." << std::endl;
+            std::cout << "Leaving on read 2." << std::endl;
             return;
          }
 
          if (ec == boost::asio::error::operation_aborted) {
             // I am unsure by this may be caused by a do_close.
-            //std::cout << "Leaving on read 3." << std::endl;
+            std::cout << "Leaving on read 3." << std::endl;
             timer.cancel();
             return;
          }
@@ -173,11 +179,25 @@ void client_session<Mgr>::do_write(std::string msg)
 template <class Mgr>
 void client_session<Mgr>::do_close()
 {
+   if (closing)
+      return;
+
+   closing = true;
+
    //std::cout << "do_close" << std::endl;
    auto handler = [p = this->shared_from_this()](auto ec)
    { p->on_close(ec); };
 
    ws.async_close(websocket::close_code::normal, handler);
+}
+
+template <class Mgr>
+void client_session<Mgr>::on_close(boost::system::error_code ec)
+{
+   if (ec)
+      fail_tmp(ec, "close");
+
+   //std::cout << "Connection closed gracefully" << std::endl;
 }
 
 template <class Mgr>
@@ -197,14 +217,54 @@ void client_session<Mgr>::on_resolve( boost::system::error_code ec
 
 template <class Mgr>
 void
+client_session<Mgr>::on_timer(boost::system::error_code ec)
+{
+   if (!ec) {
+      // The server did closed the connection fast enough. The test
+      // fails.
+      std::cout << "client_session<Mgr>::on_timer: fail." << std::endl;
+      // Returning is enough as we performed no handshake.
+      return;
+   }
+
+   if (ec != boost::asio::error::operation_aborted) {
+      // Some error, do we need to handle this?
+      fail_tmp(ec, "on_timer");
+      std::cout << "client_session<Mgr>::on_timer2" << std::endl;
+      return;
+   }
+
+   // At this point we know ec = boost::asio::error::operation_aborted
+   // but we do not know what caused it. Was the timer canceled or the
+   // deadline has moved?
+   if (timer.expiry() > std::chrono::steady_clock::now()) {
+      // The deadline has moved, this happens only if the user send any
+      // of the authentification commands. We have nothing to do.
+      return;
+   }
+
+   // The timer was canceled.
+}
+
+template <class Mgr>
+void
 client_session<Mgr>::on_connect( boost::system::error_code ec
                                , tcp::resolver::results_type results)
 {
    if (ec)
       return fail_tmp(ec, "resolve");
 
-   if (mgr.on_connect() == -1)
+   if (mgr.on_connect() == -1) {
+      // The -1 means we are are testing if the server will timeout
+      // our connection if the handshake lasts too long.
+      timer.expires_after(std::chrono::seconds {2});
+
+      auto const handler = [p = this->shared_from_this()](auto ec)
+      { p->on_timer(ec); };
+
+      timer.async_wait(handler);
       return;
+   }
 
    auto handler = [p = this->shared_from_this(), results](auto ec)
    { p->on_handshake(ec, results); };
@@ -253,15 +313,6 @@ void client_session<Mgr>::on_write( boost::system::error_code ec
 
    if (ec)
       fail_tmp(ec, "write");
-}
-
-template <class Mgr>
-void client_session<Mgr>::on_close(boost::system::error_code ec)
-{
-   if (ec)
-      fail_tmp(ec, "close");
-
-   //std::cout << "Connection closed gracefully" << std::endl;
 }
 
 template <class Mgr>

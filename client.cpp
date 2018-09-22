@@ -26,7 +26,7 @@
 //work.reset();
 // work(boost::asio::make_work_guard(ioc))
 
-constexpr auto users_size = 100;
+constexpr auto users_size = 10;
 
 void test_on_connect_timer(client_options const& op)
 {
@@ -35,7 +35,7 @@ void test_on_connect_timer(client_options const& op)
 
    boost::asio::io_context ioc;
 
-   std::vector<mgr_type> mgrs {1000};
+   std::vector<mgr_type> mgrs {10};
 
    for (auto& mgr : mgrs)
       std::make_shared<client_type>(ioc, op, mgr)->run();
@@ -50,7 +50,7 @@ void test_accept_timer(client_options const& op)
 
    boost::asio::io_context ioc;
 
-   std::vector<mgr_type> mgrs {1000};
+   std::vector<mgr_type> mgrs {10};
 
    for (auto& mgr : mgrs)
       std::make_shared<client_type>(ioc, op, mgr)->run();

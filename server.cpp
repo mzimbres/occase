@@ -13,22 +13,16 @@
 struct signal_handler {
    boost::asio::io_context& ioc;
    std::shared_ptr<listener> lst;
+   std::shared_ptr<server_mgr> sm;
 
    void operator()(boost::system::error_code const&, int)
    {
-      std::cout << "\nBeginning shutdown operations." << std::endl;
-      // TODO: Investigate if we can simply destroy the work object
-      // and let the io_context exit cleanly. That would mean we have
-      // to close each socket connection from each active user, that
-      // may not be feasible. Other clean ups how however important,
-      // like pushing some data to the database.
+      std::cout << "\nBeginning the shutdown operations ..." << std::endl;
 
+      // This function is called when the program receives one of the
+      // installed signals. The listener stop functions will continue
+      // with other necessary clean up operations.
       lst->stop();
-
-      // Stop the io_context. This will cause run() to return
-      // immediately, eventually destroying the io_context and all of
-      // the sockets in it.
-      //ioc.stop();
    }
 };
 
@@ -55,7 +49,7 @@ int main(int argc, char* argv[])
       server_op op;
       po::options_description desc("Options");
       desc.add_options()
-         ("help", "produce help message")
+         ("help, h", "produce help message")
          ( "port,p"
          , po::value<unsigned short>(&op.port)->default_value(8080)
          , "Server port.")
@@ -86,17 +80,17 @@ int main(int argc, char* argv[])
 
       boost::asio::io_context ioc {1};
 
-      auto sd = std::make_shared<server_mgr>(op.n_init_users);
+      auto sm = std::make_shared<server_mgr>(op.n_init_users);
 
       auto lst =
          std::make_shared<listener>( ioc 
                                    , tcp::endpoint {address, op.port}
-                                   , sd, op.session_config());
+                                   , sm, op.session_config());
       lst->run();
 
       // Capture SIGINT and SIGTERM to perform a clean shutdown
       boost::asio::signal_set signals(ioc, SIGINT, SIGTERM);
-      signals.async_wait(signal_handler {ioc, lst});
+      signals.async_wait(signal_handler {ioc, lst, sm});
 
       ioc.run();
       return 0;

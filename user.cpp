@@ -48,3 +48,13 @@ void user::reset()
    msg_queue = std::queue<std::string> {};
 }
 
+void user::shutdown()
+{
+   if (auto s = session.lock()) {
+      s->do_close();
+      return;
+   }
+
+   // Nothing to do, the user is offline.
+}
+

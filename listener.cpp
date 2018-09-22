@@ -77,6 +77,10 @@ void listener::on_accept(boost::system::error_code ec)
    if (ec) {
       if (ec == boost::asio::error::operation_aborted) {
          std::cout << "Stopping accepting connections ..." << std::endl;
+         // An accepted that has been canceled is to be interpreted
+         // for now as a shutdown operation so that we have to perform
+         // some further cleanup.
+         sd->shutdown();
          return;
       }
 

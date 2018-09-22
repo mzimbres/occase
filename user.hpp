@@ -17,8 +17,7 @@ class server_session;
 // groups it belongs to so that it can send messages to to group.
 class user {
 private:
-   // At the moment I think this will be the user telephone.
-   id_type id;
+   id_type id; // User email or telephone number.
 
    std::weak_ptr<server_session> session;
    std::queue<std::string> msg_queue;
@@ -40,5 +39,6 @@ public:
    void reset();
    auto const& get_id() const noexcept {return id;}
    void set_id(std::string id_) {id = std::move(id_);}
+   void shutdown();
 };
 

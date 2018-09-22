@@ -270,3 +270,11 @@ void server_mgr::on_write(index_type user_idx)
    users[user_idx].on_write();
 }
 
+void server_mgr::shutdown()
+{
+   std::cout << "Shutting down user sessions ..." << std::endl;
+
+   for (auto& o : users)
+      o.shutdown();
+}
+

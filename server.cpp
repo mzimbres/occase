@@ -55,7 +55,7 @@ int main(int argc, char* argv[])
          ( "port,p"
          , po::value<unsigned short>(&op.port)->default_value(8080)
          , "Server port.")
-         ("ip-address,d"
+         ("ip,d"
          , po::value<std::string>(&op.ip)->default_value("127.0.0.1")
          , "Server ip address.")
          ("init-users,u"
@@ -93,7 +93,6 @@ int main(int argc, char* argv[])
                                    , sm, op.session_config());
       lst->run();
 
-      // Capture SIGINT and SIGTERM to perform a clean shutdown
       boost::asio::signal_set signals(ioc, SIGINT, SIGTERM);
       signals.async_wait(signal_handler {ioc, lst, sm});
 

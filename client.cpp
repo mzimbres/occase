@@ -61,8 +61,8 @@ void test_on_connect_timer(client_op const& op)
    std::vector<mgr_type> mgrs {op.conn_test_size};
 
    for (auto& mgr : mgrs)
-      std::make_shared<client_type>(ioc, op.session_config()
-                                       , mgr)->run();
+      std::make_shared<client_type>( ioc, op.session_config()
+                                   , mgr)->run();
 
    ioc.run();
 }
@@ -358,9 +358,6 @@ int main(int argc, char* argv[])
       test_login(op, "ok", 0, op.users_size);
       std::cout << "test_login_ok_1:    ok" << std::endl;
 
-      // TODO: Check why the server does not release the 0 index in
-      // order.
-
       // Tests if the previous login commands were all released. That
       // means if we send again users_size registrations there should
       // be enough indexes for them.
@@ -390,7 +387,7 @@ int main(int argc, char* argv[])
       binds = test_sms(op, "ok", "8347");
       if (std::empty(binds)) {
          std::cerr << "Error: Binds array empty." << std::endl;
-         return EXIT_FAILURE;
+         return 1;
       }
       std::cout << "test_correct_sms:   ok" << std::endl;
 

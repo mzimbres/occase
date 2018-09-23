@@ -19,7 +19,7 @@
 #include "config.hpp"
 #include "json_utils.hpp"
 
-struct client_options {
+struct client_session_config {
    std::string host;
    std::string port;
 };
@@ -33,7 +33,7 @@ private:
    websocket::stream<tcp::socket> ws;
    boost::beast::multi_buffer buffer;
    std::string text;
-   client_options op;
+   client_session_config op;
    std::queue<std::string> msg_queue;
    bool closing = false;
 
@@ -62,7 +62,7 @@ private:
 public:
    explicit
    client_session( boost::asio::io_context& ioc
-                 , client_options op_
+                 , client_session_config op_
                  , Mgr& m);
 
    ~client_session()
@@ -144,7 +144,7 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
 
 template <class Mgr>
 client_session<Mgr>::client_session( boost::asio::io_context& ioc
-                                   , client_options op_
+                                   , client_session_config op_
                                    , Mgr& m)
 : resolver(ioc)
 , timer(ioc)

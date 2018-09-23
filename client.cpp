@@ -26,9 +26,21 @@
 //work.reset();
 // work(boost::asio::make_work_guard(ioc))
 
+struct options {
+   std::string host {"127.0.0.1"};
+   std::string port {"8080"};
+
+   auto session_config() const
+   {
+      return client_session_config
+      { {host} 
+      , {port} };
+   }
+};
+
 constexpr auto users_size = 10;
 
-void test_on_connect_timer(client_options const& op)
+void test_on_connect_timer(options const& op)
 {
    using mgr_type = client_mgr_on_connect_timer;
    using client_type = client_session<mgr_type>;
@@ -38,12 +50,13 @@ void test_on_connect_timer(client_options const& op)
    std::vector<mgr_type> mgrs {10};
 
    for (auto& mgr : mgrs)
-      std::make_shared<client_type>(ioc, op, mgr)->run();
+      std::make_shared<client_type>(ioc, op.session_config()
+                                       , mgr)->run();
 
    ioc.run();
 }
 
-void test_accept_timer(client_options const& op)
+void test_accept_timer(options const& op)
 {
    using mgr_type = client_mgr_accept_timer;
    using client_type = client_session<mgr_type>;
@@ -53,12 +66,12 @@ void test_accept_timer(client_options const& op)
    std::vector<mgr_type> mgrs {10};
 
    for (auto& mgr : mgrs)
-      std::make_shared<client_type>(ioc, op, mgr)->run();
+      std::make_shared<client_type>(ioc, op.session_config(), mgr)->run();
 
    ioc.run();
 }
 
-void test_login( client_options op
+void test_login( options const& op
                , char const* expected
                , int begin
                , int end)
@@ -74,12 +87,12 @@ void test_login( client_options op
       mgrs.push_back({to_str(i, 4, 0), expected});
 
    for (auto& mgr : mgrs)
-      std::make_shared<client_type>(ioc, op, mgr)->run();
+      std::make_shared<client_type>(ioc, op.session_config(), mgr)->run();
 
    ioc.run();
 }
 
-void test_flood_login( client_options op
+void test_flood_login( options const& op
                      , int begin
                      , int end
                      , int more)
@@ -98,12 +111,12 @@ void test_flood_login( client_options op
       mgrs.push_back({to_str(i, 4, 0), "fail"});
 
    for (auto& mgr : mgrs)
-      std::make_shared<client_type>(ioc, op, mgr)->run();
+      std::make_shared<client_type>(ioc, op.session_config(), mgr)->run();
 
    ioc.run();
 }
 
-void test_login_typo(client_options op)
+void test_login_typo(options const& op)
 {
    using mgr_type = client_mgr_login_typo;
    using client_type = client_session<mgr_type>;
@@ -129,12 +142,12 @@ void test_login_typo(client_options op)
    };
 
    for (auto& mgr : mgrs)
-      std::make_shared<client_type>(ioc, op, mgr)->run();
+      std::make_shared<client_type>(ioc, op.session_config(), mgr)->run();
 
    ioc.run();
 }
 
-auto test_sms( client_options op
+auto test_sms( options const& op
              , std::string const& expected
              , std::string const& sms)
 {
@@ -149,8 +162,11 @@ auto test_sms( client_options op
       mgrs.push_back({to_str(i, 4, 0), expected, sms});
 
    std::vector<std::shared_ptr<client_type>> sessions;
-   for (auto& mgr : mgrs)
-      sessions.push_back(std::make_shared<client_type>(ioc, op, mgr));
+   for (auto& mgr : mgrs) {
+      auto tmp =
+         std::make_shared<client_type>(ioc, op.session_config(), mgr);
+      sessions.push_back(tmp);
+   }
 
    for (auto& session : sessions)
       session->run();
@@ -165,7 +181,7 @@ auto test_sms( client_options op
    return binds;
 }
 
-auto test_auth(client_options op, std::vector<user_bind> binds)
+auto test_auth(options const& op, std::vector<user_bind> binds)
 {
    using mgr_type = client_mgr_auth;
    using client_type = client_session<mgr_type>;
@@ -177,8 +193,11 @@ auto test_auth(client_options op, std::vector<user_bind> binds)
       mgrs.emplace_back(bind, "ok");
 
    std::vector<std::shared_ptr<client_type>> sessions;
-   for (auto& mgr : mgrs)
-      sessions.push_back(std::make_shared<client_type>(ioc, op, mgr));
+   for (auto& mgr : mgrs) {
+      auto tmp =
+         std::make_shared<client_type>(ioc, op.session_config(), mgr);
+      sessions.push_back(tmp);
+   }
 
    for (auto& session : sessions)
       session->run();
@@ -186,7 +205,7 @@ auto test_auth(client_options op, std::vector<user_bind> binds)
    ioc.run();
 }
 
-auto test_create_group(client_options op, user_bind bind)
+auto test_create_group(options const& op, user_bind bind)
 {
    using mgr_type = client_mgr_cg;
    using client_type = client_session<mgr_type>;
@@ -202,11 +221,11 @@ auto test_create_group(client_options op, user_bind bind)
    mgr_type mgr {"ok", std::move(cmds), bind};
 
    boost::asio::io_context ioc;
-   std::make_shared<client_type>(ioc, op, mgr)->run();
+   std::make_shared<client_type>(ioc, op.session_config(), mgr)->run();
    ioc.run();
 }
 
-void test_simulation(client_options op, std::vector<user_bind> binds)
+void test_simulation(options const& op, std::vector<user_bind> binds)
 {
    //std::cout << "Binds size: " << std::size(binds) << std::endl;
    using mgr_type = client_mgr_sim;
@@ -234,8 +253,11 @@ void test_simulation(client_options op, std::vector<user_bind> binds)
    boost::asio::io_context ioc;
 
    std::vector<std::shared_ptr<client_type>> sessions;
-   for (auto& mgr : mgrs)
-      sessions.push_back(std::make_shared<client_type>(ioc, op, mgr));
+   for (auto& mgr : mgrs) {
+      auto tmp =
+         std::make_shared<client_type>(ioc, op.session_config(), mgr);
+      sessions.push_back(tmp);
+   }
 
    for (auto& session : sessions)
       session->run();
@@ -279,10 +301,7 @@ int main(int argc, char* argv[])
       //   return EXIT_FAILURE;
       //}
 
-      client_options op
-      { {"127.0.0.1"} // Host.
-      , {"8080"}      // Port.
-      };
+      options op;
 
       std::cout << "==========================================" << std::endl;
 

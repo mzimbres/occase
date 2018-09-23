@@ -9,6 +9,11 @@
 #include <cstdlib>
 #include <iostream>
 
+#include <boost/asio/signal_set.hpp>
+#include <boost/program_options/options_description.hpp>
+#include <boost/program_options/parsers.hpp>
+#include <boost/program_options/variables_map.hpp>
+
 #include "config.hpp"
 #include "menu_parser.hpp"
 #include "client_mgr_cg.hpp"
@@ -26,7 +31,9 @@
 //work.reset();
 // work(boost::asio::make_work_guard(ioc))
 
-struct options {
+namespace po = boost::program_options;
+
+struct client_op {
    std::string host {"127.0.0.1"};
    std::string port {"8080"};
    int users_size = 10;
@@ -44,7 +51,7 @@ struct options {
 };
 
 
-void test_on_connect_timer(options const& op)
+void test_on_connect_timer(client_op const& op)
 {
    using mgr_type = client_mgr_on_connect_timer;
    using client_type = client_session<mgr_type>;
@@ -60,7 +67,7 @@ void test_on_connect_timer(options const& op)
    ioc.run();
 }
 
-void test_accept_timer(options const& op)
+void test_accept_timer(client_op const& op)
 {
    using mgr_type = client_mgr_accept_timer;
    using client_type = client_session<mgr_type>;
@@ -75,7 +82,7 @@ void test_accept_timer(options const& op)
    ioc.run();
 }
 
-void test_login( options const& op
+void test_login( client_op const& op
                , char const* expected
                , int begin
                , int end)
@@ -96,7 +103,7 @@ void test_login( options const& op
    ioc.run();
 }
 
-void test_flood_login( options const& op
+void test_flood_login( client_op const& op
                      , int begin
                      , int end
                      , int more)
@@ -120,7 +127,7 @@ void test_flood_login( options const& op
    ioc.run();
 }
 
-void test_login_typo(options const& op)
+void test_login_typo(client_op const& op)
 {
    using mgr_type = client_mgr_login_typo;
    using client_type = client_session<mgr_type>;
@@ -151,7 +158,7 @@ void test_login_typo(options const& op)
    ioc.run();
 }
 
-auto test_sms( options const& op
+auto test_sms( client_op const& op
              , std::string const& expected
              , std::string const& sms)
 {
@@ -185,7 +192,7 @@ auto test_sms( options const& op
    return binds;
 }
 
-auto test_auth(options const& op, std::vector<user_bind> binds)
+auto test_auth(client_op const& op, std::vector<user_bind> binds)
 {
    using mgr_type = client_mgr_auth;
    using client_type = client_session<mgr_type>;
@@ -209,7 +216,7 @@ auto test_auth(options const& op, std::vector<user_bind> binds)
    ioc.run();
 }
 
-auto test_create_group(options const& op, user_bind bind)
+auto test_create_group(client_op const& op, user_bind bind)
 {
    using mgr_type = client_mgr_cg;
    using client_type = client_session<mgr_type>;
@@ -229,7 +236,7 @@ auto test_create_group(options const& op, user_bind bind)
    ioc.run();
 }
 
-void test_simulation(options const& op, std::vector<user_bind> binds)
+void test_simulation(client_op const& op, std::vector<user_bind> binds)
 {
    //std::cout << "Binds size: " << std::size(binds) << std::endl;
    using mgr_type = client_mgr_sim;
@@ -300,12 +307,38 @@ public:
 int main(int argc, char* argv[])
 {
    try {
-      //if (argc != 2) {
-      //   std::cerr << "Please, provide a user id." << std::endl;
-      //   return EXIT_FAILURE;
-      //}
+      client_op op;
+      po::options_description desc("Options");
+      desc.add_options()
+         ("help,h", "produce help message")
+         ( "port,p"
+         , po::value<std::string>(&op.port)->default_value("8080")
+         , "Server port.")
+         ("ip,d"
+         , po::value<std::string>(&op.host)->default_value("127.0.0.1")
+         , "Server ip address.")
+         ("users,u"
+         , po::value<int>(&op.users_size)->default_value(10)
+         , "Number of users.")
+         ("handshake-size,s"
+         , po::value<long unsigned>(&op.conn_test_size)->default_value(10)
+         , "Number of handshake test clients.")
+         ("accept-size,a"
+         , po::value<long unsigned>(&op.acc_test_size)->default_value(10)
+         , "Number of after accept test clients.")
+         ("handshake-size,k"
+         , po::value<int>(&op.handshake_timeout)->default_value(3)
+         , "Handshake timeout in seconds.")
+      ;
 
-      options op;
+      po::variables_map vm;        
+      po::store(po::parse_command_line(argc, argv, desc), vm);
+      po::notify(vm);    
+
+      if (vm.count("help")) {
+         std::cout << desc << "\n";
+         return 0;
+      }
 
       std::cout << "==========================================" << std::endl;
 

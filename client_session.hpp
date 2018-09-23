@@ -22,6 +22,7 @@
 struct client_session_config {
    std::string host;
    std::string port;
+   std::chrono::seconds handshake_timeout;
 };
 
 template <class Mgr>
@@ -258,7 +259,7 @@ client_session<Mgr>::on_connect( boost::system::error_code ec
    if (mgr.on_connect() == -1) {
       // The -1 means we are are testing if the server will timeout
       // our connection if the handshake lasts too long.
-      timer.expires_after(std::chrono::seconds {3});
+      timer.expires_after(op.handshake_timeout);
 
       auto const handler = [p = this->shared_from_this()](auto ec)
       { p->on_timer(ec); };

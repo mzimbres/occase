@@ -220,7 +220,7 @@ void
 client_session<Mgr>::on_timer(boost::system::error_code ec)
 {
    if (!ec) {
-      // The server did closed the connection fast enough. The test
+      // The server did not close the connection fast enough. The test
       // fails.
       std::cout << "client_session<Mgr>::on_timer: fail." << std::endl;
       // Returning is enough as we performed no handshake.
@@ -272,10 +272,10 @@ client_session<Mgr>::on_connect( boost::system::error_code ec
       {
          if (ec == boost::asio::error::eof) {
             p->timer.cancel();
-            std::cout << "Timer canceled, thanks." << std::endl;
+            //std::cout << "Timer canceled, thanks." << std::endl;
          }
 
-         std::cout << "Bytes transferred: " << n << std::endl;
+         //std::cout << "Bytes transferred: " << n << std::endl;
       };
       char dummy[32];
       ws.next_layer().async_receive( boost::asio::buffer( &dummy[0]

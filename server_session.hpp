@@ -48,7 +48,7 @@ private:
    void on_accept(boost::system::error_code ec);
    void on_write( boost::system::error_code ec
                 , std::size_t bytes_transferred);
-   void on_timer(boost::system::error_code ec);
+   void timer_mgr(boost::system::error_code ec);
    void handle_ev(ev_res r);
 
 public:

@@ -36,9 +36,8 @@ server_session::~server_session()
 void server_session::do_accept()
 {
    timer.expires_after(cf.handshake_timeout);
-
    auto const handler1 = [p = shared_from_this()](auto ec)
-   { p->on_timer(ec); };
+   { p->timer_mgr(ec); };
 
    timer.async_wait(boost::asio::bind_executor(strand, handler1));
 
@@ -48,50 +47,53 @@ void server_session::do_accept()
    ws.async_accept(boost::asio::bind_executor(strand, handler2));
 }
 
-void server_session::on_timer(boost::system::error_code ec)
+void server_session::timer_mgr(boost::system::error_code ec)
 {
-   if (!ec) { // No error
-      // The timeout was fired. This can be caused by many reasons
-      // depending on our current state.
-      // 
-      // 1. The timer expired while the client was (expected to be)
-      //    trying the handshake. 
-      // 2. The client did not sent us a login or an authentication
-      //    command after the handshake
-      // 3. The client did not send the sms confirmation on time.
-      //
-      // In case 1. the websocket will not be yet open.
-
-      if (!ws.is_open()) {
-         ws.next_layer().shutdown(tcp::socket::shutdown_both, ec);
-         ws.next_layer().close(ec);
+   if (ec) {
+      if (ec == boost::asio::error::operation_aborted) {
+         // Was the timer canceled or the deadline has moved?
+         if (timer.expiry() > std::chrono::steady_clock::now()) {
+            // The deadline has move, this happens only if the user
+            // send any of the authentification commands. We have
+            // nothing to do.
+         } else {
+            // The timer was canceled. Do whatever is needed.
+         }
+      } else {
+         // If there is an error and this error is not
+         // operation_aborted we have no treatment for it yet.
+         // TODO: Check what to do here.
+         fail(ec, "timer_mgr");
          return;
       }
-      
-      // If we get here than the websocket is open.  We can either
-      // close the connection gracefully by sending a close frame with
-      // async_close or simply shutdown the socket.  Here we decide to
-      // inform the user.
-      do_close();
-      return;
-   }
+   } else { // No error.
+      // The timer was either fired or this is the first time we are
+      // calling this function after accepting it. We test this below
+      //if (!is_waiting_auth()) {
+         // The timeout was fired. This can be caused by many reasons
+         // depending on our current state.
+         // 
+         // 1. The timer expired while the client was (expected to be)
+         //    trying the handshake. 
+         // 2. The client did not sent us a login or an authentication
+         //    command after the handshake
+         // 3. The client did not send the sms confirmation on time.
+         //
+         // In case 1. the websocket will not be yet open.
 
-   if (ec != boost::asio::error::operation_aborted) {
-      // Some error, do we need to handle this?
-      fail(ec, "on_timer");
-      return;
+         if (!ws.is_open()) {
+            ws.next_layer().shutdown(tcp::socket::shutdown_both, ec);
+            ws.next_layer().close(ec);
+            return;
+         }
+         
+         // If we get here than the websocket is open.  We can either
+         // close the connection gracefully by sending a close frame with
+         // async_close or simply shutdown the socket.  Here we decide to
+         // inform the user.
+         do_close();
+      //}
    }
-
-   // At this point we know ec = boost::asio::error::operation_aborted
-   // but we do not know what caused it. Was the timer canceled or the
-   // deadline has moved?
-   if (timer.expiry() > std::chrono::steady_clock::now()) {
-      // The deadline has move, this happens only if the user send any
-      // of the authentification commands. We have nothing to do.
-      return;
-   }
-
-   // The timer has been cancelled. We let the inititator handle it.
 }
 
 void server_session::on_accept(boost::system::error_code ec)
@@ -114,7 +116,7 @@ void server_session::on_accept(boost::system::error_code ec)
    timer.expires_after(cf.on_acc_timeout);
 
    auto const handler = [p = shared_from_this()](auto ec)
-   { p->on_timer(ec); };
+   { p->timer_mgr(ec); };
 
    timer.async_wait(boost::asio::bind_executor(strand, handler));
 
@@ -171,7 +173,7 @@ void server_session::handle_ev(ev_res r)
          // have to set the sms timeout.
          if (timer.expires_after(cf.sms_timeout) > 0) {
             auto const handler = [p = shared_from_this()](auto ec)
-            { p->on_timer(ec); };
+            { p->timer_mgr(ec); };
 
             timer.async_wait(boost::asio::bind_executor(strand, handler));
          } else {
@@ -306,7 +308,7 @@ void server_session::send_msg(std::string msg)
 
    auto const is_empty = msg_queue.empty();
 
-   // TODO: Impose a limit on how grow the queue can grow.
+   // TODO: Impose a limit on how big the queue can grow.
    msg_queue.push(std::move(msg));
 
    if (is_empty && !closing)

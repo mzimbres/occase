@@ -163,46 +163,51 @@ void server_session::do_close()
 
 void server_session::handle_ev(ev_res r)
 {
-   // TODO: Replace with a switch to avoid the search.
-   if (drop_session(r)) {
-      // We have to unconditionally close the connection. 
-      timer.cancel();
-      do_close();
-      return;
-   }
+   switch (r) {
+      case ev_res::LOGIN_OK:
+      {
+         // Successful login request which means the unknown
+         // connection timer  has to be canceled.  This is where we
+         // have to set the sms timeout.
+         if (timer.expires_after(cf.sms_timeout) > 0) {
+            auto const handler = [p = shared_from_this()](auto ec)
+            { p->on_timer(ec); };
 
-   if (r == ev_res::LOGIN_OK) {
-      // Successful login request which means the unknown
-      // connection timer  has to be canceled.  This is where we
-      // have to set the sms timeout.
-      if (timer.expires_after(cf.sms_timeout) > 0) {
-         auto const handler = [p = shared_from_this()](auto ec)
-         { p->on_timer(ec); };
-
-         timer.async_wait(boost::asio::bind_executor(strand, handler));
-         return;
+            timer.async_wait(boost::asio::bind_executor(strand, handler));
+         } else {
+            // If we get here, it means that there was no ongoing timer.
+            // But I do not see any reason for calling a login command on
+            // an stablished session, this is a logic error.
+            assert(true);
+         }
       }
-      
-      // If we get here, it means that there was no ongoing timer.
-      // But I do not see any reason for calling a login command on
-      // an stablished session, this is a logic error.
-      assert(true);
-      return;
-   }
-   
-   if (r == ev_res::SMS_CONFIRMATION_OK) {
-      // This means the sms authentification was successfull and
-      // that we have to cancel the sms timer. TODO: At this point
-      // we can begin to play with websockets ping pong frames.
-      timer.cancel();
-      return;
-   }
-   
-   if (r == ev_res::AUTH_OK) {
-      // Successful authentication. We have to cancel the on accept
-      // timeout.
-      timer.cancel();
-      return;
+      break;
+      case ev_res::SMS_CONFIRMATION_OK:
+      {
+         // This means the sms authentification was successfull and
+         // that we have to cancel the sms timer. TODO: At this point
+         // we can begin to play with websockets ping pong frames.
+         timer.cancel();
+      }
+      break;
+      case ev_res::AUTH_OK:
+      {
+         // Successful authentication. We have to cancel the on accept
+         // timeout.
+         timer.cancel();
+      }
+      break;
+      case ev_res::LOGIN_FAIL:
+      case ev_res::AUTH_FAIL:
+      case ev_res::SMS_CONFIRMATION_FAIL:
+      {
+         // Drops the session.
+         timer.cancel();
+         do_close();
+      }
+      break;
+      default:
+      break;
    }
 }
 

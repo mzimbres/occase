@@ -30,27 +30,6 @@ enum class ev_res
 , UNKNOWN
 };
 
-inline auto drop_session(ev_res r) noexcept
-{
-   switch (r) {
-   case ev_res::LOGIN_OK:              return false;
-   case ev_res::LOGIN_FAIL:            return true;
-   case ev_res::AUTH_OK:               return false;
-   case ev_res::AUTH_FAIL:             return true;
-   case ev_res::SMS_CONFIRMATION_OK:   return false;
-   case ev_res::SMS_CONFIRMATION_FAIL: return true;
-   case ev_res::CREATE_GROUP_OK:       return false;
-   case ev_res::CREATE_GROUP_FAIL:     return false;
-   case ev_res::JOIN_GROUP_OK:         return false;
-   case ev_res::JOIN_GROUP_FAIL:       return false;
-   case ev_res::GROUP_MSG_OK:          return false;
-   case ev_res::GROUP_MSG_FAIL:        return false;
-   case ev_res::USER_MSG_OK:           return false;
-   case ev_res::USER_MSG_FAIL:         return false;
-   default:                            return true;
-   }
-}
-
 class server_mgr {
 private:
    std::string host = "criatura";

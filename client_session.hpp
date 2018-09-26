@@ -23,6 +23,7 @@ struct client_session_config {
    std::string host;
    std::string port;
    std::chrono::seconds handshake_timeout;
+   std::chrono::seconds auth_timeout;
 };
 
 template <class Mgr>
@@ -293,8 +294,7 @@ client_session<Mgr>::on_handshake( boost::system::error_code ec
       // should do so since we are not sending any auth or login
       // command.
 
-      // TODO: Make this configurable.
-      timer.expires_after(std::chrono::seconds {3});
+      timer.expires_after(op.auth_timeout);
 
       auto handler = [p = this->shared_from_this()](auto ec)
       {

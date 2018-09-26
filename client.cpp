@@ -40,13 +40,15 @@ struct client_op {
    long unsigned conn_test_size = 10;
    long unsigned acc_test_size = 10;
    int handshake_timeout = 3;
+   int auth_timeout = 3;
 
    auto session_config() const
    {
       return client_session_config
       { {host} 
       , {port}
-      , std::chrono::seconds {handshake_timeout}};
+      , std::chrono::seconds {handshake_timeout}
+      , std::chrono::seconds {auth_timeout}};
    }
 };
 
@@ -326,9 +328,12 @@ int main(int argc, char* argv[])
          ("accept-size,a"
          , po::value<long unsigned>(&op.acc_test_size)->default_value(10)
          , "Number of after accept test clients.")
-         ("handshake-size,k"
+         ("handshake-timeout,k"
          , po::value<int>(&op.handshake_timeout)->default_value(3)
-         , "Handshake timeout in seconds.")
+         , "Time after before which the server should giveup the handshake.")
+         ("auth-timeout,l"
+         , po::value<int>(&op.auth_timeout)->default_value(3)
+         , "Time after before which the server should giveup witing for auth cmd.")
       ;
 
       po::variables_map vm;        

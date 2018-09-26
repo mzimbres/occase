@@ -87,7 +87,8 @@ void test_accept_timer(client_op const& op)
 void test_login( client_op const& op
                , char const* expected
                , int begin
-               , int end)
+               , int end
+               , int ret)
 {
    using mgr_type = client_mgr_login;
    using client_type = client_session<mgr_type>;
@@ -97,7 +98,7 @@ void test_login( client_op const& op
    std::vector<mgr_type> mgrs;
 
    for (auto i = begin; i < end; ++i)
-      mgrs.push_back({to_str(i, 4, 0), expected});
+      mgrs.push_back({to_str(i, 4, 0), expected, ret});
 
    for (auto& mgr : mgrs)
       std::make_shared<client_type>(ioc, op.session_config(), mgr)->run();
@@ -118,10 +119,10 @@ void test_flood_login( client_op const& op
    std::vector<mgr_type> mgrs;
 
    for (auto i = begin; i < end; ++i)
-      mgrs.push_back({to_str(i, 4, 0), "ok"});
+      mgrs.push_back({to_str(i, 4, 0), "ok", -1});
 
    for (auto i = end; i < more; ++i)
-      mgrs.push_back({to_str(i, 4, 0), "fail"});
+      mgrs.push_back({to_str(i, 4, 0), "fail", -1});
 
    for (auto& mgr : mgrs)
       std::make_shared<client_type>(ioc, op.session_config(), mgr)->run();
@@ -360,15 +361,29 @@ int main(int argc, char* argv[])
 
       // Tests the sms timeout. Connections should be dropped if the
       // users tries to register but do not send the sms on time.
-      test_login(op, "ok", 0, op.users_size);
+      // Connection is gracefully closed.
+      test_login(op, "ok", 0, op.users_size, -1);
       std::cout << "test_login_ok_1:    ok" << std::endl;
 
       // Tests if the previous login commands were all released. That
       // means if we send again users_size registrations there should
       // be enough indexes for them.
-      test_login(op, "ok", 0, op.users_size);
+      // Connection is shutdown so that the server does not notice it
+      // imediatelly. The next test should fail if we do not wait
+      // until the sessions begin to timeout in the server.
+      test_login(op, "ok", 0, op.users_size, -2);
       std::cout << "test_login_ok_2:    ok" << std::endl;
 
+      std::this_thread::sleep_for(std::chrono::seconds {op.auth_timeout});
+
+      // Tests if the previous login commands were all released. That
+      // means if we send again users_size registrations there should
+      // be enough indexes for them.
+      // Connection is gracefully closed.
+      test_login(op, "ok", 0, op.users_size, -1);
+      std::cout << "test_login_ok_21:   ok" << std::endl;
+
+      std::cout << "test_login_ok_2:    ok" << std::endl;
       // Sends more logins than the server has available user entries.
       // Assumes all messages will arrive in the server before the
       // first one begins to timeout.
@@ -398,11 +413,11 @@ int main(int argc, char* argv[])
 
       // Test if the server refuses all logins after we occupied all
       // indexes in the last sms test. First using non-existing users.
-      test_login(op, "fail", op.users_size, 2 * op.users_size);
+      test_login(op, "fail", op.users_size, 2 * op.users_size, -1);
       std::cout << "test_login_ok_3:    ok" << std::endl;
 
       // Same as above but for already registered users.
-      test_login(op, "fail", 0, op.users_size);
+      test_login(op, "fail", 0, op.users_size, -1);
       std::cout << "test_login_ok_4:    ok" << std::endl;
 
       // Test authentication with binds obtained in the sms step.

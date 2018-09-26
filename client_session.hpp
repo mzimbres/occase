@@ -126,9 +126,20 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
    json j = json::parse(str);
    //std::cout << "Received: " << str << std::endl;
 
+   // Here we are canceling the handshake timeout. The timer will
+   // however be called every time this function is called.
+   // TODO: Instead of cancel implement as activity with
+   // expires_after.
    timer.cancel();
-   if (mgr.on_read(j, this->shared_from_this()) == -1) {
+   auto const r = mgr.on_read(j, this->shared_from_this());
+   if (r == -1) {
       do_close();
+      return;
+   }
+
+   if (r == -2) {
+      ws.next_layer().shutdown(tcp::socket::shutdown_both, ec);
+      ws.next_layer().close(ec);
       return;
    }
 

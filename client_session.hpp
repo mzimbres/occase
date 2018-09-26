@@ -90,53 +90,47 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
                                  , tcp::resolver::results_type results)
 {
    std::string str;
-   //try {
-      boost::ignore_unused(bytes_transferred);
+   boost::ignore_unused(bytes_transferred);
 
-      if (ec) {
-         if (ec == websocket::error::closed) {
-            // This means the session has been closed by the server.
-            if (mgr.on_closed(ec) == -1) {
-               //std::cout << "Cancelling timer." << std::endl;
-               timer.cancel();
-               return;
-            }
-
-            // The manager wants us to reconnect to continue with its
-            // tests.
-            buffer.consume(buffer.size());
-
-            std::cout << "Leaving on read 2." << std::endl;
-            return;
-         }
-
-         if (ec == boost::asio::error::operation_aborted) {
-            // I am unsure by this may be caused by a do_close.
-            std::cout << "Leaving on read 3." << std::endl;
+   if (ec) {
+      if (ec == websocket::error::closed) {
+         // This means the session has been closed by the server.
+         if (mgr.on_closed(ec) == -1) {
+            //std::cout << "Cancelling timer." << std::endl;
             timer.cancel();
             return;
          }
 
-         //std::cout << "Leaving on read 4." << std::endl;
+         // The manager wants us to reconnect to continue with its
+         // tests.
+         buffer.consume(buffer.size());
+
+         std::cout << "Leaving on read 2." << std::endl;
          return;
       }
 
-      ++recv_msgs;
-      str = boost::beast::buffers_to_string(buffer.data());
-      buffer.consume(std::size(buffer));
-      json j = json::parse(str);
-      //std::cout << "Received: " << str << std::endl;
-
-      if (mgr.on_read(j, this->shared_from_this()) == -1) {
-         do_close();
+      if (ec == boost::asio::error::operation_aborted) {
+         // I am unsure by this may be caused by a do_close.
+         std::cout << "Leaving on read 3." << std::endl;
+         timer.cancel();
          return;
       }
 
-   //} catch (std::exception const& e) {
-   //   std::cerr << "Server error, please fix: " << str << std::endl;
-   //   std::cerr << "Error: " << e.what() << std::endl;
-   //   return;
-   //}
+      //std::cout << "Leaving on read 4." << std::endl;
+      return;
+   }
+
+   ++recv_msgs;
+   str = boost::beast::buffers_to_string(buffer.data());
+   buffer.consume(std::size(buffer));
+   json j = json::parse(str);
+   //std::cout << "Received: " << str << std::endl;
+
+   timer.cancel();
+   if (mgr.on_read(j, this->shared_from_this()) == -1) {
+      do_close();
+      return;
+   }
 
    do_read(results);
 }
@@ -286,31 +280,30 @@ client_session<Mgr>::on_handshake( boost::system::error_code ec
    // so that we can receive the acks from the server.
    do_read(results);
 
-   auto const r = mgr.on_handshake(this->shared_from_this());
-   if (r == -1) {
-      // This means the mgr wants us to set a timer that will fire if
-      // not canceled on timer. The canceling should happen on the
-      // on_read when the server gracefully closes the connection. It
-      // should do so since we are not sending any auth or login
-      // command.
+   mgr.on_handshake(this->shared_from_this());
 
-      timer.expires_after(op.auth_timeout);
+   // This means the mgr wants us to set a timer that will fire if
+   // not canceled on timer. The canceling should happen on the
+   // on_read when the server gracefully closes the connection. It
+   // should do so since we are not sending any auth or login
+   // command.
 
-      auto handler = [p = this->shared_from_this()](auto ec)
-      {
-         if (ec) {
-            if (ec == boost::asio::error::operation_aborted) {
-               // The timer has been successfully canceled.
-               //std::cout << "Timer successfully canceled." << std::endl;
-               return;
-            }
+   timer.expires_after(op.auth_timeout);
+
+   auto handler = [p = this->shared_from_this()](auto ec)
+   {
+      if (ec) {
+         if (ec == boost::asio::error::operation_aborted) {
+            // The timer has been successfully canceled.
+            //std::cout << "Timer successfully canceled." << std::endl;
+            return;
          }
+      }
 
-         throw std::runtime_error("client_session<Mgr>::on_handshake: fail.");
-      };
+      throw std::runtime_error("client_session<Mgr>::on_handshake: fail.");
+   };
 
-      timer.async_wait(handler);
-   }
+   timer.async_wait(handler);
 }
 
 template <class Mgr>

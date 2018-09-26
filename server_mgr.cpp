@@ -113,7 +113,6 @@ ev_res server_mgr::on_auth(json j, std::shared_ptr<server_session> s)
 
    s->set_login_idx(from.index);
    s->promote();
-   users[from.index].store_session(s);
 
    json resp;
    resp["cmd"] = "auth_ack";
@@ -159,7 +158,6 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
    // which means we did something wrong in the login command.
    assert(new_user.second);
 
-   users[idx].store_session(s);
    users[idx].set_id(tel);
 
    json resp;
@@ -167,14 +165,13 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
    resp["result"] = "ok";
    resp["user_bind"] = user_bind {tel, host, idx};
 
-   users[idx].send_msg(resp.dump());
+   s->send_msg(resp.dump());
    return ev_res::SMS_CONFIRMATION_OK;
 }
 
 ev_res
 server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
 {
-   auto const from = j.at("from").get<user_bind>();
    auto const hash = j.at("hash").get<std::string>();
 
    auto const new_group = groups.insert({hash, {}});
@@ -183,7 +180,7 @@ server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
       json resp;
       resp["cmd"] = "create_group_ack";
       resp["result"] = "fail";
-      users.at(from.index).send_msg(resp.dump());
+      s->send_msg(resp.dump());
       //std::cout << "fail" << j << std::endl;
       return ev_res::CREATE_GROUP_FAIL;
    }
@@ -193,7 +190,7 @@ server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
    resp["cmd"] = "create_group_ack";
    resp["result"] = "ok";
 
-   users.at(from.index).send_msg(resp.dump());
+   s->send_msg(resp.dump());
    return ev_res::CREATE_GROUP_OK;
 }
 
@@ -239,7 +236,7 @@ server_mgr::on_group_msg( std::string msg
       json resp;
       resp["cmd"] = "group_msg_ack";
       resp["result"] = "fail";
-      users.at(from.index).send_msg(resp.dump());
+      s->send_msg(resp.dump());
       return ev_res::GROUP_MSG_FAIL;
    }
 
@@ -250,7 +247,7 @@ server_mgr::on_group_msg( std::string msg
    json ack;
    ack["cmd"] = "group_msg_ack";
    ack["result"] = "ok";
-   users.at(from.index).send_msg(ack.dump());
+   s->send_msg(ack.dump());
 
    return ev_res::GROUP_MSG_OK;
 }
@@ -267,14 +264,13 @@ server_mgr::on_user_msg(json j, std::shared_ptr<server_session> s)
 
 void server_mgr::on_write(index_type user_idx)
 {
-   users[user_idx].on_write();
 }
 
 void server_mgr::shutdown()
 {
    std::cout << "Shutting down user sessions ..." << std::endl;
 
-   for (auto& o : users)
-      o.shutdown();
+   //for (auto& o : users)
+   //   o.shutdown();
 }
 

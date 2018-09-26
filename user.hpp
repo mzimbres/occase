@@ -19,26 +19,14 @@ class user {
 private:
    id_type id; // User email or telephone number.
 
-   std::weak_ptr<server_session> session;
-   std::queue<std::string> msg_queue;
-
 public:
    user(std::string id_ = {}) : id(std::move(id_)) {}
    ~user() = default;
 
-   void add_friend(index_type uid);
-   void remove_friend(index_type uid);
-
    // TODO: What to do? Should return true only if user still has an
    // account.
-   auto is_active() const {return std::empty(id);}
-   void add_group(index_type gid);
-   void store_session(std::shared_ptr<server_session> s);
-   void send_msg(std::string msg);
-   void on_write();
-   void reset();
+   void reset() { id = {}; }
    auto const& get_id() const noexcept {return id;}
    void set_id(std::string id_) {id = std::move(id_);}
-   void shutdown();
 };
 

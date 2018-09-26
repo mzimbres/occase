@@ -18,7 +18,6 @@ common_objs = json_utils.o
 common_objs += menu_parser.o
 
 server_objs =
-server_objs += user.o
 server_objs += group.o
 server_objs += server_mgr.o
 server_objs += server_session.o
@@ -40,6 +39,7 @@ SRCS =
 SRCS += $(lib_objs:.o=.cpp)
 SRCS += $(lib_objs:.o=.hpp)
 SRCS += $(addsuffix .cpp, $(exes))
+SRCS += users.hpp
 SRCS += config.hpp
 SRCS += client_session.hpp
 

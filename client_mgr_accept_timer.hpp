@@ -19,15 +19,11 @@ private:
    using client_type = client_session<client_mgr_on_connect_timer>;
 
 public:
-   int on_read(json j, std::shared_ptr<client_type> s) const noexcept
-   {return 1;}
-   int on_closed(boost::system::error_code ec) const noexcept
-   { return 1;}
-   int on_write(std::shared_ptr<client_type> s) const noexcept
-   { return 1;}
-   int on_handshake(std::shared_ptr<client_type> s) const noexcept
-   { return 1;}
-   int on_connect() const noexcept { return -1;}
+   int on_read(json j, std::shared_ptr<client_type> s) const;
+   int on_closed(boost::system::error_code ec) const;
+   int on_write(std::shared_ptr<client_type> s) const;
+   int on_handshake(std::shared_ptr<client_type> s) const;
+   int on_connect() const;
 };
 
 class client_mgr_accept_timer {
@@ -38,7 +34,7 @@ public:
    int on_read(json j, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec);
    int on_write(std::shared_ptr<client_type> s);
-   int on_handshake(std::shared_ptr<client_type> s) { return 1;}
+   int on_handshake(std::shared_ptr<client_type> s) { return -1;}
    int on_connect() const noexcept { return 1;}
 };
 

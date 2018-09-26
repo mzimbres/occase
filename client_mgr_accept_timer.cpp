@@ -4,10 +4,38 @@
 
 #include "client_session.hpp"
 
+int client_mgr_on_connect_timer::on_read(json j, std::shared_ptr<client_type> s) const 
+{
+   throw std::runtime_error("Error.");
+   return 1;
+}
+
+int client_mgr_on_connect_timer::on_closed(boost::system::error_code ec) const 
+{
+   throw std::runtime_error("Error.");
+   return 1;
+}
+
+int client_mgr_on_connect_timer::on_write(std::shared_ptr<client_type> s) const
+{
+   throw std::runtime_error("Error.");
+   return 1;
+}
+
+int client_mgr_on_connect_timer::on_handshake(std::shared_ptr<client_type> s) const 
+{
+   throw std::runtime_error("Error.");
+   return 1;
+}
+
+int client_mgr_on_connect_timer::on_connect() const
+{
+   return -1;
+}
+
 int client_mgr_accept_timer::on_read(json j, std::shared_ptr<client_type> s)
 {
    // We should not receive any message from the server in this test.
-   std::cerr << "Error: client_mgr_accept_timer::on_read." << std::endl;
    throw std::runtime_error("client_mgr_accept_timer::on_read");
    return -1;
 }

@@ -95,11 +95,9 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
       if (ec) {
          if (ec == websocket::error::closed) {
             // This means the session has been closed by the server.
-            // Now we ask the manager what to do, should we try to
-            // reconnect or are we done.
             if (mgr.on_closed(ec) == -1) {
-               // We are done.
-               //std::cout << "Leaving on read 1." << std::endl;
+               //std::cout << "Cancelling timer." << std::endl;
+               timer.cancel();
                return;
             }
 
@@ -236,7 +234,7 @@ client_session<Mgr>::on_connect( boost::system::error_code ec
          if (ec) {
             if (ec == boost::asio::error::operation_aborted) {
                // The timer has been successfully canceled.
-               std::cout << "Timer successfully canceled." << std::endl;
+               //std::cout << "Timer successfully canceled." << std::endl;
                return;
             }
          }
@@ -281,14 +279,38 @@ client_session<Mgr>::on_handshake( boost::system::error_code ec
 {
    //std::cout << "on_handshake" << std::endl;
    if (ec)
-      return fail_tmp(ec, "handshake");
+      throw std::runtime_error(ec.message());
 
    // This function must be called before we begin to write commands
    // so that we can receive the acks from the server.
    do_read(results);
 
-   if (mgr.on_handshake(this->shared_from_this()) == -1)
-      do_close();
+   auto const r = mgr.on_handshake(this->shared_from_this());
+   if (r == -1) {
+      // This means the mgr wants us to set a timer that will fire if
+      // not canceled on timer. The canceling should happen on the
+      // on_read when the server gracefully closes the connection. It
+      // should do so since we are not sending any auth or login
+      // command.
+
+      // TODO: Make this configurable.
+      timer.expires_after(std::chrono::seconds {3});
+
+      auto handler = [p = this->shared_from_this()](auto ec)
+      {
+         if (ec) {
+            if (ec == boost::asio::error::operation_aborted) {
+               // The timer has been successfully canceled.
+               //std::cout << "Timer successfully canceled." << std::endl;
+               return;
+            }
+         }
+
+         throw std::runtime_error("client_session<Mgr>::on_handshake: fail.");
+      };
+
+      timer.async_wait(handler);
+   }
 }
 
 template <class Mgr>

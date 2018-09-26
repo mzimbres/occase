@@ -58,7 +58,6 @@ private:
                , tcp::resolver::results_type results);
    void on_close(boost::system::error_code ec);
    void do_write(std::string msg);
-   void on_timer(boost::system::error_code ec);
 
 public:
    explicit
@@ -218,38 +217,6 @@ void client_session<Mgr>::on_resolve( boost::system::error_code ec
 
 template <class Mgr>
 void
-client_session<Mgr>::on_timer(boost::system::error_code ec)
-{
-   if (!ec) {
-      // The server did not close the connection fast enough. The test
-      // fails.
-      std::cout << "client_session<Mgr>::on_timer: fail." << std::endl;
-      // Returning is enough as we performed no handshake.
-      return;
-   }
-
-   if (ec != boost::asio::error::operation_aborted) {
-      // Some error, do we need to handle this?
-      fail_tmp(ec, "on_timer");
-      std::cout << "client_session<Mgr>::on_timer2" << std::endl;
-      return;
-   }
-
-   // At this point we know ec = boost::asio::error::operation_aborted
-   // but we do not know what caused it. Was the timer canceled or the
-   // deadline has moved?
-   if (timer.expiry() > std::chrono::steady_clock::now()) {
-      // The deadline has moved, this happens only if the user send any
-      // of the authentification commands. We have nothing to do.
-      return;
-   }
-
-   // The timer was canceled.
-   std::cout << "Timer successfully canceled." << std::endl;
-}
-
-template <class Mgr>
-void
 client_session<Mgr>::on_connect( boost::system::error_code ec
                                , tcp::resolver::results_type results)
 {
@@ -258,26 +225,41 @@ client_session<Mgr>::on_connect( boost::system::error_code ec
 
    if (mgr.on_connect() == -1) {
       // The -1 means we are are testing if the server will timeout
-      // our connection if the handshake lasts too long.
+      // our connection if the handshake lasts too long. So here we
+      // wont proceed with the handshake but set a timer to throw an
+      // exception on timeout. If the server closes the connection the
+      // timer will be canceled.
       timer.expires_after(op.handshake_timeout);
 
-      auto const handler = [p = this->shared_from_this()](auto ec)
-      { p->on_timer(ec); };
+      auto handler = [p = this->shared_from_this()](auto ec)
+      {
+         if (ec) {
+            if (ec == boost::asio::error::operation_aborted) {
+               // The timer has been successfully canceled.
+               std::cout << "Timer successfully canceled." << std::endl;
+               return;
+            }
+         }
+
+         throw std::runtime_error("client_session<Mgr>::on_timer: fail.");
+      };
 
       timer.async_wait(handler);
 
       // Now we post the handler that will cancel the timer when the
-      // server gives up on the handshake.
-      auto const handler2 =
-         [p = this->shared_from_this()](auto ec, auto n)
+      // server gives up the handshake by closing the connection.
+      auto handler2 = [p = this->shared_from_this()](auto ec, auto n)
       {
          if (ec == boost::asio::error::eof) {
             p->timer.cancel();
             //std::cout << "Timer canceled, thanks." << std::endl;
+            return;
          }
 
-         //std::cout << "Bytes transferred: " << n << std::endl;
+         std::cout << "Unexpected error." << std::endl;
+         std::cout << "Bytes transferred: " << n << std::endl;
       };
+
       char dummy[32];
       ws.next_layer().async_receive( boost::asio::buffer( &dummy[0]
                                                         , std::size(dummy))

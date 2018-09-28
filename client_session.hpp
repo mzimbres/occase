@@ -39,7 +39,7 @@ private:
    std::queue<std::string> msg_queue;
    bool closing = false;
 
-   Mgr& mgr;
+   Mgr mgr;
 
    int sent_msgs = 0;
    int recv_msgs = 0;
@@ -64,7 +64,7 @@ public:
    explicit
    client_session( boost::asio::io_context& ioc
                  , client_session_config op_
-                 , Mgr& m);
+                 , Mgr const& m);
 
    ~client_session()
    {
@@ -149,7 +149,7 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
 template <class Mgr>
 client_session<Mgr>::client_session( boost::asio::io_context& ioc
                                    , client_session_config op_
-                                   , Mgr& m)
+                                   , Mgr const& m)
 : resolver(ioc)
 , timer(ioc)
 , ws(ioc)

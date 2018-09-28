@@ -37,7 +37,7 @@ struct client_op {
    std::string host {"127.0.0.1"};
    std::string port {"8080"};
    int users_size = 10;
-   long unsigned conn_test_size = 10;
+   int conn_test_size = 10;
    long unsigned acc_test_size = 10;
    int handshake_timeout = 3;
    int auth_timeout = 3;
@@ -52,22 +52,51 @@ struct client_op {
    }
 };
 
-
-void test_on_connect_timer(client_op const& op)
-{
+// Tests if the server sets a timeout after a connection.
+class test_on_conn : public std::enable_shared_from_this<test_on_conn> {
+public:
    using mgr_type = client_mgr_on_connect_timer;
    using client_type = client_session<mgr_type>;
 
-   boost::asio::io_context ioc;
+private:
+   boost::asio::io_context& ioc;
+   std::chrono::milliseconds interval;
+   int number_of_runs;
+   client_session_config scf;
+   boost::asio::steady_timer timer;
+ 
+public:
+   test_on_conn( boost::asio::io_context& ioc_
+      , std::chrono::milliseconds interval_
+      , int runs
+      , client_session_config scf_)
+   : ioc(ioc_)
+   , interval(interval_) 
+   , number_of_runs(runs)
+   , scf(scf_)
+   , timer(ioc)
+   {}
+      
+   void run(boost::system::error_code ec)
+   {
+      if (ec)
+         throw std::runtime_error("No error expected here.");
 
-   std::vector<mgr_type> mgrs {op.conn_test_size};
+      if (number_of_runs-- == 0) {
+         std::cout << "test_connect_timer: ok" << std::endl;
+         return;
+      }
 
-   for (auto& mgr : mgrs)
-      std::make_shared<client_type>( ioc, op.session_config()
-                                   , mgr)->run();
+      std::make_shared<client_type>(ioc, scf, mgr_type {})->run();
 
-   ioc.run();
-}
+      timer.expires_after(interval);
+
+      auto handler = [p = this->shared_from_this()](auto ec)
+      { p->run(ec); };
+
+      timer.async_wait(handler);
+   }
+};
 
 void test_accept_timer(client_op const& op)
 {
@@ -75,6 +104,11 @@ void test_accept_timer(client_op const& op)
    using client_type = client_session<mgr_type>;
 
    boost::asio::io_context ioc;
+
+   std::make_shared<test_on_conn>( ioc 
+                                 , std::chrono::milliseconds {100}
+                                 , op.conn_test_size
+                                 , op.session_config())->run({});
 
    std::vector<mgr_type> mgrs {op.acc_test_size};
 
@@ -324,7 +358,7 @@ int main(int argc, char* argv[])
          , po::value<int>(&op.users_size)->default_value(10)
          , "Number of users.")
          ("handshake-size,s"
-         , po::value<long unsigned>(&op.conn_test_size)->default_value(10)
+         , po::value<int>(&op.conn_test_size)->default_value(10)
          , "Number of handshake test clients.")
          ("accept-size,a"
          , po::value<long unsigned>(&op.acc_test_size)->default_value(10)
@@ -347,12 +381,6 @@ int main(int argc, char* argv[])
       }
 
       std::cout << "==========================================" << std::endl;
-
-      // Tests if the ser sets a timeout after a connection.
-      // TODO: Add a timer in the client so that an error message is
-      // output. At this moment the io context will not return.
-      test_on_connect_timer(op);
-      std::cout << "test_connect_timer: ok" << std::endl;
 
       // Tests if the server drops connections that connect by do not
       // register or authenticate.

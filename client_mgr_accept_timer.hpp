@@ -19,6 +19,10 @@ private:
    using client_type = client_session<client_mgr_on_connect_timer>;
 
 public:
+   ~client_mgr_on_connect_timer()
+   {
+      //std::cout << "Bye1 bye1." << std::endl;
+   }
    int on_read(json j, std::shared_ptr<client_type> s) const;
    int on_closed(boost::system::error_code ec) const;
    int on_write(std::shared_ptr<client_type> s) const;
@@ -31,6 +35,11 @@ private:
    using client_type = client_session<client_mgr_accept_timer>;
 
 public:
+   ~client_mgr_accept_timer()
+   {
+      //std::cout << "Bye2 bye2." << std::endl;
+   }
+
    int on_read(json j, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec);
    int on_write(std::shared_ptr<client_type> s);

@@ -53,27 +53,23 @@ struct client_op {
 };
 
 // Tests if the server sets a timeout after a connection.
-class test_on_conn : public std::enable_shared_from_this<test_on_conn> {
+template <class T>
+class test_on_conn : 
+   public std::enable_shared_from_this<test_on_conn<T>> {
 public:
-   using mgr_type = client_mgr_on_connect_timer;
+   using mgr_type = T;
    using client_type = client_session<mgr_type>;
 
 private:
    boost::asio::io_context& ioc;
-   std::chrono::milliseconds interval;
-   int number_of_runs;
-   client_session_config scf;
+   client_op op;
+   std::chrono::milliseconds interval {100};
    boost::asio::steady_timer timer;
  
 public:
-   test_on_conn( boost::asio::io_context& ioc_
-      , std::chrono::milliseconds interval_
-      , int runs
-      , client_session_config scf_)
+   test_on_conn(boost::asio::io_context& ioc_ , client_op const& op_)
    : ioc(ioc_)
-   , interval(interval_) 
-   , number_of_runs(runs)
-   , scf(scf_)
+   , op(op_)
    , timer(ioc)
    {}
       
@@ -82,12 +78,13 @@ public:
       if (ec)
          throw std::runtime_error("No error expected here.");
 
-      if (number_of_runs-- == 0) {
+      if (op.conn_test_size-- == 0) {
          std::cout << "test_connect_timer: ok" << std::endl;
          return;
       }
 
-      std::make_shared<client_type>(ioc, scf, mgr_type {})->run();
+      std::make_shared<client_type>( ioc, op.session_config()
+                                   , mgr_type {})->run();
 
       timer.expires_after(interval);
 
@@ -100,21 +97,13 @@ public:
 
 void test_accept_timer(client_op const& op)
 {
-   using mgr_type = client_mgr_accept_timer;
-   using client_type = client_session<mgr_type>;
-
    boost::asio::io_context ioc;
 
-   std::make_shared<test_on_conn>( ioc 
-                                 , std::chrono::milliseconds {100}
-                                 , op.conn_test_size
-                                 , op.session_config())->run({});
+   std::make_shared< test_on_conn<client_mgr_on_connect_timer>
+                   >(ioc, op)->run({});
 
-   for (auto i = 0; i < op.acc_test_size; ++i)
-      std::make_shared<client_type>( ioc
-                                   , op.session_config()
-                                   , mgr_type {})->run();
-
+   std::make_shared< test_on_conn<client_mgr_accept_timer>
+                   >(ioc, op)->run({});
    ioc.run();
 }
 

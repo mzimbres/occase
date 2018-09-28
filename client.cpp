@@ -38,7 +38,7 @@ struct client_op {
    std::string port {"8080"};
    int users_size = 10;
    int conn_test_size = 10;
-   long unsigned acc_test_size = 10;
+   int acc_test_size = 10;
    int handshake_timeout = 3;
    int auth_timeout = 3;
 
@@ -110,10 +110,10 @@ void test_accept_timer(client_op const& op)
                                  , op.conn_test_size
                                  , op.session_config())->run({});
 
-   std::vector<mgr_type> mgrs {op.acc_test_size};
-
-   for (auto& mgr : mgrs)
-      std::make_shared<client_type>(ioc, op.session_config(), mgr)->run();
+   for (auto i = 0; i < op.acc_test_size; ++i)
+      std::make_shared<client_type>( ioc
+                                   , op.session_config()
+                                   , mgr_type {})->run();
 
    ioc.run();
 }
@@ -361,7 +361,7 @@ int main(int argc, char* argv[])
          , po::value<int>(&op.conn_test_size)->default_value(10)
          , "Number of handshake test clients.")
          ("accept-size,a"
-         , po::value<long unsigned>(&op.acc_test_size)->default_value(10)
+         , po::value<int>(&op.acc_test_size)->default_value(10)
          , "Number of after accept test clients.")
          ("handshake-timeout,k"
          , po::value<int>(&op.handshake_timeout)->default_value(3)

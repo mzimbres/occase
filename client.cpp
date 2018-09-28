@@ -52,7 +52,6 @@ struct client_op {
    }
 };
 
-// Tests if the server sets a timeout after a connection.
 template <class T>
 class test_on_conn : 
    public std::enable_shared_from_this<test_on_conn<T>> {
@@ -79,7 +78,7 @@ public:
          throw std::runtime_error("No error expected here.");
 
       if (op.conn_test_size-- == 0) {
-         std::cout << "test_connect_timer: ok" << std::endl;
+         std::cout << "Test ok." << std::endl;
          return;
       }
 
@@ -95,18 +94,6 @@ public:
    }
 };
 
-void test_accept_timer(client_op const& op)
-{
-   boost::asio::io_context ioc;
-
-   std::make_shared< test_on_conn<client_mgr_on_connect_timer>
-                   >(ioc, op)->run({});
-
-   std::make_shared< test_on_conn<client_mgr_accept_timer>
-                   >(ioc, op)->run({});
-   ioc.run();
-}
-
 void test_login( client_op const& op
                , char const* expected
                , int begin
@@ -117,6 +104,15 @@ void test_login( client_op const& op
    using client_type = client_session<mgr_type>;
 
    boost::asio::io_context ioc;
+
+   // Tests if the server sets a timeout after a connection.
+   std::make_shared< test_on_conn<client_mgr_on_connect_timer>
+                   >(ioc, op)->run({});
+
+   // Tests if the server drops connections that connect by do not
+   // register or authenticate.
+   std::make_shared< test_on_conn<client_mgr_accept_timer>
+                   >(ioc, op)->run({});
 
    std::vector<mgr_type> mgrs;
 
@@ -370,11 +366,6 @@ int main(int argc, char* argv[])
       }
 
       std::cout << "==========================================" << std::endl;
-
-      // Tests if the server drops connections that connect by do not
-      // register or authenticate.
-      test_accept_timer(op);
-      std::cout << "test_accept_timer:  ok" << std::endl;
 
       // Tests the sms timeout. Connections should be dropped if the
       // users tries to register but do not send the sms on time.

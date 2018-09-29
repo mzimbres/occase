@@ -158,8 +158,9 @@ void test_login( client_op const& op
 {
    boost::asio::io_context ioc;
 
-   // Tests if the server sets a timeout after a connection.
-   std::make_shared< test_on_conn<client_mgr_on_connect_timer>
+   // Tests if the server times out connections that do not proceed
+   // with the websocket handshake.
+   std::make_shared< test_on_conn<cmgr_handshake_tm>
                    >(ioc, op)->run({});
 
    // Tests if the server drops connections that connect but do not
@@ -366,15 +367,18 @@ int main(int argc, char* argv[])
          ("users,u"
          , po::value<int>(&op.users_size)->default_value(10)
          , "Number of users.")
-         ("handshake-size,s"
+
+         ("handshake-timeout-test-size,s"
          , po::value<int>(&op.conn_test_size)->default_value(10)
          , "Number of handshake test clients.")
+         ("handshake-timeout,k"
+         , po::value<int>(&op.handshake_timeout)->default_value(3)
+         , "Time before which the server should have given "
+           "up on the handshake in seconds.")
+
          ("accept-size,a"
          , po::value<int>(&op.acc_test_size)->default_value(10)
          , "Number of after accept test clients.")
-         ("handshake-timeout,k"
-         , po::value<int>(&op.handshake_timeout)->default_value(3)
-         , "Time after before which the server should giveup the handshake.")
          ("auth-timeout,l"
          , po::value<int>(&op.auth_timeout)->default_value(3)
          , "Time after before which the server should giveup witing for auth cmd.")

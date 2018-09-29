@@ -14,12 +14,12 @@ class client_session;
 // TODO: Add a timer here after which we should emit an error if the
 // server do not drop the connection.
 
-class client_mgr_on_connect_timer {
+class cmgr_handshake_tm {
 private:
-   using client_type = client_session<client_mgr_on_connect_timer>;
+   using client_type = client_session<cmgr_handshake_tm>;
 
 public:
-   ~client_mgr_on_connect_timer()
+   ~cmgr_handshake_tm()
    {
       //std::cout << "Bye1 bye1." << std::endl;
    }

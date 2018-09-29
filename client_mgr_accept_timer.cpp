@@ -4,31 +4,31 @@
 
 #include "client_session.hpp"
 
-int client_mgr_on_connect_timer::on_read(json j, std::shared_ptr<client_type> s) const 
+int cmgr_handshake_tm::on_read(json j, std::shared_ptr<client_type> s) const 
 {
    throw std::runtime_error("Error.");
    return 1;
 }
 
-int client_mgr_on_connect_timer::on_closed(boost::system::error_code ec) const 
+int cmgr_handshake_tm::on_closed(boost::system::error_code ec) const 
 {
    throw std::runtime_error("Error.");
    return 1;
 }
 
-int client_mgr_on_connect_timer::on_write(std::shared_ptr<client_type> s) const
+int cmgr_handshake_tm::on_write(std::shared_ptr<client_type> s) const
 {
    throw std::runtime_error("Error.");
    return 1;
 }
 
-int client_mgr_on_connect_timer::on_handshake(std::shared_ptr<client_type> s) const 
+int cmgr_handshake_tm::on_handshake(std::shared_ptr<client_type> s) const 
 {
    throw std::runtime_error("Error.");
    return 1;
 }
 
-int client_mgr_on_connect_timer::on_connect() const
+int cmgr_handshake_tm::on_connect() const
 {
    return -1;
 }

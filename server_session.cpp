@@ -43,7 +43,7 @@ void server_session::do_accept()
          if (ec == boost::asio::error::operation_aborted)
             return;
 
-         fail(ec, "timer_mgr");
+         fail(ec, "do_accept_timer");
          assert(false);
          return;
       }
@@ -57,7 +57,9 @@ void server_session::do_accept()
    timer.async_wait(boost::asio::bind_executor(strand, handler1));
 
    auto handler2 = [p = shared_from_this()](auto ec)
-   { p->on_accept(ec); };
+   {
+      p->on_accept(ec);
+   };
 
    ws.async_accept(boost::asio::bind_executor(strand, handler2));
 }
@@ -115,9 +117,9 @@ void server_session::on_accept(boost::system::error_code ec)
 {
    if (ec) {
       if (ec == boost::asio::error::operation_aborted) {
-         // The handshake laste too long and the timer fired. We give
+         // The handshake laste too long and the timer fired. giving
          // up.
-         //std::cout << "Giving up handshake." << std::endl;
+         //std::cout << "Giving up on handshake." << std::endl;
          return;
       }
 
@@ -131,7 +133,17 @@ void server_session::on_accept(boost::system::error_code ec)
    timer.expires_after(cf.on_acc_timeout);
 
    auto const handler = [p = shared_from_this()](auto ec)
-   { p->timer_mgr(ec); };
+   {
+      if (ec) {
+         if (ec == boost::asio::error::operation_aborted)
+            return;
+
+         fail(ec, "after_handshake_timer");
+         return;
+      }
+
+      p->do_close();
+   };
 
    timer.async_wait(boost::asio::bind_executor(strand, handler));
 

@@ -154,8 +154,7 @@ public:
 void test_login( client_op const& op
                , char const* expected
                , int begin
-               , int end
-               , int ret)
+               , int end)
 {
    boost::asio::io_context ioc;
 
@@ -172,31 +171,12 @@ void test_login( client_op const& op
    // users tries to register but do not send the sms on time.
    // Connection is gracefully closed.
    std::make_shared<test_login_launcher>( ioc, op, begin, end, expected
-                                        , ret)->run({});
+                                        , -1)->run({});
 
-   ioc.run();
-}
-
-void test_flood_login( client_op const& op
-                     , int begin
-                     , int end
-                     , int more)
-{
-   using mgr_type = client_mgr_login;
-   using client_type = client_session<mgr_type>;
-
-   boost::asio::io_context ioc;
-
-   std::vector<mgr_type> mgrs;
-
-   for (auto i = begin; i < end; ++i)
-      mgrs.push_back({to_str(i, 4, 0), "ok", -1});
-
-   for (auto i = end; i < more; ++i)
-      mgrs.push_back({to_str(i, 4, 0), "fail", -1});
-
-   for (auto& mgr : mgrs)
-      std::make_shared<client_type>(ioc, op.session_config(), mgr)->run();
+   // Same as above but socket is shutdown.
+   std::make_shared<test_login_launcher>( ioc, op, end, end - begin
+                                        , expected
+                                        , -2)->run({});
 
    ioc.run();
 }
@@ -418,10 +398,8 @@ int main(int argc, char* argv[])
 
       std::cout << "==========================================" << std::endl;
 
-      test_login(op, "ok", 0, op.users_size, -1);
-      std::cout << "test_login_ok_1:    ok" << std::endl;
-      test_login(op, "ok", 0, op.users_size, -2);
-      std::cout << "test_login_ok_2:    ok" << std::endl;
+      test_login(op, "ok", 0, op.users_size);
+      std::cout << "test_many:          ok" << std::endl;
 
       // Sends commands with typos.
       test_login_typo(op);

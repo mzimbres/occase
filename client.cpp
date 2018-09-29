@@ -53,8 +53,8 @@ struct client_op {
 };
 
 template <class T>
-class test_on_conn : 
-   public std::enable_shared_from_this<test_on_conn<T>> {
+class handshake_test_launcher : 
+   public std::enable_shared_from_this<handshake_test_launcher<T>> {
 public:
    using mgr_type = T;
    using client_type = client_session<mgr_type>;
@@ -66,7 +66,8 @@ private:
    boost::asio::steady_timer timer;
  
 public:
-   test_on_conn(boost::asio::io_context& ioc_ , client_op const& op_)
+   handshake_test_launcher( boost::asio::io_context& ioc_
+                          , client_op const& op_)
    : ioc(ioc_)
    , op(op_)
    , interval(op.handshake_tm_launch_interval)
@@ -79,7 +80,7 @@ public:
          throw std::runtime_error("No error expected here.");
 
       if (op.handshake_tm_test_size-- == 0) {
-         std::cout << "Handshake/Auth test ok." << std::endl;
+         std::cout << "Handshake/Auth test: ok" << std::endl;
          return;
       }
 
@@ -152,32 +153,31 @@ public:
    }
 };
 
-void test_login( client_op const& op
-               , char const* expected
-               , int begin
-               , int end)
+void test_login(client_op const& op)
 {
    boost::asio::io_context ioc;
 
    // Tests if the server times out connections that do not proceed
    // with the websocket handshake.
-   std::make_shared< test_on_conn<cmgr_handshake_tm>
+   std::make_shared< handshake_test_launcher<cmgr_handshake_tm>
                    >(ioc, op)->run({});
 
    // Tests if the server drops connections that connect but do not
    // register or authenticate.
-   std::make_shared< test_on_conn<client_mgr_accept_timer>
+   std::make_shared< handshake_test_launcher<client_mgr_accept_timer>
                    >(ioc, op)->run({});
 
    // Tests the sms timeout. Connections should be dropped if the
    // users tries to register but do not send the sms on time.
    // Connection is gracefully closed.
-   std::make_shared<test_login_launcher>( ioc, op, begin, end, expected
+   std::make_shared<test_login_launcher>( ioc, op, 0, op.users_size, "ok"
                                         , -1)->run({});
 
    // Same as above but socket is shutdown.
-   std::make_shared<test_login_launcher>( ioc, op, end, end - begin
-                                        , expected
+   std::make_shared<test_login_launcher>( ioc
+                                        , op, op.users_size
+                                        , 2 * op.users_size
+                                        , "ok"
                                         , -2)->run({});
    // Sends commands with typos.
    json j1;
@@ -209,27 +209,25 @@ void test_login( client_op const& op
 
 auto test_sms( client_op const& op
              , std::string const& expected
-             , std::string const& sms)
+             , std::string const& sms
+             , int begin
+             , int end)
 {
    using mgr_type = client_mgr_sms;
    using client_type = client_session<mgr_type>;
 
    boost::asio::io_context ioc;
 
-   std::vector<mgr_type> mgrs;
-
-   for (auto i = 0; i < op.users_size; ++i)
-      mgrs.push_back({to_str(i, 4, 0), expected, sms});
-
    std::vector<std::shared_ptr<client_type>> sessions;
-   for (auto& mgr : mgrs) {
+   for (auto i = begin; i < end; ++i) {
       auto tmp =
-         std::make_shared<client_type>(ioc, op.session_config(), mgr);
+         std::make_shared<client_type>( ioc
+                                      , op.session_config()
+                                      , client_mgr_sms
+                                        {to_str(i, 4, 0), expected, sms});
+      tmp->run();
       sessions.push_back(tmp);
    }
-
-   for (auto& session : sessions)
-      session->run();
 
    ioc.run();
 
@@ -240,7 +238,8 @@ auto test_sms( client_op const& op
    return binds;
 }
 
-auto test_auth(client_op const& op, std::vector<user_bind> binds)
+auto test_auth( client_op const& op
+              , std::vector<user_bind> binds)
 {
    using mgr_type = client_mgr_auth;
    using client_type = client_session<mgr_type>;
@@ -399,16 +398,16 @@ int main(int argc, char* argv[])
 
       std::cout << "==========================================" << std::endl;
 
-      test_login(op, "ok", 0, op.users_size);
+      test_login(op);
       std::cout << "test_many:          ok" << std::endl;
 
       // Sends sms on time but the wrong one and expects the server to
       // release sessions correctly.
-      test_sms(op, "fail", "8r47");
+      test_sms(op, "fail", "8r47", 0, op.users_size);
       std::cout << "test_wrong_sms:     ok" << std::endl;
 
       // Sends correct sms on time.
-      auto const binds = test_sms(op, "ok", "8347");
+      auto const binds = test_sms(op, "ok", "8347", 0, op.users_size);
       if (std::empty(binds)) {
          std::cerr << "Error: Binds array empty." << std::endl;
          return 1;

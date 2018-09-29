@@ -138,7 +138,7 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
    json resp;
    resp["cmd"] = "sms_confirmation_ack";
    resp["result"] = "ok";
-   resp["user_bind"] = user_bind {tel, host, -1};
+   resp["user_bind"] = user_bind {tel, tel, host};
    s->send_msg(resp.dump());
    return ev_res::SMS_CONFIRMATION_OK;
 }

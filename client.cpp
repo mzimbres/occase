@@ -37,9 +37,9 @@ struct client_op {
    std::string host {"127.0.0.1"};
    std::string port {"8080"};
    int users_size = 10;
-   int conn_test_size = 10;
-   int acc_test_size = 10;
-   int handshake_timeout = 3;
+   int handshake_tm_test_size = 10;
+   int handshake_tm = 3;
+   int handshake_tm_launch_interval = 100;
    int auth_timeout = 3;
 
    auto session_config() const
@@ -47,7 +47,7 @@ struct client_op {
       return client_session_config
       { {host} 
       , {port}
-      , std::chrono::seconds {handshake_timeout}
+      , std::chrono::seconds {handshake_tm}
       , std::chrono::seconds {auth_timeout}};
    }
 };
@@ -62,13 +62,14 @@ public:
 private:
    boost::asio::io_context& ioc;
    client_op op;
-   std::chrono::milliseconds interval {100};
+   std::chrono::milliseconds interval;
    boost::asio::steady_timer timer;
  
 public:
    test_on_conn(boost::asio::io_context& ioc_ , client_op const& op_)
    : ioc(ioc_)
    , op(op_)
+   , interval(op.handshake_tm_launch_interval)
    , timer(ioc)
    {}
       
@@ -77,8 +78,8 @@ public:
       if (ec)
          throw std::runtime_error("No error expected here.");
 
-      if (op.conn_test_size-- == 0) {
-         std::cout << "Test ok." << std::endl;
+      if (op.handshake_tm_test_size-- == 0) {
+         std::cout << "Handshake/Auth test ok." << std::endl;
          return;
       }
 
@@ -368,17 +369,20 @@ int main(int argc, char* argv[])
          , po::value<int>(&op.users_size)->default_value(10)
          , "Number of users.")
 
-         ("handshake-timeout-test-size,s"
-         , po::value<int>(&op.conn_test_size)->default_value(10)
-         , "Number of handshake test clients.")
+         ("handshake-test-size,s"
+         , po::value<int>(&op.handshake_tm_test_size)->default_value(10)
+         , "Number of handshake test clients. Also used for the "
+           "after handshake timeout i.e. the time the client has "
+           "the send the first command.")
          ("handshake-timeout,k"
-         , po::value<int>(&op.handshake_timeout)->default_value(3)
+         , po::value<int>(&op.handshake_tm)->default_value(3)
          , "Time before which the server should have given "
            "up on the handshake in seconds.")
+         ("handshake-interval,g"
+         , po::value<int>(&op.handshake_tm_launch_interval)->default_value(100)
+         , "The interval with which we will lauch new handshake"
+           " timeout test clients. Also used for the after handshake timeout.")
 
-         ("accept-size,a"
-         , po::value<int>(&op.acc_test_size)->default_value(10)
-         , "Number of after accept test clients.")
          ("auth-timeout,l"
          , po::value<int>(&op.auth_timeout)->default_value(3)
          , "Time after before which the server should giveup witing for auth cmd.")

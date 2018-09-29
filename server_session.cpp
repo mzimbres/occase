@@ -27,10 +27,7 @@ server_session::server_session( tcp::socket socket
 
 server_session::~server_session()
 {
-   if (login_idx != -1) {
-      sd->release_login(login_idx);
-      login_idx = -1;
-   }
+   sd->release_user(user_id);
 }
 
 void server_session::do_accept()
@@ -207,7 +204,7 @@ void server_session::handle_ev(ev_res r)
             // If we get here, it means that there was no ongoing timer.
             // But I do not see any reason for calling a login command on
             // an stablished session, this is a logic error.
-            assert(true);
+            assert(false);
          }
       }
       break;
@@ -304,9 +301,6 @@ void server_session::on_write( boost::system::error_code ec
    buffer.consume(std::size(buffer)); // Clear the buffer
 
    msg_queue.pop();
-
-   // TODO: Think if we will ever need this.
-   sd->on_write(user_idx);
 
    if (msg_queue.empty())
       return; // No more message to send to the client.

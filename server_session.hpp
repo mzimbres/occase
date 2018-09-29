@@ -34,8 +34,7 @@ private:
 
    server_session_config cf;
    std::shared_ptr<server_mgr> sd;
-   index_type user_idx = -1;
-   index_type login_idx = -1;
+   std::string user_id;
    std::string sms;
    std::queue<std::string> msg_queue;
    bool closing = false;
@@ -61,17 +60,16 @@ public:
    void do_accept();
    void set_sms(std::string sms_) {sms = std::move(sms_);}
    auto const& get_sms() const { return sms; }
-   void set_user(index_type idx) {user_idx = idx;};
-   void set_login_idx(index_type idx) {login_idx = idx;};
-   auto get_user_idx() const noexcept {return user_idx;}
+   void set_user_id(std::string id) {user_id = id;};
+   auto get_user_id() const noexcept {return user_id;}
    void send_msg(std::string msg);
-   void promote() { std::swap(user_idx, login_idx ); }
+   void promote() { sms.clear(); }
    auto is_waiting_sms() const noexcept
-   {return login_idx != -1 && user_idx == -1;};
+   {return !std::empty(user_id) && !std::empty(sms);};
    auto is_auth() const noexcept
-   {return login_idx == -1 && user_idx != -1;};
+   {return !std::empty(user_id) && std::empty(sms);};
    auto is_waiting_auth() const noexcept
-   {return login_idx == -1 && user_idx == -1;};
+   {return std::empty(user_id) && std::empty(sms);};
    void do_close();
 };
 

@@ -20,7 +20,7 @@ int client_mgr_sms::on_read(json j, std::shared_ptr<client_type> s)
 
       std::cout << j << std::endl;
       std::cout << "Test fail: " << tel << std::endl;
-      throw std::runtime_error("client_mgr_sms::on_read");
+      throw std::runtime_error("client_mgr_sms::on_read1");
       return -1;
    }
 
@@ -36,12 +36,12 @@ int client_mgr_sms::on_read(json j, std::shared_ptr<client_type> s)
          return -1;
       }
 
-      throw std::runtime_error("client_mgr_sms::on_read");
+      throw std::runtime_error("client_mgr_sms::on_read2");
       return -1;
    }
 
    std::cout << "Server error: Unknown command." << std::endl;
-   throw std::runtime_error("client_mgr_sms::on_read");
+   throw std::runtime_error("client_mgr_sms::on_read3");
    return -1;
 }
 

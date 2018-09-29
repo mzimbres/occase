@@ -157,9 +157,6 @@ void test_login( client_op const& op
                , int end
                , int ret)
 {
-   using mgr_type = client_mgr_login;
-   using client_type = client_session<mgr_type>;
-
    boost::asio::io_context ioc;
 
    // Tests if the server sets a timeout after a connection.
@@ -263,8 +260,7 @@ auto test_sms( client_op const& op
 
    std::vector<user_bind> binds;
    for (auto const& session : sessions)
-      if (session->get_mgr().bind.index != -1)
-         binds.push_back(session->get_mgr().bind);
+      binds.push_back(session->get_mgr().bind);
 
    return binds;
 }
@@ -424,61 +420,29 @@ int main(int argc, char* argv[])
 
       test_login(op, "ok", 0, op.users_size, -1);
       std::cout << "test_login_ok_1:    ok" << std::endl;
-
-      // Tests if the previous login commands were all released. That
-      // means if we send again users_size registrations there should
-      // be enough indexes for them.
-      // Connection is shutdown so that the server does not notice it
-      // imediatelly. The next test should fail if we do not wait
-      // until the sessions begin to timeout in the server.
       test_login(op, "ok", 0, op.users_size, -2);
       std::cout << "test_login_ok_2:    ok" << std::endl;
-
-      std::this_thread::sleep_for(std::chrono::seconds {op.auth_timeout});
-
-      // Tests if the previous login commands were all released. That
-      // means if we send again users_size registrations there should
-      // be enough indexes for them.
-      // Connection is gracefully closed.
-      test_login(op, "ok", 0, op.users_size, -1);
-      std::cout << "test_login_ok_21:   ok" << std::endl;
-
-      std::cout << "test_login_ok_2:    ok" << std::endl;
-      // Sends more logins than the server has available user entries.
-      // Assumes all messages will arrive in the server before the
-      // first one begins to timeout.
-      test_flood_login(op, 0, op.users_size, 50);
-      std::cout << "test_flood_login:   ok" << std::endl;
 
       // Sends commands with typos.
       test_login_typo(op);
       std::cout << "test_login_typo:    ok" << std::endl;
 
       // Sends sms on time but the wrong one and expects the server to
-      // release indexes correctly.
-      auto binds = test_sms(op, "fail", "8r47");
-      if (!std::empty(binds)) {
-         std::cerr << "Error: Binds array not empty." << std::endl;
-         return EXIT_FAILURE;
-      }
+      // release sessions correctly.
+      test_sms(op, "fail", "8r47");
       std::cout << "test_wrong_sms:     ok" << std::endl;
 
       // Sends correct sms on time.
-      binds = test_sms(op, "ok", "8347");
+      auto const binds = test_sms(op, "ok", "8347");
       if (std::empty(binds)) {
          std::cerr << "Error: Binds array empty." << std::endl;
          return 1;
       }
       std::cout << "test_correct_sms:   ok" << std::endl;
 
-      // Test if the server refuses all logins after we occupied all
-      // indexes in the last sms test. First using non-existing users.
-      test_login(op, "fail", op.users_size, 2 * op.users_size, -1);
-      std::cout << "test_login_ok_3:    ok" << std::endl;
-
-      // Same as above but for already registered users.
-      test_login(op, "fail", 0, op.users_size, -1);
-      std::cout << "test_login_ok_4:    ok" << std::endl;
+      // TODO: Test this after implementing queries to the database.
+      //test_login(op, "fail", 0, op.users_size, -1);
+      //std::cout << "test_login_ok_4:    ok" << std::endl;
 
       // Test authentication with binds obtained in the sms step.
       test_auth(op, binds);

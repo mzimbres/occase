@@ -31,7 +31,6 @@ namespace po = boost::program_options;
 struct server_op {
    std::string ip;
    unsigned short port;
-   int n_init_users;
    int on_acc_timeout;
    int sms_timeout;
    int handshake_timeout;
@@ -58,9 +57,6 @@ int main(int argc, char* argv[])
          ("ip,d"
          , po::value<std::string>(&op.ip)->default_value("127.0.0.1")
          , "Server ip address.")
-         ("init-users,u"
-         , po::value<int>(&op.n_init_users)->default_value(100)
-         , "Initial number of users.")
          ("sms-timeout,s"
          , po::value<int>(&op.sms_timeout)->default_value(2)
          , "SMS confirmation timeout in seconds.")
@@ -85,7 +81,7 @@ int main(int argc, char* argv[])
 
       boost::asio::io_context ioc {1};
 
-      auto sm = std::make_shared<server_mgr>(op.n_init_users);
+      auto sm = std::make_shared<server_mgr>();
 
       auto lst =
          std::make_shared<listener>( ioc 

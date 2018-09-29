@@ -34,13 +34,10 @@ class server_mgr {
 private:
    std::string host = "criatura";
 
-   // Maps a user id (telephone, email, etc.) to a user index in the
-   // users vector.
-   std::unordered_map<id_type, index_type> id_to_idx_map;
-   std::vector<user> users;
-   idx_mgr user_idx_mgr;
+   // Maps a user id (telephone, email, etc.) to a user obj.
+   std::unordered_map<std::string, user> users;
 
-   // Maps a group hash to a group object.
+   // Maps a group id to a group object.
    std::unordered_map<std::string, group> groups;
 
    ev_res on_login(json j, std::shared_ptr<server_session> s);
@@ -54,15 +51,9 @@ private:
    ev_res on_user_msg(json j, std::shared_ptr<server_session> session);
 
 public:
-   server_mgr(int users_size)
-   : users(users_size)
-   , user_idx_mgr(users_size)
-   {}
-
    ev_res on_read( std::string msg
                  , std::shared_ptr<server_session> session);
-   void on_write(index_type user_idx);
-   void release_login(index_type idx);
    void shutdown();
+   void release_user(std::string id);
 };
 

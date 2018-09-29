@@ -52,18 +52,9 @@ ev_res server_mgr::on_login(json j, std::shared_ptr<server_session> s)
 {
    auto const tel = j.at("tel").get<std::string>();
 
-   if (id_to_idx_map.find(tel) != std::end(id_to_idx_map)) {
-      // The user already exists in the system. This case can be
-      // triggered by some conditions
-      //
-      // 1. The user lost his phone and the number was assigned to
-      //    a new person.
-      // 2. The user reinstalled the app.
-      // 3. There is an error in the app and it is sending us more
-      //    than one login.
-      //
-      // I think the best strategy here is to refuse the login. Review
-      // this later.
+   // TODO: Replace this with a query to the database.
+   if (users.find(tel) != std::end(users)) {
+      // The user already exists in the system.
       json resp;
       resp["cmd"] = "login_ack";
       resp["result"] = "fail";
@@ -71,22 +62,7 @@ ev_res server_mgr::on_login(json j, std::shared_ptr<server_session> s)
       return ev_res::LOGIN_FAIL;
    }
 
-   // The user does not exist in the system so we allocate an entry in
-   // the users array and wait for sms confirmation. If confirmation
-   // does not happen (we timeout first) then this index should be
-   // released. This happens on session destruction.
-   auto const idx = user_idx_mgr.allocate();
-
-   if (idx == -1) {
-      json resp;
-      resp["cmd"] = "login_ack";
-      resp["result"] = "fail";
-      s->send_msg(resp.dump());
-      return ev_res::LOGIN_FAIL;
-   }
-
-   // WARNING: Ensure the release of idx is exception safe.
-   s->set_login_idx(idx);
+   s->set_user_id(tel);
 
    // TODO: Use a random number generator with six digits.
    s->set_sms("8347");
@@ -102,8 +78,10 @@ ev_res server_mgr::on_auth(json j, std::shared_ptr<server_session> s)
 {
    auto const from = j.at("from").get<user_bind>();
 
-   if (from.tel != users.at(from.index).get_id()) {
-      // Incorrect id.
+   auto const new_user = users.insert({from.tel, {from.tel}});
+   if (!new_user.second) {
+      // The user is already logged into the system. We do not allow
+      // this yet.
       json resp;
       resp["cmd"] = "auth_ack";
       resp["result"] = "fail";
@@ -111,8 +89,19 @@ ev_res server_mgr::on_auth(json j, std::shared_ptr<server_session> s)
       return ev_res::AUTH_FAIL;
    }
 
-   s->set_login_idx(from.index);
+   // TODO: Query the database to validate the session.
+   //if (from.tel != s->get_user_id()) {
+   //   // Incorrect id.
+   //   json resp;
+   //   resp["cmd"] = "auth_ack";
+   //   resp["result"] = "fail";
+   //   s->send_msg(resp.dump());
+   //   return ev_res::AUTH_FAIL;
+   //}
+
+   s->set_user_id(from.tel);
    s->promote();
+   //new_user.first.second->set_session(s);
 
    json resp;
    resp["cmd"] = "auth_ack";
@@ -121,50 +110,35 @@ ev_res server_mgr::on_auth(json j, std::shared_ptr<server_session> s)
    return ev_res::AUTH_OK;
 }
 
-void server_mgr::release_login(index_type idx)
-{
-   // Releases back the index allocated on the login. This is caused
-   // by a timeout of the sms confirmation.
-   user_idx_mgr.deallocate(idx);
-}
-
 ev_res
 server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
 {
    auto const tel = j.at("tel").get<std::string>();
    auto const sms = j.at("sms").get<std::string>();
 
-   if (sms != s->get_sms()) {
-      // TODO: Resend an sms to the user (some more times). For now
-      // we will simply drop the connection and release resources.
+   if (sms != s->get_sms() || tel != s->get_user_id()) {
       json resp;
       resp["cmd"] = "sms_confirmation_ack";
       resp["result"] = "fail";
       s->send_msg(resp.dump());
-      // We do not release the login index here but let the session
-      // destructor do it for us.
       return ev_res::SMS_CONFIRMATION_FAIL;
    }
 
-   // Before we call s->get_user_idx() we have to promete the session.
    s->promote();
 
    // Inserts the user in the system.
-   auto const idx = s->get_user_idx();
-   assert(idx != -1);
-   auto const new_user = id_to_idx_map.insert({tel, idx});
+   auto const id = s->get_user_id();
+   assert(!std::empty(id));
+   auto const new_user = users.insert({tel, id});
 
    // This would be odd. The entry already exists on the index map
    // which means we did something wrong in the login command.
    assert(new_user.second);
 
-   users[idx].set_id(tel);
-
    json resp;
    resp["cmd"] = "sms_confirmation_ack";
    resp["result"] = "ok";
-   resp["user_bind"] = user_bind {tel, host, idx};
-
+   resp["user_bind"] = user_bind {tel, host, -1};
    s->send_msg(resp.dump());
    return ev_res::SMS_CONFIRMATION_OK;
 }
@@ -252,6 +226,11 @@ server_mgr::on_group_msg( std::string msg
    return ev_res::GROUP_MSG_OK;
 }
 
+void server_mgr::release_user(std::string id)
+{
+   users.erase(id);
+}
+
 ev_res
 server_mgr::on_user_msg(json j, std::shared_ptr<server_session> s)
 {
@@ -260,10 +239,6 @@ server_mgr::on_user_msg(json j, std::shared_ptr<server_session> s)
 
    //users.at(to.index).send_msg(j.dump());
    return ev_res::USER_MSG_OK;
-}
-
-void server_mgr::on_write(index_type user_idx)
-{
 }
 
 void server_mgr::shutdown()

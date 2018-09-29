@@ -94,6 +94,63 @@ public:
    }
 };
 
+class test_login_launcher : 
+   public std::enable_shared_from_this<test_login_launcher> {
+public:
+   using mgr_type = client_mgr_login;
+   using client_type = client_session<mgr_type>;
+
+private:
+   boost::asio::io_context& ioc;
+   client_op op;
+   std::chrono::milliseconds interval {100};
+   boost::asio::steady_timer timer;
+   int begin = 0;
+   int end = 0;
+   std::string expected;
+   int ret;
+ 
+public:
+   test_login_launcher( boost::asio::io_context& ioc_
+                      , client_op const& op_
+                      , int b_
+                      , int e_
+                      , std::string expected_
+                      , int ret_)
+   : ioc(ioc_)
+   , op(op_)
+   , timer(ioc)
+   , begin(b_)
+   , end(e_)
+   , expected(expected_)
+   , ret(ret_)
+   {}
+      
+   void run(boost::system::error_code ec)
+   {
+      if (ec)
+         throw std::runtime_error("No error expected here.");
+
+      if (begin == end) {
+         std::cout << "Test login timeout: ok" << std::endl;
+         return;
+      }
+
+      mgr_type mgr {to_str(begin, 4, 0), expected, ret};
+
+      std::make_shared<client_type>( ioc, op.session_config()
+                                   , mgr)->run();
+
+      timer.expires_after(interval);
+
+      auto handler = [p = this->shared_from_this()](auto ec)
+      { p->run(ec); };
+
+      timer.async_wait(handler);
+      begin++;
+   }
+};
+
 void test_login( client_op const& op
                , char const* expected
                , int begin
@@ -109,18 +166,16 @@ void test_login( client_op const& op
    std::make_shared< test_on_conn<client_mgr_on_connect_timer>
                    >(ioc, op)->run({});
 
-   // Tests if the server drops connections that connect by do not
+   // Tests if the server drops connections that connect but do not
    // register or authenticate.
    std::make_shared< test_on_conn<client_mgr_accept_timer>
                    >(ioc, op)->run({});
 
-   std::vector<mgr_type> mgrs;
-
-   for (auto i = begin; i < end; ++i)
-      mgrs.push_back({to_str(i, 4, 0), expected, ret});
-
-   for (auto& mgr : mgrs)
-      std::make_shared<client_type>(ioc, op.session_config(), mgr)->run();
+   // Tests the sms timeout. Connections should be dropped if the
+   // users tries to register but do not send the sms on time.
+   // Connection is gracefully closed.
+   std::make_shared<test_login_launcher>( ioc, op, begin, end, expected
+                                        , ret)->run({});
 
    ioc.run();
 }
@@ -367,9 +422,6 @@ int main(int argc, char* argv[])
 
       std::cout << "==========================================" << std::endl;
 
-      // Tests the sms timeout. Connections should be dropped if the
-      // users tries to register but do not send the sms on time.
-      // Connection is gracefully closed.
       test_login(op, "ok", 0, op.users_size, -1);
       std::cout << "test_login_ok_1:    ok" << std::endl;
 

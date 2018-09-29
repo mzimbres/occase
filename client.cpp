@@ -177,17 +177,7 @@ void test_login( client_op const& op
    std::make_shared<test_login_launcher>( ioc, op, end, end - begin
                                         , expected
                                         , -2)->run({});
-
-   ioc.run();
-}
-
-void test_login_typo(client_op const& op)
-{
-   using mgr_type = client_mgr_login_typo;
-   using client_type = client_session<mgr_type>;
-
-   boost::asio::io_context ioc;
-
+   // Sends commands with typos.
    json j1;
    j1["cmd"] = "logrn";
    j1["tel"] = "aaaa";
@@ -200,14 +190,17 @@ void test_login_typo(client_op const& op)
    j3["crd"] = "login";
    j3["Teal"] = "cccc";
 
-   std::vector<mgr_type> mgrs
+   std::vector<std::string> cmds
    { {j1.dump()}
    , {j2.dump()}
    , {j3.dump()}
    };
 
-   for (auto& mgr : mgrs)
-      std::make_shared<client_type>(ioc, op.session_config(), mgr)->run();
+   for (auto const& cmd : cmds)
+      std::make_shared<client_session<client_mgr_login_typo>
+                      >( ioc
+                       , op.session_config()
+                       , client_mgr_login_typo {cmd})->run();
 
    ioc.run();
 }
@@ -400,10 +393,6 @@ int main(int argc, char* argv[])
 
       test_login(op, "ok", 0, op.users_size);
       std::cout << "test_many:          ok" << std::endl;
-
-      // Sends commands with typos.
-      test_login_typo(op);
-      std::cout << "test_login_typo:    ok" << std::endl;
 
       // Sends sms on time but the wrong one and expects the server to
       // release sessions correctly.

@@ -8,7 +8,6 @@
 #include "config.hpp"
 #include "user.hpp"
 #include "group.hpp"
-#include "idx_mgr.hpp"
 
 class server_session;
 

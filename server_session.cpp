@@ -36,8 +36,23 @@ server_session::~server_session()
 void server_session::do_accept()
 {
    timer.expires_after(cf.handshake_timeout);
+
    auto const handler1 = [p = shared_from_this()](auto ec)
-   { p->timer_mgr(ec); };
+   {
+      if (ec) {
+         if (ec == boost::asio::error::operation_aborted)
+            return;
+
+         fail(ec, "timer_mgr");
+         assert(false);
+         return;
+      }
+
+      assert(!p->ws.is_open());
+
+      p->ws.next_layer().shutdown(tcp::socket::shutdown_both, ec);
+      p->ws.next_layer().close(ec);
+   };
 
    timer.async_wait(boost::asio::bind_executor(strand, handler1));
 

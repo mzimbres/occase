@@ -207,7 +207,7 @@ void test_login(client_op const& op)
    ioc.run();
 }
 
-auto test_sms( client_op const& op
+void test_sms( client_op const& op
              , std::string const& expected
              , std::string const& sms
              , int begin
@@ -230,16 +230,9 @@ auto test_sms( client_op const& op
    }
 
    ioc.run();
-
-   std::vector<user_bind> binds;
-   for (auto const& session : sessions)
-      binds.push_back(session->get_mgr().bind);
-
-   return binds;
 }
 
-auto test_auth( client_op const& op
-              , std::vector<user_bind> binds)
+void test_auth(client_op const& op, int begin, int end)
 {
    using mgr_type = client_mgr_auth;
    using client_type = client_session<mgr_type>;
@@ -247,8 +240,8 @@ auto test_auth( client_op const& op
    boost::asio::io_context ioc;
 
    std::vector<mgr_type> mgrs;
-   for (auto& bind : binds)
-      mgrs.emplace_back(bind, "ok");
+   for (auto i = begin; i < end; ++i)
+      mgrs.emplace_back(to_str(i, 4, 0), "ok");
 
    std::vector<std::shared_ptr<client_type>> sessions;
    for (auto& mgr : mgrs) {
@@ -263,7 +256,7 @@ auto test_auth( client_op const& op
    ioc.run();
 }
 
-auto test_create_group(client_op const& op, user_bind bind)
+void test_create_group(client_op const& op)
 {
    using mgr_type = client_mgr_cg;
    using client_type = client_session<mgr_type>;
@@ -271,19 +264,19 @@ auto test_create_group(client_op const& op, user_bind bind)
    auto menu = gen_location_menu();
    auto hash_patches = gen_hash_patches(menu);
    menu = menu.patch(hash_patches);
-   auto const tmp = gen_create_groups(menu, bind);
+   auto const tmp = gen_create_groups(menu);
    std::stack<std::string> cmds;
    for (auto const& o : tmp)
       cmds.push(o);
 
-   mgr_type mgr {"ok", std::move(cmds), bind};
+   mgr_type mgr {"ok", std::move(cmds)};
 
    boost::asio::io_context ioc;
    std::make_shared<client_type>(ioc, op.session_config(), mgr)->run();
    ioc.run();
 }
 
-void test_simulation(client_op const& op, std::vector<user_bind> binds)
+void test_simulation(client_op const& op, int begin, int end)
 {
    //std::cout << "Binds size: " << std::size(binds) << std::endl;
    using mgr_type = client_mgr_sim;
@@ -299,13 +292,13 @@ void test_simulation(client_op const& op, std::vector<user_bind> binds)
       hashes_st.push(o);
 
    std::vector<mgr_type> mgrs;
-   for (auto const& bind : binds) {
-      auto const tmp = gen_join_groups(menu, bind);
+   for (auto i = begin; i < end; ++i) {
+      auto const tmp = gen_join_groups(menu, to_str(i, 4, 0));
       std::stack<std::string> cmds;
       for (auto const& o : tmp)
          cmds.push(o);
 
-      mgrs.emplace_back("ok", cmds, hashes_st, bind);
+      mgrs.emplace_back("ok", cmds, hashes_st, to_str(i, 4, 0));
    }
 
    boost::asio::io_context ioc;
@@ -407,11 +400,7 @@ int main(int argc, char* argv[])
       std::cout << "test_wrong_sms:     ok" << std::endl;
 
       // Sends correct sms on time.
-      auto const binds = test_sms(op, "ok", "8347", 0, op.users_size);
-      if (std::empty(binds)) {
-         std::cerr << "Error: Binds array empty." << std::endl;
-         return 1;
-      }
+      test_sms(op, "ok", "8347", 0, op.users_size);
       std::cout << "test_correct_sms:   ok" << std::endl;
 
       // TODO: Test this after implementing queries to the database.
@@ -419,14 +408,14 @@ int main(int argc, char* argv[])
       //std::cout << "test_login_ok_4:    ok" << std::endl;
 
       // Test authentication with binds obtained in the sms step.
-      test_auth(op, binds);
+      test_auth(op, 0, op.users_size);
       std::cout << "test_auth:          ok" << std::endl;
 
-      test_create_group(op, binds.front());
+      test_create_group(op);
       std::cout << "test_create_group:  ok" << std::endl;
 
       timer t;
-      test_simulation(op, binds);
+      test_simulation(op, 0, op.users_size);
       std::cout << "test_simulation:    ok" << std::endl;
       std::cout << "==========================================" << std::endl;
 

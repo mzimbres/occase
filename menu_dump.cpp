@@ -12,14 +12,14 @@ void test2()
    menu = menu.patch(hash_patches);
    std::cout << menu.dump() << std::endl;
 
-   auto const cmds = gen_create_groups(menu, {"Marcelo", "Marcelo", "Criatura"});
+   auto const cmds = gen_create_groups(menu);
    for (auto const& o : cmds)
       std::cout << o << std::endl;
 
    auto j_infos = gen_group_info(menu);
    std::cout << j_infos.dump(4) << std::endl;
 
-   auto cmds2 = gen_join_groups(menu, {"Marcelo", "Marcelo", "Criatura"});
+   auto cmds2 = gen_join_groups(menu, {"Marcelo"});
    for (auto const& o : cmds2)
       std::cout << o << std::endl;
 
@@ -56,7 +56,7 @@ void test1()
    menu = menu.patch(hash_patches);
    std::cout << menu.dump() << std::endl;
 
-   auto const cmds = gen_create_groups(menu, {"Marcelo", "Marcelo", "Criatura"});
+   auto const cmds = gen_create_groups(menu);
    for (auto const& o : cmds)
       std::cout << o << std::endl;
 }
@@ -94,8 +94,7 @@ void test3()
    menu = menu.patch(hash_patches);
    std::cout << menu.dump() << std::endl;
 
-   auto const cmds = gen_create_groups( menu
-                                      , {"Marcelo", "Marcelo", "Criatura"});
+   auto const cmds = gen_create_groups(menu);
    for (auto const& o : cmds)
       std::cout << o << std::endl;
 }
@@ -123,8 +122,7 @@ void test0()
    menu = menu.patch(hash_patches);
    std::cout << menu.dump() << std::endl;
 
-   auto const cmds =
-      gen_create_groups(menu, {"Marcelo", "Marcelo", "Criatura"});
+   auto const cmds = gen_create_groups(menu);
    for (auto const& o : cmds)
       std::cout << o << std::endl;
 }

@@ -16,21 +16,20 @@ class client_session;
 class client_mgr_cg {
 private:
    using client_type = client_session<client_mgr_cg>;
-   user_bind bind;
    std::string expected;
    std::stack<std::string> cmds;
 
 public:
-   client_mgr_cg( std::string exp
-                , std::stack<std::string> cmds_
-                , user_bind bind_)
-   : bind(bind_)
-   , expected(exp)
+   client_mgr_cg(std::string exp, std::stack<std::string> cmds_)
+   : expected(exp)
    , cmds(std::move(cmds_))
    {
+      //std::cout << "aaaaaaaaaa " << std::endl;
       if (std::empty(cmds))
          throw std::runtime_error("client_mgr_cg: Stack is empty.");
    }
+   ~client_mgr_cg();
+
    int on_read(json j, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec);
    int on_handshake(std::shared_ptr<client_type> s);

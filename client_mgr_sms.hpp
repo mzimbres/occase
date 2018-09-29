@@ -27,7 +27,6 @@ public:
    , sms(sms_)
    { }
 
-   user_bind bind;
    int on_read(json j, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec) {return 1;};
    int on_handshake(std::shared_ptr<client_type> s);
@@ -40,12 +39,12 @@ public:
 class client_mgr_auth {
 private:
    using client_type = client_session<client_mgr_auth>;
-   user_bind bind;
+   std::string user;
    std::string expected;
 
 public:
-   client_mgr_auth(user_bind bind_, std::string exp)
-   : bind(bind_)
+   client_mgr_auth(std::string bind_, std::string exp)
+   : user(bind_)
    , expected(exp) {}
    int on_read(json j, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec);

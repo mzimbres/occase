@@ -13,12 +13,12 @@ std::vector<json> gen_hash_patches(json menu);
 
 // Generates a vector with all create_group command for a given menu.
 // The menu must have already be hashfied by gen_hash_patches.
-std::vector<std::string> gen_create_groups(json menu, user_bind bind);
+std::vector<std::string> gen_create_groups(json menu);
 
 json gen_group_info(json menu);
 
 // Generates join groups for all groups for the given user.
-std::vector<std::string> gen_join_groups(json menu, user_bind bind);
+std::vector<std::string> gen_join_groups(json menu, std::string user);
 
 // Puts all group hashes into a vector.
 std::vector<std::string> get_hashes(json menu);

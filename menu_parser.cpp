@@ -142,7 +142,7 @@ std::vector<json> gen_hash_patches(json j)
    return patches;
 }
 
-std::vector<std::string> gen_create_groups(json menu, user_bind bind)
+std::vector<std::string> gen_create_groups(json menu)
 {
    if (std::empty(menu))
       return {};
@@ -152,7 +152,6 @@ std::vector<std::string> gen_create_groups(json menu, user_bind bind)
    while (!iter.end()) {
       json cmd;
       cmd["cmd"] = "create_group";
-      cmd["from"] = bind;
       cmd["hash"] = iter.current.value_prefix;
       cmds.push_back(cmd.dump());
       iter.next();
@@ -179,7 +178,7 @@ json gen_group_info(json menu)
    return j_infos;
 }
 
-std::vector<std::string> gen_join_groups(json menu, user_bind bind)
+std::vector<std::string> gen_join_groups(json menu, std::string user)
 {
    if (std::empty(menu))
       return {};
@@ -189,7 +188,7 @@ std::vector<std::string> gen_join_groups(json menu, user_bind bind)
    while (!iter.end()) {
       json cmd;
       cmd["cmd"] = "join_group";
-      cmd["from"] = bind;
+      cmd["from"] = user;
       cmd["hash"] = iter.current.value_prefix;
       cmds.push_back(cmd.dump());
       iter.next();

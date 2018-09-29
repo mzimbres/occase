@@ -28,9 +28,6 @@ int client_mgr_sms::on_read(json j, std::shared_ptr<client_type> s)
       //std::cout << j << std::endl;
       auto res = j["result"].get<std::string>();
 
-      if (res == "ok")
-         bind = j["user_bind"].get<user_bind>();
-
       if (res == expected) {
          //std::cout << "Test sms_confirmation: ok." << std::endl;
          return -1;
@@ -80,7 +77,7 @@ int client_mgr_auth::on_handshake(std::shared_ptr<client_type> s)
 {
    json j;
    j["cmd"] = "auth";
-   j["from"] = bind;
+   j["from"] = user;
    s->send_msg(j.dump());
    return 1;
 }

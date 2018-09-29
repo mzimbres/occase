@@ -8,6 +8,9 @@ server_mgr::on_read(std::string msg, std::shared_ptr<server_session> s)
    //std::cout << j << std::endl;
    auto const cmd = j.at("cmd").get<std::string>();
 
+   if (cmd == "create_group")
+      return on_create_group(std::move(j), s);
+
    if (s->is_waiting_auth()) {
       if (cmd == "login")
          return on_login(std::move(j), s);
@@ -28,8 +31,6 @@ server_mgr::on_read(std::string msg, std::shared_ptr<server_session> s)
    }
 
    if (s->is_auth()) {
-      if (cmd == "create_group")
-         return on_create_group(std::move(j), s);
 
       if (cmd == "join_group")
          return on_join_group(std::move(j), s);
@@ -76,9 +77,9 @@ ev_res server_mgr::on_login(json j, std::shared_ptr<server_session> s)
 
 ev_res server_mgr::on_auth(json j, std::shared_ptr<server_session> s)
 {
-   auto const from = j.at("from").get<user_bind>();
+   auto const from = j.at("from").get<std::string>();
 
-   auto const new_user = users.insert({from.tel, {from.tel}});
+   auto const new_user = users.insert({from, {from}});
    if (!new_user.second) {
       // The user is already logged into the system. We do not allow
       // this yet.
@@ -90,7 +91,7 @@ ev_res server_mgr::on_auth(json j, std::shared_ptr<server_session> s)
    }
 
    // TODO: Query the database to validate the session.
-   //if (from.tel != s->get_user_id()) {
+   //if (from != s->get_user_id()) {
    //   // Incorrect id.
    //   json resp;
    //   resp["cmd"] = "auth_ack";
@@ -99,7 +100,7 @@ ev_res server_mgr::on_auth(json j, std::shared_ptr<server_session> s)
    //   return ev_res::AUTH_FAIL;
    //}
 
-   s->set_user_id(from.tel);
+   s->set_user_id(from);
    s->promote();
    //new_user.first.second->set_session(s);
 
@@ -138,7 +139,6 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
    json resp;
    resp["cmd"] = "sms_confirmation_ack";
    resp["result"] = "ok";
-   resp["user_bind"] = user_bind {tel, tel, host};
    s->send_msg(resp.dump());
    return ev_res::SMS_CONFIRMATION_OK;
 }
@@ -171,7 +171,7 @@ server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
 ev_res
 server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
 {
-   auto const from = j.at("from").get<user_bind>();
+   auto const from = j.at("from").get<std::string>();
    auto const hash = j.at("hash").get<std::string>();
 
    auto const g = groups.find(hash);
@@ -183,7 +183,7 @@ server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
       return ev_res::JOIN_GROUP_FAIL;
    }
 
-   g->second.add_member(from.tel, s);
+   g->second.add_member(from, s);
 
    json resp;
    resp["cmd"] = "join_group_ack";
@@ -198,7 +198,6 @@ server_mgr::on_group_msg( std::string msg
                         , json j
                         , std::shared_ptr<server_session> s)
 {
-   auto const from = j.at("from").get<user_bind>();
    auto const to = j.at("to").get<std::string>();
 
    auto const g = groups.find(to);

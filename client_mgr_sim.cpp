@@ -2,6 +2,25 @@
 
 #include "client_session.hpp"
 
+client_mgr_sim::client_mgr_sim( std::string exp
+                              , std::vector<std::string> hashes_
+                              , std::string user_)
+: user(user_)
+, expected(exp)
+{
+   if (std::empty(hashes_))
+      throw std::runtime_error("client_mgr_sim: Stack is empty.");
+
+   for (auto const& o : hashes_) {
+      hashes.push(o);
+      json cmd;
+      cmd["cmd"] = "join_group";
+      cmd["from"] = user;
+      cmd["hash"] = o;
+      cmds.push(cmd.dump());
+   }
+}
+
 int client_mgr_sim::on_read(json j, std::shared_ptr<client_type> s)
 {
    auto const cmd = j["cmd"].get<std::string>();
@@ -70,7 +89,7 @@ int client_mgr_sim::on_handshake(std::shared_ptr<client_type> s)
 {
    json j;
    j["cmd"] = "auth";
-   j["from"] = bind;
+   j["from"] = user;
    s->send_msg(j.dump());
    return 1;
 }
@@ -86,7 +105,7 @@ void client_mgr_sim::send_group_msg(std::shared_ptr<client_type> s)
 {
    json j_msg;
    j_msg["cmd"] = "group_msg";
-   j_msg["from"] = bind;
+   j_msg["from"] = user;
    j_msg["to"] = hashes.top();
    j_msg["msg"] = "Group message to: " + hashes.top();
    s->send_msg(j_msg.dump());

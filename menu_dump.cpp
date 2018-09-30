@@ -16,10 +16,6 @@ void test2()
    auto j_infos = gen_group_info(menu);
    std::cout << j_infos.dump(4) << std::endl;
 
-   auto cmds2 = gen_join_groups(menu, {"Marcelo"});
-   for (auto const& o : cmds2)
-      std::cout << o << std::endl;
-
    auto cmds3 = get_hashes(menu);
    for (auto const& o : cmds3)
       std::cout << o << " ";

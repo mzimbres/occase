@@ -12,9 +12,6 @@ std::vector<std::string> gen_create_groups(json menu);
 
 json gen_group_info(json menu);
 
-// Generates join groups for all groups for the given user.
-std::vector<std::string> gen_join_groups(json menu, std::string user);
-
 // Puts all group hashes into a vector.
 std::vector<std::string> get_hashes(json menu);
 

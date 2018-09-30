@@ -225,18 +225,20 @@ void basic_tests(client_op const& op)
                     , op.make_correct_sms_cf()
                     )->run({});
 
-   // TODO: Test this after implementing queries to the database.
-   //basic_tests(op, "fail", 0, op.users_size, -1);
-   //std::cout << "test_login_ok_4:    ok" << std::endl;
-
-   auto const menu = gen_location_menu();
-   auto const cmds2 = gen_create_groups(menu);
+   // TODO: Test if login with already registered user fails. Can be
+   // implemented only after implementing database queries.
 
    std::make_shared<client_session<client_mgr_cg>
                    >( ioc
                     , op.make_session_cf()
-                    , client_mgr_cg
-                      {"ok", std::move(cmds2)})->run();
+                    , client_mgr_cg {"ok" }
+                    )->run();
+
+   std::make_shared<client_session<client_mgr_cg>
+                   >( ioc
+                    , op.make_session_cf()
+                    , client_mgr_cg {"fail"}
+                    )->run();
    json j1;
    j1["cmd"] = "logrn";
    j1["tel"] = "aaaa";

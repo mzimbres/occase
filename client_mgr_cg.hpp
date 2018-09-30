@@ -8,6 +8,7 @@
 
 #include "config.hpp"
 #include "json_utils.hpp"
+#include "menu_parser.hpp"
 
 template <class Mgr>
 class client_session;
@@ -21,9 +22,13 @@ private:
    std::stack<std::string> cmds;
 
 public:
-   client_mgr_cg(std::string exp, std::vector<std::string> cmds_)
+   client_mgr_cg(std::string exp)
    : expected(exp)
    {
+
+      auto const menu = gen_location_menu();
+      auto const cmds_ = gen_create_groups(menu);
+
       //std::cout << "aaaaaaaaaa " << std::endl;
       if (std::empty(cmds_))
          throw std::runtime_error("client_mgr_cg: Stack is empty.");

@@ -42,6 +42,7 @@ struct client_op {
    int handshake_tm = 3;
    int handshake_tm_launch_interval = 100;
    int auth_timeout = 3;
+   int sim_runs = 2;
 
    auto session_config() const
    {
@@ -154,7 +155,7 @@ public:
    }
 };
 
-void test_login(client_op const& op)
+void basic_tests(client_op const& op)
 {
    boost::asio::io_context ioc;
 
@@ -223,7 +224,7 @@ void test_login(client_op const& op)
                           , "ok" , op.sms})->run();
 
    // TODO: Test this after implementing queries to the database.
-   //test_login(op, "fail", 0, op.users_size, -1);
+   //basic_tests(op, "fail", 0, op.users_size, -1);
    //std::cout << "test_login_ok_4:    ok" << std::endl;
 
    auto const menu = gen_location_menu();
@@ -234,30 +235,6 @@ void test_login(client_op const& op)
                     , op.session_config()
                     , client_mgr_cg
                       {"ok", std::move(cmds2)})->run();
-   ioc.run();
-}
-
-void test_auth(client_op const& op, int begin, int end)
-{
-   using mgr_type = client_mgr_auth;
-   using client_type = client_session<mgr_type>;
-
-   boost::asio::io_context ioc;
-
-   std::vector<mgr_type> mgrs;
-   for (auto i = begin; i < end; ++i)
-      mgrs.emplace_back(to_str(i, 4, 0), "ok");
-
-   std::vector<std::shared_ptr<client_type>> sessions;
-   for (auto& mgr : mgrs) {
-      auto tmp =
-         std::make_shared<client_type>(ioc, op.session_config(), mgr);
-      sessions.push_back(tmp);
-   }
-
-   for (auto& session : sessions)
-      session->run();
-
    ioc.run();
 }
 
@@ -349,6 +326,10 @@ int main(int argc, char* argv[])
          ("auth-timeout,l"
          , po::value<int>(&op.auth_timeout)->default_value(3)
          , "Time after before which the server should giveup witing for auth cmd.")
+
+         ("simulations,r"
+         , po::value<int>(&op.sim_runs)->default_value(2)
+         , "Number of simulation runs.")
       ;
 
       po::variables_map vm;        
@@ -361,17 +342,16 @@ int main(int argc, char* argv[])
       }
 
       std::cout << "==========================================" << std::endl;
-
-      test_login(op);
-      std::cout << "test_many:          ok" << std::endl;
-
-      // Test authentication with binds obtained in the sms step.
-      test_auth(op, 0, op.users_size);
-      std::cout << "test_auth:          ok" << std::endl;
+      basic_tests(op);
+      std::cout << "Basic tests:        ok" << std::endl;
 
       timer t;
-      test_simulation(op, 0, op.users_size);
-      std::cout << "test_simulation:    ok" << std::endl;
+      while (op.sim_runs != 0) {
+         test_simulation(op, 0, op.users_size);
+         std::cout << "Simulation run " << op.sim_runs <<
+                   " completed." << std::endl;
+         --op.sim_runs;
+      }
       std::cout << "==========================================" << std::endl;
 
       return EXIT_SUCCESS;

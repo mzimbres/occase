@@ -33,6 +33,13 @@
 
 namespace po = boost::program_options;
 
+struct launcher_op {
+   int begin;
+   int end;
+   std::chrono::milliseconds interval;
+   std::string final_msg;
+};
+
 struct client_op {
    std::string host {"127.0.0.1"};
    std::string port {"8080"};
@@ -50,15 +57,43 @@ struct client_op {
       { {host} 
       , {port}
       , std::chrono::seconds {handshake_tm}
-      , std::chrono::seconds {auth_timeout}};
+      , std::chrono::seconds {auth_timeout}
+      };
    }
-};
 
-struct launcher_op {
-   int begin;
-   int end;
-   std::chrono::milliseconds interval;
-   std::string final_msg;
+   auto make_handshake_laucher_op() const
+   {
+      return launcher_op
+      { 0, handshake_tm_test_size
+      , std::chrono::milliseconds {handshake_tm_launch_interval}
+      , {"Handshake test launch:       ok"}
+      };
+   }
+
+   auto make_after_handshake_laucher_op() const
+   {
+      return launcher_op
+      { 0, handshake_tm_test_size
+      , std::chrono::milliseconds {handshake_tm_launch_interval}
+      , {"After handshake test launch: ok"}
+      };
+   }
+
+   auto make_sms_tm_laucher_op1() const
+   {
+      return launcher_op
+      { 0, users_size
+      , std::chrono::milliseconds {handshake_tm_launch_interval}
+      , {"Login test with ret = -1:    ok"}};
+   }
+
+   auto make_sms_tm_laucher_op2() const
+   {
+      return launcher_op
+      { users_size, 2 * users_size
+      , std::chrono::milliseconds {handshake_tm_launch_interval}
+      , {"Login test with ret = -2:    ok"}};
+   }
 };
 
 template <class T>
@@ -118,51 +153,41 @@ void basic_tests(client_op const& op)
 {
    boost::asio::io_context ioc;
 
-   launcher_op lop1 { 0, op.handshake_tm_test_size
-                    , std::chrono::milliseconds
-                      {op.handshake_tm_launch_interval}
-                    , {"Handshake test launch:       ok"}};
-
-   auto ccf = op.make_session_cf();
-
    // Tests if the server times out connections that do not proceed
    // with the websocket handshake.
    std::make_shared< test_launcher<cmgr_handshake_tm>
-                   >(ioc, cmgr_handshake_op {}, ccf, lop1)->run({});
+                   >( ioc, cmgr_handshake_op {}
+                    , op.make_session_cf()
+                    , op.make_handshake_laucher_op()
+                    )->run({});
 
-   launcher_op lop2 { 0, op.handshake_tm_test_size
-                    , std::chrono::milliseconds
-                      {op.handshake_tm_launch_interval}
-                    , {"After handshake test launch: ok"}};
 
    // Tests if the server drops connections that connect but do not
    // register or authenticate.
    std::make_shared< test_launcher<client_mgr_accept_timer>
-                   >(ioc, cmgr_handshake_op {}, ccf, lop2)->run({});
-
-   launcher_op lop3 { 0, op.users_size
-                    , std::chrono::milliseconds
-                      {op.handshake_tm_launch_interval}
-                    , {"Login test with ret = -1:    ok"}};
-
-   cmgr_login_cf cf2 { "" , "ok" , -1 };
+                   >( ioc
+                    , cmgr_handshake_op {}
+                    , op.make_session_cf()
+                    , op.make_after_handshake_laucher_op()
+                    )->run({});
 
    // Tests the sms timeout. Connections should be dropped if the
    // users tries to register but do not send the sms on time.
    // Connection is gracefully closed.
    std::make_shared< test_launcher<client_mgr_login>
-                   >(ioc, cf2, ccf, lop3)->run({});
-
-   launcher_op lop4 { op.users_size, 2 * op.users_size
-                    , std::chrono::milliseconds
-                      {op.handshake_tm_launch_interval}
-                    , {"Login test with ret = -2:    ok"}};
-
-   cmgr_login_cf cf4 { "" , "ok" , -2 };
+                   >( ioc
+                    , cmgr_login_cf { "" , "ok" , -1}
+                    , op.make_session_cf()
+                    , op.make_sms_tm_laucher_op1()
+                    )->run({});
 
    // Same as above but socket is shutdown.
    std::make_shared< test_launcher<client_mgr_login>
-                   >(ioc, cf4, ccf, lop4)->run({});
+                   >( ioc
+                    , cmgr_login_cf { "" , "ok" , -2 }
+                    , op.make_session_cf()
+                    , op.make_sms_tm_laucher_op2()
+                    )->run({});
 
    json j1;
    j1["cmd"] = "logrn";
@@ -199,7 +224,10 @@ void basic_tests(client_op const& op)
    // Sends sms on time but the wrong one and expects the server to
    // release sessions correctly.
    std::make_shared< test_launcher<client_mgr_sms>
-                   >(ioc, cf5, ccf, lop5)->run({});
+                   >( ioc
+                    , cf5
+                    , op.make_session_cf()
+                    , lop5)->run({});
 
    // TODO: consider changing this to avoid overlapping user ids.
    launcher_op lop6 { 0, op.users_size
@@ -211,7 +239,10 @@ void basic_tests(client_op const& op)
 
    // Sends the correct sms on time.
    std::make_shared< test_launcher<client_mgr_sms>
-                   >(ioc, cf6, ccf, lop6)->run({});
+                   >( ioc
+                    , cf6
+                    , op.make_session_cf()
+                    , lop6)->run({});
 
    // TODO: Test this after implementing queries to the database.
    //basic_tests(op, "fail", 0, op.users_size, -1);

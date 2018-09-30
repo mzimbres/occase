@@ -6,46 +6,6 @@
 
 #include "json_utils.hpp"
 
-json gen_location_menu()
-{
-   std::vector<json> j1 =
-   { {{"hash", ""}, {"sub", {}}, {"name", "Centro"}               }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Alvinópolis"}          }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Jardim Siriema"}       }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Vila Santista"}        }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Parque dos Coqueiros"} }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Terceiro Centenário"}  }
-   };
-
-   std::vector<json> j2 =
-   { {{"hash", ""}, {"sub", {}}, {"name", "Vila Leopoldina"}, }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Lapa"},            }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Pinheiros"},       }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Moema"},           }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Jardim Paulista"}, }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Mooca"},           }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Tatuapé"},         }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Penha"},           }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Ipiranga"},        }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Vila Madalena"},   }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Vila Mariana"},    }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Vila Formosa"},    }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Bixiga"},          }
-   };
-
-   std::vector<json> j3 =
-   { {{"name", "Atibaia"},  {"sub_desc", "Bairro"}, {"sub", j1}}
-   , {{"name", "Sao Paulo"},{"sub_desc", "Bairro"}, {"sub", j2}}
-   };
-
-   json j;
-   j["name"] = "SP";
-   j["sub_desc"] = "Cidade";
-   j["sub"] = j3;
-
-   return j;
-}
-
 std::string to_str(int i, int width, char fill_char)
 {
    std::ostringstream oss;
@@ -123,25 +83,6 @@ struct hash_gen_iter {
    }
 };
 
-std::vector<json> gen_hash_patches(json j)
-{
-   if (std::empty(j))
-      return {};
-
-   std::vector<json> patches;
-   hash_gen_iter iter(j);
-   while (!iter.end()) {
-      json patch;
-      patch["op"] = "replace";
-      patch["path"] = iter.current.path_prefix + "/hash";
-      patch["value"] = iter.current.value_prefix;
-      patches.push_back(patch);
-      iter.next();
-   };
-
-   return patches;
-}
-
 std::vector<std::string> gen_create_groups(json menu)
 {
    if (std::empty(menu))
@@ -210,5 +151,65 @@ std::vector<std::string> get_hashes(json menu)
    };
 
    return hashes;
+}
+
+std::vector<json> gen_hash_patches(json menu)
+{
+   if (std::empty(menu))
+      return {};
+
+   std::vector<json> patches;
+   hash_gen_iter iter(menu);
+   while (!iter.end()) {
+      json patch;
+      patch["op"] = "replace";
+      patch["path"] = iter.current.path_prefix + "/hash";
+      patch["value"] = iter.current.value_prefix;
+      patches.push_back(patch);
+      iter.next();
+   };
+
+   return patches;
+}
+
+json gen_location_menu()
+{
+   std::vector<json> j1 =
+   { {{"hash", ""}, {"sub", {}}, {"name", "Centro"}               }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Alvinópolis"}          }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Jardim Siriema"}       }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Vila Santista"}        }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Parque dos Coqueiros"} }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Terceiro Centenário"}  }
+   };
+
+   std::vector<json> j2 =
+   { {{"hash", ""}, {"sub", {}}, {"name", "Vila Leopoldina"}, }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Lapa"},            }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Pinheiros"},       }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Moema"},           }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Jardim Paulista"}, }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Mooca"},           }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Tatuapé"},         }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Penha"},           }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Ipiranga"},        }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Vila Madalena"},   }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Vila Mariana"},    }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Vila Formosa"},    }
+   , {{"hash", ""}, {"sub", {}}, {"name", "Bixiga"},          }
+   };
+
+   std::vector<json> j3 =
+   { {{"name", "Atibaia"},  {"sub_desc", "Bairro"}, {"sub", j1}}
+   , {{"name", "Sao Paulo"},{"sub_desc", "Bairro"}, {"sub", j2}}
+   };
+
+   json j;
+   j["name"] = "SP";
+   j["sub_desc"] = "Cidade";
+   j["sub"] = j3;
+
+   auto const hash_patches = gen_hash_patches(j);
+   return j.patch(std::move(hash_patches));
 }
 

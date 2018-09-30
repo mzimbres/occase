@@ -4,12 +4,9 @@
 
 void test2()
 {
-   auto menu = gen_location_menu();
+   auto const menu = gen_location_menu();
    //std::cout << menu.dump(4) << std::endl;
 
-   auto hash_patches = gen_hash_patches(menu);
-
-   menu = menu.patch(hash_patches);
    std::cout << menu.dump() << std::endl;
 
    auto const cmds = gen_create_groups(menu);
@@ -49,11 +46,6 @@ void test1()
    auto menu = gen_location_menu1();
    //std::cout << menu.dump(4) << std::endl;
 
-   auto hash_patches = gen_hash_patches(menu);
-   //json j = hash_patches;
-   //std::cout << j.dump(4) << std::endl;
-
-   menu = menu.patch(hash_patches);
    std::cout << menu.dump() << std::endl;
 
    auto const cmds = gen_create_groups(menu);
@@ -87,13 +79,6 @@ void test3()
    auto menu = gen_location_menu3();
    //std::cout << menu.dump(4) << std::endl;
 
-   auto hash_patches = gen_hash_patches(menu);
-   json j = hash_patches;
-   std::cout << j.dump() << std::endl;
-
-   menu = menu.patch(hash_patches);
-   std::cout << menu.dump() << std::endl;
-
    auto const cmds = gen_create_groups(menu);
    for (auto const& o : cmds)
       std::cout << o << std::endl;
@@ -114,13 +99,6 @@ void test0()
 {
    auto menu = gen_location_menu0();
    //std::cout << menu.dump(4) << std::endl;
-
-   auto hash_patches = gen_hash_patches(menu);
-   //json j = hash_patches;
-   //std::cout << j.dump(4) << std::endl;
-
-   menu = menu.patch(hash_patches);
-   std::cout << menu.dump() << std::endl;
 
    auto const cmds = gen_create_groups(menu);
    for (auto const& o : cmds)

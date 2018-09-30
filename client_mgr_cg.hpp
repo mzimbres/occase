@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stack>
+#include <vector>
 #include <string>
 #include <memory>
 #include <stdexcept>
@@ -20,13 +21,15 @@ private:
    std::stack<std::string> cmds;
 
 public:
-   client_mgr_cg(std::string exp, std::stack<std::string> cmds_)
+   client_mgr_cg(std::string exp, std::vector<std::string> cmds_)
    : expected(exp)
-   , cmds(std::move(cmds_))
    {
       //std::cout << "aaaaaaaaaa " << std::endl;
-      if (std::empty(cmds))
+      if (std::empty(cmds_))
          throw std::runtime_error("client_mgr_cg: Stack is empty.");
+
+      for (auto const& o : cmds_)
+         cmds.push(std::move(o));
    }
    ~client_mgr_cg();
 

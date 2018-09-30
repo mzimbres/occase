@@ -222,13 +222,12 @@ void test_login(client_op const& op)
                           , client_mgr_sms {to_str(i, 4, 0)
                           , "ok" , op.sms})->run();
 
-   auto menu = gen_location_menu();
-   auto hash_patches = gen_hash_patches(menu);
-   menu = menu.patch(hash_patches);
-   auto const tmp = gen_create_groups(menu);
-   std::stack<std::string> cmds2;
-   for (auto const& o : tmp)
-      cmds2.push(o);
+   // TODO: Test this after implementing queries to the database.
+   //test_login(op, "fail", 0, op.users_size, -1);
+   //std::cout << "test_login_ok_4:    ok" << std::endl;
+
+   auto const menu = gen_location_menu();
+   auto const cmds2 = gen_create_groups(menu);
 
    std::make_shared<client_session<client_mgr_cg>
                    >( ioc
@@ -268,10 +267,7 @@ void test_simulation(client_op const& op, int begin, int end)
    using mgr_type = client_mgr_sim;
    using client_type = client_session<mgr_type>;
 
-   auto menu = gen_location_menu();
-   auto hash_patches = gen_hash_patches(menu);
-   menu = menu.patch(hash_patches);
-
+   auto const menu = gen_location_menu();
    auto const hashes = get_hashes(menu);
    std::stack<std::string> hashes_st;
    for (auto const& o : hashes)
@@ -383,10 +379,6 @@ int main(int argc, char* argv[])
 
       test_login(op);
       std::cout << "test_many:          ok" << std::endl;
-
-      // TODO: Test this after implementing queries to the database.
-      //test_login(op, "fail", 0, op.users_size, -1);
-      //std::cout << "test_login_ok_4:    ok" << std::endl;
 
       // Test authentication with binds obtained in the sms step.
       test_auth(op, 0, op.users_size);

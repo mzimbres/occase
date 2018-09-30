@@ -221,6 +221,20 @@ void test_login(client_op const& op)
                           , op.session_config()
                           , client_mgr_sms {to_str(i, 4, 0)
                           , "ok" , op.sms})->run();
+
+   auto menu = gen_location_menu();
+   auto hash_patches = gen_hash_patches(menu);
+   menu = menu.patch(hash_patches);
+   auto const tmp = gen_create_groups(menu);
+   std::stack<std::string> cmds2;
+   for (auto const& o : tmp)
+      cmds2.push(o);
+
+   std::make_shared<client_session<client_mgr_cg>
+                   >( ioc
+                    , op.session_config()
+                    , client_mgr_cg
+                      {"ok", std::move(cmds2)})->run();
    ioc.run();
 }
 
@@ -245,26 +259,6 @@ void test_auth(client_op const& op, int begin, int end)
    for (auto& session : sessions)
       session->run();
 
-   ioc.run();
-}
-
-void test_create_group(client_op const& op)
-{
-   using mgr_type = client_mgr_cg;
-   using client_type = client_session<mgr_type>;
-
-   auto menu = gen_location_menu();
-   auto hash_patches = gen_hash_patches(menu);
-   menu = menu.patch(hash_patches);
-   auto const tmp = gen_create_groups(menu);
-   std::stack<std::string> cmds;
-   for (auto const& o : tmp)
-      cmds.push(o);
-
-   mgr_type mgr {"ok", std::move(cmds)};
-
-   boost::asio::io_context ioc;
-   std::make_shared<client_type>(ioc, op.session_config(), mgr)->run();
    ioc.run();
 }
 
@@ -397,9 +391,6 @@ int main(int argc, char* argv[])
       // Test authentication with binds obtained in the sms step.
       test_auth(op, 0, op.users_size);
       std::cout << "test_auth:          ok" << std::endl;
-
-      test_create_group(op);
-      std::cout << "test_create_group:  ok" << std::endl;
 
       timer t;
       test_simulation(op, 0, op.users_size);

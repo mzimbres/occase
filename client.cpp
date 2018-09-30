@@ -44,9 +44,9 @@ struct client_op {
    int auth_timeout = 3;
    int sim_runs = 2;
 
-   auto session_config() const
+   auto make_session_cf() const
    {
-      return client_session_config
+      return client_session_cf
       { {host} 
       , {port}
       , std::chrono::seconds {handshake_tm}
@@ -54,47 +54,63 @@ struct client_op {
    }
 };
 
+struct launcher_op {
+   int begin;
+   int end;
+   std::chrono::milliseconds interval;
+   std::string final_msg;
+};
+
 template <class T>
-class handshake_test_launcher : 
-   public std::enable_shared_from_this<handshake_test_launcher<T>> {
+class test_launcher : 
+   public std::enable_shared_from_this<test_launcher<T>> {
 public:
    using mgr_type = T;
+   using mgr_op_type = typename mgr_type::options_type;
    using client_type = client_session<mgr_type>;
 
 private:
    boost::asio::io_context& ioc;
-   client_op op;
-   std::chrono::milliseconds interval;
+   mgr_op_type mgr_op;
+   client_session_cf ccf;
+   launcher_op lop;
    boost::asio::steady_timer timer;
  
 public:
-   handshake_test_launcher( boost::asio::io_context& ioc_
-                          , client_op const& op_)
+   test_launcher( boost::asio::io_context& ioc_
+                , mgr_op_type mgr_op_
+                , client_session_cf ccf_
+                , launcher_op lop_)
    : ioc(ioc_)
-   , op(op_)
-   , interval(op.handshake_tm_launch_interval)
+   , mgr_op(mgr_op_)
+   , ccf(ccf_)
+   , lop(lop_)
    , timer(ioc)
    {}
-      
+
    void run(boost::system::error_code ec)
    {
       if (ec)
          throw std::runtime_error("No error expected here.");
 
-      if (op.handshake_tm_test_size-- == 0) {
-         std::cout << "Handshake/Auth test: ok" << std::endl;
+      if (lop.begin == lop.end) {
+         std::cout << lop.final_msg << std::endl;
          return;
       }
 
-      std::make_shared<client_type>( ioc, op.session_config()
-                                   , mgr_type {})->run();
+      mgr_op.user = to_str(lop.begin, 6, 0);
 
-      timer.expires_after(interval);
+      std::make_shared<client_type>( ioc
+                                   , ccf
+                                   , mgr_op)->run();
+
+      timer.expires_after(lop.interval);
 
       auto handler = [p = this->shared_from_this()](auto ec)
       { p->run(ec); };
 
       timer.async_wait(handler);
+      ++lop.begin;
    }
 };
 
@@ -142,7 +158,7 @@ public:
 
       mgr_type mgr {to_str(begin, 4, 0), expected, ret};
 
-      std::make_shared<client_type>( ioc, op.session_config()
+      std::make_shared<client_type>( ioc, op.make_session_cf()
                                    , mgr)->run();
 
       timer.expires_after(interval);
@@ -159,15 +175,27 @@ void basic_tests(client_op const& op)
 {
    boost::asio::io_context ioc;
 
+   launcher_op lop1 { 0, op.handshake_tm_test_size
+                    , std::chrono::milliseconds
+                      {op.handshake_tm_launch_interval}
+                    , {"Handshake test launch:       ok"}};
+
+   auto ccf = op.make_session_cf();
+
    // Tests if the server times out connections that do not proceed
    // with the websocket handshake.
-   std::make_shared< handshake_test_launcher<cmgr_handshake_tm>
-                   >(ioc, op)->run({});
+   std::make_shared< test_launcher<cmgr_handshake_tm>
+                   >(ioc, cmgr_handshake_op {}, ccf, lop1)->run({});
+
+   launcher_op lop2 { 0, op.handshake_tm_test_size
+                    , std::chrono::milliseconds
+                      {op.handshake_tm_launch_interval}
+                    , {"After handshake test launch: ok"}};
 
    // Tests if the server drops connections that connect but do not
    // register or authenticate.
-   std::make_shared< handshake_test_launcher<client_mgr_accept_timer>
-                   >(ioc, op)->run({});
+   std::make_shared< test_launcher<client_mgr_accept_timer>
+                   >(ioc, cmgr_handshake_op {}, ccf, lop2)->run({});
 
    // Tests the sms timeout. Connections should be dropped if the
    // users tries to register but do not send the sms on time.
@@ -203,7 +231,7 @@ void basic_tests(client_op const& op)
    for (auto const& cmd : cmds)
       std::make_shared<client_session<client_mgr_login_typo>
                       >( ioc
-                       , op.session_config()
+                       , op.make_session_cf()
                        , client_mgr_login_typo {cmd})->run();
 
    // Sends sms on time but the wrong one and expects the server to
@@ -211,17 +239,19 @@ void basic_tests(client_op const& op)
    for (auto i = 0; i < op.users_size; ++i)
          std::make_shared<client_session<client_mgr_sms>
                          >( ioc
-                          , op.session_config()
-                          , client_mgr_sms {to_str(i, 4, 0)
-                          , "fail" , "8r47"})->run();
+                          , op.make_session_cf()
+                          , client_mgr_sms
+                            { to_str(i, 4, 0), "fail"
+                            , "8r47"})->run();
 
    // Sends the correct sms on time.
    for (auto i = 0; i < op.users_size; ++i)
          std::make_shared<client_session<client_mgr_sms>
                          >( ioc
-                          , op.session_config()
-                          , client_mgr_sms {to_str(i, 4, 0)
-                          , "ok" , op.sms})->run();
+                          , op.make_session_cf()
+                          , client_mgr_sms
+                            { to_str(i, 4, 0), "ok"
+                            , op.sms})->run();
 
    // TODO: Test this after implementing queries to the database.
    //basic_tests(op, "fail", 0, op.users_size, -1);
@@ -232,7 +262,7 @@ void basic_tests(client_op const& op)
 
    std::make_shared<client_session<client_mgr_cg>
                    >( ioc
-                    , op.session_config()
+                    , op.make_session_cf()
                     , client_mgr_cg
                       {"ok", std::move(cmds2)})->run();
    ioc.run();
@@ -250,7 +280,7 @@ void test_simulation(client_op const& op, int begin, int end)
       auto tmp =
          std::make_shared<client_session<client_mgr_sim>
                          >( ioc
-                          , op.session_config()
+                          , op.make_session_cf()
                           , client_mgr_sim
                             {"ok", hashes, to_str(i, 4, 0)});
       tmp->run();

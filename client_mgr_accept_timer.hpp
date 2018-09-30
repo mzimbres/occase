@@ -14,11 +14,20 @@ class client_session;
 // TODO: Add a timer here after which we should emit an error if the
 // server do not drop the connection.
 
+struct cmgr_handshake_op {
+   std::string user;
+};
+
 class cmgr_handshake_tm {
 private:
    using client_type = client_session<cmgr_handshake_tm>;
 
 public:
+   using options_type = cmgr_handshake_op;
+   cmgr_handshake_tm(cmgr_handshake_op)
+   {
+      //std::cout << "Hi." << std::endl;
+   }
    ~cmgr_handshake_tm()
    {
       //std::cout << "Bye1 bye1." << std::endl;
@@ -35,6 +44,11 @@ private:
    using client_type = client_session<client_mgr_accept_timer>;
 
 public:
+   using options_type = cmgr_handshake_op;
+   client_mgr_accept_timer(cmgr_handshake_op)
+   {
+      //std::cout << "Hi." << std::endl;
+   }
    ~client_mgr_accept_timer()
    {
       //std::cout << "Bye2 bye2." << std::endl;

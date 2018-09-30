@@ -19,7 +19,7 @@
 #include "config.hpp"
 #include "json_utils.hpp"
 
-struct client_session_config {
+struct client_session_cf {
    std::string host;
    std::string port;
    std::chrono::seconds handshake_timeout;
@@ -35,7 +35,7 @@ private:
    websocket::stream<tcp::socket> ws;
    boost::beast::multi_buffer buffer;
    std::string text;
-   client_session_config op;
+   client_session_cf op;
    std::queue<std::string> msg_queue;
    bool closing = false;
 
@@ -63,7 +63,7 @@ private:
 public:
    explicit
    client_session( boost::asio::io_context& ioc
-                 , client_session_config op_
+                 , client_session_cf op_
                  , Mgr const& m);
 
    ~client_session()
@@ -148,7 +148,7 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
 
 template <class Mgr>
 client_session<Mgr>::client_session( boost::asio::io_context& ioc
-                                   , client_session_config op_
+                                   , client_session_cf op_
                                    , Mgr const& m)
 : resolver(ioc)
 , timer(ioc)

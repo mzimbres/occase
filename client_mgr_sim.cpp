@@ -9,7 +9,7 @@ int client_mgr_sim::on_read(json j, std::shared_ptr<client_type> s)
    if (cmd == "auth_ack") {
       auto const res = j["result"].get<std::string>();
       if (res == "ok") {
-         std::cout << "sending " << cmds.top() << std::endl;
+         //std::cout << "sending " << cmds.top() << std::endl;
          s->send_msg(cmds.top());
          return 1;
       }
@@ -24,7 +24,7 @@ int client_mgr_sim::on_read(json j, std::shared_ptr<client_type> s)
       if (res == expected) {
          cmds.pop();
          if (std::empty(cmds)) {
-            std::cout << "Test sim: join groups ok." << std::endl;
+            //std::cout << "Test sim: join groups ok." << std::endl;
             send_group_msg(s);
             return 1;
          }
@@ -41,7 +41,7 @@ int client_mgr_sim::on_read(json j, std::shared_ptr<client_type> s)
       if (res == expected) {
          hashes.pop();
          if (std::empty(hashes)) {
-            std::cout << "Test sim: send_group_msg_ack ok." << std::endl;
+            //std::cout << "Test sim: send_group_msg_ack ok." << std::endl;
             return -1;
          }
          send_group_msg(s);
@@ -56,8 +56,8 @@ int client_mgr_sim::on_read(json j, std::shared_ptr<client_type> s)
    if (cmd == "group_msg") {
       // TODO: Output some error if the number of messages received is
       // wrong.
-      auto const body = j["msg"].get<std::string>();
-      std::cout << "Group msg: " << body << std::endl;
+      //auto const body = j["msg"].get<std::string>();
+      //std::cout << "Group msg: " << body << std::endl;
       return 1;
    }
 

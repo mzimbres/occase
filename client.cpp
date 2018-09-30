@@ -36,6 +36,7 @@ namespace po = boost::program_options;
 struct client_op {
    std::string host {"127.0.0.1"};
    std::string port {"8080"};
+   std::string sms;
    int users_size = 10;
    int handshake_tm_test_size = 10;
    int handshake_tm = 3;
@@ -179,7 +180,6 @@ void test_login(client_op const& op)
                                         , 2 * op.users_size
                                         , "ok"
                                         , -2)->run({});
-   // Sends commands with typos.
    json j1;
    j1["cmd"] = "logrn";
    j1["tel"] = "aaaa";
@@ -198,37 +198,29 @@ void test_login(client_op const& op)
    , {j3.dump()}
    };
 
+   // Sends commands with typos and expects the server to not crash!
    for (auto const& cmd : cmds)
       std::make_shared<client_session<client_mgr_login_typo>
                       >( ioc
                        , op.session_config()
                        , client_mgr_login_typo {cmd})->run();
 
-   ioc.run();
-}
+   // Sends sms on time but the wrong one and expects the server to
+   // release sessions correctly.
+   for (auto i = 0; i < op.users_size; ++i)
+         std::make_shared<client_session<client_mgr_sms>
+                         >( ioc
+                          , op.session_config()
+                          , client_mgr_sms {to_str(i, 4, 0)
+                          , "fail" , "8r47"})->run();
 
-void test_sms( client_op const& op
-             , std::string const& expected
-             , std::string const& sms
-             , int begin
-             , int end)
-{
-   using mgr_type = client_mgr_sms;
-   using client_type = client_session<mgr_type>;
-
-   boost::asio::io_context ioc;
-
-   std::vector<std::shared_ptr<client_type>> sessions;
-   for (auto i = begin; i < end; ++i) {
-      auto tmp =
-         std::make_shared<client_type>( ioc
-                                      , op.session_config()
-                                      , client_mgr_sms
-                                        {to_str(i, 4, 0), expected, sms});
-      tmp->run();
-      sessions.push_back(tmp);
-   }
-
+   // Sends the correct sms on time.
+   for (auto i = 0; i < op.users_size; ++i)
+         std::make_shared<client_session<client_mgr_sms>
+                         >( ioc
+                          , op.session_config()
+                          , client_mgr_sms {to_str(i, 4, 0)
+                          , "ok" , op.sms})->run();
    ioc.run();
 }
 
@@ -375,6 +367,10 @@ int main(int argc, char* argv[])
          , "The interval with which we will lauch new handshake"
            " timeout test clients. Also used for the after handshake timeout.")
 
+         ("sms,m"
+         , po::value<std::string>(&op.sms)->default_value("8347")
+         , "The code sent via email for account validation.")
+
          ("auth-timeout,l"
          , po::value<int>(&op.auth_timeout)->default_value(3)
          , "Time after before which the server should giveup witing for auth cmd.")
@@ -393,15 +389,6 @@ int main(int argc, char* argv[])
 
       test_login(op);
       std::cout << "test_many:          ok" << std::endl;
-
-      // Sends sms on time but the wrong one and expects the server to
-      // release sessions correctly.
-      test_sms(op, "fail", "8r47", 0, op.users_size);
-      std::cout << "test_wrong_sms:     ok" << std::endl;
-
-      // Sends correct sms on time.
-      test_sms(op, "ok", "8347", 0, op.users_size);
-      std::cout << "test_correct_sms:   ok" << std::endl;
 
       // TODO: Test this after implementing queries to the database.
       //test_login(op, "fail", 0, op.users_size, -1);

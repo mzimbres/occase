@@ -113,11 +113,20 @@ struct client_op {
       , {"Correct sms test launch:     ok"}
       };
    }
+
+   auto make_sim_cf() const
+   {
+      return launcher_op
+      { 0, users_size
+      , std::chrono::milliseconds {launch_interval}
+      , {""}
+      };
+   }
 };
 
 template <class T>
-class test_launcher : 
-   public std::enable_shared_from_this<test_launcher<T>> {
+class session_launcher : 
+   public std::enable_shared_from_this<session_launcher<T>> {
 public:
    using mgr_type = T;
    using mgr_op_type = typename mgr_type::options_type;
@@ -131,10 +140,10 @@ private:
    boost::asio::steady_timer timer;
  
 public:
-   test_launcher( boost::asio::io_context& ioc_
-                , mgr_op_type mgr_op_
-                , client_session_cf ccf_
-                , launcher_op lop_)
+   session_launcher( boost::asio::io_context& ioc_
+                   , mgr_op_type mgr_op_
+                   , client_session_cf ccf_
+                   , launcher_op lop_)
    : ioc(ioc_)
    , mgr_op(mgr_op_)
    , ccf(ccf_)
@@ -142,13 +151,29 @@ public:
    , timer(ioc)
    {}
 
+   ~session_launcher()
+   {
+      // TODO: Implement this.
+      //std::vector<std::shared_ptr<client_session<client_mgr_sim>>> sessions;
+      //auto sent = 0;
+      //auto recv = 0;
+      //for (auto const& session : sessions) {
+      //   sent += session->get_sent_msgs();
+      //   recv += session->get_recv_msgs();
+      //}
+
+      //std::cout << "Sent:     " << sent << std::endl;
+      //std::cout << "Received: " << recv << std::endl;
+   }
+
    void run(boost::system::error_code ec)
    {
       if (ec)
          throw std::runtime_error("No error expected here.");
 
       if (lop.begin == lop.end) {
-         std::cout << lop.final_msg << std::endl;
+         if (!std::empty(lop.final_msg))
+            std::cout << lop.final_msg << std::endl;
          return;
       }
 
@@ -174,7 +199,7 @@ void basic_tests(client_op const& op)
 
    // Tests if the server times out connections that do not proceed
    // with the websocket handshake.
-   std::make_shared< test_launcher<cmgr_handshake_tm>
+   std::make_shared< session_launcher<cmgr_handshake_tm>
                    >( ioc, cmgr_handshake_op {}
                     , op.make_session_cf()
                     , op.make_handshake_laucher_op()
@@ -183,7 +208,7 @@ void basic_tests(client_op const& op)
 
    // Tests if the server drops connections that connect but do not
    // register or authenticate.
-   std::make_shared< test_launcher<client_mgr_accept_timer>
+   std::make_shared< session_launcher<client_mgr_accept_timer>
                    >( ioc
                     , cmgr_handshake_op {}
                     , op.make_session_cf()
@@ -193,7 +218,7 @@ void basic_tests(client_op const& op)
    // Tests the sms timeout. Connections should be dropped if the
    // users tries to register but do not send the sms on time.
    // Connection is gracefully closed.
-   std::make_shared< test_launcher<client_mgr_login>
+   std::make_shared< session_launcher<client_mgr_login>
                    >( ioc
                     , cmgr_login_cf { "" , "ok" , -1}
                     , op.make_session_cf()
@@ -201,7 +226,7 @@ void basic_tests(client_op const& op)
                     )->run({});
 
    // Same as above but socket is shutdown.
-   std::make_shared< test_launcher<client_mgr_login>
+   std::make_shared< session_launcher<client_mgr_login>
                    >( ioc
                     , cmgr_login_cf { "" , "ok" , -2 }
                     , op.make_session_cf()
@@ -210,7 +235,7 @@ void basic_tests(client_op const& op)
 
    // Sends sms on time but the wrong one and expects the server to
    // release sessions correctly.
-   std::make_shared< test_launcher<client_mgr_sms>
+   std::make_shared< session_launcher<client_mgr_sms>
                    >( ioc
                     , cmgr_sms_op {"", "fail", "8r47"}
                     , op.make_session_cf()
@@ -218,7 +243,7 @@ void basic_tests(client_op const& op)
                     )->run({});
 
    // Sends the correct sms on time.
-   std::make_shared< test_launcher<client_mgr_sms>
+   std::make_shared< session_launcher<client_mgr_sms>
                    >( ioc
                     , cmgr_sms_op {"", "ok", op.sms}
                     , op.make_session_cf()
@@ -264,36 +289,18 @@ void basic_tests(client_op const& op)
    ioc.run();
 }
 
-void test_simulation(client_op const& op, int begin, int end)
+void test_simulation(client_op const& op)
 {
-   auto const menu = gen_location_menu();
-   auto const hashes = get_hashes(menu);
-
    boost::asio::io_context ioc;
 
-   std::vector<std::shared_ptr<client_session<client_mgr_sim>>> sessions;
-   for (auto i = begin; i < end; ++i) {
-      auto tmp =
-         std::make_shared<client_session<client_mgr_sim>
-                         >( ioc
-                          , op.make_session_cf()
-                          , client_mgr_sim
-                            {"ok", hashes, to_str(i, 4, 0)});
-      tmp->run();
-      sessions.push_back(tmp);
-   }
+   std::make_shared< session_launcher<client_mgr_sim>
+                   >( ioc
+                    , cmgr_sim_op {"", "ok"}
+                    , op.make_session_cf()
+                    , op.make_sim_cf()
+                    )->run({});
 
    ioc.run();
-
-   auto sent = 0;
-   auto recv = 0;
-   for (auto const& session : sessions) {
-      sent += session->get_sent_msgs();
-      recv += session->get_recv_msgs();
-   }
-
-   std::cout << "Sent:     " << sent << std::endl;
-   std::cout << "Received: " << recv << std::endl;
 }
 
 class timer {
@@ -378,9 +385,9 @@ int main(int argc, char* argv[])
 
       timer t;
       while (op.sim_runs != 0) {
-         test_simulation(op, 0, op.users_size);
-         std::cout << "Simulation run " << op.sim_runs <<
-                   " completed." << std::endl;
+         test_simulation(op);
+         std::cout << "Simulation run " << op.sim_runs
+                   << " completed." << std::endl;
          --op.sim_runs;
       }
       std::cout << "==========================================" << std::endl;

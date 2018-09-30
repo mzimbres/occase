@@ -171,7 +171,6 @@ server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
 ev_res
 server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
 {
-   auto const from = j.at("from").get<std::string>();
    auto const hash = j.at("hash").get<std::string>();
 
    auto const g = groups.find(hash);
@@ -183,6 +182,7 @@ server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
       return ev_res::JOIN_GROUP_FAIL;
    }
 
+   auto const from = s->get_user_id();
    g->second.add_member(from, s);
 
    json resp;

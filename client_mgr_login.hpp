@@ -18,17 +18,20 @@ class client_session;
 // TODO: What should happen if we send a new login command when there
 //       is an ongoing login transaction?
 
+struct cmgr_login_cf {
+   std::string user;
+   std::string expected;
+   int on_read_ret;
+};
+
 class client_mgr_login {
 private:
    using client_type = client_session<client_mgr_login>;
-   std::string tel;
-   std::string expected;
-   int on_read_ret;
+   cmgr_login_cf op;
 
 public:
-   client_mgr_login( std::string tel_
-                   , std::string expected
-                   , int on_read_ret);
+   using options_type = cmgr_login_cf;
+   client_mgr_login(options_type op);
    int on_read(json j, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec) { return -1; }
    int on_handshake(std::shared_ptr<client_type> s);

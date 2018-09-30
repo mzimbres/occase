@@ -114,63 +114,6 @@ public:
    }
 };
 
-class test_login_launcher : 
-   public std::enable_shared_from_this<test_login_launcher> {
-public:
-   using mgr_type = client_mgr_login;
-   using client_type = client_session<mgr_type>;
-
-private:
-   boost::asio::io_context& ioc;
-   client_op op;
-   std::chrono::milliseconds interval {100};
-   boost::asio::steady_timer timer;
-   int begin = 0;
-   int end = 0;
-   std::string expected;
-   int ret;
- 
-public:
-   test_login_launcher( boost::asio::io_context& ioc_
-                      , client_op const& op_
-                      , int b_
-                      , int e_
-                      , std::string expected_
-                      , int ret_)
-   : ioc(ioc_)
-   , op(op_)
-   , timer(ioc)
-   , begin(b_)
-   , end(e_)
-   , expected(expected_)
-   , ret(ret_)
-   {}
-      
-   void run(boost::system::error_code ec)
-   {
-      if (ec)
-         throw std::runtime_error("No error expected here.");
-
-      if (begin == end) {
-         std::cout << "Test login timeout: ok" << std::endl;
-         return;
-      }
-
-      mgr_type mgr {to_str(begin, 4, 0), expected, ret};
-
-      std::make_shared<client_type>( ioc, op.make_session_cf()
-                                   , mgr)->run();
-
-      timer.expires_after(interval);
-
-      auto handler = [p = this->shared_from_this()](auto ec)
-      { p->run(ec); };
-
-      timer.async_wait(handler);
-      begin++;
-   }
-};
-
 void basic_tests(client_op const& op)
 {
    boost::asio::io_context ioc;
@@ -197,18 +140,30 @@ void basic_tests(client_op const& op)
    std::make_shared< test_launcher<client_mgr_accept_timer>
                    >(ioc, cmgr_handshake_op {}, ccf, lop2)->run({});
 
+   launcher_op lop3 { 0, op.users_size
+                    , std::chrono::milliseconds
+                      {op.handshake_tm_launch_interval}
+                    , {"Login test with ret = -1:    ok"}};
+
+   cmgr_login_cf cf2 { "" , "ok" , -1 };
+
    // Tests the sms timeout. Connections should be dropped if the
    // users tries to register but do not send the sms on time.
    // Connection is gracefully closed.
-   std::make_shared<test_login_launcher>( ioc, op, 0, op.users_size, "ok"
-                                        , -1)->run({});
+   std::make_shared< test_launcher<client_mgr_login>
+                   >(ioc, cf2, ccf, lop3)->run({});
+
+   launcher_op lop4 { op.users_size, 2 * op.users_size
+                    , std::chrono::milliseconds
+                      {op.handshake_tm_launch_interval}
+                    , {"Login test with ret = -2:    ok"}};
+
+   cmgr_login_cf cf4 { "" , "ok" , -2 };
 
    // Same as above but socket is shutdown.
-   std::make_shared<test_login_launcher>( ioc
-                                        , op, op.users_size
-                                        , 2 * op.users_size
-                                        , "ok"
-                                        , -2)->run({});
+   std::make_shared< test_launcher<client_mgr_login>
+                   >(ioc, cf4, ccf, lop4)->run({});
+
    json j1;
    j1["cmd"] = "logrn";
    j1["tel"] = "aaaa";

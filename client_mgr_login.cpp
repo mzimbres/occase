@@ -2,12 +2,8 @@
 
 #include "client_session.hpp"
 
-client_mgr_login::client_mgr_login( std::string tel_
-                                  , std::string expected_
-                                  , int on_read_ret_)
-: tel(tel_)
-, expected(expected_)
-, on_read_ret(on_read_ret_)
+client_mgr_login::client_mgr_login(cmgr_login_cf op_)
+: op(op_)
 { }
 
 int client_mgr_login::on_read(json j, std::shared_ptr<client_type> s)
@@ -17,25 +13,25 @@ int client_mgr_login::on_read(json j, std::shared_ptr<client_type> s)
    if (cmd != "login_ack") {
       std::cerr << "Server error. Please fix." << std::endl;
       throw std::runtime_error("client_mgr_login::on_read2");
-      return on_read_ret;
+      return op.on_read_ret;
    }
 
    auto res = j["result"].get<std::string>();
-   if (res == expected) {
+   if (res == op.expected) {
       //std::cout << "Test login: ok." << std::endl;
-      return on_read_ret;
+      return op.on_read_ret;
    }
 
    std::cerr << "Test login: fail. Unexpected: " << cmd << std::endl;
    throw std::runtime_error("client_mgr_login::on_read2");
-   return on_read_ret;
+   return op.on_read_ret;
 }
 
 int client_mgr_login::on_handshake(std::shared_ptr<client_type> s)
 {
    json j;
    j["cmd"] = "login";
-   j["tel"] = tel;
+   j["tel"] = op.user;
    s->send_msg(j.dump());
    return 1;
 }

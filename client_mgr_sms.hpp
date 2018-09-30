@@ -11,20 +11,23 @@ class client_session;
 
 // Performs a login followed by an sms confirmation.
 
-class client_mgr_sms {
-private:
-   using client_type = client_session<client_mgr_sms>;
-   std::string tel;
+struct cmgr_sms_op {
+   std::string user;
    std::string expected;
    std::string sms;
+};
+
+class client_mgr_sms {
+public:
+   using options_type = cmgr_sms_op;
+
+private:
+   using client_type = client_session<client_mgr_sms>;
+   options_type op;
 
 public:
-   client_mgr_sms( std::string tel_
-                 , std::string expected_
-                 , std::string sms_)
-   : tel(tel_)
-   , expected(expected_)
-   , sms(sms_)
+   client_mgr_sms(options_type op_)
+   : op(op_)
    { }
 
    int on_read(json j, std::shared_ptr<client_type> s);

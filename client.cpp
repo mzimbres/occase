@@ -189,24 +189,29 @@ void basic_tests(client_op const& op)
                        , op.make_session_cf()
                        , client_mgr_login_typo {cmd})->run();
 
+   launcher_op lop5 { 0, op.users_size
+                    , std::chrono::milliseconds
+                      {op.handshake_tm_launch_interval}
+                    , {"Wrong sms test launch:       ok"}};
+
+   cmgr_sms_op cf5 {"", "fail", "8r47"};
+
    // Sends sms on time but the wrong one and expects the server to
    // release sessions correctly.
-   for (auto i = 0; i < op.users_size; ++i)
-         std::make_shared<client_session<client_mgr_sms>
-                         >( ioc
-                          , op.make_session_cf()
-                          , client_mgr_sms
-                            { to_str(i, 4, 0), "fail"
-                            , "8r47"})->run();
+   std::make_shared< test_launcher<client_mgr_sms>
+                   >(ioc, cf5, ccf, lop5)->run({});
+
+   // TODO: consider changing this to avoid overlapping user ids.
+   launcher_op lop6 { 0, op.users_size
+                    , std::chrono::milliseconds
+                      {op.handshake_tm_launch_interval}
+                    , {"Correct sms test launch:     ok"}};
+
+   cmgr_sms_op cf6 {"", "ok", op.sms};
 
    // Sends the correct sms on time.
-   for (auto i = 0; i < op.users_size; ++i)
-         std::make_shared<client_session<client_mgr_sms>
-                         >( ioc
-                          , op.make_session_cf()
-                          , client_mgr_sms
-                            { to_str(i, 4, 0), "ok"
-                            , op.sms})->run();
+   std::make_shared< test_launcher<client_mgr_sms>
+                   >(ioc, cf6, ccf, lop6)->run({});
 
    // TODO: Test this after implementing queries to the database.
    //basic_tests(op, "fail", 0, op.users_size, -1);

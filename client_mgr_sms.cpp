@@ -11,15 +11,15 @@ int client_mgr_sms::on_read(json j, std::shared_ptr<client_type> s)
       if (res == "ok") {
          json j1;
          j1["cmd"] = "sms_confirmation";
-         j1["tel"] = tel;
-         j1["sms"] = sms;
+         j1["tel"] = op.user;
+         j1["sms"] = op.sms;
          s->send_msg(j1.dump());
-         //std::cout << "login_ack ok: " << tel << std::endl;
+         //std::cout << "login_ack ok: " << op.user << std::endl;
          return 1;
       }
 
       std::cout << j << std::endl;
-      std::cout << "Test fail: " << tel << std::endl;
+      std::cout << "Test fail: " << op.user << std::endl;
       throw std::runtime_error("client_mgr_sms::on_read1");
       return -1;
    }
@@ -28,7 +28,7 @@ int client_mgr_sms::on_read(json j, std::shared_ptr<client_type> s)
       //std::cout << j << std::endl;
       auto res = j["result"].get<std::string>();
 
-      if (res == expected) {
+      if (res == op.expected) {
          //std::cout << "Test sms_confirmation: ok." << std::endl;
          return -1;
       }
@@ -46,7 +46,7 @@ int client_mgr_sms::on_handshake(std::shared_ptr<client_type> s)
 {
    json j;
    j["cmd"] = "login";
-   j["tel"] = tel;
+   j["tel"] = op.user;
    s->send_msg(j.dump());
    return 1;
 }

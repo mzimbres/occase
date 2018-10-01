@@ -117,7 +117,7 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
    auto const tel = j.at("tel").get<std::string>();
    auto const sms = j.at("sms").get<std::string>();
 
-   if (sms != s->get_sms() || tel != s->get_user_id()) {
+   if (sms != s->get_sms()) {
       json resp;
       resp["cmd"] = "sms_confirmation_ack";
       resp["result"] = "fail";

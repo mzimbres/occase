@@ -61,55 +61,6 @@ void server_session::do_accept()
    ws.async_accept(boost::asio::bind_executor(strand, handler2));
 }
 
-void server_session::timer_mgr(boost::system::error_code ec)
-{
-   if (ec) {
-      if (ec == boost::asio::error::operation_aborted) {
-         // Was the timer canceled or the deadline has moved?
-         if (timer.expiry() > std::chrono::steady_clock::now()) {
-            // The deadline has move, this happens only if the user
-            // send any of the authentification commands. We have
-            // nothing to do.
-         } else {
-            // The timer was canceled. Do whatever is needed.
-         }
-      } else {
-         // If there is an error and this error is not
-         // operation_aborted we have no treatment for it yet.
-         // TODO: Check what to do here.
-         fail(ec, "timer_mgr");
-         return;
-      }
-   } else { // No error.
-      // The timer was either fired or this is the first time we are
-      // calling this function after accepting it. We test this below
-      //if (!is_waiting_auth()) {
-         // The timeout was fired. This can be caused by many reasons
-         // depending on our current state.
-         // 
-         // 1. The timer expired while the client was (expected to be)
-         //    trying the handshake. 
-         // 2. The client did not sent us a login or an authentication
-         //    command after the handshake
-         // 3. The client did not send the sms confirmation on time.
-         //
-         // In case 1. the websocket will not be yet open.
-
-         if (!ws.is_open()) {
-            ws.next_layer().shutdown(tcp::socket::shutdown_both, ec);
-            ws.next_layer().close(ec);
-            return;
-         }
-         
-         // If we get here than the websocket is open.  We can either
-         // close the connection gracefully by sending a close frame with
-         // async_close or simply shutdown the socket.  Here we decide to
-         // inform the user.
-         do_close();
-      //}
-   }
-}
-
 void server_session::on_accept(boost::system::error_code ec)
 {
    if (ec) {
@@ -161,8 +112,14 @@ void server_session::do_read()
 void server_session::on_close(boost::system::error_code ec)
 {
    if (ec) {
+      if (ec == boost::asio::error::operation_aborted) {
+         // This can be caused for example if the client shuts down
+         // the socket before receiving (and replying) the close frame
+         //std::cout << "server_session::on_close: aborted." << std::endl;
+         return;
+      }
+
       // TODO: What should be done here?
-      closing = false;
       fail(ec, "close");
       return;
    }
@@ -192,20 +149,30 @@ void server_session::handle_ev(ev_res r)
    switch (r) {
       case ev_res::LOGIN_OK:
       {
-         // Successful login request which means the unknown
+         // Successful login request which means the ongoing
          // connection timer  has to be canceled.  This is where we
          // have to set the sms timeout.
-         if (timer.expires_after(cf.sms_timeout) > 0) {
-            auto const handler = [p = shared_from_this()](auto ec)
-            { p->timer_mgr(ec); };
+         auto const n = timer.expires_after(cf.sms_timeout);
 
-            timer.async_wait(boost::asio::bind_executor(strand, handler));
-         } else {
-            // If we get here, it means that there was no ongoing timer.
-            // But I do not see any reason for calling a login command on
-            // an stablished session, this is a logic error.
-            assert(false);
-         }
+         auto const handler = [p = shared_from_this()](auto ec)
+         {
+            if (ec) {
+               if (ec == boost::asio::error::operation_aborted)
+                  return;
+
+               fail(ec, "SMS timer"); // TODO: Check what to do here.
+               return;
+            }
+
+            p->do_close();
+         };
+
+         timer.async_wait(boost::asio::bind_executor(strand, handler));
+
+         // If we get here, it means that there was no ongoing timer.
+         // But I do not see any reason for accepting a login command
+         // on an stablished session, this is a logic error.
+         assert(n > 0);
       }
       break;
       case ev_res::SMS_CONFIRMATION_OK:
@@ -245,6 +212,8 @@ void server_session::on_read( boost::system::error_code ec
    if (ec == websocket::error::closed) {
       // The connection has been gracefully closed. The only possible
       // pending operations now are the timers.
+      //std::cout << "server_session::on_read: socket closed gracefully."
+      //          << std::endl;
       timer.cancel();
 
       // We could also shutdown and close the socket but this is
@@ -258,8 +227,6 @@ void server_session::on_read( boost::system::error_code ec
       // functions close the file descriptor even on failure.
       //ws.next_layer().shutdown(tcp::socket::shutdown_both, ec);
       //ws.next_layer().close(ec);
-      //std::cout << "server_session::on_read: socket closed gracefully."
-      //          << std::endl;
       return;
    }
 

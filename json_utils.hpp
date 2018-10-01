@@ -6,8 +6,6 @@
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
-using user_bind = std::string;
-
 struct group_info {
    std::vector<std::string> header;
    std::string hash;

@@ -6,7 +6,6 @@
 #include <unordered_map>
 
 #include "config.hpp"
-#include "user.hpp"
 #include "group.hpp"
 
 class server_session;
@@ -34,7 +33,8 @@ private:
    std::string host = "criatura";
 
    // Maps a user id (telephone, email, etc.) to a user obj.
-   std::unordered_map<std::string, user> users;
+   std::unordered_map< std::string
+                     , std::weak_ptr<server_session>> sessions;
 
    // Maps a group id to a group object.
    std::unordered_map<std::string, group> groups;

@@ -5,7 +5,6 @@
 #include <unordered_map>
 
 #include "config.hpp"
-#include "user.hpp"
 #include "json_utils.hpp"
 
 class server_session;

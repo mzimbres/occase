@@ -38,7 +38,6 @@ SRCS =
 SRCS += $(lib_objs:.o=.cpp)
 SRCS += $(lib_objs:.o=.hpp)
 SRCS += $(addsuffix .cpp, $(exes))
-SRCS += user.hpp
 SRCS += config.hpp
 SRCS += client_session.hpp
 

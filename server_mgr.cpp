@@ -54,7 +54,7 @@ ev_res server_mgr::on_login(json j, std::shared_ptr<server_session> s)
    auto const tel = j.at("tel").get<std::string>();
 
    // TODO: Replace this with a query to the database.
-   if (users.find(tel) != std::end(users)) {
+   if (sessions.find(tel) != std::end(sessions)) {
       // The user already exists in the system.
       json resp;
       resp["cmd"] = "login_ack";
@@ -79,7 +79,7 @@ ev_res server_mgr::on_auth(json j, std::shared_ptr<server_session> s)
 {
    auto const from = j.at("from").get<std::string>();
 
-   auto const new_user = users.insert({from, {from}});
+   auto const new_user = sessions.insert({from, s});
    if (!new_user.second) {
       // The user is already logged into the system. We do not allow
       // this yet.
@@ -130,7 +130,7 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
    // Inserts the user in the system.
    auto const id = s->get_user_id();
    assert(!std::empty(id));
-   auto const new_user = users.insert({tel, id});
+   auto const new_user = sessions.insert({tel, s});
 
    // This would be odd. The entry already exists on the index map
    // which means we did something wrong in the login command.
@@ -227,7 +227,7 @@ server_mgr::on_group_msg( std::string msg
 
 void server_mgr::release_user(std::string id)
 {
-   users.erase(id);
+   sessions.erase(id);
 }
 
 ev_res

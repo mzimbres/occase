@@ -24,6 +24,7 @@ struct server_session_config {
 };
 
 // TODO: Implementing control frames as in Beast advanced example.
+// TODO: Introduce close frames timeout.
 class server_session :
    public std::enable_shared_from_this<server_session> {
 private:

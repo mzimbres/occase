@@ -2,6 +2,7 @@
 
 #include <chrono>
 
+#include <boost/beast/websocket/stream.hpp>
 #include <boost/beast/websocket/rfc6455.hpp>
 
 namespace
@@ -32,6 +33,21 @@ server_session::~server_session()
 
 void server_session::do_accept()
 {
+   auto const handler0 = [](auto kind, auto payload)
+   {
+      //if (kind == boost::beast::websocket::frame_type::close) {
+      //   std::cout << "Close frame received." << std::endl;
+      //} else if (kind == boost::beast::websocket::frame_type::ping) {
+      //   std::cout << "Ping frame received." << std::endl;
+      //} else if (kind == boost::beast::websocket::frame_type::pong) {
+      //   std::cout << "Pong frame received." << std::endl;
+      //}
+
+      boost::ignore_unused(kind, payload);
+   };
+
+   ws.control_callback(handler0);
+
    timer.expires_after(cf.handshake_timeout);
 
    auto const handler1 = [p = shared_from_this()](auto ec)

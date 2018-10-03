@@ -182,6 +182,8 @@ void server_session::do_pong_wait()
       if (p->ping_pong_state == 1) {
          // We did not receive the pong. We can shutdown and close the
          // socket.
+         std::cout << "Peer unresponsive. Shuting down connection."
+                   << std::endl;
          p->ws.next_layer().shutdown(tcp::socket::shutdown_both, ec);
          p->ws.next_layer().close(ec);
          return;

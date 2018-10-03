@@ -15,6 +15,7 @@ struct cmgr_sms_op {
    std::string user;
    std::string expected;
    std::string sms;
+   int end_ret;
 };
 
 class client_mgr_sms {

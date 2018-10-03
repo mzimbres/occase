@@ -66,7 +66,7 @@ struct client_op {
       return launcher_op
       { 0, handshake_tm_test_size
       , std::chrono::milliseconds {launch_interval}
-      , {"Handshake test launch:       ok"}
+      , {"Handshake test launch:           ok"}
       };
    }
 
@@ -75,7 +75,7 @@ struct client_op {
       return launcher_op
       { 0, handshake_tm_test_size
       , std::chrono::milliseconds {launch_interval}
-      , {"After handshake test launch: ok"}
+      , {"After handshake test launch:     ok"}
       };
    }
 
@@ -84,7 +84,7 @@ struct client_op {
       return launcher_op
       { 0, users_size
       , std::chrono::milliseconds {launch_interval}
-      , {"Login test with ret = -1:    ok"}};
+      , {"Login test with ret = -1:        ok"}};
    }
 
    auto make_sms_tm_laucher_op2() const
@@ -92,7 +92,7 @@ struct client_op {
       return launcher_op
       { users_size, 2 * users_size
       , std::chrono::milliseconds {launch_interval}
-      , {"Login test with ret = -2:    ok"}};
+      , {"Login test with ret = -2:        ok"}};
    }
 
    auto make_sms_tm_laucher_op3() const
@@ -100,25 +100,60 @@ struct client_op {
       return launcher_op
       { 2 * users_size, 3 * users_size
       , std::chrono::milliseconds {launch_interval}
-      , {"Login test with ret = -3:    ok"}};
+      , {"Login test with ret = -3:        ok"}};
    }
 
-   auto make_wrong_sms_cf() const
+   auto make_wrong_sms_cf1() const
    {
       return launcher_op
-      { 0, users_size
+      { 3 * users_size, 4 * users_size
       , std::chrono::milliseconds {launch_interval}
-      , {"Wrong sms test launch:       ok"}
+      , {"Wrong sms test with ret = -1:    ok"}
       };
    }
 
-   auto make_correct_sms_cf() const
+   auto make_wrong_sms_cf2() const
    {
-      // TODO: consider changing this to avoid overlapping user ids.
       return launcher_op
-      { 0, users_size
+      { 4 * users_size, 5 * users_size
       , std::chrono::milliseconds {launch_interval}
-      , {"Correct sms test launch:     ok"}
+      , {"Wrong sms test with ret = -2:    ok"}
+      };
+   }
+
+   auto make_wrong_sms_cf3() const
+   {
+      return launcher_op
+      { 5 * users_size, 6 * users_size
+      , std::chrono::milliseconds {launch_interval}
+      , {"Wrong sms test with ret = -3:    ok"}
+      };
+   }
+
+   auto make_correct_sms_cf1() const
+   {
+      return launcher_op
+      { 6 * users_size, 7 * users_size
+      , std::chrono::milliseconds {launch_interval}
+      , {"Correct sms test with ret = -1:  ok"}
+      };
+   }
+
+   auto make_correct_sms_cf2() const
+   {
+      return launcher_op
+      { 7 * users_size, 8 * users_size
+      , std::chrono::milliseconds {launch_interval}
+      , {"Correct sms test with ret = -2:  ok"}
+      };
+   }
+
+   auto make_correct_sms_cf3() const
+   {
+      return launcher_op
+      { 8 * users_size, 9 * users_size
+      , std::chrono::milliseconds {launch_interval}
+      , {"Correct sms test with ret = -3:  ok"}
       };
    }
 
@@ -185,7 +220,7 @@ public:
          return;
       }
 
-      mgr_op.user = to_str(lop.begin, 6, 0);
+      mgr_op.user = to_str(lop.begin, 7, 0);
 
       std::make_shared<client_type>( ioc
                                    , ccf
@@ -250,20 +285,54 @@ void basic_tests(client_op const& op)
                     )->run({});
 
    // Sends sms on time but the wrong one and expects the server to
-   // release sessions correctly.
+   // release sessions correctly. Finishes with a close frame.
    std::make_shared< session_launcher<client_mgr_sms>
                    >( ioc
-                    , cmgr_sms_op {"", "fail", "8r47"}
+                    , cmgr_sms_op {"", "fail", "8r47", -1}
                     , op.make_session_cf()
-                    , op.make_wrong_sms_cf()
+                    , op.make_wrong_sms_cf1()
                     )->run({});
 
-   // Sends the correct sms on time.
+   // Same as above but shuts down the socket instead of gracefully
+   // closing by sending a close frame.
    std::make_shared< session_launcher<client_mgr_sms>
                    >( ioc
-                    , cmgr_sms_op {"", "ok", op.sms}
+                    , cmgr_sms_op {"", "fail", "8r47", -2}
                     , op.make_session_cf()
-                    , op.make_correct_sms_cf()
+                    , op.make_wrong_sms_cf2()
+                    )->run({});
+
+   // Same as above but closes the socket instead of shuting it down.
+   std::make_shared< session_launcher<client_mgr_sms>
+                   >( ioc
+                    , cmgr_sms_op {"", "fail", "8r47", -3}
+                    , op.make_session_cf()
+                    , op.make_wrong_sms_cf3()
+                    )->run({});
+
+   // Sends the correct sms on time and closes gracefully.
+   std::make_shared< session_launcher<client_mgr_sms>
+                   >( ioc
+                    , cmgr_sms_op {"", "ok", op.sms, -1}
+                    , op.make_session_cf()
+                    , op.make_correct_sms_cf1()
+                    )->run({});
+
+   // Same as above but shuts down the socket instead of sending a
+   // close frame.
+   std::make_shared< session_launcher<client_mgr_sms>
+                   >( ioc
+                    , cmgr_sms_op {"", "ok", op.sms, -2}
+                    , op.make_session_cf()
+                    , op.make_correct_sms_cf2()
+                    )->run({});
+
+   // Same as above but only closes the socket.
+   std::make_shared< session_launcher<client_mgr_sms>
+                   >( ioc
+                    , cmgr_sms_op {"", "ok", op.sms, -3}
+                    , op.make_session_cf()
+                    , op.make_correct_sms_cf3()
                     )->run({});
 
    // TODO: Test if login with already registered user fails. Can be

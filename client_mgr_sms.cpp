@@ -29,8 +29,9 @@ int client_mgr_sms::on_read(json j, std::shared_ptr<client_type> s)
       auto res = j["result"].get<std::string>();
 
       if (res == op.expected) {
+         // Successfull end
          //std::cout << "Test sms_confirmation: ok." << std::endl;
-         return -1;
+         return op.end_ret;
       }
 
       throw std::runtime_error("client_mgr_sms::on_read2");

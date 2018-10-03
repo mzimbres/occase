@@ -33,15 +33,17 @@ server_session::~server_session()
 
 void server_session::do_accept()
 {
-   auto const handler0 = [](auto kind, auto payload)
+   //auto const handler0 = [](auto kind, auto payload)
+   auto const handler0 = [this](auto kind, auto payload)
    {
-      //if (kind == boost::beast::websocket::frame_type::close) {
-      //   std::cout << "Close frame received." << std::endl;
-      //} else if (kind == boost::beast::websocket::frame_type::ping) {
-      //   std::cout << "Ping frame received." << std::endl;
-      //} else if (kind == boost::beast::websocket::frame_type::pong) {
-      //   std::cout << "Pong frame received." << std::endl;
-      //}
+      if (kind == boost::beast::websocket::frame_type::close) {
+         //std::cout << "Close frame received." << std::endl;
+      } else if (kind == boost::beast::websocket::frame_type::ping) {
+         std::cout << "Ping frame received." << std::endl;
+      } else if (kind == boost::beast::websocket::frame_type::pong) {
+         std::cout << "Pong frame received." << std::endl;
+         ping_pong_state = 2;
+      }
 
       boost::ignore_unused(kind, payload);
    };
@@ -160,6 +162,27 @@ void server_session::do_close()
    ws.async_close(reason, handler);
 }
 
+
+void server_session::ping_handler(boost::system::error_code ec)
+{
+   if (ec) {
+      if (ec == boost::asio::error::operation_aborted) {
+         // A closed frame has been sent or received before
+         // the ping was sent. we have nothing to do except
+         // perhaps for seting ping_state to an irrelevant
+         // state.
+         ping_pong_state = 0;
+         return;
+      }
+
+      fail(ec, "Ping handler");
+      return;
+   }
+
+   // Sets the ping state to "ping sent".
+   ping_pong_state = 1;
+}
+
 void server_session::handle_ev(ev_res r)
 {
    switch (r) {
@@ -194,16 +217,25 @@ void server_session::handle_ev(ev_res r)
       case ev_res::SMS_CONFIRMATION_OK:
       {
          // This means the sms authentification was successfull and
-         // that we have to cancel the sms timer. TODO: At this point
-         // we can begin to play with websockets ping pong frames.
+         // that we have to cancel the sms timer.
          timer.cancel();
+         auto const handler = [p = shared_from_this()](auto ec)
+         {
+            p->ping_handler(ec);
+         };
+
+         ws.async_ping({}, handler);
       }
       break;
       case ev_res::AUTH_OK:
       {
-         // Successful authentication. We have to cancel the on accept
-         // timeout.
          timer.cancel();
+         auto const handler = [p = shared_from_this()](auto ec)
+         {
+            p->ping_handler(ec);
+         };
+
+         ws.async_ping({}, handler);
       }
       break;
       case ev_res::LOGIN_FAIL:

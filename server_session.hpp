@@ -38,6 +38,7 @@ private:
    std::string user_id;
    std::string sms;
    std::queue<std::string> msg_queue;
+   int ping_pong_state = 0;
    bool closing = false;
 
    void do_read();
@@ -49,6 +50,7 @@ private:
    void on_write( boost::system::error_code ec
                 , std::size_t bytes_transferred);
    void handle_ev(ev_res r);
+   void ping_handler(boost::system::error_code ec);
 
 public:
    explicit

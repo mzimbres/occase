@@ -42,7 +42,7 @@ void server_session::do_accept()
          //std::cout << "Ping frame received." << std::endl;
       } else if (kind == boost::beast::websocket::frame_type::pong) {
          std::cout << "Pong frame received." << std::endl;
-         ping_pong_state = 2;
+         pp_state = ping_pong::pong_received;
       }
 
       boost::ignore_unused(kind, payload);
@@ -179,7 +179,7 @@ void server_session::do_pong_wait()
       }
 
       // The timer expired.
-      if (p->ping_pong_state == 1) {
+      if (p->pp_state == ping_pong::ping_sent) {
          // We did not receive the pong. We can shutdown and close the
          // socket.
          std::cout << "Peer unresponsive. Shuting down connection."
@@ -206,7 +206,7 @@ void server_session::do_ping()
             // the ping was sent. We have nothing to do except
             // perhaps for seting ping_state to an irrelevant
             // state.
-            p->ping_pong_state = 0;
+            p->pp_state = ping_pong::unset;
             return;
          }
 
@@ -215,7 +215,7 @@ void server_session::do_ping()
       }
 
       // Sets the ping state to "ping sent".
-      p->ping_pong_state = 1;
+      p->pp_state = ping_pong::ping_sent;
 
       // Inititates a wait on the pong.
       p->do_pong_wait();

@@ -24,7 +24,12 @@ struct server_session_config {
    std::chrono::seconds pong_wait_timeout {2};
 };
 
-// TODO: Implementing control frames as in Beast advanced example.
+enum class ping_pong
+{ ping_sent
+, pong_received
+, unset
+};
+
 // TODO: Introduce close frames timeout.
 class server_session :
    public std::enable_shared_from_this<server_session> {
@@ -39,7 +44,7 @@ private:
    std::string user_id;
    std::string sms;
    std::queue<std::string> msg_queue;
-   int ping_pong_state = 0;
+   ping_pong pp_state = ping_pong::unset;
    bool closing = false;
 
    void do_read();

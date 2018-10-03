@@ -39,7 +39,7 @@ void server_session::do_accept()
       } else if (kind == boost::beast::websocket::frame_type::ping) {
          //std::cout << "Ping frame received." << std::endl;
       } else if (kind == boost::beast::websocket::frame_type::pong) {
-         std::cout << "Pong frame received." << std::endl;
+         //std::cout << "Pong frame received." << std::endl;
          pp_state = ping_pong::pong_received;
       }
 
@@ -134,8 +134,9 @@ void server_session::on_close(boost::system::error_code ec)
          return;
       }
 
-      // TODO: What should be done here?
-      fail(ec, "close");
+      // May be caused by a socket that has already been close by the
+      // peer.
+      //fail(ec, "close");
       return;
    }
 
@@ -180,8 +181,8 @@ void server_session::do_pong_wait()
       if (p->pp_state == ping_pong::ping_sent) {
          // We did not receive the pong. We can shutdown and close the
          // socket.
-         std::cout << "Peer unresponsive. Shuting down connection."
-                   << std::endl;
+         //std::cout << "Peer unresponsive. Shuting down connection."
+         //          << std::endl;
          p->ws.next_layer().shutdown(tcp::socket::shutdown_both, ec);
          p->ws.next_layer().close(ec);
          return;

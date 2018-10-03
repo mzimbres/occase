@@ -18,11 +18,12 @@ void fail(boost::system::error_code ec, char const* what)
 listener::listener( boost::asio::io_context& ioc
                   , tcp::endpoint endpoint
                   , std::shared_ptr<server_mgr> mgr_
-                  , std::shared_ptr<const server_session_timeouts> timeouts)
+                  , std::shared_ptr< const server_session_timeouts
+                                   > timeouts_)
 : acceptor(ioc)
 , socket(ioc)
 , mgr(mgr_)
-, timeouts(timeouts)
+, timeouts(timeouts_)
 {
    boost::system::error_code ec;
 

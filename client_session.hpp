@@ -143,6 +143,11 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
       return;
    }
 
+   if (r == -3) {
+      ws.next_layer().close(ec);
+      return;
+   }
+
    do_read(results);
 }
 

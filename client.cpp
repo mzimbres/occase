@@ -95,6 +95,14 @@ struct client_op {
       , {"Login test with ret = -2:    ok"}};
    }
 
+   auto make_sms_tm_laucher_op3() const
+   {
+      return launcher_op
+      { 2 * users_size, 3 * users_size
+      , std::chrono::milliseconds {launch_interval}
+      , {"Login test with ret = -3:    ok"}};
+   }
+
    auto make_wrong_sms_cf() const
    {
       return launcher_op
@@ -225,12 +233,20 @@ void basic_tests(client_op const& op)
                     , op.make_sms_tm_laucher_op1()
                     )->run({});
 
-   // Same as above but socket is shutdown.
+   // Same as above but socket is shutdown and closed.
    std::make_shared< session_launcher<client_mgr_login>
                    >( ioc
                     , cmgr_login_cf { "" , "ok" , -2 }
                     , op.make_session_cf()
                     , op.make_sms_tm_laucher_op2()
+                    )->run({});
+
+   // Same as above but socket is only closed.
+   std::make_shared< session_launcher<client_mgr_login>
+                   >( ioc
+                    , cmgr_login_cf { "" , "ok" , -3 }
+                    , op.make_session_cf()
+                    , op.make_sms_tm_laucher_op3()
                     )->run({});
 
    // Sends sms on time but the wrong one and expects the server to

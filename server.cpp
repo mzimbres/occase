@@ -38,7 +38,7 @@ struct server_op {
 
    auto session_config() const noexcept
    {
-      return server_session_config
+      return server_session_timeouts
       { std::chrono::seconds {auth_timeout}
       , std::chrono::seconds {sms_timeout}
       , std::chrono::seconds {handshake_timeout}
@@ -99,11 +99,14 @@ int main(int argc, char* argv[])
       boost::asio::io_context ioc {1};
 
       auto sm = std::make_shared<server_mgr>();
+      auto ss_tms = std::make_shared< const server_session_timeouts
+                                    >(op.session_config());
 
       auto lst =
          std::make_shared<listener>( ioc 
                                    , tcp::endpoint {address, op.port}
-                                   , sm, op.session_config());
+                                   , sm
+                                   , ss_tms);
       lst->run();
 
       boost::asio::signal_set signals(ioc, SIGINT, SIGTERM);

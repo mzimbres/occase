@@ -14,14 +14,11 @@
 #include "config.hpp"
 #include "server_mgr.hpp"
 
-// TODO: Think whether having one such struct per session consumes
-// more memory than we want and whether we should store a pointer to a
-// shared object instead.
-struct server_session_config {
-   const std::chrono::seconds auth_timeout {2};
-   const std::chrono::seconds sms_timeout {2};
-   const std::chrono::seconds handshake_timeout {2};
-   const std::chrono::seconds pong_timeout {2};
+struct server_session_timeouts {
+   std::chrono::seconds auth {2};
+   std::chrono::seconds sms {2};
+   std::chrono::seconds handshake {2};
+   std::chrono::seconds pong {2};
 };
 
 enum class ping_pong
@@ -39,7 +36,7 @@ private:
    boost::asio::steady_timer timer;
    boost::beast::multi_buffer buffer;
 
-   server_session_config cf;
+   std::shared_ptr<const server_session_timeouts> ss_tms;
    std::shared_ptr<server_mgr> sd;
    std::string user_id;
    std::string sms;
@@ -63,7 +60,8 @@ public:
    explicit
    server_session( tcp::socket socket
                  , std::shared_ptr<server_mgr> sd_
-                 , server_session_config cf_);
+                 , std::shared_ptr< const server_session_timeouts
+                                  > ss_tms_);
    ~server_session();
 
    void do_accept();

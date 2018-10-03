@@ -19,11 +19,11 @@ void fail(boost::system::error_code ec, char const* what)
 listener::listener( boost::asio::io_context& ioc
                   , tcp::endpoint endpoint
                   , std::shared_ptr<server_mgr> sd_
-                  , server_session_config cf_)
+                  , std::shared_ptr<const server_session_timeouts> ss_tms_)
 : acceptor(ioc)
 , socket(ioc)
 , sd(sd_)
-, cf(cf_)
+, ss_tms(ss_tms_)
 {
    boost::system::error_code ec;
 
@@ -89,7 +89,7 @@ void listener::on_accept(boost::system::error_code ec)
    }
 
    std::make_shared<server_session>( std::move(socket)
-                                   , sd, cf)->do_accept();
+                                   , sd, ss_tms)->do_accept();
 
    do_accept();
 }

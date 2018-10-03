@@ -16,13 +16,13 @@ private:
    tcp::acceptor acceptor;
    tcp::socket socket;
    std::shared_ptr<server_mgr> sd;
-   server_session_config cf;
+   std::shared_ptr<const server_session_timeouts> ss_tms;
 
 public:
    listener( boost::asio::io_context& ioc
            , tcp::endpoint endpoint
            , std::shared_ptr<server_mgr> sd_
-           , server_session_config cf_);
+           , std::shared_ptr<const server_session_timeouts> ss_tms_);
    void run();
    void do_accept();
    void on_accept(boost::system::error_code ec);

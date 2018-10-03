@@ -18,12 +18,12 @@ void fail(boost::system::error_code ec, char const* what)
 
 listener::listener( boost::asio::io_context& ioc
                   , tcp::endpoint endpoint
-                  , std::shared_ptr<server_mgr> sd_
-                  , std::shared_ptr<const server_session_timeouts> ss_tms_)
+                  , std::shared_ptr<server_mgr> mgr_
+                  , std::shared_ptr<const server_session_timeouts> timeouts)
 : acceptor(ioc)
 , socket(ioc)
-, sd(sd_)
-, ss_tms(ss_tms_)
+, mgr(mgr_)
+, timeouts(timeouts)
 {
    boost::system::error_code ec;
 
@@ -80,7 +80,7 @@ void listener::on_accept(boost::system::error_code ec)
          // An accepted that has been canceled is to be interpreted
          // for now as a shutdown operation so that we have to perform
          // some further cleanup.
-         sd->shutdown();
+         mgr->shutdown();
          return;
       }
 
@@ -89,7 +89,8 @@ void listener::on_accept(boost::system::error_code ec)
    }
 
    std::make_shared<server_session>( std::move(socket)
-                                   , sd, ss_tms)->do_accept();
+                                   , session_shared {mgr, timeouts}
+                                   )->do_accept();
 
    do_accept();
 }

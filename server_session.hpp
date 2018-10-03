@@ -21,6 +21,11 @@ struct server_session_timeouts {
    std::chrono::seconds pong {2};
 };
 
+struct session_shared {
+   std::shared_ptr<server_mgr> mgr;
+   std::shared_ptr<const server_session_timeouts> timeouts;
+};
+
 enum class ping_pong
 { ping_sent
 , pong_received
@@ -36,8 +41,7 @@ private:
    boost::asio::steady_timer timer;
    boost::beast::multi_buffer buffer;
 
-   std::shared_ptr<const server_session_timeouts> ss_tms;
-   std::shared_ptr<server_mgr> sd;
+   session_shared shared;
    std::string user_id;
    std::string sms;
    std::queue<std::string> msg_queue;
@@ -58,10 +62,7 @@ private:
 
 public:
    explicit
-   server_session( tcp::socket socket
-                 , std::shared_ptr<server_mgr> sd_
-                 , std::shared_ptr< const server_session_timeouts
-                                  > ss_tms_);
+   server_session(tcp::socket socket, session_shared shared_);
    ~server_session();
 
    void do_accept();

@@ -16,20 +16,17 @@ void fail(boost::system::error_code ec, char const* what)
 }
 
 server_session::server_session( tcp::socket socket
-                              , std::shared_ptr<server_mgr> sd_
-                              , std::shared_ptr< const server_session_timeouts
-                                               > ss_tms_)
+                              , session_shared shared_)
 : ws(std::move(socket))
 , strand(ws.get_executor())
 , timer( ws.get_executor().context()
        , std::chrono::steady_clock::time_point::max())
-, ss_tms(ss_tms_)
-, sd(sd_)
+, shared(shared_)
 { }
 
 server_session::~server_session()
 {
-   sd->release_user(user_id);
+   shared.mgr->release_user(user_id);
 }
 
 void server_session::do_accept()
@@ -51,7 +48,7 @@ void server_session::do_accept()
 
    ws.control_callback(handler0);
 
-   timer.expires_after(ss_tms->handshake);
+   timer.expires_after(shared.timeouts->handshake);
 
    auto const handler1 = [p = shared_from_this()](auto ec)
    {
@@ -96,7 +93,7 @@ void server_session::on_accept(boost::system::error_code ec)
    // The cancelling of this timer should happen when either
    // 1. The session is autheticated or a login is performed.
    // 2. The user requests a login.
-   timer.expires_after(ss_tms->auth);
+   timer.expires_after(shared.timeouts->auth);
 
    auto const handler = [p = shared_from_this()](auto ec)
    {
@@ -164,7 +161,7 @@ void server_session::do_close()
 
 void server_session::do_pong_wait()
 {
-   timer.expires_after(ss_tms->pong);
+   timer.expires_after(shared.timeouts->pong);
 
    auto const handler = [p = shared_from_this()](auto ec)
    {
@@ -233,7 +230,7 @@ void server_session::handle_ev(ev_res r)
          // Successful login request which means the ongoing
          // connection timer  has to be canceled.  This is where we
          // have to set the sms timeout.
-         auto const n = timer.expires_after(ss_tms->sms);
+         auto const n = timer.expires_after(shared.timeouts->sms);
 
          auto const handler = [p = shared_from_this()](auto ec)
          {
@@ -317,7 +314,7 @@ void server_session::on_read( boost::system::error_code ec
    try {
       auto const msg = boost::beast::buffers_to_string(buffer.data());
       buffer.consume(std::size(buffer));
-      auto const r = sd->on_read(std::move(msg), shared_from_this());
+      auto const r = shared.mgr->on_read(std::move(msg), shared_from_this());
       handle_ev(r);
       do_read();
    } catch (...) {

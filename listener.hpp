@@ -7,9 +7,7 @@
 #include "config.hpp"
 #include "server_session.hpp"
 
-// TODO: Understand why a forward declaration is no working.
-//class server_mgr;
-#include "server_mgr.hpp"
+class server_mgr;
 
 class listener : public std::enable_shared_from_this<listener> {
 private:

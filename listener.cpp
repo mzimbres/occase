@@ -2,9 +2,8 @@
 
 #include <iostream>
 
-//#include <boost/beast/core.hpp>
-
 #include "server_session.hpp"
+#include "server_mgr.hpp"
 
 namespace
 {

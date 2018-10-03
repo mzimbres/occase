@@ -89,7 +89,6 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
                                  , std::size_t bytes_transferred
                                  , tcp::resolver::results_type results)
 {
-   std::string str;
    boost::ignore_unused(bytes_transferred);
 
    if (ec) {
@@ -121,7 +120,10 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
    }
 
    ++recv_msgs;
-   str = boost::beast::buffers_to_string(buffer.data());
+   auto str = boost::beast::buffers_to_string(buffer.data());
+   if (std::empty(str))
+      throw std::runtime_error("client_session::on_read: msg empty.");
+
    buffer.consume(std::size(buffer));
    json j = json::parse(str);
    //std::cout << "Received: " << str << std::endl;

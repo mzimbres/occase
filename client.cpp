@@ -66,7 +66,7 @@ struct client_op {
       return launcher_op
       { 0, handshake_tm_test_size
       , std::chrono::milliseconds {launch_interval}
-      , {"Handshake test launch:           ok"}
+      , {"Handshake test launch:        "}
       };
    }
 
@@ -75,7 +75,7 @@ struct client_op {
       return launcher_op
       { 0, handshake_tm_test_size
       , std::chrono::milliseconds {launch_interval}
-      , {"After handshake test launch:     ok"}
+      , {"After handshake test launch:  "}
       };
    }
 
@@ -84,7 +84,7 @@ struct client_op {
       return launcher_op
       { 0, users_size
       , std::chrono::milliseconds {launch_interval}
-      , {"Login test with ret = -1:        ok"}};
+      , {"Login test with ret = -1:     "}};
    }
 
    auto make_sms_tm_laucher_op2() const
@@ -92,7 +92,7 @@ struct client_op {
       return launcher_op
       { users_size, 2 * users_size
       , std::chrono::milliseconds {launch_interval}
-      , {"Login test with ret = -2:        ok"}};
+      , {"Login test with ret = -2:     "}};
    }
 
    auto make_sms_tm_laucher_op3() const
@@ -100,7 +100,7 @@ struct client_op {
       return launcher_op
       { 2 * users_size, 3 * users_size
       , std::chrono::milliseconds {launch_interval}
-      , {"Login test with ret = -3:        ok"}};
+      , {"Login test with ret = -3:     "}};
    }
 
    auto make_wrong_sms_cf1() const
@@ -108,7 +108,7 @@ struct client_op {
       return launcher_op
       { 3 * users_size, 4 * users_size
       , std::chrono::milliseconds {launch_interval}
-      , {"Wrong sms test with ret = -1:    ok"}
+      , {"Wrong sms test with ret = -1: "}
       };
    }
 
@@ -117,7 +117,7 @@ struct client_op {
       return launcher_op
       { 4 * users_size, 5 * users_size
       , std::chrono::milliseconds {launch_interval}
-      , {"Wrong sms test with ret = -2:    ok"}
+      , {"Wrong sms test with ret = -2: "}
       };
    }
 
@@ -126,7 +126,7 @@ struct client_op {
       return launcher_op
       { 5 * users_size, 6 * users_size
       , std::chrono::milliseconds {launch_interval}
-      , {"Wrong sms test with ret = -3:    ok"}
+      , {"Wrong sms test with ret = -3: "}
       };
    }
 
@@ -135,7 +135,7 @@ struct client_op {
       return launcher_op
       { 6 * users_size, 7 * users_size
       , std::chrono::milliseconds {launch_interval}
-      , {"Correct sms test with ret = -1:  ok"}
+      , {"Correct sms test with ret = -1:"}
       };
    }
 
@@ -144,7 +144,7 @@ struct client_op {
       return launcher_op
       { 7 * users_size, 8 * users_size
       , std::chrono::milliseconds {launch_interval}
-      , {"Correct sms test with ret = -2:  ok"}
+      , {"Correct sms test with ret = -2:"}
       };
    }
 
@@ -153,7 +153,7 @@ struct client_op {
       return launcher_op
       { 8 * users_size, 9 * users_size
       , std::chrono::milliseconds {launch_interval}
-      , {"Correct sms test with ret = -3:  ok"}
+      , {"Correct sms test with ret = -3:"}
       };
    }
 
@@ -162,7 +162,7 @@ struct client_op {
       return launcher_op
       { 0, users_size
       , std::chrono::milliseconds {launch_interval}
-      , {""}
+      , {"Launch of sim clients:         "}
       };
    }
 };
@@ -216,7 +216,8 @@ public:
 
       if (lop.begin == lop.end) {
          if (!std::empty(lop.final_msg))
-            std::cout << lop.final_msg << std::endl;
+            std::cout << lop.final_msg << " "
+                      << lop.end << std::endl;
          return;
       }
 

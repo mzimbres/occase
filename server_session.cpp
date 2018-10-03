@@ -22,11 +22,14 @@ server_session::server_session( tcp::socket socket
 , timer( ws.get_executor().context()
        , std::chrono::steady_clock::time_point::max())
 , shared(shared_)
-{ }
+{
+   ++shared.stats->number_of_sessions;
+}
 
 server_session::~server_session()
 {
    shared.mgr->release_user(user_id);
+   --shared.stats->number_of_sessions;
 }
 
 void server_session::do_accept()

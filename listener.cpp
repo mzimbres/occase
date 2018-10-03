@@ -24,6 +24,8 @@ listener::listener( boost::asio::io_context& ioc
 , socket(ioc)
 , mgr(mgr_)
 , timeouts(timeouts_)
+, stats(std::make_shared<sessions_stats>())
+, session_stats_timer(ioc)
 {
    boost::system::error_code ec;
 
@@ -56,12 +58,47 @@ listener::listener( boost::asio::io_context& ioc
    }
 }
 
+listener::~listener()
+{
+   stop();
+}
+
+void listener::stop()
+{
+   acceptor.cancel();
+   session_stats_timer.cancel();
+}
+
+void listener::do_stats_logger()
+{
+   session_stats_timer.expires_after(std::chrono::seconds{1});
+
+   auto handler = [p = shared_from_this()](auto ec)
+   {
+      if (ec) {
+         if (ec == boost::asio::error::operation_aborted)
+            return;
+
+         return;
+      }
+      
+      std::cout << "Current number of sessions: "
+                << p->stats->number_of_sessions
+                << std::endl;
+
+      p->do_stats_logger();
+   };
+
+   session_stats_timer.async_wait(handler);
+}
+
 void listener::run()
 {
    if (!acceptor.is_open())
       return;
 
    do_accept();
+   do_stats_logger();
 }
 
 void listener::do_accept()
@@ -89,7 +126,7 @@ void listener::on_accept(boost::system::error_code ec)
    }
 
    std::make_shared<server_session>( std::move(socket)
-                                   , session_shared {mgr, timeouts}
+                                   , session_shared {mgr, timeouts, stats}
                                    )->do_accept();
 
    do_accept();

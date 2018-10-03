@@ -3,6 +3,7 @@
 #include <queue>
 #include <chrono>
 #include <memory>
+#include <atomic>
 
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
@@ -21,9 +22,14 @@ struct server_session_timeouts {
    std::chrono::seconds pong {2};
 };
 
+struct sessions_stats {
+   std::atomic<int> number_of_sessions {0};
+};
+
 struct session_shared {
    std::shared_ptr<server_mgr> mgr;
    std::shared_ptr<const server_session_timeouts> timeouts;
+   std::shared_ptr<sessions_stats> stats;
 };
 
 enum class ping_pong

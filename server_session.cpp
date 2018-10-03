@@ -93,9 +93,9 @@ void server_session::on_accept(boost::system::error_code ec)
    }
 
    // The cancelling of this timer should happen when either
-   // 1. The user Identifies himself.
+   // 1. The session is autheticated or a login is performed.
    // 2. The user requests a login.
-   timer.expires_after(cf.on_acc_timeout);
+   timer.expires_after(cf.auth_timeout);
 
    auto const handler = [p = shared_from_this()](auto ec)
    {
@@ -163,7 +163,7 @@ void server_session::do_close()
 
 void server_session::do_pong_wait()
 {
-   timer.expires_after(cf.pong_wait_timeout);
+   timer.expires_after(cf.pong_timeout);
 
    auto const handler = [p = shared_from_this()](auto ec)
    {

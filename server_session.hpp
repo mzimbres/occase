@@ -18,10 +18,10 @@
 // more memory than we want and whether we should store a pointer to a
 // shared object instead.
 struct server_session_config {
-   std::chrono::seconds on_acc_timeout {2};
-   std::chrono::seconds sms_timeout {2};
-   std::chrono::seconds handshake_timeout {2};
-   std::chrono::seconds pong_wait_timeout {2};
+   const std::chrono::seconds auth_timeout {2};
+   const std::chrono::seconds sms_timeout {2};
+   const std::chrono::seconds handshake_timeout {2};
+   const std::chrono::seconds pong_timeout {2};
 };
 
 enum class ping_pong

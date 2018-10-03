@@ -31,16 +31,19 @@ namespace po = boost::program_options;
 struct server_op {
    std::string ip;
    unsigned short port;
-   int on_acc_timeout;
+   int auth_timeout;
    int sms_timeout;
    int handshake_timeout;
+   int pong_timeout;
 
    auto session_config() const noexcept
    {
       return server_session_config
-      { std::chrono::seconds {on_acc_timeout}
+      { std::chrono::seconds {auth_timeout}
       , std::chrono::seconds {sms_timeout}
-      , std::chrono::seconds {handshake_timeout}};
+      , std::chrono::seconds {handshake_timeout}
+      , std::chrono::seconds {pong_timeout}
+      };
    }
 };
 
@@ -50,22 +53,36 @@ int main(int argc, char* argv[])
       server_op op;
       po::options_description desc("Options");
       desc.add_options()
-         ("help,h", "produce help message")
+         ("help,h", "Produces help message")
          ( "port,p"
          , po::value<unsigned short>(&op.port)->default_value(8080)
-         , "Server port.")
+         , "Server listening port."
+         )
          ("ip,d"
          , po::value<std::string>(&op.ip)->default_value("127.0.0.1")
-         , "Server ip address.")
+         , "Server ip address."
+         )
          ("sms-timeout,s"
          , po::value<int>(&op.sms_timeout)->default_value(2)
-         , "SMS confirmation timeout in seconds.")
-         ("accept-timeout,a"
-         , po::value<int>(&op.on_acc_timeout)->default_value(2)
-         , "On accept timeout in seconds.")
+         , "SMS confirmation timeout in seconds."
+         )
+         ("auth-timeout,a"
+         , po::value<int>(&op.auth_timeout)->default_value(2)
+         , "Authetication timeout in seconds. Fired after the websocket "
+           "handshake completes. Used also by the login "
+           "command for clients registering for the first time."
+         )
          ("handshake-timeout,k"
          , po::value<int>(&op.handshake_timeout)->default_value(2)
-         , "Handshake timeout in seconds.")
+         , "Handshake timeout in seconds. If the websocket handshake lasts "
+           "more than that the socket is shutdown and closed."
+         )
+         ("pong-timeout,r"
+         , po::value<int>(&op.pong_timeout)->default_value(2)
+         , "Pong timeout in seconds. This is the time the client has to "
+           "reply a ping frame sent by the server. If a pong is received "
+           "on time a new ping is sent on timer expiration."
+         )
       ;
 
       po::variables_map vm;        

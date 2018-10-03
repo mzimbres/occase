@@ -11,21 +11,21 @@
 class server_session;
 
 enum class ev_res
-{ LOGIN_OK
-, LOGIN_FAIL
-, AUTH_OK
-, AUTH_FAIL
-, SMS_CONFIRMATION_OK
-, SMS_CONFIRMATION_FAIL
-, CREATE_GROUP_OK
-, CREATE_GROUP_FAIL
-, JOIN_GROUP_OK
-, JOIN_GROUP_FAIL
-, GROUP_MSG_OK
-, GROUP_MSG_FAIL
-, USER_MSG_OK
-, USER_MSG_FAIL
-, UNKNOWN
+{ login_ok
+, login_fail
+, auth_ok
+, auth_fail
+, sms_confirmation_ok
+, sms_confirmation_fail
+, create_group_ok
+, create_group_fail
+, join_group_ok
+, join_group_fail
+, group_msg_ok
+, group_msg_fail
+, user_msg_ok
+, user_msg_fail
+, unknown
 };
 
 class server_mgr {

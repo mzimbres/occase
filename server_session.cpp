@@ -225,7 +225,7 @@ void server_session::do_ping()
 void server_session::handle_ev(ev_res r)
 {
    switch (r) {
-      case ev_res::LOGIN_OK:
+      case ev_res::login_ok:
       {
          // Successful login request which means the ongoing
          // connection timer  has to be canceled.  This is where we
@@ -253,19 +253,19 @@ void server_session::handle_ev(ev_res r)
          assert(n > 0);
       }
       break;
-      case ev_res::SMS_CONFIRMATION_OK:
+      case ev_res::sms_confirmation_ok:
       {
          do_ping();
       }
       break;
-      case ev_res::AUTH_OK:
+      case ev_res::auth_ok:
       {
          do_ping();
       }
       break;
-      case ev_res::LOGIN_FAIL:
-      case ev_res::AUTH_FAIL:
-      case ev_res::SMS_CONFIRMATION_FAIL:
+      case ev_res::login_fail:
+      case ev_res::auth_fail:
+      case ev_res::sms_confirmation_fail:
       {
          timer.cancel();
          do_close();

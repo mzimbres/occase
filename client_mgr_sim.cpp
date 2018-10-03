@@ -9,9 +9,6 @@ client_mgr_sim::client_mgr_sim(options_type op_)
    auto const menu = gen_location_menu();
    auto const hashes_ = get_hashes(menu);
 
-   if (std::empty(hashes_))
-      throw std::runtime_error("client_mgr_sim: Stack is empty.");
-
    for (auto const& o : hashes_) {
       hashes.push(o);
       json cmd;
@@ -19,6 +16,12 @@ client_mgr_sim::client_mgr_sim(options_type op_)
       cmd["hash"] = o;
       cmds.push(cmd.dump());
    }
+
+   if (std::size(hashes) != std::size(cmds))
+      throw std::runtime_error("client_mgr_sim: Invalid sizes.");
+
+   if (std::empty(hashes))
+      throw std::runtime_error("client_mgr_sim: Stack is empty.");
 }
 
 int client_mgr_sim::on_read(json j, std::shared_ptr<client_type> s)
@@ -41,6 +44,9 @@ int client_mgr_sim::on_read(json j, std::shared_ptr<client_type> s)
    if (cmd == "join_group_ack") {
       auto const res = j["result"].get<std::string>();
       if (res == op.expected) {
+         if (std::empty(cmds))
+            throw std::runtime_error("Stack not suposed to be empty.");
+
          cmds.pop();
          if (std::empty(cmds)) {
             //std::cout << "Test sim: join groups ok." << std::endl;

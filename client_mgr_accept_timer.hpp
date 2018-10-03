@@ -37,6 +37,7 @@ public:
    int on_write(std::shared_ptr<client_type> s) const;
    int on_handshake(std::shared_ptr<client_type> s) const;
    int on_connect() const;
+   auto get_user() const {return "aaaaaa";}
 };
 
 class client_mgr_accept_timer {
@@ -59,5 +60,6 @@ public:
    int on_write(std::shared_ptr<client_type> s);
    int on_handshake(std::shared_ptr<client_type> s) { return -1;}
    int on_connect() const noexcept { return 1;}
+   auto get_user() const {return "aaaaaa";}
 };
 

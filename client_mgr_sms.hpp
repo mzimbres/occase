@@ -35,6 +35,7 @@ public:
    int on_closed(boost::system::error_code ec) {return 1;};
    int on_handshake(std::shared_ptr<client_type> s);
    int on_connect() const noexcept { return 1;}
+   auto get_user() const {return op.user;}
 };
 
 // Tries to authenticate a session with the user bind provided on the
@@ -54,5 +55,6 @@ public:
    int on_closed(boost::system::error_code ec);
    int on_handshake(std::shared_ptr<client_type> s);
    int on_connect() const noexcept { return 1;}
+   auto get_user() const {return "dddddd";}
 };
 

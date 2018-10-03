@@ -100,8 +100,6 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
             return;
          }
 
-         // The manager wants us to reconnect to continue with its
-         // tests.
          buffer.consume(buffer.size());
 
          std::cout << "Leaving on read 2." << std::endl;
@@ -109,8 +107,8 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
       }
 
       if (ec == boost::asio::error::operation_aborted) {
-         // I am unsure by this may be caused by a do_close.
-         std::cout << "Leaving on read 3." << std::endl;
+         std::cout << "Leaving on read 3: " << mgr.get_user()
+                   << std::endl;
          timer.cancel();
          return;
       }

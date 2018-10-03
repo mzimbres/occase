@@ -39,7 +39,7 @@ void server_session::do_accept()
       if (kind == boost::beast::websocket::frame_type::close) {
          //std::cout << "Close frame received." << std::endl;
       } else if (kind == boost::beast::websocket::frame_type::ping) {
-         std::cout << "Ping frame received." << std::endl;
+         //std::cout << "Ping frame received." << std::endl;
       } else if (kind == boost::beast::websocket::frame_type::pong) {
          std::cout << "Pong frame received." << std::endl;
          ping_pong_state = 2;
@@ -59,7 +59,6 @@ void server_session::do_accept()
             return;
 
          fail(ec, "do_accept_timer");
-         assert(false);
          return;
       }
 
@@ -162,25 +161,65 @@ void server_session::do_close()
    ws.async_close(reason, handler);
 }
 
-
-void server_session::ping_handler(boost::system::error_code ec)
+void server_session::do_pong_wait()
 {
-   if (ec) {
-      if (ec == boost::asio::error::operation_aborted) {
-         // A closed frame has been sent or received before
-         // the ping was sent. we have nothing to do except
-         // perhaps for seting ping_state to an irrelevant
-         // state.
-         ping_pong_state = 0;
+   timer.expires_after(cf.pong_wait_timeout);
+
+   auto const handler = [p = shared_from_this()](auto ec)
+   {
+      if (ec) {
+         if (ec == boost::asio::error::operation_aborted) {
+            // Either the deadline has moved or the timer has been
+            // canceled.
+            return;
+         }
+
+         fail(ec, "pong_wait_handler.");
          return;
       }
 
-      fail(ec, "Ping handler");
-      return;
-   }
+      // The timer expired.
+      if (p->ping_pong_state == 1) {
+         // We did not receive the pong. We can shutdown and close the
+         // socket.
+         p->ws.next_layer().shutdown(tcp::socket::shutdown_both, ec);
+         p->ws.next_layer().close(ec);
+         return;
+      }
 
-   // Sets the ping state to "ping sent".
-   ping_pong_state = 1;
+      // The pong was received on time. We can initiate a new ping.
+      p->do_ping();
+   };
+
+   timer.async_wait(handler);
+}
+
+void server_session::do_ping()
+{
+   auto const handler = [p = shared_from_this()](auto ec)
+   {
+      if (ec) {
+         if (ec == boost::asio::error::operation_aborted) {
+            // A closed frame has been sent or received before
+            // the ping was sent. We have nothing to do except
+            // perhaps for seting ping_state to an irrelevant
+            // state.
+            p->ping_pong_state = 0;
+            return;
+         }
+
+         fail(ec, "Ping handler");
+         return;
+      }
+
+      // Sets the ping state to "ping sent".
+      p->ping_pong_state = 1;
+
+      // Inititates a wait on the pong.
+      p->do_pong_wait();
+   };
+
+   ws.async_ping({}, handler);
 }
 
 void server_session::handle_ev(ev_res r)
@@ -216,33 +255,18 @@ void server_session::handle_ev(ev_res r)
       break;
       case ev_res::SMS_CONFIRMATION_OK:
       {
-         // This means the sms authentification was successfull and
-         // that we have to cancel the sms timer.
-         timer.cancel();
-         auto const handler = [p = shared_from_this()](auto ec)
-         {
-            p->ping_handler(ec);
-         };
-
-         ws.async_ping({}, handler);
+         do_ping();
       }
       break;
       case ev_res::AUTH_OK:
       {
-         timer.cancel();
-         auto const handler = [p = shared_from_this()](auto ec)
-         {
-            p->ping_handler(ec);
-         };
-
-         ws.async_ping({}, handler);
+         do_ping();
       }
       break;
       case ev_res::LOGIN_FAIL:
       case ev_res::AUTH_FAIL:
       case ev_res::SMS_CONFIRMATION_FAIL:
       {
-         // Drops the session.
          timer.cancel();
          do_close();
       }

@@ -21,6 +21,7 @@ struct server_session_config {
    std::chrono::seconds on_acc_timeout {2};
    std::chrono::seconds sms_timeout {2};
    std::chrono::seconds handshake_timeout {2};
+   std::chrono::seconds pong_wait_timeout {2};
 };
 
 // TODO: Implementing control frames as in Beast advanced example.
@@ -50,7 +51,8 @@ private:
    void on_write( boost::system::error_code ec
                 , std::size_t bytes_transferred);
    void handle_ev(ev_res r);
-   void ping_handler(boost::system::error_code ec);
+   void do_ping();
+   void do_pong_wait();
 
 public:
    explicit

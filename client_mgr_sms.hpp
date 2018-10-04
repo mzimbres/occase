@@ -41,16 +41,22 @@ public:
 // Tries to authenticate a session with the user bind provided on the
 // sms commands.
 
-class client_mgr_auth {
-private:
-   using client_type = client_session<client_mgr_auth>;
+struct cmgr_auth_op {
    std::string user;
    std::string expected;
+};
+
+class client_mgr_auth {
+public:
+   using options_type = cmgr_auth_op;
+private:
+   using client_type = client_session<client_mgr_auth>;
+   options_type op;
 
 public:
-   client_mgr_auth(std::string bind_, std::string exp)
-   : user(bind_)
-   , expected(exp) {}
+   client_mgr_auth(options_type op_)
+   : op(op_)
+   {}
    int on_read(json j, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec);
    int on_handshake(std::shared_ptr<client_type> s);

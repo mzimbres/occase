@@ -49,6 +49,7 @@ private:
    std::string cmd;
 
 public:
+   using options_type = std::string;
    client_mgr_login_typo(std::string cmd);
    int on_read(json j, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec);

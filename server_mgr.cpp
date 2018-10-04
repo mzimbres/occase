@@ -8,9 +8,6 @@ server_mgr::on_read(std::string msg, std::shared_ptr<server_session> s)
    //std::cout << j << std::endl;
    auto const cmd = j.at("cmd").get<std::string>();
 
-   if (cmd == "create_group")
-      return on_create_group(std::move(j), s);
-
    if (s->is_waiting_auth()) {
       if (cmd == "login")
          return on_login(std::move(j), s);
@@ -31,6 +28,8 @@ server_mgr::on_read(std::string msg, std::shared_ptr<server_session> s)
    }
 
    if (s->is_auth()) {
+      if (cmd == "create_group")
+         return on_create_group(std::move(j), s);
 
       if (cmd == "join_group")
          return on_join_group(std::move(j), s);
@@ -159,7 +158,6 @@ server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
       return ev_res::create_group_fail;
    }
 
-   //std::cout << "ok" << j << std::endl;
    json resp;
    resp["cmd"] = "create_group_ack";
    resp["result"] = "ok";

@@ -60,7 +60,7 @@ int client_mgr_auth::on_read(json j, std::shared_ptr<client_type> s)
 
    if (cmd == "auth_ack") {
       auto res = j["result"].get<std::string>();
-      if (res == expected) {
+      if (res == op.expected) {
          //std::cout << "Test auth: ok." << std::endl;
          return -1;
       }
@@ -78,7 +78,7 @@ int client_mgr_auth::on_handshake(std::shared_ptr<client_type> s)
 {
    json j;
    j["cmd"] = "auth";
-   j["from"] = user;
+   j["from"] = op.user;
    s->send_msg(j.dump());
    return 1;
 }

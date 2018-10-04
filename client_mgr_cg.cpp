@@ -6,9 +6,23 @@ int client_mgr_cg::on_read(json j, std::shared_ptr<client_type> s)
 {
    auto const cmd = j["cmd"].get<std::string>();
 
+   if (cmd == "auth_ack") {
+      auto const res = j["result"].get<std::string>();
+      if (res == "ok") {
+         std::cout << "Auth ok." << std::endl;
+         s->send_msg(cmds.top());
+         //std::cout << "Sending " << cmds.top() << std::endl;
+         return 1;
+      }
+
+      std::cout << "Test auth: " << res << std::endl;
+      throw std::runtime_error("client_mgr_cg::on_read1");
+      return -1;
+   }
+
    if (cmd == "create_group_ack") {
       auto const res = j["result"].get<std::string>();
-      if (res == expected) {
+      if (res == op.expected) {
          //std::cout << "Test cg: ok." << std::endl;
          //std::cout << "poping " << cmds.top() << std::endl;
          cmds.pop();
@@ -22,25 +36,44 @@ int client_mgr_cg::on_read(json j, std::shared_ptr<client_type> s)
       }
 
       std::cout << "Test cg: create_group_ack fail." << std::endl;
-      throw std::runtime_error("client_mgr_cg::on_read");
+      throw std::runtime_error("client_mgr_cg::on_read2");
       return -1;
    }
 
    std::cout << "Server error: Unknown command." << std::endl;
-   throw std::runtime_error("client_mgr_cg::on_read");
+   throw std::runtime_error("client_mgr_cg::on_read3");
    return -1;
+}
+
+client_mgr_cg::client_mgr_cg(options_type op_)
+: op(op_)
+{
+
+   auto const menu = gen_location_menu();
+   auto const cmds_ = gen_create_groups(menu);
+
+   if (std::empty(cmds_))
+      throw std::runtime_error("client_mgr_cg: Stack is empty.");
+
+   for (auto const& o : cmds_)
+      cmds.push(std::move(o));
+
+   //std::cout << "Ctor stack size: " << std::size(cmds) << std::endl;
 }
 
 client_mgr_cg::~client_mgr_cg()
 {
    // TODO: Why is this constructor being called twice?
-   //std::cout << "Stack: " << std::empty(cmds) << std::endl;
-   //assert(std::empty(cmds));
+   //std::cout << "Dtor stack: " << std::size(cmds) << std::endl;
+   assert(std::empty(cmds));
 }
 
 int client_mgr_cg::on_handshake(std::shared_ptr<client_type> s)
 {
-   s->send_msg(cmds.top());
+   json j;
+   j["cmd"] = "auth";
+   j["from"] = op.user;
+   s->send_msg(j.dump());
    return 1;
 }
 

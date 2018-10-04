@@ -61,10 +61,11 @@ private:
    void do_write(std::string msg);
 
 public:
+   using mgr_op_type = typename Mgr::options_type;
    explicit
    client_session( boost::asio::io_context& ioc
                  , client_session_cf op_
-                 , Mgr const& m);
+                 , mgr_op_type const& m);
 
    ~client_session()
    {
@@ -118,13 +119,13 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
    }
 
    ++recv_msgs;
-   auto str = boost::beast::buffers_to_string(buffer.data());
+   auto const str = boost::beast::buffers_to_string(buffer.data());
    if (std::empty(str))
       throw std::runtime_error("client_session::on_read: msg empty.");
 
+   //std::cout << "Received: " << str << std::endl;
    buffer.consume(std::size(buffer));
    json j = json::parse(str);
-   //std::cout << "Received: " << str << std::endl;
 
    // Here we are canceling the handshake timeout. The timer will
    // however be called every time this function is called.
@@ -154,7 +155,7 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
 template <class Mgr>
 client_session<Mgr>::client_session( boost::asio::io_context& ioc
                                    , client_session_cf op_
-                                   , Mgr const& m)
+                                   , mgr_op_type const& m)
 : resolver(ioc)
 , timer(ioc)
 , ws(ioc)

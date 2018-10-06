@@ -32,7 +32,7 @@ public:
    { }
 
    int on_read(std::string msg, std::shared_ptr<client_type> s);
-   int on_closed(boost::system::error_code ec) {return 1;};
+   int on_closed(boost::system::error_code ec) {return -1;};
    int on_handshake(std::shared_ptr<client_type> s);
    int on_connect() const noexcept { return 1;}
    auto get_user() const {return op.user;}

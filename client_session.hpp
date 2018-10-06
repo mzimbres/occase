@@ -112,7 +112,7 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
 
          buffer.consume(buffer.size());
 
-         std::cout << "Leaving on read 2." << std::endl;
+         std::cout << "Leaving on read 2 ..." << std::endl;
          return;
       }
 

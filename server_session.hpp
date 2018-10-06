@@ -65,6 +65,8 @@ private:
    void handle_ev(ev_res r);
    void do_ping();
    void do_pong_wait();
+   void do_close();
+   void do_send(std::string msg);
 
 public:
    explicit
@@ -76,14 +78,14 @@ public:
    auto const& get_sms() const { return sms; }
    void set_user_id(std::string id) {user_id = id;};
    auto get_user_id() const noexcept {return user_id;}
-   void send_msg(std::string msg);
+   void send(std::string msg);
    void promote() { sms.clear(); }
    auto is_waiting_sms() const noexcept
-   {return !std::empty(user_id) && !std::empty(sms);};
+      {return !std::empty(user_id) && !std::empty(sms);};
    auto is_auth() const noexcept
-   {return !std::empty(user_id) && std::empty(sms);};
+      {return !std::empty(user_id) && std::empty(sms);};
    auto is_waiting_auth() const noexcept
-   {return std::empty(user_id) && std::empty(sms);};
-   void do_close();
+      {return std::empty(user_id) && std::empty(sms);};
+   void shutdown();
 };
 

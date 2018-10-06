@@ -121,10 +121,7 @@ void server_session::do_read()
    auto handler = [p = shared_from_this()](auto ec, auto n)
    { p->on_read(ec, n); };
 
-   ws.async_read( buffer
-                , boost::asio::bind_executor(
-                     strand,
-                     handler));
+   ws.async_read(buffer, boost::asio::bind_executor(strand, handler));
 }
 
 void server_session::on_close(boost::system::error_code ec)
@@ -154,11 +151,33 @@ void server_session::do_close()
     closing = true;
 
    //std::cout << "server_session::do_close()" << std::endl;
-   auto handler = [p = shared_from_this()](auto ec)
-   { p->on_close(ec); };
+   auto const handler = [p = shared_from_this()](auto ec)
+   { 
+      p->on_close(ec);
+   };
 
    websocket::close_reason reason {};
-   ws.async_close(reason, handler);
+   ws.async_close(reason, boost::asio::bind_executor(strand, handler));
+}
+
+void server_session::send(std::string msg)
+{
+   auto const handler = [m = std::move(msg), p = shared_from_this()]()
+   {
+      p->do_send(m);
+   };
+
+   boost::asio::post(boost::asio::bind_executor(strand, handler));
+}
+
+void server_session::shutdown()
+{
+   auto const handler = [p = shared_from_this()]()
+   {
+      p->do_close();
+   };
+
+   boost::asio::post(boost::asio::bind_executor(strand, handler));
 }
 
 void server_session::do_pong_wait()
@@ -193,7 +212,7 @@ void server_session::do_pong_wait()
       p->do_ping();
    };
 
-   timer.async_wait(handler);
+   timer.async_wait(boost::asio::bind_executor(strand, handler));
 }
 
 void server_session::do_ping()
@@ -221,7 +240,7 @@ void server_session::do_ping()
       p->do_pong_wait();
    };
 
-   ws.async_ping({}, handler);
+   ws.async_ping({}, boost::asio::bind_executor(strand, handler));
 }
 
 void server_session::handle_ev(ev_res r)
@@ -354,7 +373,7 @@ void server_session::do_write(std::string const& msg)
                  , boost::asio::bind_executor(strand, handler));
 }
 
-void server_session::send_msg(std::string msg)
+void server_session::do_send(std::string msg)
 {
    assert(!std::empty(msg));
 

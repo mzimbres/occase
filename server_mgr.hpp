@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mutex>
 #include <vector>
 #include <memory>
 #include <string>
@@ -30,7 +31,7 @@ enum class ev_res
 
 class server_mgr {
 private:
-   std::string host = "criatura";
+   std::mutex mutex;
 
    // Maps a user id (telephone, email, etc.) to a user obj.
    std::unordered_map< std::string

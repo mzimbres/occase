@@ -59,8 +59,7 @@ client_mgr_cg::client_mgr_cg(options_type op_)
 
 client_mgr_cg::~client_mgr_cg()
 {
-   // TODO: Why is this constructor being called twice?
-   //std::cout << "Dtor stack: " << std::size(cmds) << std::endl;
+   std::cout << "Dtor stack: " << std::size(cmds) << std::endl;
    assert(std::empty(cmds));
 }
 

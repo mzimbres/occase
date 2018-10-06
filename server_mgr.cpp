@@ -153,16 +153,21 @@ server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
       json resp;
       resp["cmd"] = "create_group_ack";
       resp["result"] = "fail";
-      s->send_msg(resp.dump());
-      //std::cout << "fail" << j << std::endl;
+      resp["code"] = hash;
+      auto const tmp = resp.dump();
+      s->send_msg(tmp);
+      //std::cout << tmp << std::endl;
       return ev_res::create_group_fail;
    }
 
    json resp;
    resp["cmd"] = "create_group_ack";
    resp["result"] = "ok";
+   resp["code"] = hash;
+   auto const tmp = resp.dump();
+   std::cout << tmp << std::endl;
 
-   s->send_msg(resp.dump());
+   s->send_msg(std::move(tmp));
    return ev_res::create_group_ok;
 }
 

@@ -35,6 +35,7 @@ struct server_op {
    int sms_timeout;
    int handshake_timeout;
    int pong_timeout;
+   int number_of_threads;
 
    auto session_config() const noexcept
    {
@@ -83,6 +84,12 @@ int main(int argc, char* argv[])
            "reply a ping frame sent by the server. If a pong is received "
            "on time a new ping is sent on timer expiration."
          )
+
+         ("number-of-threads,c"
+         , po::value<int>(&op.number_of_threads)->default_value(1)
+         , "The number of threads for the io_context. This is usually "
+           "the number of processor cores."
+         )
       ;
 
       po::variables_map vm;        
@@ -94,9 +101,15 @@ int main(int argc, char* argv[])
          return 0;
       }
 
+      if (op.number_of_threads < 1) {
+         std::cout << "Number of threads must be at least 1."
+                   << std::endl;
+         return 0;
+      }
+
       auto const address = boost::asio::ip::make_address(op.ip);
 
-      boost::asio::io_context ioc {1};
+      boost::asio::io_context ioc {op.number_of_threads};
 
       auto sm = std::make_shared<server_mgr>();
       auto ss_tms = std::make_shared< const server_session_timeouts
@@ -111,6 +124,12 @@ int main(int argc, char* argv[])
 
       boost::asio::signal_set signals(ioc, SIGINT, SIGTERM);
       signals.async_wait(signal_handler {ioc, lst, sm});
+
+      std::vector<std::thread> threads;
+      threads.reserve(op.number_of_threads - 1);
+
+      for (auto i = 0; i < op.number_of_threads - 1; ++i)
+          threads.emplace_back([&ioc] { ioc.run(); });
 
       ioc.run();
       return 0;

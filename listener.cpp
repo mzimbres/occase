@@ -105,7 +105,9 @@ void listener::run()
 void listener::do_accept()
 {
    auto handler = [p = shared_from_this()](auto ec)
-   { p->on_accept(ec); };
+   {
+      p->on_accept(ec);
+   };
 
    acceptor.async_accept(socket, handler);
 }
@@ -115,8 +117,8 @@ void listener::on_accept(boost::system::error_code ec)
    if (ec) {
       if (ec == boost::asio::error::operation_aborted) {
          std::cout << "Stopping accepting connections ..." << std::endl;
-         // An accepted that has been canceled is to be interpreted
-         // for now as a shutdown operation so that we have to perform
+         // An accept that has been canceled is to be interpreted for
+         // now as a shutdown operation so that we have to perform
          // some further cleanup.
          mgr->shutdown();
          return;

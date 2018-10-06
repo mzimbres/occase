@@ -1,19 +1,21 @@
 #include "server_mgr.hpp"
 #include "server_session.hpp"
 
-ev_res
-server_mgr::on_read(std::string msg, std::shared_ptr<server_session> s)
+ev_res on_message( server_mgr& mgr
+                 , std::shared_ptr<server_session> s
+                 , std::string msg)
 {
    auto const j = json::parse(msg);
    //std::cout << j << std::endl;
+
    auto const cmd = j.at("cmd").get<std::string>();
 
    if (s->is_waiting_auth()) {
       if (cmd == "login")
-         return on_login(std::move(j), s);
+         return mgr.on_login(std::move(j), s);
 
       if (cmd == "auth")
-         return on_auth(std::move(j), s);
+         return mgr.on_auth(std::move(j), s);
 
       std::cerr << "Server: Unknown command " << cmd << std::endl;
       return ev_res::unknown;
@@ -21,7 +23,7 @@ server_mgr::on_read(std::string msg, std::shared_ptr<server_session> s)
 
    if (s->is_waiting_sms()) {
       if (cmd == "sms_confirmation")
-         return on_sms_confirmation(std::move(j), s);
+         return mgr.on_sms_confirmation(std::move(j), s);
 
       std::cerr << "Server: Unknown command " << cmd << std::endl;
       return ev_res::unknown;
@@ -29,16 +31,16 @@ server_mgr::on_read(std::string msg, std::shared_ptr<server_session> s)
 
    if (s->is_auth()) {
       if (cmd == "create_group")
-         return on_create_group(std::move(j), s);
+         return mgr.on_create_group(std::move(j), s);
 
       if (cmd == "join_group")
-         return on_join_group(std::move(j), s);
+         return mgr.on_join_group(std::move(j), s);
 
       if (cmd == "group_msg")
-         return on_group_msg(std::move(msg), std::move(j), s);
+         return mgr.on_group_msg(std::move(msg), std::move(j), s);
 
       if (cmd == "user_msg")
-         return on_user_msg(std::move(j), s);
+         return mgr.on_user_msg(std::move(j), s);
 
       std::cerr << "Server: Unknown command " << cmd << std::endl;
       return ev_res::unknown;

@@ -39,20 +39,22 @@ private:
    // Maps a group id to a group object.
    std::unordered_map<std::string, group> groups;
 
+public:
+   void shutdown();
+   void release_user(std::string id);
+
    ev_res on_login(json j, std::shared_ptr<server_session> s);
    ev_res on_auth(json j, std::shared_ptr<server_session> s);
    ev_res on_sms_confirmation(json j, std::shared_ptr<server_session> s);
    ev_res on_create_group(json j, std::shared_ptr<server_session> s);
    ev_res on_join_group(json j, std::shared_ptr<server_session> session);
+   ev_res on_user_msg(json j, std::shared_ptr<server_session> session);
    ev_res on_group_msg( std::string msg
                       , json j // To avoid parsing it again.
                       , std::shared_ptr<server_session> session);
-   ev_res on_user_msg(json j, std::shared_ptr<server_session> session);
-
-public:
-   ev_res on_read( std::string msg
-                 , std::shared_ptr<server_session> session);
-   void shutdown();
-   void release_user(std::string id);
 };
+
+ev_res on_message( server_mgr& mgr
+                 , std::shared_ptr<server_session> s
+                 , std::string msg);
 

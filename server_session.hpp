@@ -48,11 +48,16 @@ private:
    boost::beast::multi_buffer buffer;
 
    session_shared shared;
-   std::string user_id;
-   std::string sms;
    std::queue<std::string> msg_queue;
    ping_pong pp_state = ping_pong::unset;
    bool closing = false;
+
+   // This variable is called in this function only in the destructor.
+   // So I do not any possibility of race condition arising with it.
+   std::string user_id;
+
+   // Not used by the session. So there is also not possible race.
+   std::string sms;
 
    void do_read();
    void do_write(std::string const& msg);

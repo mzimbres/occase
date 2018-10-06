@@ -337,7 +337,8 @@ void server_session::on_read( boost::system::error_code ec
    try {
       auto const msg = boost::beast::buffers_to_string(buffer.data());
       buffer.consume(std::size(buffer));
-      auto const r = shared.mgr->on_read(std::move(msg), shared_from_this());
+      auto const r = on_message( *shared.mgr, shared_from_this()
+                               , std::move(msg));
       handle_ev(r);
       do_read();
    } catch (...) {

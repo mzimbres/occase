@@ -279,17 +279,14 @@ void basic_tests2(client_op const& op)
                     )->run({});
 
    // Same as above but socket is shutdown and closed.
-   //std::make_shared< session_launcher<client_mgr_login>
-   //                >( ioc
-   //                 , cmgr_login_cf { "" , "ok" , -2 }
-   //                 , op.make_session_cf()
-   //                 , op.make_sms_tm_laucher_op2()
-   //                 )->run({});
+   std::make_shared< session_launcher<client_mgr_login>
+                   >( ioc
+                    , cmgr_login_cf { "" , "ok" , -2 }
+                    , op.make_session_cf()
+                    , op.make_sms_tm_laucher_op2()
+                    )->run({});
 
    // Same as above but socket is only closed.
-   // TODO: This in combination with the -1 version is resulting in a
-   // very strange bug where the json is received only in part by the
-   // create_group_ack further ahead. No idea what is happening.
    std::make_shared< session_launcher<client_mgr_login>
                    >( ioc
                     , cmgr_login_cf { "" , "ok" , -3 }

@@ -353,17 +353,15 @@ void server_session::on_write( boost::system::error_code ec
    do_write(msg_queue.front());
 }
 
-void server_session::do_write(std::string msg)
+void server_session::do_write(std::string const& msg)
 {
    ws.text(ws.got_text());
 
    auto handler = [p = shared_from_this()](auto ec, auto n)
    { p->on_write(ec, n); };
 
-   ws.async_write( boost::asio::buffer(std::move(msg))
-                 , boost::asio::bind_executor(
-                      strand,
-                      handler));
+   ws.async_write( boost::asio::buffer(msg)
+                 , boost::asio::bind_executor(strand, handler));
 }
 
 void server_session::send_msg(std::string msg)

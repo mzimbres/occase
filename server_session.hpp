@@ -55,7 +55,7 @@ private:
    bool closing = false;
 
    void do_read();
-   void do_write(std::string msg);
+   void do_write(std::string const& msg);
    void on_read( boost::system::error_code ec
                , std::size_t bytes_transferred);
    void on_close(boost::system::error_code ec);

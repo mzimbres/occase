@@ -32,6 +32,16 @@ server_session::~server_session()
    --shared.stats->number_of_sessions;
 }
 
+void server_session::accept()
+{
+   auto const handler = [p = shared_from_this()]()
+   {
+      p->do_accept();
+   };
+
+   boost::asio::post(boost::asio::bind_executor(strand, handler));
+}
+
 void server_session::do_accept()
 {
    //auto const handler0 = [](auto kind, auto payload)

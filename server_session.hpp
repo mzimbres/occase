@@ -67,13 +67,14 @@ private:
    void do_pong_wait();
    void do_close();
    void do_send(std::string msg);
+   void do_accept();
 
 public:
    explicit
    server_session(tcp::socket socket, session_shared shared_);
    ~server_session();
 
-   void do_accept();
+   void accept();
    void send(std::string msg);
    void shutdown();
 

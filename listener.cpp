@@ -128,7 +128,7 @@ void listener::on_accept(boost::system::error_code ec)
 
    std::make_shared<server_session>( std::move(socket)
                                    , session_shared {mgr, timeouts, stats}
-                                   )->do_accept();
+                                   )->accept();
 
    do_accept();
 }

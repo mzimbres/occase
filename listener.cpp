@@ -60,13 +60,14 @@ listener::listener( boost::asio::io_context& ioc
 
 listener::~listener()
 {
-   stop();
+   //stop();
 }
 
 void listener::stop()
 {
    acceptor.cancel();
    session_stats_timer.cancel();
+   mgr->shutdown();
 }
 
 void listener::do_stats_logger()

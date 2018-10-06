@@ -143,8 +143,6 @@ void server_session::on_close(boost::system::error_code ec)
       return;
    }
 
-   // TODO: Should we shutdown the socket here?
-   //std::cout << "Connection closed." << std::endl;
    // TODO: Set a timeout for the received close.
 }
 
@@ -295,14 +293,6 @@ void server_session::on_read( boost::system::error_code ec
       // We could also shutdown and close the socket but this is
       // redundant since the socket destructor will be called anyway
       // when we release the last reference upon return.
-
-      // Closing the socket cancels all outstanding
-      // operations. They will complete with
-      // boost::asio::error::operation_aborted
-      // We do not have to check the error code returned since these
-      // functions close the file descriptor even on failure.
-      //ws.next_layer().shutdown(tcp::socket::shutdown_both, ec);
-      //ws.next_layer().close(ec);
       return;
    }
 

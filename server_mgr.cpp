@@ -247,7 +247,8 @@ void server_mgr::shutdown()
 {
    std::cout << "Shutting down user sessions ..." << std::endl;
 
-   //for (auto& o : users)
-   //   o.shutdown();
+   for (auto o : sessions)
+      if (auto s = o.second.lock())
+         s->do_close();
 }
 

@@ -74,18 +74,24 @@ public:
    ~server_session();
 
    void do_accept();
-   void set_sms(std::string sms_) {sms = std::move(sms_);}
-   auto const& get_sms() const { return sms; }
-   void set_user_id(std::string id) {user_id = id;};
-   auto get_user_id() const noexcept {return user_id;}
    void send(std::string msg);
-   void promote() { sms.clear(); }
+   void shutdown();
+
+   void promote()
+      { sms.clear(); }
+   void set_sms(std::string sms_)
+      {sms = std::move(sms_);}
+   auto const& get_sms() const
+      { return sms; }
+   void set_id(std::string id)
+      {user_id = std::move(id);};
+   auto const& get_id() const noexcept
+      {return user_id;}
    auto is_waiting_sms() const noexcept
       {return !std::empty(user_id) && !std::empty(sms);};
    auto is_auth() const noexcept
       {return !std::empty(user_id) && std::empty(sms);};
    auto is_waiting_auth() const noexcept
       {return std::empty(user_id) && std::empty(sms);};
-   void shutdown();
 };
 

@@ -62,7 +62,7 @@ ev_res server_mgr::on_login(json j, std::shared_ptr<server_session> s)
       return ev_res::login_fail;
    }
 
-   s->set_user_id(tel);
+   s->set_id(tel);
 
    // TODO: Use a random number generator with six digits.
    s->set_sms("8347");
@@ -90,7 +90,7 @@ ev_res server_mgr::on_auth(json j, std::shared_ptr<server_session> s)
    }
 
    // TODO: Query the database to validate the session.
-   //if (from != s->get_user_id()) {
+   //if (from != s->get_id()) {
    //   // Incorrect id.
    //   json resp;
    //   resp["cmd"] = "auth_ack";
@@ -99,7 +99,7 @@ ev_res server_mgr::on_auth(json j, std::shared_ptr<server_session> s)
    //   return ev_res::auth_fail;
    //}
 
-   s->set_user_id(from);
+   s->set_id(from);
    s->promote();
    //new_user.first.second->set_session(s);
 
@@ -127,7 +127,7 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
    s->promote();
 
    // Inserts the user in the system.
-   auto const id = s->get_user_id();
+   auto const id = s->get_id();
    assert(!std::empty(id));
    auto const new_user = sessions.insert({tel, s});
 
@@ -185,7 +185,7 @@ server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
       return ev_res::join_group_fail;
    }
 
-   auto const from = s->get_user_id();
+   auto const from = s->get_id();
    g->second.add_member(from, s);
 
    json resp;

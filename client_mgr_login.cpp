@@ -10,7 +10,7 @@ int client_mgr_login::on_read( std::string msg
                              , std::shared_ptr<client_type> s)
 {
    auto const j = json::parse(msg);
-   auto cmd = j["cmd"].get<std::string>();
+   auto const cmd = j.at("cmd").get<std::string>();
 
    if (cmd != "login_ack") {
       std::cerr << "Server error. Please fix." << std::endl;
@@ -18,7 +18,7 @@ int client_mgr_login::on_read( std::string msg
       return op.on_read_ret;
    }
 
-   auto res = j["result"].get<std::string>();
+   auto res = j.at("result").get<std::string>();
    if (res == op.expected) {
       //std::cout << "Test login: ok." << std::endl;
       return op.on_read_ret;

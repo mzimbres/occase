@@ -5,12 +5,12 @@
 int client_mgr_cg::on_read(std::string msg, std::shared_ptr<client_type> s)
 {
    auto const j = json::parse(msg);
-   auto const cmd = j["cmd"].get<std::string>();
+   auto const cmd = j.at("cmd").get<std::string>();
 
    if (cmd == "auth_ack") {
-      auto const res = j["result"].get<std::string>();
+      auto const res = j.at("result").get<std::string>();
       if (res == "ok") {
-         std::cout << "Auth ok." << std::endl;
+         //std::cout << "Auth ok." << std::endl;
          s->send_msg(cmds.top());
          //std::cout << "Sending " << cmds.top() << std::endl;
          return 1;

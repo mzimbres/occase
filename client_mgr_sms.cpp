@@ -8,7 +8,7 @@ int client_mgr_sms::on_read(std::string msg, std::shared_ptr<client_type> s)
    auto const cmd = j["cmd"].get<std::string>();
 
    if (cmd == "login_ack") {
-      auto res = j["result"].get<std::string>();
+      auto const res = j.at("result").get<std::string>();
       if (res == "ok") {
          json j1;
          j1["cmd"] = "sms_confirmation";
@@ -27,7 +27,7 @@ int client_mgr_sms::on_read(std::string msg, std::shared_ptr<client_type> s)
 
    if (cmd == "sms_confirmation_ack") {
       //std::cout << j << std::endl;
-      auto res = j["result"].get<std::string>();
+      auto const res = j.at("result").get<std::string>();
 
       if (res == op.expected) {
          // Successfull end
@@ -61,7 +61,7 @@ int client_mgr_auth::on_read(std::string msg, std::shared_ptr<client_type> s)
    auto const cmd = j["cmd"].get<std::string>();
 
    if (cmd == "auth_ack") {
-      auto res = j["result"].get<std::string>();
+      auto const res = j.at("result").get<std::string>();
       if (res == op.expected) {
          //std::cout << "Test auth: ok." << std::endl;
          return -1;

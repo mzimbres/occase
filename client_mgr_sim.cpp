@@ -27,10 +27,10 @@ client_mgr_sim::client_mgr_sim(options_type op_)
 int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
 {
    auto const j = json::parse(msg);
-   auto const cmd = j["cmd"].get<std::string>();
+   auto const cmd = j.at("cmd").get<std::string>();
 
    if (cmd == "auth_ack") {
-      auto const res = j["result"].get<std::string>();
+      auto const res = j.at("result").get<std::string>();
       if (res == "ok") {
          //std::cout << "sending " << cmds.top() << std::endl;
          s->send_msg(cmds.top());
@@ -43,7 +43,7 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
    }
 
    if (cmd == "join_group_ack") {
-      auto const res = j["result"].get<std::string>();
+      auto const res = j.at("result").get<std::string>();
       if (res == op.expected) {
          if (std::empty(cmds))
             throw std::runtime_error("Stack not suposed to be empty.");
@@ -63,7 +63,7 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
       return -1;
    }
    if (cmd == "group_msg_ack") {
-      auto const res = j["result"].get<std::string>();
+      auto const res = j.at("result").get<std::string>();
       if (res == op.expected) {
          hashes.pop();
          if (std::empty(hashes)) {
@@ -82,7 +82,7 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
    if (cmd == "group_msg") {
       // TODO: Output some error if the number of messages received is
       // wrong.
-      auto const body = j["msg"].get<std::string>();
+      auto const body = j.at("msg").get<std::string>();
       //std::cout << "Group msg: " << body << std::endl;
       return 1;
    }

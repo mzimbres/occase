@@ -15,5 +15,5 @@ json gen_group_info(json menu);
 // Puts all group hashes into a vector.
 std::vector<std::string> get_hashes(json menu);
 
-std::string to_str(int i, int width, char fill_char);
+std::string to_str(int i);
 

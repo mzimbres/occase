@@ -6,13 +6,18 @@
 
 #include "json_utils.hpp"
 
-std::string to_str(int i, int width, char fill_char)
+std::string to_str_raw(int i, int width, char fill)
 {
    std::ostringstream oss;
-   oss.fill(fill_char);
+   oss.fill(fill);
    oss.width(width);
    oss << i;
    return oss.str();
+}
+
+std::string to_str(int i)
+{
+   return to_str_raw(i, 10, '0');
 }
 
 struct patch_helper {
@@ -62,7 +67,7 @@ struct hash_gen_iter {
                             + std::to_string(i);
             auto const value = st.top().back().value_prefix
                              + "."
-                             + to_str(i, 2, '0');
+                             + to_str_raw(i, 2, '0');
             auto header = st.top().back().header;
             auto const category = sub_desc + " : " + o["name"].get<std::string>();
             header.push_back(category);

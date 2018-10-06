@@ -221,7 +221,7 @@ public:
          return;
       }
 
-      mgr_op.user = to_str(lop.begin, 7, 0);
+      mgr_op.user = to_str(lop.begin);
 
       std::make_shared<client_type>( ioc
                                    , ccf

@@ -9,11 +9,12 @@ client_mgr_sim::client_mgr_sim(options_type op_)
    auto const menu = gen_location_menu();
    auto const hashes_ = get_hashes(menu);
 
-   for (auto const& o : hashes_) {
-      hashes.push(o);
+   for (auto i = 0; i < op.number_of_groups; ++i) {
+      auto const hash = to_str(i);
+      hashes.push(hash);
       json cmd;
       cmd["cmd"] = "join_group";
-      cmd["hash"] = o;
+      cmd["hash"] = hash;
       cmds.push(cmd.dump());
    }
 
@@ -54,6 +55,7 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
             send_group_msg(s);
             return 1;
          }
+         //std::cout << "sending " << cmds.top() << std::endl;
          s->send_msg(cmds.top());
          return 1;
       }

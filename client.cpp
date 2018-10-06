@@ -373,7 +373,7 @@ void basic_tests5(client_op const& op)
    std::make_shared<client_session<client_mgr_cg>
                    >( ioc
                     , op.make_session_cf()
-                    , client_mgr_cg::options_type {"Marcelo1", "ok" }
+                    , client_mgr_cg::options_type {"Marcelo1", "ok", 20}
                     )->run();
 
    ioc.run();
@@ -385,7 +385,7 @@ void basic_tests6(client_op const& op)
    std::make_shared<client_session<client_mgr_cg>
                    >( ioc
                     , op.make_session_cf()
-                    , client_mgr_cg::options_type {"Marcelo2", "fail"}
+                    , client_mgr_cg::options_type {"Marcelo2", "fail", 20}
                     )->run();
    ioc.run();
 }
@@ -425,7 +425,7 @@ void test_simulation(client_op const& op)
 
    std::make_shared< session_launcher<client_mgr_sim>
                    >( ioc
-                    , cmgr_sim_op {"", "ok"}
+                    , cmgr_sim_op {"", "ok", 20}
                     , op.make_session_cf()
                     , op.make_sim_cf()
                     )->run({});

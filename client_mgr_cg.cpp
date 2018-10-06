@@ -49,17 +49,12 @@ int client_mgr_cg::on_read(std::string msg, std::shared_ptr<client_type> s)
 client_mgr_cg::client_mgr_cg(options_type op_)
 : op(op_)
 {
-
-   auto const menu = gen_location_menu();
-   auto const cmds_ = gen_create_groups(menu);
-
-   if (std::empty(cmds_))
-      throw std::runtime_error("client_mgr_cg: Stack is empty.");
-
-   for (auto const& o : cmds_)
-      cmds.push(std::move(o));
-
-   //std::cout << "Ctor stack size: " << std::size(cmds) << std::endl;
+   for (auto i = 0; i < op.number_of_groups; ++i) {
+      json cmd;
+      cmd["cmd"] = "create_group";
+      cmd["hash"] = to_str(i);
+      cmds.push(cmd.dump());
+   }
 }
 
 client_mgr_cg::~client_mgr_cg()

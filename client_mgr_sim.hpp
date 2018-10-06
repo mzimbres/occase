@@ -15,6 +15,7 @@ class client_session;
 struct cmgr_sim_op {
    std::string user;
    std::string expected;
+   int number_of_groups;
 };
 
 class client_mgr_sim {

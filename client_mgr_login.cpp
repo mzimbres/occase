@@ -6,8 +6,10 @@ client_mgr_login::client_mgr_login(cmgr_login_cf op_)
 : op(op_)
 { }
 
-int client_mgr_login::on_read(json j, std::shared_ptr<client_type> s)
+int client_mgr_login::on_read( std::string msg
+                             , std::shared_ptr<client_type> s)
 {
+   auto const j = json::parse(msg);
    auto cmd = j["cmd"].get<std::string>();
 
    if (cmd != "login_ack") {
@@ -42,7 +44,8 @@ client_mgr_login_typo::client_mgr_login_typo(std::string cmd_)
 : cmd(cmd_)
 { }
 
-int client_mgr_login_typo::on_read(json j, std::shared_ptr<client_type> s)
+int client_mgr_login_typo::on_read( std::string msg
+                                  , std::shared_ptr<client_type> s)
 {
    // A dropped login should not receive any message.
    std::cout << "Test login1: fail." << std::endl;

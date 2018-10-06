@@ -24,8 +24,9 @@ client_mgr_sim::client_mgr_sim(options_type op_)
       throw std::runtime_error("client_mgr_sim: Stack is empty.");
 }
 
-int client_mgr_sim::on_read(json j, std::shared_ptr<client_type> s)
+int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
 {
+   auto const j = json::parse(msg);
    auto const cmd = j["cmd"].get<std::string>();
 
    if (cmd == "auth_ack") {

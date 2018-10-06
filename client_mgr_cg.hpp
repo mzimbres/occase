@@ -32,7 +32,7 @@ public:
    client_mgr_cg(options_type op_);
    ~client_mgr_cg();
 
-   int on_read(json j, std::shared_ptr<client_type> s);
+   int on_read(std::string msg, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec);
    int on_handshake(std::shared_ptr<client_type> s);
    int on_connect() const noexcept { return 1;}

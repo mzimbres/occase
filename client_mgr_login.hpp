@@ -32,7 +32,7 @@ private:
 public:
    using options_type = cmgr_login_cf;
    client_mgr_login(options_type op);
-   int on_read(json j, std::shared_ptr<client_type> s);
+   int on_read(std::string msg, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec) { return -1; }
    int on_handshake(std::shared_ptr<client_type> s);
    int on_connect() const noexcept { return 1;}
@@ -51,7 +51,7 @@ private:
 public:
    using options_type = std::string;
    client_mgr_login_typo(std::string cmd);
-   int on_read(json j, std::shared_ptr<client_type> s);
+   int on_read(std::string msg, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec);
    int on_handshake(std::shared_ptr<client_type> s);
    int on_connect() const noexcept { return 1;}

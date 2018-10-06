@@ -2,9 +2,10 @@
 
 #include "client_session.hpp"
 
-int client_mgr_sms::on_read(json j, std::shared_ptr<client_type> s)
+int client_mgr_sms::on_read(std::string msg, std::shared_ptr<client_type> s)
 {
-   auto cmd = j["cmd"].get<std::string>();
+   auto const j = json::parse(msg);
+   auto const cmd = j["cmd"].get<std::string>();
 
    if (cmd == "login_ack") {
       auto res = j["result"].get<std::string>();
@@ -54,9 +55,10 @@ int client_mgr_sms::on_handshake(std::shared_ptr<client_type> s)
 
 //____________________________________________________________
 
-int client_mgr_auth::on_read(json j, std::shared_ptr<client_type> s)
+int client_mgr_auth::on_read(std::string msg, std::shared_ptr<client_type> s)
 {
-   auto cmd = j["cmd"].get<std::string>();
+   auto const j = json::parse(msg);
+   auto const cmd = j["cmd"].get<std::string>();
 
    if (cmd == "auth_ack") {
       auto res = j["result"].get<std::string>();

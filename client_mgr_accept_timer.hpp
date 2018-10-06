@@ -32,7 +32,7 @@ public:
    {
       //std::cout << "Bye1 bye1." << std::endl;
    }
-   int on_read(json j, std::shared_ptr<client_type> s) const;
+   int on_read(std::string msg, std::shared_ptr<client_type> s) const;
    int on_closed(boost::system::error_code ec) const;
    int on_write(std::shared_ptr<client_type> s) const;
    int on_handshake(std::shared_ptr<client_type> s) const;
@@ -55,7 +55,7 @@ public:
       //std::cout << "Bye2 bye2." << std::endl;
    }
 
-   int on_read(json j, std::shared_ptr<client_type> s);
+   int on_read(std::string msg, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec);
    int on_write(std::shared_ptr<client_type> s);
    int on_handshake(std::shared_ptr<client_type> s) { return -1;}

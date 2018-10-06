@@ -123,16 +123,14 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
    if (std::empty(str))
       throw std::runtime_error("client_session::on_read: msg empty.");
 
-   //std::cout << "Received: " << str << std::endl;
    buffer.consume(std::size(buffer));
-   json j = json::parse(str);
 
    // Here we are canceling the handshake timeout. The timer will
    // however be called every time this function is called.
    // TODO: Instead of cancel implement as activity with
    // expires_after.
    timer.cancel();
-   auto const r = mgr.on_read(j, this->shared_from_this());
+   auto const r = mgr.on_read(str, this->shared_from_this());
    if (r == -1) {
       do_close();
       return;

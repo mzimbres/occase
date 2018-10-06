@@ -2,8 +2,9 @@
 
 #include "client_session.hpp"
 
-int client_mgr_cg::on_read(json j, std::shared_ptr<client_type> s)
+int client_mgr_cg::on_read(std::string msg, std::shared_ptr<client_type> s)
 {
+   auto const j = json::parse(msg);
    auto const cmd = j["cmd"].get<std::string>();
 
    if (cmd == "auth_ack") {

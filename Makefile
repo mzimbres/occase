@@ -12,7 +12,7 @@ CPPFLAGS      = -I. -I$(boost_include) -I$(json_include) \
 
 DIST_NAME   = sellit
 
-exes = client server menu_dump
+exes = client server menu_dump aedis
 
 common_objs = json_utils.o
 common_objs += menu_parser.o
@@ -58,6 +58,9 @@ server: % : %.o $(server_objs) $(common_objs)
 
 menu_dump: % : %.o $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS)
+
+aedis: % : %.o
+	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(boost_libs)
 
 .PHONY: clean
 clean:

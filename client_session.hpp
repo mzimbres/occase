@@ -49,15 +49,13 @@ private:
    void on_resolve( boost::system::error_code ec
                   , tcp::resolver::results_type results);
    void on_connect( boost::system::error_code ec
-                  , tcp::resolver::results_type results);
-   void on_handshake( boost::system::error_code ec
-                    , tcp::resolver::results_type results);
-   void do_read(tcp::resolver::results_type results);
+                  , boost::asio::ip::tcp::endpoint const& endpoint);
+   void on_handshake( boost::system::error_code ec);
+   void do_read();
    void on_write( boost::system::error_code ec
                 , std::size_t bytes_transferred);
    void on_read( boost::system::error_code ec
-               , std::size_t bytes_transferred
-               , tcp::resolver::results_type results);
+               , std::size_t bytes_transferred);
    void on_close(boost::system::error_code ec);
    void do_write(std::string msg);
 
@@ -80,6 +78,17 @@ public:
    auto get_recv_msgs() const noexcept {return recv_msgs;}
 };
 
+template <class Mgr>
+client_session<Mgr>::client_session( boost::asio::io_context& ioc
+                                   , client_session_cf op_
+                                   , mgr_op_type const& m)
+: resolver(ioc)
+, timer(ioc)
+, ws(ioc)
+, op(std::move(op_))
+, mgr(m)
+{ }
+
 inline
 void fail_tmp(boost::system::error_code ec, char const* what)
 {
@@ -88,8 +97,7 @@ void fail_tmp(boost::system::error_code ec, char const* what)
 
 template <class Mgr>
 void client_session<Mgr>::on_read( boost::system::error_code ec
-                                 , std::size_t bytes_transferred
-                                 , tcp::resolver::results_type results)
+                                 , std::size_t bytes_transferred)
 {
    boost::ignore_unused(bytes_transferred);
 
@@ -148,19 +156,8 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
       return;
    }
 
-   do_read(results);
+   do_read();
 }
-
-template <class Mgr>
-client_session<Mgr>::client_session( boost::asio::io_context& ioc
-                                   , client_session_cf op_
-                                   , mgr_op_type const& m)
-: resolver(ioc)
-, timer(ioc)
-, ws(ioc)
-, op(std::move(op_))
-, mgr(m)
-{ }
 
 template <class Mgr>
 void client_session<Mgr>::send_msg(std::string msg)
@@ -210,24 +207,9 @@ void client_session<Mgr>::on_close(boost::system::error_code ec)
 }
 
 template <class Mgr>
-void client_session<Mgr>::on_resolve( boost::system::error_code ec
-                                    , tcp::resolver::results_type results)
-{
-   if (ec)
-      return fail_tmp(ec, "resolve");
-
-   auto this_obj = this->shared_from_this();
-   auto handler = [results, p = this_obj](auto ec, auto Iterator)
-   { p->on_connect(ec, results); };
-
-   boost::asio::async_connect( ws.next_layer(), results.begin()
-                             , results.end(), handler);
-}
-
-template <class Mgr>
 void
 client_session<Mgr>::on_connect( boost::system::error_code ec
-                               , tcp::resolver::results_type results)
+                            , boost::asio::ip::tcp::endpoint const&)
 {
    if (ec)
       return fail_tmp(ec, "resolve");
@@ -277,8 +259,8 @@ client_session<Mgr>::on_connect( boost::system::error_code ec
       return;
    }
 
-   auto handler = [p = this->shared_from_this(), results](auto ec)
-   { p->on_handshake(ec, results); };
+   auto handler = [p = this->shared_from_this()](auto ec)
+   { p->on_handshake(ec); };
 
    // Perform the websocket handshake
    ws.async_handshake(op.host, "/", handler);
@@ -286,8 +268,7 @@ client_session<Mgr>::on_connect( boost::system::error_code ec
 
 template <class Mgr>
 void
-client_session<Mgr>::on_handshake( boost::system::error_code ec
-                                 , tcp::resolver::results_type results)
+client_session<Mgr>::on_handshake(boost::system::error_code ec)
 {
    //std::cout << "on_handshake" << std::endl;
    if (ec)
@@ -295,7 +276,7 @@ client_session<Mgr>::on_handshake( boost::system::error_code ec
 
    // This function must be called before we begin to write commands
    // so that we can receive the acks from the server.
-   do_read(results);
+   do_read();
 
    mgr.on_handshake(this->shared_from_this());
 
@@ -324,10 +305,12 @@ client_session<Mgr>::on_handshake( boost::system::error_code ec
 }
 
 template <class Mgr>
-void client_session<Mgr>::do_read(tcp::resolver::results_type results)
+void client_session<Mgr>::do_read()
 {
-   auto handler = [p = this->shared_from_this(), results](auto ec, auto res)
-   { p->on_read(ec, res, results); };
+   auto handler = [p = this->shared_from_this()](auto ec, auto res)
+   { 
+      p->on_read(ec, res);
+   };
 
    ws.async_read(buffer, handler);
 }
@@ -349,10 +332,28 @@ void client_session<Mgr>::on_write( boost::system::error_code ec
 }
 
 template <class Mgr>
+void client_session<Mgr>::on_resolve( boost::system::error_code ec
+                                    , tcp::resolver::results_type results)
+{
+   if (ec)
+      return fail_tmp(ec, "resolve");
+
+   auto const handler =
+      [p = this->shared_from_this()](auto ec, auto Iterator)
+   {
+      p->on_connect(ec, Iterator);
+   };
+
+   boost::asio::async_connect(ws.next_layer(), results, handler);
+}
+
+template <class Mgr>
 void client_session<Mgr>::run()
 {
    auto handler = [p = this->shared_from_this()](auto ec, auto res)
-   { p->on_resolve(ec, res); };
+   {
+      p->on_resolve(ec, res);
+   };
 
    // Look up the domain name
    resolver.async_resolve(op.host, op.port, handler);

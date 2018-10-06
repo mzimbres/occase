@@ -50,6 +50,7 @@ struct client_op {
    int launch_interval = 100;
    int auth_timeout = 3;
    int sim_runs = 2;
+   int number_of_groups;
 
    auto make_session_cf() const
    {
@@ -373,7 +374,8 @@ void basic_tests5(client_op const& op)
    std::make_shared<client_session<client_mgr_cg>
                    >( ioc
                     , op.make_session_cf()
-                    , client_mgr_cg::options_type {"Marcelo1", "ok", 20}
+                    , client_mgr_cg::options_type
+                      {"Marcelo1", "ok", op.number_of_groups}
                     )->run();
 
    ioc.run();
@@ -385,7 +387,8 @@ void basic_tests6(client_op const& op)
    std::make_shared<client_session<client_mgr_cg>
                    >( ioc
                     , op.make_session_cf()
-                    , client_mgr_cg::options_type {"Marcelo2", "fail", 20}
+                    , client_mgr_cg::options_type
+                      {"Marcelo2", "fail", op.number_of_groups}
                     )->run();
    ioc.run();
 }
@@ -425,7 +428,7 @@ void test_simulation(client_op const& op)
 
    std::make_shared< session_launcher<client_mgr_sim>
                    >( ioc
-                    , cmgr_sim_op {"", "ok", 20}
+                    , cmgr_sim_op {"", "ok", op.number_of_groups}
                     , op.make_session_cf()
                     , op.make_sim_cf()
                     )->run({});
@@ -497,7 +500,13 @@ int main(int argc, char* argv[])
 
          ("simulations,r"
          , po::value<int>(&op.sim_runs)->default_value(2)
-         , "Number of simulation runs.")
+         , "Number of simulation runs."
+         )
+
+         ("number-of-groups,a"
+         , po::value<int>(&op.number_of_groups)->default_value(20)
+         , "Number of groups to generate."
+         )
       ;
 
       po::variables_map vm;        

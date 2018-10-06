@@ -16,6 +16,7 @@ struct cmgr_sim_op {
    std::string user;
    std::string expected;
    int number_of_groups;
+   int msgs_per_group;
 };
 
 class client_mgr_sim {
@@ -26,6 +27,7 @@ private:
    options_type op;
    std::stack<std::string> cmds;
    std::stack<std::string> hashes;
+   int counter = 0;
 
    void send_group_msg(std::shared_ptr<client_type> s);
 

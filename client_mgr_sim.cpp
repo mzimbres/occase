@@ -6,9 +6,6 @@
 client_mgr_sim::client_mgr_sim(options_type op_)
 : op(op_)
 {
-   auto const menu = gen_location_menu();
-   auto const hashes_ = get_hashes(menu);
-
    for (auto i = 0; i < op.number_of_groups; ++i) {
       auto const hash = to_str(i);
       hashes.push(hash);
@@ -17,12 +14,6 @@ client_mgr_sim::client_mgr_sim(options_type op_)
       cmd["hash"] = hash;
       cmds.push(cmd.dump());
    }
-
-   if (std::size(hashes) != std::size(cmds))
-      throw std::runtime_error("client_mgr_sim: Invalid sizes.");
-
-   if (std::empty(hashes))
-      throw std::runtime_error("client_mgr_sim: Stack is empty.");
 }
 
 int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
@@ -67,7 +58,11 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
    if (cmd == "group_msg_ack") {
       auto const res = j.at("result").get<std::string>();
       if (res == op.expected) {
-         hashes.pop();
+         if (++counter == op.msgs_per_group) {
+            hashes.pop();
+            counter = 0;
+         }
+
          if (std::empty(hashes)) {
             //std::cout << "Test sim: send_group_msg_ack ok." << std::endl;
             return -1;

@@ -51,6 +51,7 @@ struct client_op {
    int auth_timeout = 3;
    int sim_runs = 2;
    int number_of_groups;
+   int msgs_per_group;
 
    auto make_session_cf() const
    {
@@ -428,7 +429,9 @@ void test_simulation(client_op const& op)
 
    std::make_shared< session_launcher<client_mgr_sim>
                    >( ioc
-                    , cmgr_sim_op {"", "ok", op.number_of_groups}
+                    , cmgr_sim_op
+                      { "", "ok", op.number_of_groups
+                      , op.msgs_per_group}
                     , op.make_session_cf()
                     , op.make_sim_cf()
                     )->run({});
@@ -506,6 +509,11 @@ int main(int argc, char* argv[])
          ("number-of-groups,a"
          , po::value<int>(&op.number_of_groups)->default_value(20)
          , "Number of groups to generate."
+         )
+
+         ("msgs-per-group,b"
+         , po::value<int>(&op.msgs_per_group)->default_value(20)
+         , "Number of messages per group used in the simulation."
          )
       ;
 

@@ -1,4 +1,5 @@
 #include <deque>
+#include <thread>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -21,23 +22,18 @@ int main(int argc, char* argv[])
     boost::asio::ip::tcp::resolver resolver(ioc);
     auto endpoints = resolver.resolve(argv[1], argv[2]);
 
-    redis_session c(ioc, endpoints);
+    redis_session client(ioc, endpoints);
 
-    //boost::thread t(boost::bind(&boost::asio::io_context::run, &ioc));
+    std::thread thread([&](){ioc.run();});
 
-    //char line[chat_message::max_body_length + 1];
-    //while (std::cin.getline(line, chat_message::max_body_length + 1))
-    //{
-    //  using namespace std; // For strlen and memcpy.
-    //  chat_message msg;
-    //  msg.body_length(strlen(line));
-    //  memcpy(msg.body(), line, msg.body_length());
-    //  msg.encode_header();
-    //  c.write(msg);
-    //}
+    char line[1024];
+    while (std::cin.getline(line, std::size(line)))
+    {
+      client.write("PING");
+    }
 
-    //c.close();
-    //t.join();
+    client.close();
+    thread.join();
   } catch (std::exception& e) {
     std::cerr << "Exception: " << e.what() << "\n";
   }

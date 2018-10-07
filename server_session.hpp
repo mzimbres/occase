@@ -15,30 +15,21 @@
 #include "config.hpp"
 #include "server_mgr.hpp"
 
-struct sessions_stats {
-   std::atomic<int> number_of_sessions {0};
-};
-
-struct session_shared {
-   std::shared_ptr<server_mgr> mgr;
-   std::shared_ptr<sessions_stats> stats;
-};
-
-enum class ping_pong
-{ ping_sent
-, pong_received
-, unset
-};
-
 class server_session :
    public std::enable_shared_from_this<server_session> {
 private:
+   enum class ping_pong
+   { ping_sent
+   , pong_received
+   , unset
+   };
+
    websocket::stream<tcp::socket> ws;
    boost::asio::strand<boost::asio::io_context::executor_type> strand;
    boost::asio::steady_timer timer;
    boost::beast::multi_buffer buffer;
 
-   session_shared shared;
+   std::shared_ptr<server_mgr> mgr;
    std::queue<std::string> msg_queue;
    ping_pong pp_state = ping_pong::unset;
    bool closing = false;
@@ -67,7 +58,8 @@ private:
 
 public:
    explicit
-   server_session(tcp::socket socket, session_shared shared_);
+   server_session( tcp::socket socket
+                 , std::shared_ptr<server_mgr> mgr_);
    ~server_session();
 
    void accept();

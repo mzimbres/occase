@@ -40,7 +40,7 @@ struct server_op {
 
    auto get_timeouts() const noexcept
    {
-      return server_session_timeouts
+      return session_timeouts
       { std::chrono::seconds {auth_timeout}
       , std::chrono::seconds {sms_timeout}
       , std::chrono::seconds {handshake_timeout}

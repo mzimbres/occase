@@ -21,7 +21,6 @@ listener::listener( boost::asio::io_context& ioc
 : acceptor(ioc)
 , socket(ioc)
 , mgr(mgr_)
-, stats(std::make_shared<sessions_stats>())
 , session_stats_timer(ioc)
 {
    boost::system::error_code ec;
@@ -81,7 +80,7 @@ void listener::do_stats_logger()
       }
       
       std::cout << "Current number of sessions: "
-                << p->stats->number_of_sessions
+                << p->mgr->get_stats().number_of_sessions
                 << std::endl;
 
       p->do_stats_logger();
@@ -125,9 +124,7 @@ void listener::on_accept(boost::system::error_code ec)
       return;
    }
 
-   std::make_shared<server_session>( std::move(socket)
-                                   , session_shared {mgr, stats}
-                                   )->accept();
+   std::make_shared<server_session>(std::move(socket), mgr)->accept();
 
    do_accept();
 }

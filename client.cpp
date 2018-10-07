@@ -105,6 +105,33 @@ struct client_op {
       , {"Login test with ret = -3:      "}};
    }
 
+   auto make_correct_sms_cf1() const
+   {
+      return launcher_op
+      { 0, users_size
+      , std::chrono::milliseconds {launch_interval}
+      , {"Correct sms test with ret = -1:"}
+      };
+   }
+
+   auto make_correct_sms_cf2() const
+   {
+      return launcher_op
+      { users_size, 2 * users_size
+      , std::chrono::milliseconds {launch_interval}
+      , {"Correct sms test with ret = -2:"}
+      };
+   }
+
+   auto make_correct_sms_cf3() const
+   {
+      return launcher_op
+      { 2 * users_size, 3 * users_size
+      , std::chrono::milliseconds {launch_interval}
+      , {"Correct sms test with ret = -3:"}
+      };
+   }
+
    auto make_wrong_sms_cf1() const
    {
       return launcher_op
@@ -129,33 +156,6 @@ struct client_op {
       { 5 * users_size, 6 * users_size
       , std::chrono::milliseconds {launch_interval}
       , {"Wrong sms test with ret = -3:  "}
-      };
-   }
-
-   auto make_correct_sms_cf1() const
-   {
-      return launcher_op
-      { 6 * users_size, 7 * users_size
-      , std::chrono::milliseconds {launch_interval}
-      , {"Correct sms test with ret = -1:"}
-      };
-   }
-
-   auto make_correct_sms_cf2() const
-   {
-      return launcher_op
-      { 7 * users_size, 8 * users_size
-      , std::chrono::milliseconds {launch_interval}
-      , {"Correct sms test with ret = -2:"}
-      };
-   }
-
-   auto make_correct_sms_cf3() const
-   {
-      return launcher_op
-      { 8 * users_size, 9 * users_size
-      , std::chrono::milliseconds {launch_interval}
-      , {"Correct sms test with ret = -3:"}
       };
    }
 
@@ -302,20 +302,6 @@ void basic_tests3( client_op const& op
    ioc.run();
 }
 
-void basic_tests5(client_op const& op)
-{
-   boost::asio::io_context ioc;
-
-   std::make_shared<client_session<client_mgr_cg>
-                   >( ioc
-                    , op.make_session_cf()
-                    , client_mgr_cg::options_type
-                      {"Marcelo1", "ok", op.number_of_groups}
-                    )->run();
-
-   ioc.run();
-}
-
 void basic_tests6(client_op const& op)
 {
    boost::asio::io_context ioc;
@@ -328,9 +314,94 @@ void basic_tests6(client_op const& op)
    ioc.run();
 }
 
-void basic_tests7(client_op const& op)
+// Run tests while registering users and creating groups.
+void prepare_server(client_op const& op)
 {
    boost::asio::io_context ioc;
+
+   std::make_shared< session_launcher<cmgr_handshake_tm>
+                   >( ioc
+                    , cmgr_handshake_op {}
+                    , op.make_session_cf()
+                    , op.make_handshake_laucher_op()
+                    )->run({});
+
+   std::make_shared< session_launcher<client_mgr_accept_timer>
+                   >( ioc
+                    , cmgr_handshake_op {}
+                    , op.make_session_cf()
+                    , op.make_after_handshake_laucher_op()
+                    )->run({});
+
+   std::make_shared< session_launcher<client_mgr_login>
+                   >( ioc
+                    , cmgr_login_cf { "" , "ok" , -1}
+                    , op.make_session_cf()
+                    , op.make_sms_tm_laucher_op1()
+                    )->run({});
+
+   std::make_shared< session_launcher<client_mgr_login>
+                   >( ioc
+                    , cmgr_login_cf { "" , "ok" , -2}
+                    , op.make_session_cf()
+                    , op.make_sms_tm_laucher_op2()
+                    )->run({});
+
+   std::make_shared< session_launcher<client_mgr_login>
+                   >( ioc
+                    , cmgr_login_cf { "" , "ok" , -3}
+                    , op.make_session_cf()
+                    , op.make_sms_tm_laucher_op3()
+                    )->run({});
+
+   std::make_shared< session_launcher<client_mgr_sms>
+                   >( ioc
+                    , cmgr_sms_op {"", "ok", op.sms, -1}
+                    , op.make_session_cf()
+                    , op.make_correct_sms_cf1()
+                    )->run({});
+
+   std::make_shared< session_launcher<client_mgr_sms>
+                   >( ioc
+                    , cmgr_sms_op {"", "ok", op.sms, -2}
+                    , op.make_session_cf()
+                    , op.make_correct_sms_cf2()
+                    )->run({});
+
+   std::make_shared< session_launcher<client_mgr_sms>
+                   >( ioc
+                    , cmgr_sms_op {"", "ok", op.sms, -3}
+                    , op.make_session_cf()
+                    , op.make_correct_sms_cf3()
+                    )->run({});
+
+   std::make_shared< session_launcher<client_mgr_sms>
+                   >( ioc
+                    , cmgr_sms_op {"", "fail", "8r47", -1}
+                    , op.make_session_cf()
+                    , op.make_wrong_sms_cf1()
+                    )->run({});
+
+   std::make_shared< session_launcher<client_mgr_sms>
+                   >( ioc
+                    , cmgr_sms_op {"", "fail", "8r47", -2}
+                    , op.make_session_cf()
+                    , op.make_wrong_sms_cf2()
+                    )->run({});
+
+   std::make_shared< session_launcher<client_mgr_sms>
+                   >( ioc
+                    , cmgr_sms_op {"", "fail", "8r47", -3}
+                    , op.make_session_cf()
+                    , op.make_wrong_sms_cf3()
+                    )->run({});
+
+   std::make_shared<client_session<client_mgr_cg>
+                   >( ioc
+                    , op.make_session_cf()
+                    , client_mgr_cg::options_type
+                      {"Marcelo1", "ok", op.number_of_groups}
+                    )->run();
 
    json j1;
    j1["cmd"] = "logrn";
@@ -461,6 +532,7 @@ int main(int argc, char* argv[])
       }
 
       std::cout << "==========================================" << std::endl;
+      // Runs some tests individually.
       basic_tests1a(op);
       basic_tests1b(op);
 
@@ -472,13 +544,11 @@ int main(int argc, char* argv[])
       basic_tests3(op, {"", "fail", "8r47", -2}, op.make_wrong_sms_cf2());
       basic_tests3(op, {"", "fail", "8r47", -3}, op.make_wrong_sms_cf3());
 
-      basic_tests3(op, {"", "ok", op.sms, -1}, op.make_correct_sms_cf1());
-      basic_tests3(op, {"", "ok", op.sms, -2}, op.make_correct_sms_cf2());
-      basic_tests3(op, {"", "ok", op.sms, -3}, op.make_correct_sms_cf3());
+      std::cout << "\nFinished launching individual tests." << std::endl;
 
-      basic_tests5(op);
+      prepare_server(op);
+
       basic_tests6(op);
-      basic_tests7(op);
       std::cout << "Basic tests:        ok" << std::endl;
 
       timer t;

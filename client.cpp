@@ -44,6 +44,7 @@ struct client_op {
    std::string host {"127.0.0.1"};
    std::string port {"8080"};
    std::string sms;
+   int initial_user = 0;
    int users_size = 10;
    int handshake_tm_test_size = 10;
    int handshake_tm = 3;
@@ -85,7 +86,8 @@ struct client_op {
    auto make_sms_tm_laucher_op1() const
    {
       return launcher_op
-      { 0, users_size
+      { initial_user
+      , initial_user + users_size
       , std::chrono::milliseconds {launch_interval}
       , {"Login test with ret = -1:      "}};
    }
@@ -93,7 +95,8 @@ struct client_op {
    auto make_sms_tm_laucher_op2() const
    {
       return launcher_op
-      { 0, users_size
+      { initial_user
+      , initial_user + users_size
       , std::chrono::milliseconds {launch_interval}
       , {"Login test with ret = -2:      "}};
    }
@@ -101,7 +104,8 @@ struct client_op {
    auto make_sms_tm_laucher_op3() const
    {
       return launcher_op
-      { 0, users_size
+      { initial_user
+      , initial_user + users_size
       , std::chrono::milliseconds {launch_interval}
       , {"Login test with ret = -3:      "}};
    }
@@ -109,7 +113,8 @@ struct client_op {
    auto make_correct_sms_cf1() const
    {
       return launcher_op
-      { 0, users_size
+      { initial_user
+      , initial_user + users_size
       , std::chrono::milliseconds {launch_interval}
       , {"Correct sms test with ret = -1:"}
       };
@@ -118,7 +123,8 @@ struct client_op {
    auto make_correct_sms_cf2() const
    {
       return launcher_op
-      { users_size, 2 * users_size
+      { initial_user + users_size
+      , initial_user + 2 * users_size
       , std::chrono::milliseconds {launch_interval}
       , {"Correct sms test with ret = -2:"}
       };
@@ -127,7 +133,8 @@ struct client_op {
    auto make_correct_sms_cf3() const
    {
       return launcher_op
-      { 2 * users_size, 3 * users_size
+      { initial_user + 2 * users_size
+      , initial_user + 3 * users_size
       , std::chrono::milliseconds {launch_interval}
       , {"Correct sms test with ret = -3:"}
       };
@@ -136,7 +143,8 @@ struct client_op {
    auto make_wrong_sms_cf1() const
    {
       return launcher_op
-      { 3 * users_size, 4 * users_size
+      { initial_user + 3 * users_size
+      , initial_user + 4 * users_size
       , std::chrono::milliseconds {launch_interval}
       , {"Wrong sms test with ret = -1:  "}
       };
@@ -145,7 +153,8 @@ struct client_op {
    auto make_wrong_sms_cf2() const
    {
       return launcher_op
-      { 4 * users_size, 5 * users_size
+      { initial_user + 4 * users_size
+      , initial_user + 5 * users_size
       , std::chrono::milliseconds {launch_interval}
       , {"Wrong sms test with ret = -2:  "}
       };
@@ -154,7 +163,8 @@ struct client_op {
    auto make_wrong_sms_cf3() const
    {
       return launcher_op
-      { 5 * users_size, 6 * users_size
+      { initial_user + 5 * users_size
+      , initial_user + 6 * users_size
       , std::chrono::milliseconds {launch_interval}
       , {"Wrong sms test with ret = -3:  "}
       };
@@ -163,7 +173,7 @@ struct client_op {
    auto make_sim_cf() const
    {
       return launcher_op
-      { 0, users_size
+      { initial_user, initial_user + 3 * users_size
       , std::chrono::milliseconds {launch_interval}
       , {"Launch of sim clients:         "}
       };
@@ -421,10 +431,16 @@ int main(int argc, char* argv[])
          , po::value<std::string>(&op.host)->default_value("127.0.0.1")
          , "Server ip address."
          )
+
+         ("initial-user"
+         , po::value<int>(&op.initial_user)->default_value(0)
+         , "Id of the first user."
+         )
          ("users,u"
          , po::value<int>(&op.users_size)->default_value(10)
          , "Number of users."
          )
+
          ("launch-interval,g"
          , po::value<int>(&op.launch_interval)->default_value(100)
          , "Interval used to launch test clients."

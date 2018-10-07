@@ -155,10 +155,33 @@ void server_session::on_close(boost::system::error_code ec)
 
 void server_session::do_close()
 {
-    if (closing)
-       return;
+   if (closing)
+      return;
 
-    closing = true;
+   closing = true;
+
+   // First we set the close frame timeout so that if the peer does
+   // not reply with his close frame we do not wait forever. This
+   // timer can only be canceled when on_read is called with closed.
+   timer.expires_after(shared.timeouts->close);
+
+   auto const handler0 = [p = shared_from_this()](auto ec)
+   {
+      if (ec) {
+         if (ec == boost::asio::error::operation_aborted)
+            return;
+
+         fail(ec, "on_close"); // TODO: Check what to do here.
+         return;
+      }
+
+      //std::cout << "Giving up waiting for close frame. Shutting down socket."
+      //          << std::endl;
+      p->ws.next_layer().shutdown(tcp::socket::shutdown_both, ec);
+      p->ws.next_layer().close(ec);
+   };
+
+   timer.async_wait(boost::asio::bind_executor(strand, handler0));
 
    //std::cout << "server_session::do_close()" << std::endl;
    auto const handler = [p = shared_from_this()](auto ec)

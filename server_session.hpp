@@ -20,6 +20,7 @@ struct server_session_timeouts {
    std::chrono::seconds sms {2};
    std::chrono::seconds handshake {2};
    std::chrono::seconds pong {2};
+   std::chrono::seconds close {2};
 };
 
 struct sessions_stats {
@@ -38,7 +39,6 @@ enum class ping_pong
 , unset
 };
 
-// TODO: Introduce close frames timeout.
 class server_session :
    public std::enable_shared_from_this<server_session> {
 private:

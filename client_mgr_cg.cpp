@@ -49,7 +49,9 @@ int client_mgr_cg::on_read(std::string msg, std::shared_ptr<client_type> s)
 client_mgr_cg::client_mgr_cg(options_type op_)
 : op(op_)
 {
-   for (auto i = op.group_begin; i < op.number_of_groups; ++i) {
+   auto const b = op.group_begin;
+   auto const e = op.group_begin + op.number_of_groups;
+   for (auto i = b; i < e; ++i) {
       json cmd;
       cmd["cmd"] = "create_group";
       cmd["hash"] = to_str(i);

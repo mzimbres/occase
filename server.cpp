@@ -36,6 +36,7 @@ struct server_op {
    int handshake_timeout;
    int pong_timeout;
    int number_of_threads;
+   int close_frame_timeout;
 
    auto session_config() const noexcept
    {
@@ -44,6 +45,7 @@ struct server_op {
       , std::chrono::seconds {sms_timeout}
       , std::chrono::seconds {handshake_timeout}
       , std::chrono::seconds {pong_timeout}
+      , std::chrono::seconds {close_frame_timeout}
       };
    }
 };
@@ -83,6 +85,10 @@ int main(int argc, char* argv[])
          , "Pong timeout in seconds. This is the time the client has to "
            "reply a ping frame sent by the server. If a pong is received "
            "on time a new ping is sent on timer expiration."
+         )
+         ("close-frame-timeout,e"
+         , po::value<int>(&op.close_frame_timeout)->default_value(2)
+         , "The time we are willing to wait for a reply of a sent close frame."
          )
 
          ("number-of-threads,c"

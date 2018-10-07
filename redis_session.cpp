@@ -26,6 +26,7 @@ void redis_session::run()
 
 void redis_session::write(std::string msg)
 {
+   msg += "\r\n";
    auto const handler = [p = shared_from_this(), m = std::move(msg)]()
    {
       p->do_write(std::move(m));
@@ -51,39 +52,38 @@ void redis_session::on_connect(boost::system::error_code ec)
       return;
    }
 
-   std::cout << "Proceeding to read." << std::endl;
+   boost::asio::ip::tcp::no_delay option(true);
+   socket.set_option(option);
+
    do_read({}, 0);
 }
 
 void redis_session::do_read(boost::system::error_code ec, std::size_t n)
 {
    if (ec) {
-      std::cout << "do_read closing." << std::endl;
+      //std::cout << "do_read closing." << std::endl;
       do_close();
       return;
    }
 
-   if (!std::empty(message)) {
-      std::cout << "do_read zero bytes have been read." << std::endl;
+   if (!std::empty(message))
       std::cout << message << "\n";
-   }
 
    auto const handler = [p = shared_from_this()](auto ec, auto n)
    {
       p->do_read(ec, n);
    };
 
-   std::cout << "do_read posting." << std::endl;
-   message.resize(4);
-   boost::asio::async_read( socket
-                          , boost::asio::buffer(message)
+   //std::cout << "do_read posting." << std::endl;
+   message.resize(1024);
+   //boost::asio::async_read( socket
+   //                       , boost::asio::buffer(message)
+   //                       , boost::asio::transfer_all()
+   //                       , boost::asio::bind_executor(strand, handler));
+   boost::asio::async_read_until( socket
+                          , boost::asio::dynamic_buffer(message)
+                          , "\r\n"
                           , boost::asio::bind_executor(strand, handler));
-   //boost::asio::async_read_until( socket
-   //                          , message
-   //                          , '\n'
-   //                          , boost::asio::bind_executor(strand, handler));
-   //socket.async_read_some( boost::asio::buffer(message)
-   //                      , boost::asio::bind_executor(strand, handler));
 }
 
 void redis_session::do_write(std::string msg)
@@ -97,7 +97,7 @@ void redis_session::do_write(std::string msg)
          p->on_write(ec, n);
       };
 
-      std::cout << "async_write ===> " << write_queue.front() << std::endl;
+      //std::cout << "async_write ===> " << write_queue.front() << std::endl;
       boost::asio::async_write( socket
                            , boost::asio::buffer(write_queue.front())
                            , boost::asio::bind_executor(strand, handler));
@@ -113,8 +113,8 @@ void redis_session::on_write( boost::system::error_code ec
      return;
    }
 
-   std::cout << "on_write popping ===> " << write_queue.front()
-             << " " << n << std::endl;
+   //std::cout << "on_write popping ===> " << write_queue.front()
+   //          << " " << n << std::endl;
    write_queue.pop_front();
 
    if (write_queue.empty())
@@ -125,7 +125,7 @@ void redis_session::on_write( boost::system::error_code ec
       p->on_write(ec, n);
    };
 
-   std::cout << "on_write: Writing more." << std::endl;
+   //std::cout << "on_write: Writing more." << std::endl;
    boost::asio::async_write( socket
                         , boost::asio::buffer(write_queue.front())
                         , boost::asio::bind_executor(strand, handler));

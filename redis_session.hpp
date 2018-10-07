@@ -32,7 +32,8 @@ public:
    : socket(ioc_)
    , strand(socket.get_executor())
    , endpoints(endpoints_)
-   { }
+   {
+   }
 
    void run();
    void write(std::string msg);

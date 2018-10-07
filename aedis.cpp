@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
       desc.add_options()
       ("help,h", "Produces help message")
       ( "port,p"
-      , po::value<std::string>(&op.port)->default_value("6380")
+      , po::value<std::string>(&op.port)->default_value("6379")
       , "Server listening port."
       )
       ("ip,i"
@@ -50,17 +50,17 @@ int main(int argc, char* argv[])
       boost::asio::ip::tcp::resolver resolver(ioc);
       auto endpoints = resolver.resolve(op.ip, op.port);
 
-      redis_session client(ioc, endpoints);
+      auto session = std::make_shared<redis_session>(ioc, endpoints);
+      session->run();
 
       std::thread thread([&](){ioc.run();});
 
       char line[1024];
-      while (std::cin.getline(line, std::size(line)))
-      {
-         client.write("PING");
+      while (std::cin.getline(line, std::size(line))) {
+         session->write(line);
       }
 
-      client.close();
+      session->close();
       thread.join();
    } catch (std::exception& e) {
       std::cerr << "Exception: " << e.what() << "\n";

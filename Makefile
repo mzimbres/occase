@@ -30,9 +30,12 @@ client_objs += client_mgr_cg.o
 client_objs += client_mgr_accept_timer.o
 client_objs += client_mgr_sim.o
 
+aedis_objs =
+aedis_objs += redis_session.o
+
 exe_objs = $(addsuffix .o, $(exes))
 
-lib_objs = $(server_objs) $(client_objs) $(common_objs)
+lib_objs = $(server_objs) $(client_objs) $(aedis_objs) $(common_objs)
 
 SRCS =
 SRCS += $(lib_objs:.o=.cpp)
@@ -59,7 +62,7 @@ server: % : %.o $(server_objs) $(common_objs)
 menu_dump: % : %.o $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS)
 
-aedis: % : %.o
+aedis: % : %.o $(aedis_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(boost_libs)
 
 .PHONY: clean

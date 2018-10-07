@@ -38,7 +38,7 @@ struct server_op {
    int number_of_threads;
    int close_frame_timeout;
 
-   auto session_config() const noexcept
+   auto get_timeouts() const noexcept
    {
       return server_session_timeouts
       { std::chrono::seconds {auth_timeout}
@@ -117,15 +117,12 @@ int main(int argc, char* argv[])
 
       boost::asio::io_context ioc {op.number_of_threads};
 
-      auto sm = std::make_shared<server_mgr>();
-      auto ss_tms = std::make_shared< const server_session_timeouts
-                                    >(op.session_config());
+      auto sm = std::make_shared<server_mgr>(op.get_timeouts());
 
       auto lst =
          std::make_shared<listener>( ioc 
                                    , tcp::endpoint {address, op.port}
-                                   , sm
-                                   , ss_tms);
+                                   , sm);
       lst->run();
 
       boost::asio::signal_set signals(ioc, SIGINT, SIGTERM);

@@ -61,7 +61,7 @@ void server_session::do_accept()
 
    ws.control_callback(handler0);
 
-   timer.expires_after(shared.timeouts->handshake);
+   timer.expires_after(shared.mgr->get_timeouts().handshake);
 
    auto const handler1 = [p = shared_from_this()](auto ec)
    {
@@ -106,7 +106,7 @@ void server_session::on_accept(boost::system::error_code ec)
    // The cancelling of this timer should happen when either
    // 1. The session is autheticated or a login is performed.
    // 2. The user requests a login.
-   timer.expires_after(shared.timeouts->auth);
+   timer.expires_after(shared.mgr->get_timeouts().auth);
 
    auto const handler = [p = shared_from_this()](auto ec)
    {
@@ -163,7 +163,7 @@ void server_session::do_close()
    // First we set the close frame timeout so that if the peer does
    // not reply with his close frame we do not wait forever. This
    // timer can only be canceled when on_read is called with closed.
-   timer.expires_after(shared.timeouts->close);
+   timer.expires_after(shared.mgr->get_timeouts().close);
 
    auto const handler0 = [p = shared_from_this()](auto ec)
    {
@@ -215,7 +215,7 @@ void server_session::shutdown()
 
 void server_session::do_pong_wait()
 {
-   timer.expires_after(shared.timeouts->pong);
+   timer.expires_after(shared.mgr->get_timeouts().pong);
 
    auto const handler = [p = shared_from_this()](auto ec)
    {
@@ -284,7 +284,7 @@ void server_session::handle_ev(ev_res r)
          // Successful login request which means the ongoing
          // connection timer  has to be canceled.  This is where we
          // have to set the sms timeout.
-         auto const n = timer.expires_after(shared.timeouts->sms);
+         auto const n = timer.expires_after(shared.mgr->get_timeouts().sms);
 
          auto const handler = [p = shared_from_this()](auto ec)
          {

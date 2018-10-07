@@ -15,7 +15,6 @@ private:
    tcp::acceptor acceptor;
    tcp::socket socket;
    std::shared_ptr<server_mgr> mgr;
-   std::shared_ptr<const server_session_timeouts> timeouts;
    std::shared_ptr<sessions_stats> stats;
    boost::asio::steady_timer session_stats_timer;
 
@@ -24,8 +23,7 @@ private:
 public:
    listener( boost::asio::io_context& ioc
            , tcp::endpoint endpoint
-           , std::shared_ptr<server_mgr> mgr_
-           , std::shared_ptr<const server_session_timeouts> timeouts);
+           , std::shared_ptr<server_mgr> mgr_);
    ~listener();
    void run();
    void do_accept();

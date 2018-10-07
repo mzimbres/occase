@@ -29,6 +29,14 @@ enum class ev_res
 , unknown
 };
 
+struct server_session_timeouts {
+   std::chrono::seconds auth {2};
+   std::chrono::seconds sms {2};
+   std::chrono::seconds handshake {2};
+   std::chrono::seconds pong {2};
+   std::chrono::seconds close {2};
+};
+
 class server_mgr {
 private:
    std::mutex mutex;
@@ -40,7 +48,12 @@ private:
    // Maps a group id to a group object.
    std::unordered_map<std::string, group> groups;
 
+   server_session_timeouts const timeouts;
+
 public:
+   server_mgr(server_session_timeouts timeouts_)
+   : timeouts(timeouts_)
+   {}
    void shutdown();
    void release_user(std::string id);
 
@@ -53,6 +66,8 @@ public:
    ev_res on_group_msg( std::string msg
                       , json j // To avoid parsing it again.
                       , std::shared_ptr<server_session> session);
+
+   auto const& get_timeouts() const noexcept {return timeouts;}
 };
 
 ev_res on_message( server_mgr& mgr

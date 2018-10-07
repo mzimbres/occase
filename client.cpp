@@ -239,69 +239,6 @@ public:
    }
 };
 
-void basic_tests1a(client_op const& op)
-{
-   boost::asio::io_context ioc;
-
-   // Tests if the server times out connections that do not proceed
-   // with the websocket handshake.
-   std::make_shared< session_launcher<cmgr_handshake_tm>
-                   >( ioc, cmgr_handshake_op {}
-                    , op.make_session_cf()
-                    , op.make_handshake_laucher_op()
-                    )->run({});
-   ioc.run();
-}
-
-void basic_tests1b(client_op const& op)
-{
-   boost::asio::io_context ioc;
-
-   // Tests if the server drops connections that connect but do not
-   // register or authenticate.
-   std::make_shared< session_launcher<client_mgr_accept_timer>
-                   >( ioc
-                    , cmgr_handshake_op {}
-                    , op.make_session_cf()
-                    , op.make_after_handshake_laucher_op()
-                    )->run({});
-   ioc.run();
-}
-
-void basic_tests2( client_op const& op
-                 , cmgr_login_cf ccf
-                 , launcher_op lop)
-{
-   boost::asio::io_context ioc;
-
-   // Tests the sms timeout. Connections should be dropped if the
-   // users tries to register but do not send the sms on time.
-   std::make_shared< session_launcher<client_mgr_login>
-                   >( ioc
-                    , ccf
-                    , op.make_session_cf()
-                    , lop
-                    )->run({});
-   ioc.run();
-}
-
-void basic_tests3( client_op const& op
-                 , cmgr_sms_op const& ccf
-                 , launcher_op const& lop)
-{
-   boost::asio::io_context ioc;
-
-   // Sends sms on time but the wrong one and expects the server to
-   // release sessions correctly.
-   std::make_shared< session_launcher<client_mgr_sms>
-                   >( ioc
-                    , ccf
-                    , op.make_session_cf()
-                    , lop
-                    )->run({});
-   ioc.run();
-}
-
 void basic_tests6(client_op const& op)
 {
    boost::asio::io_context ioc;
@@ -532,22 +469,7 @@ int main(int argc, char* argv[])
       }
 
       std::cout << "==========================================" << std::endl;
-      // Runs some tests individually.
-      basic_tests1a(op);
-      basic_tests1b(op);
-
-      basic_tests2(op, { "" , "ok" , -1}, op.make_sms_tm_laucher_op1());
-      basic_tests2(op, { "" , "ok" , -2}, op.make_sms_tm_laucher_op2());
-      basic_tests2(op, { "" , "ok" , -3}, op.make_sms_tm_laucher_op3());
-
-      basic_tests3(op, {"", "fail", "8r47", -1}, op.make_wrong_sms_cf1());
-      basic_tests3(op, {"", "fail", "8r47", -2}, op.make_wrong_sms_cf2());
-      basic_tests3(op, {"", "fail", "8r47", -3}, op.make_wrong_sms_cf3());
-
-      std::cout << "\nFinished launching individual tests." << std::endl;
-
       prepare_server(op);
-
       basic_tests6(op);
       std::cout << "Basic tests:        ok" << std::endl;
 

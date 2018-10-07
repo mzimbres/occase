@@ -56,46 +56,46 @@ int main(int argc, char* argv[])
       server_op op;
       po::options_description desc("Options");
       desc.add_options()
-         ("help,h", "Produces help message")
-         ( "port,p"
-         , po::value<unsigned short>(&op.port)->default_value(8080)
-         , "Server listening port."
-         )
-         ("ip,d"
-         , po::value<std::string>(&op.ip)->default_value("127.0.0.1")
-         , "Server ip address."
-         )
-         ("sms-timeout,s"
-         , po::value<int>(&op.sms_timeout)->default_value(2)
-         , "SMS confirmation timeout in seconds."
-         )
-         ("auth-timeout,a"
-         , po::value<int>(&op.auth_timeout)->default_value(2)
-         , "Authetication timeout in seconds. Fired after the websocket "
-           "handshake completes. Used also by the login "
-           "command for clients registering for the first time."
-         )
-         ("handshake-timeout,k"
-         , po::value<int>(&op.handshake_timeout)->default_value(2)
-         , "Handshake timeout in seconds. If the websocket handshake lasts "
-           "more than that the socket is shutdown and closed."
-         )
-         ("pong-timeout,r"
-         , po::value<int>(&op.pong_timeout)->default_value(2)
-         , "Pong timeout in seconds. This is the time the client has to "
-           "reply a ping frame sent by the server. If a pong is received "
-           "on time a new ping is sent on timer expiration."
-         )
-         ("close-frame-timeout,e"
-         , po::value<int>(&op.close_frame_timeout)->default_value(2)
-         , "The time we are willing to wait for a reply of a sent close frame."
-         )
+      ("help,h", "Produces help message")
+      ( "port,p"
+      , po::value<unsigned short>(&op.port)->default_value(8080)
+      , "Server listening port."
+      )
+      ("ip,d"
+      , po::value<std::string>(&op.ip)->default_value("127.0.0.1")
+      , "Server ip address."
+      )
+      ("sms-timeout,s"
+      , po::value<int>(&op.sms_timeout)->default_value(2)
+      , "SMS confirmation timeout in seconds."
+      )
+      ("auth-timeout,a"
+      , po::value<int>(&op.auth_timeout)->default_value(2)
+      , "Authetication timeout in seconds. Fired after the websocket "
+        "handshake completes. Used also by the login "
+        "command for clients registering for the first time."
+      )
+      ("handshake-timeout,k"
+      , po::value<int>(&op.handshake_timeout)->default_value(2)
+      , "Handshake timeout in seconds. If the websocket handshake lasts "
+        "more than that the socket is shutdown and closed."
+      )
+      ("pong-timeout,r"
+      , po::value<int>(&op.pong_timeout)->default_value(2)
+      , "Pong timeout in seconds. This is the time the client has to "
+        "reply a ping frame sent by the server. If a pong is received "
+        "on time a new ping is sent on timer expiration."
+      )
+      ("close-frame-timeout,e"
+      , po::value<int>(&op.close_frame_timeout)->default_value(2)
+      , "The time we are willing to wait for a reply of a sent close frame."
+      )
 
-         ("number-of-threads,c"
-         , po::value<int>(&op.number_of_threads)->default_value(1)
-         , "The number of threads for the io_context. This is usually "
-           "the number of processor cores."
-         )
+      ("number-of-threads,c"
+      , po::value<int>(&op.number_of_threads)->default_value(1)
+      , "The number of threads for the io_context. This is usually "
+        "the number of processor cores."
+      )
       ;
 
       po::variables_map vm;        

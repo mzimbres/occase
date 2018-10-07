@@ -6,38 +6,66 @@
 #include <iostream>
 
 #include <boost/asio.hpp>
+#include <boost/program_options/options_description.hpp>
+#include <boost/program_options/parsers.hpp>
+#include <boost/program_options/variables_map.hpp>
 
 #include "redis_session.hpp"
 
+namespace po = boost::program_options;
+
+struct aedis_op {
+   std::string ip;
+   std::string port;
+};
+
 int main(int argc, char* argv[])
 {
-  try {
-    if (argc != 3) {
-      std::cerr << "Usage: redis_session <host> <port>\n";
-      return 1;
-    }
+   try {
+      aedis_op op;
+      po::options_description desc("Options");
+      desc.add_options()
+      ("help,h", "Produces help message")
+      ( "port,p"
+      , po::value<std::string>(&op.port)->default_value("6380")
+      , "Server listening port."
+      )
+      ("ip,i"
+      , po::value<std::string>(&op.ip)->default_value("127.0.0.1")
+      , "Server ip address."
+      )
+      ;
 
-    boost::asio::io_context ioc;
+      po::variables_map vm;        
+      po::store(po::parse_command_line(argc, argv, desc), vm);
+      po::notify(vm);    
 
-    boost::asio::ip::tcp::resolver resolver(ioc);
-    auto endpoints = resolver.resolve(argv[1], argv[2]);
+      if (vm.count("help")) {
+         std::cout << desc << "\n";
+         return 0;
+      }
 
-    redis_session client(ioc, endpoints);
+      boost::asio::io_context ioc;
 
-    std::thread thread([&](){ioc.run();});
+      boost::asio::ip::tcp::resolver resolver(ioc);
+      auto endpoints = resolver.resolve(op.ip, op.port);
 
-    char line[1024];
-    while (std::cin.getline(line, std::size(line)))
-    {
-      client.write("PING");
-    }
+      redis_session client(ioc, endpoints);
 
-    client.close();
-    thread.join();
-  } catch (std::exception& e) {
-    std::cerr << "Exception: " << e.what() << "\n";
-  }
+      std::thread thread([&](){ioc.run();});
 
-  return 0;
+      char line[1024];
+      while (std::cin.getline(line, std::size(line)))
+      {
+         client.write("PING");
+      }
+
+      client.close();
+      thread.join();
+   } catch (std::exception& e) {
+      std::cerr << "Exception: " << e.what() << "\n";
+   }
+
+   return 0;
 }
 

@@ -18,6 +18,7 @@ class client_session;
 struct cmgr_cg_op {
    std::string user;
    std::string expected;
+   int group_begin;
    int number_of_groups;
 };
 

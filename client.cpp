@@ -50,6 +50,7 @@ struct client_op {
    int launch_interval = 100;
    int auth_timeout = 3;
    int sim_runs = 2;
+   int group_begin;
    int number_of_groups;
    int msgs_per_group;
 
@@ -246,7 +247,10 @@ void basic_tests6(client_op const& op)
                    >( ioc
                     , op.make_session_cf()
                     , client_mgr_cg::options_type
-                      {"Marcelo2", "fail", op.number_of_groups}
+                      { "Marcelo2"
+                      , "fail"
+                      , op.group_begin
+                      , op.number_of_groups}
                     )->run();
    ioc.run();
 }
@@ -337,7 +341,10 @@ void prepare_server(client_op const& op)
                    >( ioc
                     , op.make_session_cf()
                     , client_mgr_cg::options_type
-                      {"Marcelo1", "ok", op.number_of_groups}
+                      { "Marcelo1"
+                      , "ok"
+                      , op.group_begin
+                      , op.number_of_groups}
                     )->run();
 
    json j1;
@@ -448,6 +455,10 @@ int main(int argc, char* argv[])
          , "Number of simulation runs."
          )
 
+         ("group-begin"
+         , po::value<int>(&op.group_begin)->default_value(0)
+         , "Code of the first group."
+         )
          ("number-of-groups,a"
          , po::value<int>(&op.number_of_groups)->default_value(20)
          , "Number of groups to generate."

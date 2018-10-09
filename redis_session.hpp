@@ -1,6 +1,7 @@
 #pragma once
 
 #include <deque>
+#include <vector>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -16,7 +17,9 @@ class redis_session :
 private:
    boost::asio::ip::tcp::socket socket;
    boost::asio::strand<boost::asio::io_context::executor_type> strand;
-   std::string message;
+   static constexpr auto msg_size = 3;
+   std::vector<char> message {msg_size};
+   std::vector<char> result;
    std::deque<std::string> write_queue;
    boost::asio::ip::tcp::resolver::results_type endpoints;
 
@@ -28,7 +31,7 @@ private:
 
 public:
    redis_session( boost::asio::io_context& ioc_
-               , boost::asio::ip::tcp::resolver::results_type endpoints_)
+                , boost::asio::ip::tcp::resolver::results_type endpoints_)
    : socket(ioc_)
    , strand(socket.get_executor())
    , endpoints(endpoints_)

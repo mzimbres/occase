@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <string_view>
 
 #include <boost/asio.hpp>
 #include <boost/asio/strand.hpp>
@@ -61,29 +62,39 @@ void redis_session::on_connect(boost::system::error_code ec)
 void redis_session::do_read(boost::system::error_code ec, std::size_t n)
 {
    if (ec) {
-      //std::cout << "do_read closing." << std::endl;
+      std::cout << "do_read closing." << std::endl;
       do_close();
       return;
    }
 
-   if (!std::empty(message))
-      std::cout << message << "\n";
+   std::copy( std::begin(message), std::begin(message) + n
+            , std::back_inserter(result));
+
+   if (n < msg_size) {
+      std::string_view v {result.data(), std::size(result)};
+      std::cout << v << "\n";
+      result.resize(0);
+   }
+
+   //std::cout << "Vector size " << std::size(message)
+   //          << " -- " << n << std::endl;
+   message.resize(msg_size);
+   //boost::asio::async_read( socket
+   //                       , boost::asio::buffer(message)
+   //                       , boost::asio::transfer_all()
+   //                       , boost::asio::bind_executor(strand, handler));
+   //boost::asio::async_read_until( socket
+   //                       , boost::asio::dynamic_buffer(message)
+   //                       , "\r\n"
+   //                       , boost::asio::bind_executor(strand, handler));
 
    auto const handler = [p = shared_from_this()](auto ec, auto n)
    {
       p->do_read(ec, n);
    };
 
-   //std::cout << "do_read posting." << std::endl;
-   message.resize(1024);
-   //boost::asio::async_read( socket
-   //                       , boost::asio::buffer(message)
-   //                       , boost::asio::transfer_all()
-   //                       , boost::asio::bind_executor(strand, handler));
-   boost::asio::async_read_until( socket
-                          , boost::asio::dynamic_buffer(message)
-                          , "\r\n"
-                          , boost::asio::bind_executor(strand, handler));
+   socket.async_read_some( boost::asio::buffer(message)
+                         , boost::asio::bind_executor(strand, handler));
 }
 
 void redis_session::do_write(std::string msg)

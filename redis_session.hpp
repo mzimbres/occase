@@ -12,6 +12,9 @@
 #include <boost/asio/bind_executor.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
+namespace aedis
+{
+
 class redis_session :
   public std::enable_shared_from_this<redis_session> {
 private:
@@ -35,12 +38,12 @@ public:
    : socket(ioc_)
    , strand(socket.get_executor())
    , endpoints(endpoints_)
-   {
-   }
+   { }
 
    void run();
    void write(std::string msg);
    void close();
-
 };
+
+}
 

@@ -12,6 +12,8 @@
 
 #include "redis_session.hpp"
 
+using namespace aedis;
+
 namespace po = boost::program_options;
 
 struct aedis_op {

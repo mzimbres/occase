@@ -14,6 +14,9 @@
 
 using boost::asio::ip::tcp;
 
+namespace aedis
+{
+
 void redis_session::run()
 {
    auto const handler = [p = shared_from_this()](auto ec, auto Iterator)
@@ -146,5 +149,7 @@ void redis_session::do_close()
 {
    std::cout << "do_close." << std::endl;
    socket.close();
+}
+
 }
 

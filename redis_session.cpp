@@ -24,8 +24,8 @@ void redis_session::run()
       p->on_connect(ec);
    };
 
-   boost::asio::async_connect(socket, endpoints
-                          , boost::asio::bind_executor(strand, handler));
+   boost::asio::async_connect( socket, endpoints
+                             , boost::asio::bind_executor(strand, handler));
 }
 
 void redis_session::write(std::string msg)
@@ -73,7 +73,44 @@ void redis_session::do_read(boost::system::error_code ec, std::size_t n)
    std::copy( std::begin(message), std::begin(message) + n
             , std::back_inserter(result));
 
-   if (n < msg_size) {
+   if (n < msg_size && n != 0) {
+      auto p = std::begin(result);
+      switch (*p++) {
+         case '+':
+            {
+               std::cout << "Simple string." << std::endl;
+
+               auto match = std::find(p, std::end(result), '\r');
+               if (match == std::end(result)) { // Redis bug?
+                  std::cout << "Redis bug." << std::endl;
+               } else {
+                  std::string_view v {&*p, match - p};
+                  std::cout << v << "\n";
+               }
+            }
+            break;
+         case '-':
+            {
+               std::cout << "Error." << std::endl;
+            }
+            break;
+         case ':':
+            {
+               std::cout << "Integer." << std::endl;
+            }
+            break;
+         case '$':
+            {
+               std::cout << "Bulky string." << std::endl;
+            }
+            break;
+         case '*':
+            {
+               std::cout << "Array." << std::endl;
+            }
+            break;
+      }
+
       std::string_view v {result.data(), std::size(result)};
       std::cout << v << "\n";
       result.resize(0);
@@ -102,8 +139,8 @@ void redis_session::do_read(boost::system::error_code ec, std::size_t n)
 
 void redis_session::do_write(std::string msg)
 {
-   auto const is_empty = write_queue.empty();
-   write_queue.push_back(std::move(msg));
+   auto const is_empty = std::empty(write_queue);
+   write_queue.push(std::move(msg));
 
    if (is_empty) {
       auto const handler = [p = shared_from_this()](auto ec, auto n)
@@ -129,9 +166,9 @@ void redis_session::on_write( boost::system::error_code ec
 
    //std::cout << "on_write popping ===> " << write_queue.front()
    //          << " " << n << std::endl;
-   write_queue.pop_front();
+   write_queue.pop();
 
-   if (write_queue.empty())
+   if (std::empty(write_queue))
       return;
 
    auto const handler = [p = shared_from_this()](auto ec, auto n)

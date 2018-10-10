@@ -1,6 +1,6 @@
 #pragma once
 
-#include <deque>
+#include <queue>
 #include <vector>
 #include <cstdio>
 #include <cstdlib>
@@ -23,7 +23,7 @@ private:
    static constexpr auto msg_size = 3;
    std::vector<char> message {msg_size};
    std::vector<char> result;
-   std::deque<std::string> write_queue;
+   std::queue<std::string> write_queue;
    boost::asio::ip::tcp::resolver::results_type endpoints;
 
    void on_connect(boost::system::error_code ec);

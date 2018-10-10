@@ -74,24 +74,42 @@ void redis_session::do_read(boost::system::error_code ec, std::size_t n)
             , std::back_inserter(result));
 
    if (n < msg_size && n != 0) {
-      auto p = std::begin(result);
-      switch (*p++) {
+      auto begin = std::begin(result);
+      auto end = std::begin(result);
+      switch (*begin++) {
          case '+':
             {
                std::cout << "Simple string." << std::endl;
 
-               auto match = std::find(p, std::end(result), '\r');
-               if (match == std::end(result)) { // Redis bug?
+               auto p = begin;
+               while (p != end && *p != '\r')
+                  ++p;
+
+               if (p == end) { // Redis bug?
                   std::cout << "Redis bug." << std::endl;
                } else {
-                  std::string_view v {&*p, match - p};
+                  std::string_view v {&*begin, p - begin};
                   std::cout << v << "\n";
                }
             }
             break;
          case '-':
             {
-               std::cout << "Error." << std::endl;
+               auto p = begin;
+               while (p != end && *p != ' ')
+                  ++p;
+
+               std::string_view error_type {&*begin, p - begin};
+               std::cout << "Error type: " << error_type << std::endl;
+
+               ++p; // TODO: Check this is not past the end.
+
+               begin = p;
+               while (p != end && *p != '\r')
+                  ++p;
+
+               std::string_view error_msg {&*begin, p - begin};
+               std::cout << "Error msg: " << error_msg << std::endl;
             }
             break;
          case ':':

@@ -17,6 +17,72 @@ using boost::asio::ip::tcp;
 namespace aedis
 {
 
+void process_response(std::vector<char> const& resp)
+{
+   auto begin = std::cbegin(resp);
+   auto end = std::cend(resp);
+   switch (*begin++) {
+   case '+':
+   {
+      auto p = begin;
+      while (*p != '\r')
+         ++p;
+
+      std::string_view v {&*begin, p - begin};
+      std::cout << v << "\n";
+   }
+   break;
+   case '-':
+   {
+      auto p = begin;
+      while (*p != ' ' && *p != '\r')
+         ++p;
+
+      std::string_view error_type {&*begin, p - begin};
+      std::cout << "Error type: " << error_type << std::endl;
+
+      if (*p == '\r') { // Redis bug?
+         std::cout << "Redis bug." << std::endl;
+      } else {
+         ++p;
+      }
+
+      begin = p;
+      while (*p != '\r')
+         ++p;
+
+      auto const d = std::distance(begin, p);
+      std::string_view error_msg {&*begin, d};
+      std::cout << "Error msg: " << error_msg << std::endl;
+   }
+   break;
+   case ':':
+   {
+      auto p = begin;
+      while (*p != '\r')
+         ++p;
+
+      auto const d = std::distance(begin, p);
+      std::string_view n {&*begin, d};
+      std::cout << n << std::endl;
+   }
+   break;
+   case '$':
+   {
+      std::cout << "Bulky string." << std::endl;
+   }
+   break;
+   case '*':
+   {
+      std::cout << "Array." << std::endl;
+   }
+   break;
+   }
+
+   std::string_view v {resp.data(), std::size(resp)};
+   std::cout << v << "\n";
+}
+
 void redis_session::run()
 {
    auto const handler = [p = shared_from_this()](auto ec, auto Iterator)
@@ -75,68 +141,7 @@ void redis_session::do_read(boost::system::error_code ec, std::size_t n)
 
    if (n < msg_size && n != 0) {
       result.push_back('\r'); // To simplify the search.
-      auto begin = std::begin(result);
-      auto end = std::begin(result);
-      switch (*begin++) {
-         case '+':
-            {
-               auto p = begin;
-               while (*p != '\r')
-                  ++p;
-
-               std::string_view v {&*begin, p - begin};
-               std::cout << v << "\n";
-            }
-            break;
-         case '-':
-            {
-               auto p = begin;
-               while (*p != ' ' && *p != '\r')
-                  ++p;
-
-               std::string_view error_type {&*begin, p - begin};
-               std::cout << "Error type: " << error_type << std::endl;
-
-               if (*p == '\r') { // Redis bug?
-                  std::cout << "Redis bug." << std::endl;
-               } else {
-                  ++p;
-               }
-
-               begin = p;
-               while (*p != '\r')
-                  ++p;
-
-               auto const d = std::distance(begin, p);
-               std::string_view error_msg {&*begin, d};
-               std::cout << "Error msg: " << error_msg << std::endl;
-            }
-            break;
-         case ':':
-            {
-               auto p = begin;
-               while (*p != '\r')
-                  ++p;
-
-               auto const d = std::distance(begin, p);
-               std::string_view n {&*begin, d};
-               std::cout << n << std::endl;
-            }
-            break;
-         case '$':
-            {
-               std::cout << "Bulky string." << std::endl;
-            }
-            break;
-         case '*':
-            {
-               std::cout << "Array." << std::endl;
-            }
-            break;
-      }
-
-      std::string_view v {result.data(), std::size(result)};
-      std::cout << v << "\n";
+      process_response(result);
       result.resize(0);
    }
 

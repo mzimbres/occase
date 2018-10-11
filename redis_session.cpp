@@ -19,8 +19,19 @@ namespace aedis
 
 void process_response(std::vector<char> const& resp)
 {
+   // Checks whether the array is well formed.
+   if (std::size(resp) < 4) {
+      std::cout << "Ill formed array." << std::endl;
+      return;
+   }
+
+   auto const end = std::cend(resp);
+   if (*(end - 2) != '\r' && *(end - 1) != '\n') {
+      std::cout << "Ill formed array." << std::endl;
+      return;
+   }
+
    auto begin = std::cbegin(resp);
-   auto end = std::cend(resp);
    switch (*begin++) {
    case '+':
    {
@@ -38,14 +49,15 @@ void process_response(std::vector<char> const& resp)
       while (*p != ' ' && *p != '\r')
          ++p;
 
+      if (*p == '\r') { // Redis bug?
+         std::cout << "Redis bug." << std::endl;
+         return;
+      }
+
       std::string_view error_type {&*begin, p - begin};
       std::cout << "Error type: " << error_type << std::endl;
 
-      if (*p == '\r') { // Redis bug?
-         std::cout << "Redis bug." << std::endl;
-      } else {
-         ++p;
-      }
+      ++p;
 
       begin = p;
       while (*p != '\r')
@@ -140,7 +152,6 @@ void redis_session::do_read(boost::system::error_code ec, std::size_t n)
             , std::back_inserter(result));
 
    if (n < msg_size && n != 0) {
-      result.push_back('\r'); // To simplify the search.
       process_response(result);
       result.resize(0);
    }

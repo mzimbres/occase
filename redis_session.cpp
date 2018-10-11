@@ -74,6 +74,7 @@ void redis_session::do_read(boost::system::error_code ec, std::size_t n)
             , std::back_inserter(result));
 
    if (n < msg_size && n != 0) {
+      result.push_back('\r'); // To simplify the search.
       auto begin = std::begin(result);
       auto end = std::begin(result);
       switch (*begin++) {
@@ -82,30 +83,30 @@ void redis_session::do_read(boost::system::error_code ec, std::size_t n)
                std::cout << "Simple string." << std::endl;
 
                auto p = begin;
-               while (p != end && *p != '\r')
+               while (*p != '\r')
                   ++p;
 
-               if (p == end) { // Redis bug?
-                  std::cout << "Redis bug." << std::endl;
-               } else {
-                  std::string_view v {&*begin, p - begin};
-                  std::cout << v << "\n";
-               }
+               std::string_view v {&*begin, p - begin};
+               std::cout << v << "\n";
             }
             break;
          case '-':
             {
                auto p = begin;
-               while (p != end && *p != ' ')
+               while (*p != ' ' && *p != '\r')
                   ++p;
 
                std::string_view error_type {&*begin, p - begin};
                std::cout << "Error type: " << error_type << std::endl;
 
-               ++p; // TODO: Check this is not past the end.
+               if (*p == '\r') { // Redis bug?
+                  std::cout << "Redis bug." << std::endl;
+               } else {
+                  ++p;
+               }
 
                begin = p;
-               while (p != end && *p != '\r')
+               while (*p != '\r')
                   ++p;
 
                std::string_view error_msg {&*begin, p - begin};

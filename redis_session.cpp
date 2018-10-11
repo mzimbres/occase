@@ -80,8 +80,6 @@ void redis_session::do_read(boost::system::error_code ec, std::size_t n)
       switch (*begin++) {
          case '+':
             {
-               std::cout << "Simple string." << std::endl;
-
                auto p = begin;
                while (*p != '\r')
                   ++p;
@@ -109,13 +107,20 @@ void redis_session::do_read(boost::system::error_code ec, std::size_t n)
                while (*p != '\r')
                   ++p;
 
-               std::string_view error_msg {&*begin, p - begin};
+               auto const d = std::distance(begin, p);
+               std::string_view error_msg {&*begin, d};
                std::cout << "Error msg: " << error_msg << std::endl;
             }
             break;
          case ':':
             {
-               std::cout << "Integer." << std::endl;
+               auto p = begin;
+               while (*p != '\r')
+                  ++p;
+
+               auto const d = std::distance(begin, p);
+               std::string_view n {&*begin, d};
+               std::cout << n << std::endl;
             }
             break;
          case '$':

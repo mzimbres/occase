@@ -6,7 +6,6 @@
 #include <string_view>
 
 #include <boost/asio.hpp>
-#include <boost/asio/strand.hpp>
 #include <boost/asio/bind_executor.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
@@ -102,8 +101,7 @@ void redis_session::run()
       p->on_connect(ec);
    };
 
-   boost::asio::async_connect( socket, endpoints
-                             , boost::asio::bind_executor(strand, handler));
+   boost::asio::async_connect(socket, endpoints, handler);
 }
 
 void redis_session::write(std::string msg)
@@ -114,7 +112,7 @@ void redis_session::write(std::string msg)
       p->do_write(std::move(m));
    };
 
-   boost::asio::post(boost::asio::bind_executor(strand, handler));
+   boost::asio::post(socket.get_io_context(), handler);
 }
 
 void redis_session::close()
@@ -124,7 +122,7 @@ void redis_session::close()
       p->do_close();
    };
 
-   boost::asio::post(boost::asio::bind_executor(strand, handler));
+   boost::asio::post(socket.get_io_context(), handler);
 }
 
 void redis_session::on_connect(boost::system::error_code ec)
@@ -149,8 +147,7 @@ void redis_session::do_read_some()
       p->on_read_some(ec, n);
    };
 
-   socket.async_read_some( boost::asio::buffer(message)
-                         , boost::asio::bind_executor(strand, handler));
+   socket.async_read_some(boost::asio::buffer(message), handler);
 }
 
 void redis_session::on_read_some(boost::system::error_code ec, std::size_t n)
@@ -196,7 +193,7 @@ void redis_session::do_write(std::string msg)
       //std::cout << "async_write ===> " << write_queue.front() << std::endl;
       boost::asio::async_write( socket
                            , boost::asio::buffer(write_queue.front())
-                           , boost::asio::bind_executor(strand, handler));
+                           , handler);
    }
 }
 
@@ -224,7 +221,7 @@ void redis_session::on_write( boost::system::error_code ec
    //std::cout << "on_write: Writing more." << std::endl;
    boost::asio::async_write( socket
                         , boost::asio::buffer(write_queue.front())
-                        , boost::asio::bind_executor(strand, handler));
+                        , handler);
 }
 
 void redis_session::do_close()

@@ -27,10 +27,12 @@ private:
    boost::asio::ip::tcp::resolver::results_type endpoints;
 
    void on_connect(boost::system::error_code ec);
-   void do_read(boost::system::error_code ec, std::size_t n);
+   void on_read_some(boost::system::error_code ec, std::size_t n);
+   void on_read();
    void do_write(std::string msg);
    void on_write(boost::system::error_code ec, std::size_t n);
    void do_close();
+   void do_read_some();
 
 public:
    redis_session( boost::asio::io_context& ioc_

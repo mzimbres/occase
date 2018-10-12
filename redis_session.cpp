@@ -137,13 +137,26 @@ void redis_session::on_connect(boost::system::error_code ec)
    boost::asio::ip::tcp::no_delay option(true);
    socket.set_option(option);
 
-   do_read({}, 0);
+   do_read_some();
 }
 
-void redis_session::do_read(boost::system::error_code ec, std::size_t n)
+void redis_session::do_read_some()
+{
+   message.resize(msg_size);
+
+   auto const handler = [p = shared_from_this()](auto ec, auto n)
+   {
+      p->on_read_some(ec, n);
+   };
+
+   socket.async_read_some( boost::asio::buffer(message)
+                         , boost::asio::bind_executor(strand, handler));
+}
+
+void redis_session::on_read_some(boost::system::error_code ec, std::size_t n)
 {
    if (ec) {
-      std::cout << "do_read closing." << std::endl;
+      std::cout << "on_read_some closing." << std::endl;
       do_close();
       return;
    }
@@ -151,30 +164,22 @@ void redis_session::do_read(boost::system::error_code ec, std::size_t n)
    std::copy( std::begin(message), std::begin(message) + n
             , std::back_inserter(result));
 
-   if (n < msg_size && n != 0) {
-      process_response(result);
-      result.resize(0);
+   if (n < msg_size) {
+      auto const handler = [p = shared_from_this()]()
+      { p->on_read(); };
+
+      boost::asio::post(socket.get_io_context(), handler);
    }
+   
+   do_read_some();
+}
 
-   //std::cout << "Vector size " << std::size(message)
-   //          << " -- " << n << std::endl;
-   message.resize(msg_size);
-   //boost::asio::async_read( socket
-   //                       , boost::asio::buffer(message)
-   //                       , boost::asio::transfer_all()
-   //                       , boost::asio::bind_executor(strand, handler));
-   //boost::asio::async_read_until( socket
-   //                       , boost::asio::dynamic_buffer(message)
-   //                       , "\r\n"
-   //                       , boost::asio::bind_executor(strand, handler));
+void redis_session::on_read()
+{
+   process_response(result);
+   result.resize(0);
 
-   auto const handler = [p = shared_from_this()](auto ec, auto n)
-   {
-      p->do_read(ec, n);
-   };
-
-   socket.async_read_some( boost::asio::buffer(message)
-                         , boost::asio::bind_executor(strand, handler));
+   do_read_some();
 }
 
 void redis_session::do_write(std::string msg)

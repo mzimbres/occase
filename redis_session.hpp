@@ -24,8 +24,9 @@ private:
    std::array<char, 3> message;
    std::vector<char> result;
 
-   template<class ReadHandler>
-   void do_read_some( std::vector<char>* buffer
+   template< class DynamicBuffer
+           , class ReadHandler>
+   void do_read_some( DynamicBuffer buffer
                     , ReadHandler&& handler)
    {
       auto handler2 = [this, buffer, handler](auto ec, auto n)
@@ -36,10 +37,11 @@ private:
       socket.async_read_some(boost::asio::buffer(message), handler2);
    }
 
-   template<class ReadHandler>
+   template< class DynamicBuffer
+           , class ReadHandler>
    void on_read_some( boost::system::error_code ec
                     , std::size_t n
-                    , std::vector<char>* buffer
+                    , DynamicBuffer buffer
                     , ReadHandler&& handler)
    {
       if (ec) {
@@ -88,8 +90,9 @@ public:
       socket.async_write_some(buffers, handler);
    }
 
-   template<class ReadHandler>
-   auto async_read( std::vector<char>* buffer
+   template< class DynamicBuffer
+           , class ReadHandler>
+   auto async_read( DynamicBuffer buffer
                   , ReadHandler&& handler)
    {
       do_read_some(buffer, handler);

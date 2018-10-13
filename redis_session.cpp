@@ -133,7 +133,6 @@ void redis_session::do_read()
       p->on_read(ec, n);
    };
 
-   //result.resize(1024);
    rs.async_read(buffer, handler);
 }
 
@@ -157,7 +156,6 @@ void redis_session::on_read(boost::system::error_code ec, std::size_t n)
       return;
    }
 
-   //result.resize(n);
    process_response(result);
    buffer.consume(std::size(buffer));
    do_read();

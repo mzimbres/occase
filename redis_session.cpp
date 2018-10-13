@@ -133,13 +133,8 @@ void redis_session::do_read()
       p->on_read(ec, n);
    };
 
-   //boost::asio::async_read( rs
-   //                       , boost::asio::buffer(result)
-   //                       , handler);
-   //auto buffer = 
-   //   boost::asio::buffer(result.data(), std::size(result));
-
-   rs.async_read(&result, handler);
+   result.resize(1024);
+   rs.async_read(boost::asio::buffer(result), handler);
 }
 
 void redis_session::on_connect(boost::system::error_code ec)
@@ -162,8 +157,8 @@ void redis_session::on_read(boost::system::error_code ec, std::size_t n)
       return;
    }
 
+   result.resize(n);
    process_response(result);
-   result.resize(0);
    //buffer.consume(std::size(buffer));
    do_read();
 }

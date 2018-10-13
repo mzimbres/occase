@@ -21,7 +21,7 @@ public:
 
 private:
    next_layer_type socket;
-   std::array<char, 3> message;
+   std::array<unsigned char, 3> message;
    std::vector<char> result;
 
    template< class DynamicBuffer
@@ -53,12 +53,16 @@ private:
                , std::back_inserter(result));
 
       if (n < std::size(message)) {
-         *buffer = std::move(result);
-         //boost::asio::buffer_copy(result, buffer);
+         //*buffer = std::move(result);
+         //auto bb = boost::asio::buffer(result);
+         std::copy( std::begin(result), std::end(result)
+                  , (unsigned char*)buffer.data());
+         //boost::asio::buffer_copy(bb, buffer);
          auto const hh = [handler, n = std::size(result)]()
          {
             handler({}, n);
          };
+         result.resize(0);
          boost::asio::post(socket.get_io_context(), hh);
          return;
       }
@@ -104,6 +108,7 @@ class redis_session :
 private:
    stream rs;
    std::vector<char> result;
+   boost::asio::dynamic_vector_buffer<char, std::allocator<char>> buffer;
    std::queue<std::string> write_queue;
    boost::asio::ip::tcp::resolver::results_type endpoints;
 
@@ -118,6 +123,7 @@ public:
    redis_session( boost::asio::io_context& ioc_
                 , boost::asio::ip::tcp::resolver::results_type endpoints_)
    : rs(ioc_)
+   , buffer(result)
    , endpoints(endpoints_)
    { }
 

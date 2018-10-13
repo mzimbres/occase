@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <functional>
 
 #include <boost/asio.hpp>
 #include <boost/asio/bind_executor.hpp>
@@ -49,16 +50,19 @@ private:
          return;
       }
 
-      std::copy( std::begin(message), std::begin(message) + n
-               , std::back_inserter(result));
+      std::copy( std::begin(message), std::end(message)
+               , (unsigned char*)buffer.get().prepare(n).data());
+      buffer.get().commit(n);
+      //std::copy( std::begin(message), std::begin(message) + n
+      //         , std::back_inserter(result));
 
       if (n < std::size(message)) {
          //*buffer = std::move(result);
          //auto bb = boost::asio::buffer(result);
-         std::copy( std::begin(result), std::end(result)
-                  , (unsigned char*)buffer.data());
+         //std::copy( std::begin(result), std::end(result)
+         //         , (unsigned char*)buffer.data());
          //boost::asio::buffer_copy(bb, buffer);
-         auto const hh = [handler, n = std::size(result)]()
+         auto const hh = [handler, n = buffer.get().size()]()
          {
             handler({}, n);
          };
@@ -96,10 +100,10 @@ public:
 
    template< class DynamicBuffer
            , class ReadHandler>
-   auto async_read( DynamicBuffer buffer
+   auto async_read( DynamicBuffer& buffer
                   , ReadHandler&& handler)
    {
-      do_read_some(buffer, handler);
+      do_read_some(std::ref(buffer), handler);
    }
 };
 

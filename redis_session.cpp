@@ -101,7 +101,7 @@ void redis_session::run()
       p->on_connect(ec);
    };
 
-   boost::asio::async_connect(socket, endpoints, handler);
+   boost::asio::async_connect(rs.next_layer(), endpoints, handler);
 }
 
 void redis_session::write(std::string msg)
@@ -112,7 +112,7 @@ void redis_session::write(std::string msg)
       p->do_write(std::move(m));
    };
 
-   boost::asio::post(socket.get_io_context(), handler);
+   boost::asio::post(rs.next_layer().get_io_context(), handler);
 }
 
 void redis_session::close()
@@ -122,7 +122,24 @@ void redis_session::close()
       p->do_close();
    };
 
-   boost::asio::post(socket.get_io_context(), handler);
+   boost::asio::post(rs.next_layer().get_io_context(), handler);
+}
+
+void redis_session::do_read()
+{
+   auto const handler =
+      [p = shared_from_this()](boost::system::error_code ec, std::size_t n)
+   {
+      p->on_read(ec, n);
+   };
+
+   //boost::asio::async_read( rs
+   //                       , boost::asio::buffer(result)
+   //                       , handler);
+   //auto buffer = 
+   //   boost::asio::buffer(result.data(), std::size(result));
+
+   rs.async_read(&result, handler);
 }
 
 void redis_session::on_connect(boost::system::error_code ec)
@@ -133,50 +150,22 @@ void redis_session::on_connect(boost::system::error_code ec)
    }
 
    boost::asio::ip::tcp::no_delay option(true);
-   socket.set_option(option);
+   rs.next_layer().set_option(option);
 
-   do_read_some();
+   do_read();
 }
 
-void redis_session::do_read_some()
-{
-   message.resize(msg_size);
-
-   auto const handler = [p = shared_from_this()](auto ec, auto n)
-   {
-      p->on_read_some(ec, n);
-   };
-
-   socket.async_read_some(boost::asio::buffer(message), handler);
-}
-
-void redis_session::on_read_some(boost::system::error_code ec, std::size_t n)
+void redis_session::on_read(boost::system::error_code ec, std::size_t n)
 {
    if (ec) {
-      std::cout << "on_read_some closing." << std::endl;
-      do_close();
+      std::cout << "Error" << std::endl;
       return;
    }
 
-   std::copy( std::begin(message), std::begin(message) + n
-            , std::back_inserter(result));
-
-   if (n < msg_size) {
-      auto const handler = [p = shared_from_this()]()
-      { p->on_read(); };
-
-      boost::asio::post(socket.get_io_context(), handler);
-   }
-   
-   do_read_some();
-}
-
-void redis_session::on_read()
-{
    process_response(result);
    result.resize(0);
-
-   do_read_some();
+   //buffer.consume(std::size(buffer));
+   do_read();
 }
 
 void redis_session::do_write(std::string msg)
@@ -191,9 +180,9 @@ void redis_session::do_write(std::string msg)
       };
 
       //std::cout << "async_write ===> " << write_queue.front() << std::endl;
-      boost::asio::async_write( socket
-                           , boost::asio::buffer(write_queue.front())
-                           , handler);
+      boost::asio::async_write( rs
+                              , boost::asio::buffer(write_queue.front())
+                              , handler);
    }
 }
 
@@ -219,15 +208,15 @@ void redis_session::on_write( boost::system::error_code ec
    };
 
    //std::cout << "on_write: Writing more." << std::endl;
-   boost::asio::async_write( socket
-                        , boost::asio::buffer(write_queue.front())
-                        , handler);
+   boost::asio::async_write( rs
+                           , boost::asio::buffer(write_queue.front())
+                           , handler);
 }
 
 void redis_session::do_close()
 {
    std::cout << "do_close." << std::endl;
-   socket.close();
+   rs.next_layer().close();
 }
 
 }

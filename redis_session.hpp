@@ -16,18 +16,18 @@
 namespace aedis
 {
 
+template < class NextLayer
+         , int N>
 class stream {
 public:
-   using next_layer_type = boost::asio::ip::tcp::socket;
+   using next_layer_type = NextLayer;
 
 private:
    next_layer_type socket;
-   std::array<unsigned char, 3> message;
-   std::vector<char> result;
 
    template< class DynamicBuffer
            , class ReadHandler>
-   void do_read_some( DynamicBuffer buffer
+   void do_read_some( std::reference_wrapper<DynamicBuffer> buffer
                     , ReadHandler&& handler)
    {
       auto handler2 = [this, buffer, handler](auto ec, auto n)
@@ -35,14 +35,15 @@ private:
          on_read_some(ec, n, buffer, handler);
       };
 
-      socket.async_read_some(boost::asio::buffer(message), handler2);
+      socket.async_read_some( boost::asio::buffer(buffer.get().prepare(N))
+                            , handler2);
    }
 
    template< class DynamicBuffer
            , class ReadHandler>
    void on_read_some( boost::system::error_code ec
                     , std::size_t n
-                    , DynamicBuffer buffer
+                    , std::reference_wrapper<DynamicBuffer> buffer
                     , ReadHandler&& handler)
    {
       if (ec) {
@@ -50,24 +51,10 @@ private:
          return;
       }
 
-      std::copy( std::begin(message), std::end(message)
-               , (unsigned char*)buffer.get().prepare(n).data());
       buffer.get().commit(n);
-      //std::copy( std::begin(message), std::begin(message) + n
-      //         , std::back_inserter(result));
 
-      if (n < std::size(message)) {
-         //*buffer = std::move(result);
-         //auto bb = boost::asio::buffer(result);
-         //std::copy( std::begin(result), std::end(result)
-         //         , (unsigned char*)buffer.data());
-         //boost::asio::buffer_copy(bb, buffer);
-         auto const hh = [handler, n = buffer.get().size()]()
-         {
-            handler({}, n);
-         };
-         result.resize(0);
-         boost::asio::post(socket.get_io_context(), hh);
+      if (n < N) {
+         handler({}, n);
          return;
       }
       
@@ -110,7 +97,7 @@ public:
 class redis_session :
   public std::enable_shared_from_this<redis_session> {
 private:
-   stream rs;
+   stream<boost::asio::ip::tcp::socket, 3> rs;
    std::vector<char> result;
    boost::asio::dynamic_vector_buffer<char, std::allocator<char>> buffer;
    std::queue<std::string> write_queue;

@@ -32,6 +32,7 @@ client_objs += client_mgr_sim.o
 
 aedis_objs =
 aedis_objs += redis_session.o
+aedis_objs += resp.o
 
 exe_objs = $(addsuffix .o, $(exes))
 

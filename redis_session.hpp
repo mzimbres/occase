@@ -23,7 +23,9 @@ class redis_session :
 private:
    stream<boost::asio::ip::tcp::socket, 3> rs;
    std::vector<char> result;
-   boost::asio::dynamic_vector_buffer<char, std::allocator<char>> buffer;
+   boost::asio::dynamic_vector_buffer< std::vector<char>::value_type
+                                     , std::vector<char>::allocator_type
+                                     > buffer;
    std::queue<std::string> write_queue;
    boost::asio::ip::tcp::resolver::results_type endpoints;
 

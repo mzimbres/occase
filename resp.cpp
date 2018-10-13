@@ -14,8 +14,8 @@ void resp_response::process_response() const
       return;
    }
 
-   auto const end = std::cend(str);
-   if (*(end - 2) != '\r' && *(end - 1) != '\n') {
+   auto const s = std::size(str);
+   if (str[s - 2] != '\r' && str[s - 1] != '\n') {
       std::cout << "Ill formed array." << std::endl;
       return;
    }
@@ -77,7 +77,14 @@ void resp_response::process_response() const
    break;
    case '*':
    {
-      std::cout << "Array." << std::endl;
+      auto len = 0;
+      auto p = begin;
+      while(*p != '\r') {
+          len = (10 * len) + (*p - '0');
+          p++;
+      }
+
+      std::cout << "Array with size: " << len << std::endl;
    }
    break;
    }

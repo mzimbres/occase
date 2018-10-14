@@ -21,7 +21,7 @@ namespace aedis
 
 struct interaction {
    std::string cmd;
-   std::function<void(boost::system::error_code ec, std::string)> action;
+   std::function<void(boost::system::error_code, std::string)> action;
    bool sent = false;
 };
 

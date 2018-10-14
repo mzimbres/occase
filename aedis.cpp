@@ -22,6 +22,38 @@ struct aedis_op {
    std::string port;
 };
 
+struct test_action {
+   std::string expected;
+   int repeat = 0;
+   std::shared_ptr<redis_session> session;
+   void operator()( boost::system::error_code ec
+                  , std::string response) const
+   {
+      if (ec)
+         throw std::runtime_error("test_ping: Error");
+
+      auto const str = get_simple_string(response);
+      if (str != expected) {
+         std::cout << "test_action: fail." << std::endl;
+         std::cout << "Expected ok. Received: " << str
+                   << std::endl;
+         throw std::runtime_error("test_ping: Error");
+      }
+
+      if (repeat == 0) {
+         session->close();
+         std::cout << "test_action: ok." << std::endl;
+         return;
+      }
+
+      interaction tmp { gen_bulky_string({{"PING"}})
+                     , test_action {"PONG", repeat - 1, session}
+                     , false};
+
+      session->send(std::move(tmp));
+   }
+};
+
 void test_ping(aedis_op const op)
 {
    boost::asio::io_context ioc;
@@ -30,25 +62,10 @@ void test_ping(aedis_op const op)
    auto endpoints = resolver.resolve(op.ip, op.port);
 
    auto session = std::make_shared<redis_session>(ioc, endpoints);
-   auto const action = [session](auto ec, auto response)
-   {
-      if (ec)
-         throw std::runtime_error("test_ping: Error");
-
-      auto const str = get_simple_string(response);
-      if (str == "PONG") {
-         std::cout << "test_ping: ok." << std::endl;
-      } else {
-         std::cout << "test_ping: fail." << std::endl;
-         std::cout << "Expected ok. Received: " << str
-                   << std::endl;
-      }
-
-      session->close();
-   };
-
    interaction a1 { gen_bulky_string({{"PING"}})
-                  , action , false};
+                  , test_action {"PONG", 1000, session}
+                  , false};
+
    session->send(std::move(a1));
    session->run();
 

@@ -18,6 +18,13 @@
 namespace aedis
 {
 
+struct interaction {
+   std::string cmd;
+   std::function< void ( boost::system::error_code ec
+                       , std::vector<char>)> action;
+   bool sent = false;
+};
+
 class redis_session :
   public std::enable_shared_from_this<redis_session> {
 private:
@@ -26,15 +33,16 @@ private:
    boost::asio::dynamic_vector_buffer< std::vector<char>::value_type
                                      , std::vector<char>::allocator_type
                                      > buffer;
-   std::queue<std::string> write_queue;
+   std::queue<interaction> write_queue;
    boost::asio::ip::tcp::resolver::results_type endpoints;
+
+   void do_write(interaction i);
+   void do_read();
+   void do_close();
 
    void on_connect(boost::system::error_code ec);
    void on_read(boost::system::error_code ec, std::size_t n);
-   void do_write(std::string msg);
-   void do_read();
    void on_write(boost::system::error_code ec, std::size_t n);
-   void do_close();
 
 public:
    redis_session( boost::asio::io_context& ioc_
@@ -45,7 +53,7 @@ public:
    { }
 
    void run();
-   void write(std::string msg);
+   void send(interaction i);
    void close();
 };
 

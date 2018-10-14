@@ -15,16 +15,18 @@ void fail(boost::system::error_code ec, char const* what)
 
 }
 
-listener::listener( boost::asio::io_context& ioc
-                  , tcp::endpoint endpoint
+listener::listener( server_op op
+                  , boost::asio::io_context& ioc
                   , std::shared_ptr<server_mgr> mgr_)
 : acceptor(ioc)
 , socket(ioc)
 , mgr(mgr_)
 , session_stats_timer(ioc)
 {
-   boost::system::error_code ec;
+   auto const address = boost::asio::ip::make_address(op.ip);
+   tcp::endpoint endpoint {address, op.port};
 
+   boost::system::error_code ec;
    acceptor.open(endpoint.protocol(), ec);
    if (ec) {
       fail(ec, "open");

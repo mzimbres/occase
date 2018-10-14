@@ -28,28 +28,6 @@ struct signal_handler {
 
 namespace po = boost::program_options;
 
-struct server_op {
-   bool help = false;
-   std::string ip;
-   unsigned short port;
-   int auth_timeout;
-   int sms_timeout;
-   int handshake_timeout;
-   int pong_timeout;
-   int close_frame_timeout;
-
-   auto get_timeouts() const noexcept
-   {
-      return session_timeouts
-      { std::chrono::seconds {auth_timeout}
-      , std::chrono::seconds {sms_timeout}
-      , std::chrono::seconds {handshake_timeout}
-      , std::chrono::seconds {pong_timeout}
-      , std::chrono::seconds {close_frame_timeout}
-      };
-   }
-};
-
 server_op get_server_op(int argc, char* argv[])
 {
    server_op op;
@@ -110,16 +88,11 @@ int main(int argc, char* argv[])
       if (op.help)
          return 0;
 
-      auto const address = boost::asio::ip::make_address(op.ip);
-
       boost::asio::io_context ioc {1};
 
       auto sm = std::make_shared<server_mgr>(op.get_timeouts());
 
-      auto lst =
-         std::make_shared<listener>( ioc 
-                                   , tcp::endpoint {address, op.port}
-                                   , sm);
+      auto lst = std::make_shared<listener>(op, ioc, sm);
       lst->run();
 
       boost::asio::signal_set signals(ioc, SIGINT, SIGTERM);

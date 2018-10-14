@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vector>
 #include <string>
 
 namespace aedis
@@ -10,7 +11,7 @@ bool is_array(std::string const& str);
 
 std::string_view get_simple_string(std::string const& str);
 
-std::string gen_ping_cmd(std::string msg);
+std::string gen_bulky_string(std::vector<std::string> param);
 
 class resp_response {
 public:

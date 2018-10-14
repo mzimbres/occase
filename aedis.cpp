@@ -47,8 +47,7 @@ void test_ping(aedis_op const op)
       session->close();
    };
 
-   auto const cmd = gen_ping_cmd({});
-   interaction a1 { cmd
+   interaction a1 { gen_bulky_string({{"PING"}})
                   , action , false};
    session->send(std::move(a1));
    session->run();

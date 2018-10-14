@@ -24,16 +24,19 @@ auto get_data_end(resp_response::const_iterator p)
    return p;
 }
 
-std::string gen_ping_cmd(std::string msg)
+std::string gen_bulky_string(std::vector<std::string> param)
 {
-   std::string cmd = "*2";
-   if (std::empty(msg))
-      cmd = "*1";
+   std::string cmd = "*";
+   cmd += std::to_string(std::size(param));
+   cmd += "\r\n";
 
-   cmd += "\r\n$4\r\nPING\r\n";
-
-   if (!std::empty(msg))
-      cmd += msg;
+   for (auto const& o : param) {
+      cmd += "$";
+      cmd += std::to_string(std::size(o));
+      cmd += "\r\n";
+      cmd += o;
+      cmd += "\r\n";
+   }
 
    return cmd;
 }

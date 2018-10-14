@@ -3,6 +3,7 @@
 #include <array>
 #include <queue>
 #include <vector>
+#include <string>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -20,18 +21,21 @@ namespace aedis
 
 struct interaction {
    std::string cmd;
-   std::function< void ( boost::system::error_code ec
-                       , std::vector<char>)> action;
+   std::function<void(boost::system::error_code ec, std::string)> action;
    bool sent = false;
 };
 
 class redis_session :
   public std::enable_shared_from_this<redis_session> {
 private:
+   using value_type = std::string::value_type;
+   using traits_type = std::string::traits_type;
+   using allocator_type = std::string::allocator_type;
+
    stream<boost::asio::ip::tcp::socket, 3> rs;
-   std::vector<char> result;
-   boost::asio::dynamic_vector_buffer< std::vector<char>::value_type
-                                     , std::vector<char>::allocator_type
+   std::string result;
+   boost::asio::dynamic_string_buffer< value_type, traits_type
+                                     , allocator_type
                                      > buffer;
    std::queue<interaction> write_queue;
    boost::asio::ip::tcp::resolver::results_type endpoints;

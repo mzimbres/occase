@@ -22,6 +22,42 @@ struct aedis_op {
    std::string port;
 };
 
+//auto gen_ping_cmd(std::string msg)
+//{
+//   std::vector<char> cmd = "*2";
+//   if (std::empty(msg))
+//      cmd = "*1";
+//
+//   cmd += "\r\n$4\r\nPING\r\n";
+//
+//   if (!std::empty(msg))
+//      cmd += msg;
+//}
+
+void test_ping(aedis_op const op)
+{
+   boost::asio::io_context ioc;
+
+   boost::asio::ip::tcp::resolver resolver(ioc);
+   auto endpoints = resolver.resolve(op.ip, op.port);
+
+   auto session = std::make_shared<redis_session>(ioc, endpoints);
+   auto const action = [](auto ec, auto payload)
+   {
+      if (ec)
+         throw std::runtime_error("test_ping: Error");
+
+      resp_response resp(std::move(payload));
+      resp.process_response();
+   };
+
+   interaction a1 { {"*1\r\n$4\r\nPING\r\n"} , action , false};
+   session->send(std::move(a1));
+   session->run();
+
+   ioc.run();
+}
+
 int main(int argc, char* argv[])
 {
    try {
@@ -48,6 +84,8 @@ int main(int argc, char* argv[])
          return 0;
       }
 
+      test_ping(op);
+      std::cout << "test_ping: ok." << std::endl;
       boost::asio::io_context ioc;
 
       boost::asio::ip::tcp::resolver resolver(ioc);

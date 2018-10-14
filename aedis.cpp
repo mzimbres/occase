@@ -42,13 +42,21 @@ void test_ping(aedis_op const op)
    auto endpoints = resolver.resolve(op.ip, op.port);
 
    auto session = std::make_shared<redis_session>(ioc, endpoints);
-   auto const action = [session](auto ec, auto payload)
+   auto const action = [session](auto ec, auto response)
    {
       if (ec)
          throw std::runtime_error("test_ping: Error");
 
-      resp_response resp(std::move(payload));
-      resp.process_response();
+      auto const str = get_simple_string(response);
+      if (str == "PONG") {
+         std::cout << "test_ping: ok." << std::endl;
+      } else {
+         std::cout << "test_ping: fail." << std::endl;
+         std::cout << "Expected ok, received: " << str << std::endl;
+      }
+
+      //resp_response resp(std::move(response));
+      //resp.process_response();
       session->close();
    };
 
@@ -86,7 +94,6 @@ int main(int argc, char* argv[])
       }
 
       test_ping(op);
-      std::cout << "test_ping: ok." << std::endl;
       boost::asio::io_context ioc;
 
       boost::asio::ip::tcp::resolver resolver(ioc);

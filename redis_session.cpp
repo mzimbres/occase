@@ -18,9 +18,9 @@ namespace aedis
 
 void redis_session::run()
 {
-   auto const handler = [p = shared_from_this()](auto ec, auto Iterator)
+   auto const handler = [this](auto ec, auto Iterator)
    {
-      p->on_connect(ec);
+      on_connect(ec);
    };
 
    boost::asio::async_connect(rs.next_layer(), endpoints, handler);
@@ -28,32 +28,22 @@ void redis_session::run()
 
 void redis_session::send(interaction i)
 {
-   auto const handler = [p = shared_from_this(), ii = std::move(i)]()
-   {
-      p->do_write(std::move(ii));
-   };
-
-   boost::asio::post(rs.next_layer().get_io_context(), handler);
+   boost::asio::post( rs.next_layer().get_io_context()
+                    , [this, ii = std::move(i)]() { do_write(std::move(ii));}
+                    );
 }
 
 void redis_session::close()
 {
-   auto const handler = [p = shared_from_this()]()
-   {
-      p->do_close();
-   };
-
-   boost::asio::post(rs.next_layer().get_io_context(), handler);
+   boost::asio::post( rs.next_layer().get_io_context()
+                    , [this]() { do_close(); });
 }
 
 void redis_session::do_read()
 {
-   auto const handler =
-      [p = shared_from_this()]( boost::system::error_code ec
+   auto const handler = [this]( boost::system::error_code ec
                               , std::size_t n)
-   {
-      p->on_read(ec, n);
-   };
+   { on_read(ec, n); };
 
    rs.async_read(buffer, handler);
 }
@@ -74,6 +64,12 @@ void redis_session::on_connect(boost::system::error_code ec)
 void redis_session::on_read(boost::system::error_code ec, std::size_t n)
 {
    if (ec) {
+      if (ec == boost::asio::error::operation_aborted) {
+         // Abortion can be caused by a socket shutting down and closing.
+         // We have no cleanup to perform.
+         return;
+      }
+
       std::cout << "Error" << std::endl;
       return;
    }
@@ -90,10 +86,8 @@ void redis_session::on_read(boost::system::error_code ec, std::size_t n)
    if (std::empty(write_queue))
       return;
 
-   auto const handler = [p = shared_from_this()](auto ec, auto n)
-   {
-      p->on_write(ec, n);
-   };
+   auto const handler = [this](auto ec, auto n)
+   { on_write(ec, n); };
 
    //std::cout << "on_write: Writing more." << std::endl;
    boost::asio::async_write( rs
@@ -107,10 +101,8 @@ void redis_session::do_write(interaction i)
    write_queue.push(std::move(i));
 
    if (is_empty) {
-      auto const handler = [p = shared_from_this()](auto ec, auto n)
-      {
-         p->on_write(ec, n);
-      };
+      auto const handler = [this](auto ec, auto n)
+      { on_write(ec, n); };
 
       //std::cout << "async_write ===> " << write_queue.front().cmd 
       //          << std::endl;
@@ -136,7 +128,7 @@ void redis_session::on_write( boost::system::error_code ec
 
 void redis_session::do_close()
 {
-   std::cout << "do_close." << std::endl;
+   //std::cout << "do_close." << std::endl;
    rs.next_layer().close();
 }
 

@@ -25,8 +25,7 @@ struct interaction {
    bool sent = false;
 };
 
-class redis_session :
-  public std::enable_shared_from_this<redis_session> {
+class redis_session {
 private:
    using value_type = std::string::value_type;
    using traits_type = std::string::traits_type;

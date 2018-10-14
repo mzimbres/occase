@@ -42,13 +42,14 @@ void test_ping(aedis_op const op)
    auto endpoints = resolver.resolve(op.ip, op.port);
 
    auto session = std::make_shared<redis_session>(ioc, endpoints);
-   auto const action = [](auto ec, auto payload)
+   auto const action = [session](auto ec, auto payload)
    {
       if (ec)
          throw std::runtime_error("test_ping: Error");
 
       resp_response resp(std::move(payload));
       resp.process_response();
+      session->close();
    };
 
    interaction a1 { {"*1\r\n$4\r\nPING\r\n"} , action , false};

@@ -10,21 +10,6 @@
 
 #include "listener.hpp"
 
-struct signal_handler {
-   boost::asio::io_context& ioc;
-   listener& lst;
-
-   void operator()(boost::system::error_code const&, int)
-   {
-      std::cout << "\nBeginning the shutdown operations ..." << std::endl;
-
-      // This function is called when the program receives one of the
-      // installed signals. The listener stop functions will continue
-      // with other necessary clean up operations.
-      lst.stop();
-   }
-};
-
 namespace po = boost::program_options;
 
 server_op get_server_op(int argc, char* argv[])
@@ -88,14 +73,10 @@ int main(int argc, char* argv[])
          return 0;
 
       boost::asio::io_context ioc {1};
-
       listener lst {op, ioc};
       lst.run();
-
-      boost::asio::signal_set signals(ioc, SIGINT, SIGTERM);
-      signals.async_wait(signal_handler {ioc, lst});
-
       ioc.run();
+
       return 0;
    } catch (std::exception const& e) {
        std::cerr << "Error: " << e.what() << "\n";

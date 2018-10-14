@@ -16,11 +16,25 @@ void fail(boost::system::error_code ec, char const* what)
 }
 
 listener::listener(server_op op, boost::asio::io_context& ioc)
-: acceptor(ioc)
+: signals(ioc, SIGINT, SIGTERM)
+, acceptor(ioc)
 , socket(ioc)
 , mgr(op.get_timeouts())
 , session_stats_timer(ioc)
 {
+   auto const shandler = [this](auto ec, auto n)
+   {
+      // TODO: Verify ec here.
+      std::cout << "\nBeginning the shutdown operations ..."
+                << std::endl;
+
+      acceptor.cancel();
+      session_stats_timer.cancel();
+      mgr.shutdown();
+   };
+
+   signals.async_wait(shandler);
+
    auto const address = boost::asio::ip::make_address(op.ip);
    tcp::endpoint endpoint {address, op.port};
 
@@ -56,14 +70,6 @@ listener::listener(server_op op, boost::asio::io_context& ioc)
 
 listener::~listener()
 {
-   //stop();
-}
-
-void listener::stop()
-{
-   acceptor.cancel();
-   session_stats_timer.cancel();
-   mgr.shutdown();
 }
 
 void listener::do_stats_logger()

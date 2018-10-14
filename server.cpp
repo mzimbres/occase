@@ -12,7 +12,7 @@
 
 struct signal_handler {
    boost::asio::io_context& ioc;
-   std::shared_ptr<listener> lst;
+   listener& lst;
 
    void operator()(boost::system::error_code const&, int)
    {
@@ -21,7 +21,7 @@ struct signal_handler {
       // This function is called when the program receives one of the
       // installed signals. The listener stop functions will continue
       // with other necessary clean up operations.
-      lst->stop();
+      lst.stop();
    }
 };
 
@@ -89,8 +89,8 @@ int main(int argc, char* argv[])
 
       boost::asio::io_context ioc {1};
 
-      auto lst = std::make_shared<listener>(op, ioc);
-      lst->run();
+      listener lst {op, ioc};
+      lst.run();
 
       boost::asio::signal_set signals(ioc, SIGINT, SIGTERM);
       signals.async_wait(signal_handler {ioc, lst});

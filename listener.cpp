@@ -70,7 +70,7 @@ void listener::do_stats_logger()
 {
    session_stats_timer.expires_after(std::chrono::seconds{1});
 
-   auto handler = [p = shared_from_this()](auto ec)
+   auto handler = [this](auto ec)
    {
       if (ec) {
          if (ec == boost::asio::error::operation_aborted)
@@ -80,10 +80,10 @@ void listener::do_stats_logger()
       }
       
       std::cout << "Current number of sessions: "
-                << p->mgr.get_stats().number_of_sessions
+                << mgr.get_stats().number_of_sessions
                 << std::endl;
 
-      p->do_stats_logger();
+      do_stats_logger();
    };
 
    session_stats_timer.async_wait(handler);
@@ -100,9 +100,9 @@ void listener::run()
 
 void listener::do_accept()
 {
-   auto handler = [p = shared_from_this()](auto ec)
+   auto handler = [this](auto ec)
    {
-      p->on_accept(ec);
+      on_accept(ec);
    };
 
    acceptor.async_accept(socket, handler);

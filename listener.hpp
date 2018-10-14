@@ -32,7 +32,7 @@ struct server_op {
 
 class server_mgr;
 
-class listener : public std::enable_shared_from_this<listener> {
+class listener {
 private:
    tcp::acceptor acceptor;
    tcp::socket socket;

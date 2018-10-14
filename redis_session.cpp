@@ -51,7 +51,8 @@ void redis_session::close()
 void redis_session::do_read()
 {
    auto const handler =
-      [p = shared_from_this()](boost::system::error_code ec, std::size_t n)
+      [p = shared_from_this()]( boost::system::error_code ec
+                              , std::size_t n)
    {
       p->on_read(ec, n);
    };
@@ -79,6 +80,7 @@ void redis_session::on_read(boost::system::error_code ec, std::size_t n)
       return;
    }
 
+   assert(n = std::size(result));
    resp_response resp(result);
    resp.process_response();
    buffer.consume(std::size(buffer));

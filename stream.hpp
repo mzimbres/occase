@@ -7,6 +7,8 @@
 namespace aedis
 {
 
+// Sends and write complete messages to redis.
+
 template < class NextLayer
          , int N>
 class stream {
@@ -38,14 +40,14 @@ private:
                     , ReadHandler&& handler)
    {
       if (ec) {
-         handler(ec, n);
+         handler(ec, std::size(buffer.get()));
          return;
       }
 
       buffer.get().commit(n);
 
       if (n < N) {
-         handler({}, n);
+         handler({}, std::size(buffer.get()));
          return;
       }
       
@@ -65,7 +67,7 @@ public:
    auto async_write( ConstBufferSequence const& buffers
                    , WriteHandler&& handler)
    {
-      boost::asio::async_write(socket, buffers, handler);
+      socket.async_write(buffers, handler);
    }
 
    template< class ConstBufferSequence

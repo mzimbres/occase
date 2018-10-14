@@ -24,21 +24,28 @@ auto get_data_end(resp_response::const_iterator p)
    return p;
 }
 
-std::string gen_bulky_string(std::vector<std::string> param)
+void add_bulky_str(std::string& payload, std::string const& param)
 {
-   std::string cmd = "*";
-   cmd += std::to_string(std::size(param));
-   cmd += "\r\n";
+   payload += "$";
+   payload += std::to_string(std::size(param));
+   payload += "\r\n";
+   payload += param;
+   payload += "\r\n";
+}
 
-   for (auto const& o : param) {
-      cmd += "$";
-      cmd += std::to_string(std::size(o));
-      cmd += "\r\n";
-      cmd += o;
-      cmd += "\r\n";
-   }
+std::string gen_bulky_string( std::string cmd
+                            , std::vector<std::string> param)
+{
+   std::string payload = "*";
+   payload += std::to_string(std::size(param) + 1);
+   payload += "\r\n";
 
-   return cmd;
+   add_bulky_str(payload, cmd);
+
+   for (auto const& o : param)
+      add_bulky_str(payload, o);
+
+   return payload;
 }
 
 auto handle_other(resp_response::const_iterator begin)

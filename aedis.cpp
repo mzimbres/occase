@@ -51,8 +51,7 @@ struct test_action {
       }
 
       interaction tmp { gen_bulky_string(cmd, {})
-                      , test_action {cmd, expected, repeat - 1, session}
-                      , false};
+                      , test_action {cmd, expected, repeat - 1, session}};
 
       session->send(std::move(tmp));
    }
@@ -67,8 +66,7 @@ void test_ping(aedis_op const op)
 
    auto session = std::make_shared<redis_session>(ioc, endpoints);
    interaction a1 { gen_bulky_string({"PING"}, {})
-                  , test_action {"PING", "PONG", 1000, session}
-                  , false};
+                  , test_action {"PING", "PONG", 1000, session}};
 
    session->send(std::move(a1));
    session->run();
@@ -109,43 +107,44 @@ int main(int argc, char* argv[])
       auto endpoints = resolver.resolve(op.ip, op.port);
 
       auto session = std::make_shared<redis_session>(ioc, endpoints);
-      auto const action = [](auto ec, auto payload)
+      auto const ab1 = [](auto ec, auto payload)
       {
          if (ec) {
             std::cout << "Error while reading." << std::endl;
             return;
          }
-         resp_response resp(std::move(payload));
-         resp.process_response();
+
+         std::cout << "(simple string) " << get_simple_string(payload)
+                   << std::endl;
       };
 
-      interaction a1 { {"*1\r\n$4\r\nPING\r\n"} , action , false};
-      session->send(std::move(a1));
-      interaction a2 { {"PING\r\n"} , action , false};
-      session->send(std::move(a2));
-      interaction a3 { {"PING\r\n"} , action , false};
-      session->send(std::move(a3));
-      interaction a4 { {"PING\r\n"} , action , false};
-      session->send(std::move(a4));
-
-      interaction b { {"*3\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$2\r\n20\r\n"}
-                    , action , false};
+      interaction b {gen_bulky_string("SET", {"foo", "20"}), ab1};
       session->send(std::move(b));
 
-      interaction c1 { {"*3\r\n$6\r\nINCRBY\r\n$3\r\nfoo\r\n$1\r\n3\r\n"}
-                    , action , false};
+      auto const ac1 = [](auto ec, auto payload)
+      {
+         if (ec) {
+            std::cout << "Error while reading." << std::endl;
+            return;
+         }
+         std::cout << "(integer) " << get_int(payload) << std::endl;
+      };
+
+      interaction c1 {gen_bulky_string("INCRBY", {"foo", "3"}), ac1};
       session->send(std::move(c1));
 
-      interaction c2 { {"*3\r\n$6\r\nINCRBY\r\n$3\r\nfoo\r\n$1\r\n3\r\n"}
-                    , action , false};
-      session->send(std::move(c2));
+      auto const ad1 = [](auto ec, auto payload)
+      {
+         if (ec) {
+            std::cout << "Error while reading." << std::endl;
+            return;
+         }
 
-      interaction c3 { {"*3\r\n$6\r\nINCRBY\r\n$3\r\nfoo\r\n$1\r\n3\r\n"}
-                    , action , false};
-      session->send(std::move(c3));
+         std::cout << "(bulky string) " << get_bulky_string(payload)
+                   << std::endl;
+      };
 
-      interaction d1 { {"*2\r\n$3\r\nGET\r\n$3\r\nfoo\r\n"}
-                    , action , false};
+      interaction d1 {gen_bulky_string("GET", {"foo"}) , ad1};
       session->send(std::move(d1));
 
       session->run();

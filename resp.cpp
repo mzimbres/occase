@@ -6,7 +6,7 @@
 namespace aedis
 {
 
-auto get_length(resp_response::const_iterator& p)
+auto get_length(std::string::const_iterator& p)
 {
    auto len = 0;
    while (*p != '\r') {
@@ -104,16 +104,33 @@ bool is_array(std::string const& str)
    return str.front() == '*';
 }
 
-std::string_view get_simple_string(std::string const& str)
+std::string get_simple_string(std::string const& str)
 {
    if (str.front() != '+')
       throw std::runtime_error("get_simple_string: Not a string.");
 
-   auto begin = std::cbegin(str);
+   auto const p = std::next(std::cbegin(str));
+   return std::string {p, get_data_end(p)};
+}
 
-   auto p = get_data_end(++begin);
-   auto const n = static_cast<std::size_t>(std::distance(begin, p));
-   return std::string_view {&*begin, n};
+std::string get_int(std::string const& str)
+{
+   if (str.front() != ':')
+      throw std::runtime_error("get_int: Not an integer.");
+
+   auto const p = std::next(std::cbegin(str));
+   return std::string {p, get_data_end(p)};
+}
+
+std::string get_bulky_string(std::string const& str)
+{
+   if (str.front() != '$')
+      throw std::runtime_error("get_bulky_string: Not a bulky string.");
+
+   // TODO: Check boundaries.
+   auto p = std::next(std::cbegin(str));
+   auto const l = get_length(p);
+   return std::string {p + 2, p + 2 + l};
 }
 
 void resp_response::process_response() const

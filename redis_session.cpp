@@ -75,13 +75,13 @@ void redis_session::on_read(boost::system::error_code ec, std::size_t n)
    }
 
    assert(n == std::size(result));
-   assert(write_queue.front().sent);
 
    write_queue.front().action(ec, result);
    buffer.consume(std::size(buffer));
 
    do_read();
    write_queue.pop();
+   waiting_response = false;
 
    if (std::empty(write_queue))
       return;
@@ -123,7 +123,7 @@ void redis_session::on_write( boost::system::error_code ec
 
    //std::cout << "on_write popping ===> " << write_queue.front().cmd
    //          << " " << n << std::endl;
-   write_queue.front().sent = true;
+   waiting_response = true;
 }
 
 void redis_session::do_close()

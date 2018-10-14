@@ -9,7 +9,9 @@ namespace aedis
 bool is_valid(std::string const& str);
 bool is_array(std::string const& str);
 
-std::string_view get_simple_string(std::string const& str);
+std::string get_simple_string(std::string const& str);
+std::string get_int(std::string const& str);
+std::string get_bulky_string(std::string const& str);
 
 std::string gen_bulky_string( std::string cmd
                             , std::vector<std::string> param);

@@ -22,7 +22,6 @@ namespace aedis
 struct interaction {
    std::string cmd;
    std::function<void(boost::system::error_code, std::string)> action;
-   bool sent = false;
 };
 
 class redis_session {
@@ -38,6 +37,7 @@ private:
                                      > buffer;
    std::queue<interaction> write_queue;
    boost::asio::ip::tcp::resolver::results_type endpoints;
+   bool waiting_response = false;
 
    void do_write(interaction i);
    void do_read();

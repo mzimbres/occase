@@ -64,16 +64,34 @@ int main(int argc, char* argv[])
          resp.process_response();
       };
 
-      interaction a { {"PING\r\n"} , action , false};
-      session->send(std::move(a));
+      interaction a1 { {"*1\r\n$4\r\nPING\r\n"} , action , false};
+      session->send(std::move(a1));
+      interaction a2 { {"PING\r\n"} , action , false};
+      session->send(std::move(a2));
+      interaction a3 { {"PING\r\n"} , action , false};
+      session->send(std::move(a3));
+      interaction a4 { {"PING\r\n"} , action , false};
+      session->send(std::move(a4));
 
-      interaction b { {"*3\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$3\r\nbar\r\n"}
+      interaction b { {"*3\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$2\r\n20\r\n"}
                     , action , false};
       session->send(std::move(b));
 
-      interaction c { {"*2\r\n$3\r\nGET\r\n$3\r\nfoo\r\n"}
+      interaction c1 { {"*3\r\n$6\r\nINCRBY\r\n$3\r\nfoo\r\n$1\r\n3\r\n"}
                     , action , false};
-      session->send(std::move(c));
+      session->send(std::move(c1));
+
+      interaction c2 { {"*3\r\n$6\r\nINCRBY\r\n$3\r\nfoo\r\n$1\r\n3\r\n"}
+                    , action , false};
+      session->send(std::move(c2));
+
+      interaction c3 { {"*3\r\n$6\r\nINCRBY\r\n$3\r\nfoo\r\n$1\r\n3\r\n"}
+                    , action , false};
+      session->send(std::move(c3));
+
+      interaction d1 { {"*2\r\n$3\r\nGET\r\n$3\r\nfoo\r\n"}
+                    , action , false};
+      session->send(std::move(d1));
 
       session->run();
 

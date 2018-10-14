@@ -24,6 +24,20 @@ auto get_data_end(resp_response::const_iterator p)
    return p;
 }
 
+std::string gen_ping_cmd(std::string msg)
+{
+   std::string cmd = "*2";
+   if (std::empty(msg))
+      cmd = "*1";
+
+   cmd += "\r\n$4\r\nPING\r\n";
+
+   if (!std::empty(msg))
+      cmd += msg;
+
+   return cmd;
+}
+
 auto handle_other(resp_response::const_iterator begin)
 {
    auto const c = *begin;

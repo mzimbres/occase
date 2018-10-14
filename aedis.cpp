@@ -22,18 +22,6 @@ struct aedis_op {
    std::string port;
 };
 
-//auto gen_ping_cmd(std::string msg)
-//{
-//   std::vector<char> cmd = "*2";
-//   if (std::empty(msg))
-//      cmd = "*1";
-//
-//   cmd += "\r\n$4\r\nPING\r\n";
-//
-//   if (!std::empty(msg))
-//      cmd += msg;
-//}
-
 void test_ping(aedis_op const op)
 {
    boost::asio::io_context ioc;
@@ -52,15 +40,16 @@ void test_ping(aedis_op const op)
          std::cout << "test_ping: ok." << std::endl;
       } else {
          std::cout << "test_ping: fail." << std::endl;
-         std::cout << "Expected ok, received: " << str << std::endl;
+         std::cout << "Expected ok. Received: " << str
+                   << std::endl;
       }
 
-      //resp_response resp(std::move(response));
-      //resp.process_response();
       session->close();
    };
 
-   interaction a1 { {"*1\r\n$4\r\nPING\r\n"} , action , false};
+   auto const cmd = gen_ping_cmd({});
+   interaction a1 { cmd
+                  , action , false};
    session->send(std::move(a1));
    session->run();
 

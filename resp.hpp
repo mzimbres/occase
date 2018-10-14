@@ -10,6 +10,8 @@ bool is_array(std::string const& str);
 
 std::string_view get_simple_string(std::string const& str);
 
+std::string gen_ping_cmd(std::string msg);
+
 class resp_response {
 public:
    using container_type = std::string;

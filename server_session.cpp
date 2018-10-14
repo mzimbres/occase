@@ -15,21 +15,20 @@ void fail(boost::system::error_code ec, char const* what)
 
 }
 
-server_session::server_session( tcp::socket socket
-                              , std::shared_ptr<server_mgr> mgr_)
+server_session::server_session(tcp::socket socket, server_mgr& mgr_)
 : ws(std::move(socket))
 , strand(ws.get_executor())
 , timer( ws.get_executor().context()
        , std::chrono::steady_clock::time_point::max())
 , mgr(mgr_)
 {
-   ++mgr->get_stats().number_of_sessions;
+   ++mgr.get_stats().number_of_sessions;
 }
 
 server_session::~server_session()
 {
-   mgr->release_user(user_id);
-   --mgr->get_stats().number_of_sessions;
+   mgr.release_user(user_id);
+   --mgr.get_stats().number_of_sessions;
 }
 
 void server_session::accept()
@@ -61,7 +60,7 @@ void server_session::do_accept()
 
    ws.control_callback(handler0);
 
-   timer.expires_after(mgr->get_timeouts().handshake);
+   timer.expires_after(mgr.get_timeouts().handshake);
 
    auto const handler1 = [p = shared_from_this()](auto ec)
    {
@@ -106,7 +105,7 @@ void server_session::on_accept(boost::system::error_code ec)
    // The cancelling of this timer should happen when either
    // 1. The session is autheticated or a login is performed.
    // 2. The user requests a login.
-   timer.expires_after(mgr->get_timeouts().auth);
+   timer.expires_after(mgr.get_timeouts().auth);
 
    auto const handler = [p = shared_from_this()](auto ec)
    {
@@ -163,7 +162,7 @@ void server_session::do_close()
    // First we set the close frame timeout so that if the peer does
    // not reply with his close frame we do not wait forever. This
    // timer can only be canceled when on_read is called with closed.
-   timer.expires_after(mgr->get_timeouts().close);
+   timer.expires_after(mgr.get_timeouts().close);
 
    auto const handler0 = [p = shared_from_this()](auto ec)
    {
@@ -215,7 +214,7 @@ void server_session::shutdown()
 
 void server_session::do_pong_wait()
 {
-   timer.expires_after(mgr->get_timeouts().pong);
+   timer.expires_after(mgr.get_timeouts().pong);
 
    auto const handler = [p = shared_from_this()](auto ec)
    {
@@ -284,7 +283,7 @@ void server_session::handle_ev(ev_res r)
          // Successful login request which means the ongoing
          // connection timer  has to be canceled.  This is where we
          // have to set the sms timeout.
-         auto const n = timer.expires_after(mgr->get_timeouts().sms);
+         auto const n = timer.expires_after(mgr.get_timeouts().sms);
 
          auto const handler = [p = shared_from_this()](auto ec)
          {
@@ -360,8 +359,7 @@ void server_session::on_read( boost::system::error_code ec
    try {
       auto const msg = boost::beast::buffers_to_string(buffer.data());
       buffer.consume(std::size(buffer));
-      auto const r = on_message( *mgr, shared_from_this()
-                               , std::move(msg));
+      auto const r = on_message(mgr, shared_from_this(), std::move(msg));
       handle_ev(r);
       do_read();
    } catch (...) {

@@ -13,7 +13,6 @@
 struct signal_handler {
    boost::asio::io_context& ioc;
    std::shared_ptr<listener> lst;
-   std::shared_ptr<server_mgr> sm;
 
    void operator()(boost::system::error_code const&, int)
    {
@@ -90,18 +89,16 @@ int main(int argc, char* argv[])
 
       boost::asio::io_context ioc {1};
 
-      auto sm = std::make_shared<server_mgr>(op.get_timeouts());
-
-      auto lst = std::make_shared<listener>(op, ioc, sm);
+      auto lst = std::make_shared<listener>(op, ioc);
       lst->run();
 
       boost::asio::signal_set signals(ioc, SIGINT, SIGTERM);
-      signals.async_wait(signal_handler {ioc, lst, sm});
+      signals.async_wait(signal_handler {ioc, lst});
 
       ioc.run();
       return 0;
    } catch (std::exception const& e) {
-       std::cerr << "error: " << e.what() << "\n";
+       std::cerr << "Error: " << e.what() << "\n";
        return 1;
    }
 }

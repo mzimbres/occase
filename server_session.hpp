@@ -29,7 +29,7 @@ private:
    boost::asio::steady_timer timer;
    boost::beast::multi_buffer buffer;
 
-   std::shared_ptr<server_mgr> mgr;
+   server_mgr& mgr;
    std::queue<std::string> msg_queue;
    ping_pong pp_state = ping_pong::unset;
    bool closing = false;
@@ -58,8 +58,7 @@ private:
 
 public:
    explicit
-   server_session( tcp::socket socket
-                 , std::shared_ptr<server_mgr> mgr_);
+   server_session(tcp::socket socket, server_mgr& mgr);
    ~server_session();
 
    void accept();

@@ -36,14 +36,13 @@ class listener : public std::enable_shared_from_this<listener> {
 private:
    tcp::acceptor acceptor;
    tcp::socket socket;
-   std::shared_ptr<server_mgr> mgr;
+   server_mgr mgr;
    boost::asio::steady_timer session_stats_timer;
 
    void do_stats_logger();
 
 public:
-   listener( server_op op, boost::asio::io_context& ioc
-           , std::shared_ptr<server_mgr> mgr_);
+   listener(server_op op, boost::asio::io_context& ioc);
    ~listener();
    void run();
    void do_accept();

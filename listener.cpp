@@ -15,12 +15,10 @@ void fail(boost::system::error_code ec, char const* what)
 
 }
 
-listener::listener( server_op op
-                  , boost::asio::io_context& ioc
-                  , std::shared_ptr<server_mgr> mgr_)
+listener::listener(server_op op, boost::asio::io_context& ioc)
 : acceptor(ioc)
 , socket(ioc)
-, mgr(mgr_)
+, mgr(op.get_timeouts())
 , session_stats_timer(ioc)
 {
    auto const address = boost::asio::ip::make_address(op.ip);
@@ -65,7 +63,7 @@ void listener::stop()
 {
    acceptor.cancel();
    session_stats_timer.cancel();
-   mgr->shutdown();
+   mgr.shutdown();
 }
 
 void listener::do_stats_logger()
@@ -82,7 +80,7 @@ void listener::do_stats_logger()
       }
       
       std::cout << "Current number of sessions: "
-                << p->mgr->get_stats().number_of_sessions
+                << p->mgr.get_stats().number_of_sessions
                 << std::endl;
 
       p->do_stats_logger();
@@ -118,7 +116,7 @@ void listener::on_accept(boost::system::error_code ec)
          // An accept that has been canceled is to be interpreted for
          // now as a shutdown operation so that we have to perform
          // some further cleanup.
-         mgr->shutdown();
+         mgr.shutdown();
          return;
       }
 

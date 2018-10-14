@@ -1,6 +1,5 @@
 #pragma once
 
-#include <mutex>
 #include <vector>
 #include <memory>
 #include <string>
@@ -38,13 +37,11 @@ struct session_timeouts {
 };
 
 struct sessions_stats {
-   std::atomic<int> number_of_sessions {0};
+   int number_of_sessions {0};
 };
 
 class server_mgr {
 private:
-   std::mutex mutex;
-
    // Maps a user id (telephone, email, etc.) to a user obj.
    std::unordered_map< std::string
                      , std::weak_ptr<server_session>> sessions;

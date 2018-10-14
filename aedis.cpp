@@ -148,16 +148,6 @@ int main(int argc, char* argv[])
       session->send(std::move(d1));
 
       session->run();
-
-      //std::thread thread([&](){ioc.run();});
-
-      //char line[1024];
-      //while (std::cin.getline(line, std::size(line))) {
-      //   session->write(line);
-      //}
-
-      //session->close();
-      //thread.join();
       ioc.run();
    } catch (std::exception& e) {
       std::cerr << "Exception: " << e.what() << "\n";

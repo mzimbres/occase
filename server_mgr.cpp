@@ -52,8 +52,6 @@ ev_res on_message( server_mgr& mgr
 
 ev_res server_mgr::on_login(json j, std::shared_ptr<server_session> s)
 {
-   std::lock_guard<std::mutex> lock(mutex);
-
    auto const tel = j.at("tel").get<std::string>();
 
    // TODO: Replace this with a query to the database.
@@ -80,8 +78,6 @@ ev_res server_mgr::on_login(json j, std::shared_ptr<server_session> s)
 
 ev_res server_mgr::on_auth(json j, std::shared_ptr<server_session> s)
 {
-   std::lock_guard<std::mutex> lock(mutex);
-
    auto const from = j.at("from").get<std::string>();
 
    auto const new_user = sessions.insert({from, s});
@@ -119,8 +115,6 @@ ev_res server_mgr::on_auth(json j, std::shared_ptr<server_session> s)
 ev_res
 server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
 {
-   std::lock_guard<std::mutex> lock(mutex);
-
    auto const tel = j.at("tel").get<std::string>();
    auto const sms = j.at("sms").get<std::string>();
 
@@ -153,8 +147,6 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
 ev_res
 server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
 {
-   std::lock_guard<std::mutex> lock(mutex);
-
    auto const hash = j.at("hash").get<std::string>();
 
    auto const new_group = groups.insert({hash, {}});
@@ -184,8 +176,6 @@ server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
 ev_res
 server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
 {
-   std::lock_guard<std::mutex> lock(mutex);
-
    auto const hash = j.at("hash").get<std::string>();
 
    auto const g = groups.find(hash);
@@ -213,8 +203,6 @@ server_mgr::on_group_msg( std::string msg
                         , json j
                         , std::shared_ptr<server_session> s)
 {
-   std::lock_guard<std::mutex> lock(mutex);
-
    auto const to = j.at("to").get<std::string>();
 
    auto const g = groups.find(to);
@@ -244,15 +232,12 @@ server_mgr::on_group_msg( std::string msg
 
 void server_mgr::release_user(std::string id)
 {
-   std::lock_guard<std::mutex> lock(mutex);
    sessions.erase(id);
 }
 
 ev_res
 server_mgr::on_user_msg(json j, std::shared_ptr<server_session> s)
 {
-   std::lock_guard<std::mutex> lock(mutex);
-
    //auto const from = j["from"].get<user_bind>();
    //auto const to = j["to"].get<user_bind>();
 
@@ -262,8 +247,6 @@ server_mgr::on_user_msg(json j, std::shared_ptr<server_session> s)
 
 void server_mgr::shutdown()
 {
-   std::lock_guard<std::mutex> lock(mutex);
-
    std::cout << "Shutting down user sessions ..." << std::endl;
 
    for (auto o : sessions)

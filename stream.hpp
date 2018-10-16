@@ -28,8 +28,7 @@ private:
          on_read_some(ec, n, buffer, handler);
       };
 
-      socket.async_read_some( boost::asio::buffer(buffer.get().prepare(N))
-                            , handler2);
+      socket.async_read_some(buffer.get().prepare(N), handler2);
    }
 
    template< class DynamicBuffer

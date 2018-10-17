@@ -66,7 +66,7 @@ void test_ping(aedis_op const op)
 
    auto session = std::make_shared<redis_session>(ioc, endpoints);
    interaction a1 { gen_bulky_string({"PING"}, {})
-                  , test_action {"PING", "PONG", 1000, session}};
+                  , test_action {"PING", "PONG", 1, session}};
 
    session->send(std::move(a1));
    session->run();

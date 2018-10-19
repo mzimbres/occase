@@ -79,8 +79,8 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
    if (cmd == "group_msg") {
       // TODO: Output some error if the number of messages received is
       // wrong.
-      auto const body = j.at("msg").get<std::string>();
-      std::cout << "Group msg: " << body << std::endl;
+      //auto const body = j.at("msg").get<std::string>();
+      //std::cout << "Group msg: " << body << std::endl;
       return 1;
    }
 

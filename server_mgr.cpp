@@ -276,7 +276,8 @@ server_mgr::on_user_msg(json j, std::shared_ptr<server_session> s)
 
 void server_mgr::shutdown()
 {
-   std::cout << "Shutting down user sessions ..." << std::endl;
+   std::cout << "Shutting down " << std::size(sessions) 
+             << " user sessions ..." << std::endl;
 
    for (auto o : sessions)
       if (auto s = o.second.lock())

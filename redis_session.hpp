@@ -38,7 +38,7 @@ private:
    bool bulky_str_read = false;
 
    void do_write(interaction i);
-   void do_read_resp();
+   void start_reading_resp();
    void do_close();
 
    void on_connect(boost::system::error_code ec);

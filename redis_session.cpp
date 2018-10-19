@@ -9,9 +9,8 @@
 #include <boost/asio/bind_executor.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
+#include "config.hpp"
 #include "redis_session.hpp"
-
-using boost::asio::ip::tcp;
 
 namespace aedis
 {
@@ -23,19 +22,18 @@ void redis_session::run()
       on_connect(ec);
    };
 
-   boost::asio::async_connect(socket, endpoints, handler);
+   asio::async_connect(socket, endpoints, handler);
 }
 
 void redis_session::send(interaction i)
 {
-   boost::asio::post( socket.get_io_context()
-                    , [this, ii = std::move(i)]() { do_write(std::move(ii));}
-                    );
+   asio::post( socket.get_io_context()
+             , [this, ii = std::move(i)]() { do_write(std::move(ii));});
 }
 
 void redis_session::close()
 {
-   boost::asio::post( socket.get_io_context() , [this]() { do_close(); });
+   asio::post( socket.get_io_context() , [this]() { do_close(); });
 }
 
 void redis_session::on_resp_chunk( boost::system::error_code ec
@@ -66,11 +64,11 @@ void redis_session::on_resp_chunk( boost::system::error_code ec
          {
             --counter;
             bulky_str_read = true;
-            boost::asio::async_read_until( socket
-                                         , boost::asio::dynamic_buffer(data)
-                                         , delim
-                                         , [this](auto ec, auto n)
-                                           { on_resp_chunk(ec, n); });
+            asio::async_read_until( socket
+                                  , asio::dynamic_buffer(data)
+                                  , delim
+                                  , [this](auto ec, auto n)
+                                    { on_resp_chunk(ec, n); });
             return;
          }
          break;
@@ -93,19 +91,17 @@ void redis_session::on_resp_chunk( boost::system::error_code ec
 
    if (counter == 0) {
       // We are done.
-      boost::asio::post( socket.get_io_context()
-                       , [this]() { on_resp(); });
+      asio::post(socket.get_io_context(), [this]() { on_resp(); });
       counter = 1;
    } else {
-      boost::asio::async_read_until( socket
-            , boost::asio::dynamic_buffer(data)
-                                   , delim,
-            [this](auto ec, auto n) { on_resp_chunk(ec, n); });
+      asio::async_read_until( socket, asio::dynamic_buffer(data), delim
+                            , [this](auto ec, auto n)
+                              { on_resp_chunk(ec, n); });
    }
    return;
 }
 
-void redis_session::do_read_resp()
+void redis_session::start_reading_resp()
 {
    //auto const handler = [this]( boost::system::error_code ec
    //                           , std::size_t n)
@@ -114,9 +110,8 @@ void redis_session::do_read_resp()
    auto const handler = [this](auto ec, std::size_t n)
    { on_resp_chunk(ec, n); };
 
-   boost::asio::async_read_until( socket
-            , boost::asio::dynamic_buffer(data)
-            , delim, handler);
+   asio::async_read_until( socket, asio::dynamic_buffer(data)
+                         , delim, handler);
 }
 
 void redis_session::on_connect(boost::system::error_code ec)
@@ -126,17 +121,17 @@ void redis_session::on_connect(boost::system::error_code ec)
       return;
    }
 
-   boost::asio::ip::tcp::no_delay option(true);
+   asio::ip::tcp::no_delay option(true);
    socket.set_option(option);
 
-   do_read_resp();
+   start_reading_resp();
 }
 
 void redis_session::on_resp()
 {
    write_queue.front().action({}, std::move(data));
 
-   do_read_resp();
+   start_reading_resp();
    write_queue.pop();
    waiting_response = false;
 
@@ -147,9 +142,8 @@ void redis_session::on_resp()
    { on_write(ec, n); };
 
    //std::cout << "on_write: Writing more." << std::endl;
-   boost::asio::async_write( socket
-                           , boost::asio::buffer(write_queue.front().cmd)
-                           , handler);
+   ::asio::async_write( socket, asio::buffer(write_queue.front().cmd)
+                      , handler);
 }
 
 void redis_session::do_write(interaction i)
@@ -163,9 +157,8 @@ void redis_session::do_write(interaction i)
 
       //std::cout << "async_write ===> " << write_queue.front().cmd 
       //          << std::endl;
-      boost::asio::async_write( socket
-                              , boost::asio::buffer(write_queue.front().cmd)
-                              , handler);
+      asio::async_write( socket, asio::buffer(write_queue.front().cmd)
+                       , handler);
    }
 }
 

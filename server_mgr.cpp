@@ -198,7 +198,7 @@ server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
    return ev_res::join_group_ok;
 }
 
-void broadcast_msg(session_container_type& members, std::string msg)
+void broadcast_msg(channel_type& members, std::string msg)
 {
    auto begin = std::begin(members);
    auto end = std::end(members);

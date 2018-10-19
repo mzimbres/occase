@@ -24,10 +24,10 @@ private:
    , unset
    };
 
-   websocket::stream<tcp::socket> ws;
-   boost::asio::strand<boost::asio::io_context::executor_type> strand;
-   boost::asio::steady_timer timer;
-   boost::beast::multi_buffer buffer;
+   beast::websocket::stream<tcp::socket> ws;
+   asio::strand<asio::io_context::executor_type> strand;
+   asio::steady_timer timer;
+   beast::multi_buffer buffer;
 
    server_mgr& mgr;
    std::queue<std::string> msg_queue;

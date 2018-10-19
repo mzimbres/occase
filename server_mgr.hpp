@@ -49,8 +49,8 @@ struct sessions_stats {
 // 
 // Would like to use a vector but cannot pay for the linear search
 // time, even if not occurring very often.
-using session_container_type =
-   std::unordered_map< id_type
+using channel_type =
+   std::unordered_map< std::string
                      , std::weak_ptr<server_session>>;
 
 class server_mgr {
@@ -61,7 +61,7 @@ private:
 
    // Maps a channel id to a map of server sessions that subscribed to
    // that channel.
-   std::unordered_map<std::string, session_container_type> channels;
+   std::unordered_map<std::string, channel_type> channels;
 
    session_timeouts const timeouts;
    sessions_stats stats;

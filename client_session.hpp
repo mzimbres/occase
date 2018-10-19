@@ -31,9 +31,9 @@ class client_session :
    public std::enable_shared_from_this<client_session<Mgr>> {
 private:
    tcp::resolver resolver;
-   boost::asio::steady_timer timer;
-   websocket::stream<tcp::socket> ws;
-   boost::beast::multi_buffer buffer;
+   asio::steady_timer timer;
+   beast::websocket::stream<tcp::socket> ws;
+   beast::multi_buffer buffer;
    std::string text;
    client_session_cf op;
    std::queue<std::string> msg_queue;
@@ -49,7 +49,7 @@ private:
    void on_resolve( boost::system::error_code ec
                   , tcp::resolver::results_type results);
    void on_connect( boost::system::error_code ec
-                  , boost::asio::ip::tcp::endpoint const& endpoint);
+                  , asio::ip::tcp::endpoint const& endpoint);
    void on_handshake( boost::system::error_code ec);
    void do_read();
    void on_write( boost::system::error_code ec
@@ -62,7 +62,7 @@ private:
 public:
    using mgr_op_type = typename Mgr::options_type;
    explicit
-   client_session( boost::asio::io_context& ioc
+   client_session( asio::io_context& ioc
                  , client_session_cf op_
                  , mgr_op_type const& m);
 
@@ -79,7 +79,7 @@ public:
 };
 
 template <class Mgr>
-client_session<Mgr>::client_session( boost::asio::io_context& ioc
+client_session<Mgr>::client_session( asio::io_context& ioc
                                    , client_session_cf op_
                                    , mgr_op_type const& m)
 : resolver(ioc)
@@ -102,7 +102,7 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
    boost::ignore_unused(bytes_transferred);
 
    if (ec) {
-      if (ec == websocket::error::closed) {
+      if (ec == beast::websocket::error::closed) {
          // This means the session has been closed by the server.
          if (mgr.on_closed(ec) == -1) {
             //std::cout << "Cancelling timer." << std::endl;
@@ -116,7 +116,7 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
          return;
       }
 
-      if (ec == boost::asio::error::operation_aborted) {
+      if (ec == asio::error::operation_aborted) {
          std::cout << "Leaving on read 3: " << mgr.get_user()
                    << std::endl;
          timer.cancel();
@@ -128,7 +128,7 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
    }
 
    ++recv_msgs;
-   auto const str = boost::beast::buffers_to_string(buffer.data());
+   auto const str = beast::buffers_to_string(buffer.data());
    if (std::empty(str))
       throw std::runtime_error("client_session::on_read: msg empty.");
 
@@ -179,7 +179,7 @@ void client_session<Mgr>::do_write(std::string msg)
    auto handler = [p = this->shared_from_this()](auto ec, auto res)
    { p->on_write(ec, res); };
 
-   ws.async_write(boost::asio::buffer(text), handler);
+   ws.async_write(asio::buffer(text), handler);
 }
 
 template <class Mgr>
@@ -194,7 +194,7 @@ void client_session<Mgr>::do_close()
    auto handler = [p = this->shared_from_this()](auto ec)
    { p->on_close(ec); };
 
-   ws.async_close(websocket::close_code::normal, handler);
+   ws.async_close(beast::websocket::close_code::normal, handler);
 }
 
 template <class Mgr>
@@ -209,7 +209,7 @@ void client_session<Mgr>::on_close(boost::system::error_code ec)
 template <class Mgr>
 void
 client_session<Mgr>::on_connect( boost::system::error_code ec
-                            , boost::asio::ip::tcp::endpoint const&)
+                               , asio::ip::tcp::endpoint const&)
 {
    if (ec)
       return fail_tmp(ec, "resolve");
@@ -227,7 +227,7 @@ client_session<Mgr>::on_connect( boost::system::error_code ec
       auto handler = [p = this->shared_from_this()](auto ec)
       {
          if (ec) {
-            if (ec == boost::asio::error::operation_aborted) {
+            if (ec == asio::error::operation_aborted) {
                // The timer has been successfully canceled.
                //std::cout << "Timer successfully canceled." << std::endl;
                return;
@@ -243,7 +243,7 @@ client_session<Mgr>::on_connect( boost::system::error_code ec
       // server gives up the handshake by closing the connection.
       auto handler2 = [p = this->shared_from_this()](auto ec, auto n)
       {
-         if (ec == boost::asio::error::eof) {
+         if (ec == asio::error::eof) {
             p->timer.cancel();
             //std::cout << "Timer canceled, thanks." << std::endl;
             return;
@@ -254,7 +254,7 @@ client_session<Mgr>::on_connect( boost::system::error_code ec
       };
 
       receive_buffer.resize(32);
-      ws.next_layer().async_receive( boost::asio::buffer(receive_buffer)
+      ws.next_layer().async_receive( asio::buffer(receive_buffer)
                                    , 0, handler2);
       return;
    }
@@ -291,7 +291,7 @@ client_session<Mgr>::on_handshake(boost::system::error_code ec)
    auto handler = [p = this->shared_from_this()](auto ec)
    {
       if (ec) {
-         if (ec == boost::asio::error::operation_aborted) {
+         if (ec == asio::error::operation_aborted) {
             // The timer has been successfully canceled.
             //std::cout << "Timer successfully canceled." << std::endl;
             return;
@@ -344,7 +344,7 @@ void client_session<Mgr>::on_resolve( boost::system::error_code ec
       p->on_connect(ec, Iterator);
    };
 
-   boost::asio::async_connect(ws.next_layer(), results, handler);
+   asio::async_connect(ws.next_layer(), results, handler);
 }
 
 template <class Mgr>

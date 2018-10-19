@@ -46,11 +46,11 @@ void server_session::do_accept()
    //auto const handler0 = [](auto kind, auto payload)
    auto const handler0 = [this](auto kind, auto payload)
    {
-      if (kind == boost::beast::websocket::frame_type::close) {
+      if (kind == beast::websocket::frame_type::close) {
          //std::cout << "Close frame received." << std::endl;
-      } else if (kind == boost::beast::websocket::frame_type::ping) {
+      } else if (kind == beast::websocket::frame_type::ping) {
          //std::cout << "Ping frame received." << std::endl;
-      } else if (kind == boost::beast::websocket::frame_type::pong) {
+      } else if (kind == beast::websocket::frame_type::pong) {
          //std::cout << "Pong frame received." << std::endl;
          pp_state = ping_pong::pong_received;
       }
@@ -188,7 +188,7 @@ void server_session::do_close()
       p->on_close(ec);
    };
 
-   websocket::close_reason reason {};
+   beast::websocket::close_reason reason {};
    ws.async_close(reason, boost::asio::bind_executor(strand, handler));
 }
 
@@ -334,7 +334,7 @@ void server_session::on_read( boost::system::error_code ec
 {
    boost::ignore_unused(bytes_transferred);
 
-   if (ec == websocket::error::closed) {
+   if (ec == beast::websocket::error::closed) {
       // The connection has been gracefully closed. The only possible
       // pending operations now are the timers.
       //std::cout << "server_session::on_read: socket closed gracefully."
@@ -357,7 +357,7 @@ void server_session::on_read( boost::system::error_code ec
       return;
 
    try {
-      auto const msg = boost::beast::buffers_to_string(buffer.data());
+      auto const msg = beast::buffers_to_string(buffer.data());
       buffer.consume(std::size(buffer));
       auto const r = on_message(mgr, shared_from_this(), std::move(msg));
       handle_ev(r);

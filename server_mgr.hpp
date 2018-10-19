@@ -6,7 +6,7 @@
 #include <unordered_map>
 
 #include "config.hpp"
-#include "group.hpp"
+#include "json_utils.hpp"
 
 class server_session;
 
@@ -40,14 +40,28 @@ struct sessions_stats {
    int number_of_sessions {0};
 };
 
+// The number of members in a channel is expected be on the
+// thousands, let us say 10k. The operations performed are
+//
+// 1. Insert very often. Can be on the back.
+// 2. Traverse very often.
+// 3. Remove: Once in a while, requires searching.
+// 
+// Would like to use a vector but cannot pay for the linear search
+// time, even if not occurring very often.
+using session_container_type =
+   std::unordered_map< id_type
+                     , std::weak_ptr<server_session>>;
+
 class server_mgr {
 private:
    // Maps a user id (telephone, email, etc.) to a user obj.
    std::unordered_map< std::string
                      , std::weak_ptr<server_session>> sessions;
 
-   // Maps a group id to a group object.
-   std::unordered_map<std::string, group> groups;
+   // Maps a channel id to a map of server sessions that subscribed to
+   // that channel.
+   std::unordered_map<std::string, session_container_type> channels;
 
    session_timeouts const timeouts;
    sessions_stats stats;

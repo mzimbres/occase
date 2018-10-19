@@ -149,7 +149,7 @@ server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
 {
    auto const hash = j.at("hash").get<std::string>();
 
-   auto const new_group = groups.insert({hash, {}});
+   auto const new_group = channels.insert({hash, {}});
    if (!new_group.second) {
       // Group already exists.
       json resp;
@@ -178,8 +178,8 @@ server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
 {
    auto const hash = j.at("hash").get<std::string>();
 
-   auto const g = groups.find(hash);
-   if (g == std::end(groups)) {
+   auto const g = channels.find(hash);
+   if (g == std::end(channels)) {
       json resp;
       resp["cmd"] = "join_group_ack";
       resp["result"] = "fail";
@@ -188,7 +188,7 @@ server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
    }
 
    auto const from = s->get_id();
-   g->second.add_member(from, s);
+   g->second.insert({from, s});
 
    json resp;
    resp["cmd"] = "join_group_ack";
@@ -198,6 +198,35 @@ server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
    return ev_res::join_group_ok;
 }
 
+void broadcast_msg(session_container_type& members, std::string msg)
+{
+   auto begin = std::begin(members);
+   auto end = std::end(members);
+   while (begin != end) {
+      if (auto s = begin->second.lock()) {
+         // The user is online. We can just forward his message.
+         // TODO: We incurr here the possibility of sending repeated
+         // messages to the user. The scenario is as follows
+         // 1. We send a message bellow and it is buffered.
+         // 2. The user disconnects before receiving the message.
+         // 3. The message are saved on the database.
+         // 4. The user reconnects and we read and send him his
+         //    messages from the database.
+         // 5. We traverse the channels sending him the latest messages
+         //    the he missed while he was offline and this message is
+         //    between them.
+         // This is perhaps unlikely but should be avoided in the
+         // future.
+         s->send(msg);
+         ++begin;
+         continue;
+      }
+
+      // Removes users that are not online anymore.
+      begin = members.erase(begin);
+   }
+}
+
 ev_res
 server_mgr::on_group_msg( std::string msg
                         , json j
@@ -205,8 +234,8 @@ server_mgr::on_group_msg( std::string msg
 {
    auto const to = j.at("to").get<std::string>();
 
-   auto const g = groups.find(to);
-   if (g == std::end(groups)) {
+   auto const g = channels.find(to);
+   if (g == std::end(channels)) {
       // This is a non-existing group. Perhaps the json command was
       // sent with the wrong information signaling a logic error in
       // the app.
@@ -220,7 +249,7 @@ server_mgr::on_group_msg( std::string msg
 
    // TODO: Change broadcast to return the number of users that the
    // message has reached.
-   g->second.broadcast_msg(std::move(msg));
+   broadcast_msg(g->second, std::move(msg));
 
    json ack;
    ack["cmd"] = "group_msg_ack";

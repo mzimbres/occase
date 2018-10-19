@@ -18,7 +18,6 @@ common_objs = json_utils.o
 common_objs += menu_parser.o
 
 server_objs =
-server_objs += group.o
 server_objs += server_mgr.o
 server_objs += server_session.o
 server_objs += listener.o

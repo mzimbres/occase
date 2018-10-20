@@ -17,55 +17,6 @@ using namespace aedis;
 
 namespace po = boost::program_options;
 
-struct test_action {
-   std::string cmd;
-   std::string expected;
-   int repeat = 0;
-   std::shared_ptr<redis_session> session;
-   void operator()( boost::system::error_code ec
-                  , std::string response) const
-   {
-      if (ec) {
-         std::string error_msg = cmd + ": test fails.";
-         throw std::runtime_error(error_msg);
-      }
-
-      auto const str = get_simple_string(response);
-      if (str != expected) {
-         std::string error_msg = cmd + ": test fails. ";
-         error_msg += "Expects ";
-         error_msg += expected + ". Received ";
-         error_msg += str;
-         throw std::runtime_error(error_msg);
-      }
-
-      if (repeat == 0) {
-         session->close();
-         std::cout << cmd <<": test ok." << std::endl;
-         return;
-      }
-
-      interaction tmp { gen_bulky_string(cmd, {})
-                      , test_action {cmd, expected, repeat - 1, session}};
-
-      session->send(std::move(tmp));
-   }
-};
-
-void test_ping(redis_session_cf const cf)
-{
-   boost::asio::io_context ioc;
-
-   auto session = std::make_shared<redis_session>(cf, ioc);
-   interaction a1 { gen_bulky_string({"PING"}, {})
-                  , test_action {"PING", "PONG", 1, session}};
-
-   session->send(std::move(a1));
-   session->run();
-
-   ioc.run();
-}
-
 int main(int argc, char* argv[])
 {
    try {
@@ -92,7 +43,6 @@ int main(int argc, char* argv[])
          return 0;
       }
 
-      //test_ping(cf);
       boost::asio::io_context ioc;
       auto session = std::make_shared<redis_session>(cf, ioc);
 

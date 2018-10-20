@@ -12,12 +12,15 @@
 #include "config.hpp"
 #include "redis_session.hpp"
 
-namespace {
+namespace
+{
+
 inline
 void fail_tmp(boost::system::error_code ec, char const* what)
 {
    std::cerr << what << ": " << ec.message() << "\n";
 }
+
 }
 
 namespace aedis
@@ -49,20 +52,38 @@ void redis_session::run()
 
 void redis_session::send(interaction i)
 {
-   asio::post( socket.get_io_context()
-             , [this, ii = std::move(i)]() { do_write(std::move(ii));});
+   auto const is_empty = std::empty(write_queue);
+   write_queue.push(std::move(i));
+
+   if (is_empty && socket.is_open()) {
+      auto const handler = [this](auto ec, auto n)
+      { on_write(ec, n); };
+
+      //std::cout << "is_open: " << socket.is_open() << std::endl;
+      asio::async_write( socket, asio::buffer(write_queue.front().cmd)
+                       , handler);
+   }
 }
 
 void redis_session::close()
 {
-   asio::post(socket.get_io_context(), [this]() { do_close(); });
+   boost::system::error_code ec;
+   socket.shutdown(tcp::socket::shutdown_send, ec);
+   if (ec)
+      fail_tmp(ec, "close");
+
+   socket.close(ec);
+   if (ec)
+      fail_tmp(ec, "close");
 }
 
 void redis_session::on_resp_chunk( boost::system::error_code ec
-                                 , std::size_t n)
+                                 , std::size_t n
+                                 , int counter
+                                 , bool bulky_str_read)
 {
    if (ec) {
-      std::cout << "on_resp_chunk: " << ec.message() << std::endl;
+      fail_tmp(ec, "on_resp_chunk");
       return;
    }
 
@@ -75,22 +96,14 @@ void redis_session::on_resp_chunk( boost::system::error_code ec
    if (!bulky_str_read && counter != 0) {
       auto const c = data.front();
       switch (c) {
-         case '+':
-         case '-':
-         case ':':
-         {
-            --counter;
-         }
-         break;
          case '$':
          {
-            --counter;
-            bulky_str_read = true;
             asio::async_read_until( socket
                                   , asio::dynamic_buffer(data)
                                   , delim
-                                  , [this](auto ec, auto n)
-                                    { on_resp_chunk(ec, n); });
+                                  , [this, counter](auto ec, auto n)
+                                    { on_resp_chunk( ec, n, counter - 1
+                                                   , true); });
             return;
          }
          break;
@@ -100,27 +113,24 @@ void redis_session::on_resp_chunk( boost::system::error_code ec
             // counter = ...
          }
          break;
+         case '+':
+         case '-':
+         case ':':
+         break;
          default:
-         {
-            std::cout << "on_resp_chunk: Invalid redis response. Aborting ..."
-                      << std::endl;
-            return;
-         }
+            assert(false);
       }
    }
-
-   bulky_str_read = false;
 
    if (counter == 0) {
       // We are done.
       asio::post(socket.get_io_context(), [this]() { on_resp(); });
-      counter = 1;
-   } else {
-      asio::async_read_until( socket, asio::dynamic_buffer(data), delim
-                            , [this](auto ec, auto n)
-                              { on_resp_chunk(ec, n); });
+      return;
    }
-   return;
+
+   asio::async_read_until( socket, asio::dynamic_buffer(data), delim
+                         , [this, counter](auto ec, auto n)
+                           { on_resp_chunk(ec, n, counter - 1, false); });
 }
 
 void redis_session::start_reading_resp()
@@ -130,7 +140,9 @@ void redis_session::start_reading_resp()
    //{ on_resp(ec, n); };
 
    auto const handler = [this](auto ec, std::size_t n)
-   { on_resp_chunk(ec, n); };
+   {
+      on_resp_chunk(ec, n, 1, false);
+   };
 
    asio::async_read_until( socket, asio::dynamic_buffer(data)
                          , delim, handler);
@@ -182,39 +194,18 @@ void redis_session::on_resp()
                       , handler);
 }
 
-void redis_session::do_write(interaction i)
-{
-   auto const is_empty = std::empty(write_queue);
-   write_queue.push(std::move(i));
-
-   if (is_empty && socket.is_open()) {
-      auto const handler = [this](auto ec, auto n)
-      { on_write(ec, n); };
-
-      //std::cout << "is_open: " << socket.is_open() << std::endl;
-      asio::async_write( socket, asio::buffer(write_queue.front().cmd)
-                       , handler);
-   }
-}
-
 void redis_session::on_write( boost::system::error_code ec
                             , std::size_t n)
 {
    if (ec) {
      std::cout << "on_write error: " << ec.message() << std::endl;
-     do_close();
+     close();
      return;
    }
 
    //std::cout << "on_write popping ===> " << write_queue.front().cmd
    //          << " " << n << std::endl;
    waiting_response = true;
-}
-
-void redis_session::do_close()
-{
-   //std::cout << "do_close." << std::endl;
-   socket.close();
 }
 
 }

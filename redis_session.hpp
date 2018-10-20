@@ -31,10 +31,6 @@ struct interaction {
 
 class redis_session {
 private:
-   using value_type = std::string::value_type;
-   using traits_type = std::string::traits_type;
-   using allocator_type = std::string::allocator_type;
-
    static std::string_view constexpr delim {"\r\n"};
 
    redis_session_cf cf;
@@ -43,19 +39,18 @@ private:
    std::string data;
    std::queue<interaction> write_queue;
    bool waiting_response = false;
-   int counter = 1;
-   bool bulky_str_read = false;
 
-   void do_write(interaction i);
    void start_reading_resp();
-   void do_close();
 
    void on_resolve( boost::system::error_code ec
                   , tcp::resolver::results_type results);
    void on_connect( boost::system::error_code ec
                   , asio::ip::tcp::endpoint const& endpoint);
    void on_resp();
-   void on_resp_chunk(boost::system::error_code ec, std::size_t n);
+   void on_resp_chunk( boost::system::error_code ec
+                     , std::size_t n
+                     , int counter
+                     , bool bulky_str_read);
    void on_write(boost::system::error_code ec, std::size_t n);
 
 public:

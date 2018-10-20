@@ -6,7 +6,7 @@
 namespace aedis
 {
 
-auto get_length(std::string::const_iterator& p)
+int get_length(std::string::const_iterator& p)
 {
    auto len = 0;
    while (*p != '\r') {
@@ -33,8 +33,7 @@ void add_bulky_str(std::string& payload, std::string const& param)
    payload += "\r\n";
 }
 
-std::string gen_bulky_string( std::string cmd
-                            , std::vector<std::string> param)
+std::string gen_resp_cmd(std::string cmd, std::vector<std::string> param)
 {
    std::string payload = "*";
    payload += std::to_string(std::size(param) + 1);

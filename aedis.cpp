@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
       auto session = std::make_shared<redis_session>(cf, ioc);
 
       interaction i1
-      { gen_bulky_string("SET", {"foo", "20"})
+      { gen_resp_cmd("SET", {"foo", "20"})
       , [](auto ec, auto payload)
         {
            if (ec) {
@@ -61,7 +61,7 @@ int main(int argc, char* argv[])
       };
 
       interaction i2
-      { gen_bulky_string("INCRBY", {"foo", "3"})
+      { gen_resp_cmd("INCRBY", {"foo", "3"})
       , [](auto ec, auto payload)
         {
            if (ec) {
@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
       };
 
       interaction i3
-      { gen_bulky_string("GET", {"foo"})
+      { gen_resp_cmd("GET", {"foo"})
       , [](auto ec, auto payload)
         {
            if (ec) {
@@ -88,7 +88,7 @@ int main(int argc, char* argv[])
       };
 
       interaction i4
-      { gen_bulky_string("PING", {"Arbitrary message."})
+      { gen_resp_cmd("PING", {"Arbitrary message."})
       , [](auto ec, auto payload)
         {
            if (ec) {

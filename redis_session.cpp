@@ -9,6 +9,7 @@
 #include <boost/asio/bind_executor.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
+#include "resp.hpp"
 #include "config.hpp"
 #include "redis_session.hpp"
 
@@ -96,34 +97,33 @@ void redis_session::on_resp_chunk( boost::system::error_code ec
    if (!bulky_str_read && counter != 0) {
       auto const c = data.front();
       switch (c) {
-         case '$':
-         {
-            asio::async_read_until( socket
-                                  , asio::dynamic_buffer(data)
-                                  , delim
-                                  , [this, counter](auto ec, auto n)
-                                    { on_resp_chunk( ec, n, counter - 1
-                                                   , true); });
-            return;
-         }
-         break;
-         case '*':
-         {
-            assert(counter == 1);
-            // counter = ...
-         }
-         break;
-         case '+':
-         case '-':
-         case ':':
-         break;
-         default:
-            assert(false);
+      case '$':
+      {
+         asio::async_read_until( socket
+                               , asio::dynamic_buffer(data)
+                               , delim
+                               , [this, counter](auto ec, auto n)
+                                 { on_resp_chunk( ec, n, counter - 1
+                                                , true); });
+         return;
       }
+      break;
+      case '*':
+      {
+         assert(counter == 1);
+         auto p = std::cbegin(data);
+         counter = aedis::get_length(p);
+      }
+      break;
+      case '+': break;
+      case '-': break;
+      case ':': break;
+      default:
+         assert(false);
+   }
    }
 
    if (counter == 0) {
-      // We are done.
       asio::post(socket.get_io_context(), [this]() { on_resp(); });
       return;
    }

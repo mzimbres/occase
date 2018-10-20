@@ -36,6 +36,27 @@ struct session_timeouts {
    std::chrono::seconds close {2};
 };
 
+struct server_mgr_cf {
+   std::string redis_address;
+   unsigned short redis_port;
+   int auth_timeout;
+   int sms_timeout;
+   int handshake_timeout;
+   int pong_timeout;
+   int close_frame_timeout;
+
+   auto get_timeouts() const noexcept
+   {
+      return session_timeouts
+      { std::chrono::seconds {auth_timeout}
+      , std::chrono::seconds {sms_timeout}
+      , std::chrono::seconds {handshake_timeout}
+      , std::chrono::seconds {pong_timeout}
+      , std::chrono::seconds {close_frame_timeout}
+      };
+   }
+};
+
 struct sessions_stats {
    int number_of_sessions {0};
 };
@@ -67,8 +88,8 @@ private:
    sessions_stats stats;
 
 public:
-   server_mgr(session_timeouts timeouts_)
-   : timeouts(timeouts_)
+   server_mgr(server_mgr_cf cf)
+   : timeouts(cf.get_timeouts())
    {}
    void shutdown();
    void release_user(std::string id);

@@ -46,7 +46,7 @@ private:
                   , tcp::resolver::results_type results);
    void on_connect( boost::system::error_code ec
                   , asio::ip::tcp::endpoint const& endpoint);
-   void on_resp();
+   void on_resp(boost::system::error_code ec);
    void on_resp_chunk( boost::system::error_code ec
                      , std::size_t n
                      , int counter

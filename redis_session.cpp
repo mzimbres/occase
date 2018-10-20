@@ -124,7 +124,7 @@ void redis_session::on_resp_chunk( boost::system::error_code ec
    }
 
    if (counter == 0) {
-      asio::post(socket.get_io_context(), [this]() { on_resp(); });
+      asio::post(socket.get_io_context(), [this]() { on_resp({}); });
       return;
    }
 
@@ -135,10 +135,6 @@ void redis_session::on_resp_chunk( boost::system::error_code ec
 
 void redis_session::start_reading_resp()
 {
-   //auto const handler = [this]( boost::system::error_code ec
-   //                           , std::size_t n)
-   //{ on_resp(ec, n); };
-
    auto const handler = [this](auto ec, std::size_t n)
    {
       on_resp_chunk(ec, n, 1, false);
@@ -175,9 +171,9 @@ void redis_session::on_connect( boost::system::error_code ec
                     , handler);
 }
 
-void redis_session::on_resp()
+void redis_session::on_resp(boost::system::error_code ec)
 {
-   write_queue.front().action({}, std::move(data));
+   write_queue.front().action(ec, std::move(data));
 
    start_reading_resp();
    write_queue.pop();

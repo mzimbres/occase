@@ -50,7 +50,8 @@ private:
    void on_resp_chunk( boost::system::error_code ec
                      , std::size_t n
                      , int counter
-                     , bool bulky_str_read);
+                     , bool bulky_str_read
+                     , std::size_t pos);
    void on_write(boost::system::error_code ec, std::size_t n);
 
 public:

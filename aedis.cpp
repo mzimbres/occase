@@ -101,10 +101,25 @@ int main(int argc, char* argv[])
         }
       };
 
+      interaction i5
+      { gen_resp_cmd("SUBSCRIBE", {"foo"})
+      , [](auto ec, auto payload)
+        {
+           if (ec) {
+              std::cout << ec.message() << std::endl;
+              return;
+           }
+
+           std::cout << "(array) " << payload
+                     << std::endl;
+        }
+      };
+
       session->send(std::move(i1));
       session->send(std::move(i2));
       session->send(std::move(i3));
       session->send(std::move(i4));
+      session->send(std::move(i5));
 
       session->run();
       ioc.run();

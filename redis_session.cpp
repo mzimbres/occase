@@ -81,30 +81,32 @@ void redis_session::close()
 void redis_session::on_resp_chunk( boost::system::error_code ec
                                  , std::size_t n
                                  , int counter
-                                 , bool bulky_str_read)
+                                 , bool bulky_str_read
+                                 , std::size_t pos)
 {
    if (ec) {
       fail_tmp(ec, "on_resp_chunk");
       return;
    }
 
-   if (std::size(data) < 4) {
+   if (n < 4) {
       std::cout << "on_resp_chunk: Invalid redis response. Aborting ..."
                 << std::endl;
       return;
    }
 
+   auto const rs = pos + n;
    if (!bulky_str_read && counter != 0) {
-      auto const c = data.front();
+      auto const c = data[pos];
       switch (c) {
       case '$':
       {
          asio::async_read_until( socket
                                , asio::dynamic_buffer(data)
                                , delim
-                               , [this, counter](auto ec, auto n)
-                                 { on_resp_chunk( ec, n, counter - 1
-                                                , true); });
+                               , [this, counter, rs](auto ec, auto n2)
+                                 { on_resp_chunk( ec, n2, counter - 1
+                                                , true, rs); });
          return;
       }
       break;
@@ -112,7 +114,7 @@ void redis_session::on_resp_chunk( boost::system::error_code ec
       {
          assert(counter == 1);
          auto p = std::cbegin(data);
-         counter = aedis::get_length(p);
+         counter = aedis::get_length(++p);
       }
       break;
       case '+': break;
@@ -129,15 +131,16 @@ void redis_session::on_resp_chunk( boost::system::error_code ec
    }
 
    asio::async_read_until( socket, asio::dynamic_buffer(data), delim
-                         , [this, counter](auto ec, auto n)
-                           { on_resp_chunk(ec, n, counter - 1, false); });
+                         , [this, counter, rs](auto ec, auto n2)
+                           { on_resp_chunk( ec, n2, counter - 1
+                                          , false, rs); });
 }
 
 void redis_session::start_reading_resp()
 {
    auto const handler = [this](auto ec, std::size_t n)
    {
-      on_resp_chunk(ec, n, 1, false);
+      on_resp_chunk(ec, n, 1, false, 0);
    };
 
    asio::async_read_until( socket, asio::dynamic_buffer(data)

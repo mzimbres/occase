@@ -85,24 +85,6 @@ auto handle_other(resp_response::const_iterator begin)
    return p + 2;
 }
 
-bool is_valid(std::string const& str)
-{
-   // Checks whether the array is well formed.
-   if (std::size(str) < 4)
-      return false;
-
-   auto const s = std::size(str);
-   if (str[s - 2] != '\r' && str[s - 1] != '\n')
-      return false;
-
-   return true;
-}
-
-bool is_array(std::string const& str)
-{
-   return str.front() == '*';
-}
-
 std::string get_simple_string(std::string const& str)
 {
    if (str.front() != '+')
@@ -134,11 +116,6 @@ std::string get_bulky_string(std::string const& str)
 
 void resp_response::process_response() const
 {
-   if (!is_valid(str)) {
-      std::cout << "Received a redis ill formed response.." << std::endl;
-      return;
-   }
-
    //auto const end = std::cend(str);
    auto begin = std::cbegin(str);
    if (*begin == '*') {

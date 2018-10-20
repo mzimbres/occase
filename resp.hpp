@@ -6,8 +6,6 @@
 namespace aedis
 {
 
-bool is_valid(std::string const& str);
-bool is_array(std::string const& str);
 int get_length(std::string::const_iterator& p);
 
 std::string get_simple_string(std::string const& str);

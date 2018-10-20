@@ -92,49 +92,69 @@ int main(int argc, char* argv[])
          return 0;
       }
 
-      test_ping(cf);
+      //test_ping(cf);
       boost::asio::io_context ioc;
-
       auto session = std::make_shared<redis_session>(cf, ioc);
-      auto const ab1 = [](auto ec, auto payload)
-      {
-         if (ec) {
-            std::cout << "Error while reading." << std::endl;
-            return;
-         }
 
-         std::cout << "(simple string) " << get_simple_string(payload)
-                   << std::endl;
+      interaction i1
+      { gen_bulky_string("SET", {"foo", "20"})
+      , [](auto ec, auto payload)
+        {
+           if (ec) {
+              std::cout << ec.message() << std::endl;
+              return;
+           }
+
+           std::cout << "(simple string) " << get_simple_string(payload)
+                     << std::endl;
+        }
       };
 
-      interaction b {gen_bulky_string("SET", {"foo", "20"}), ab1};
-      session->send(std::move(b));
+      interaction i2
+      { gen_bulky_string("INCRBY", {"foo", "3"})
+      , [](auto ec, auto payload)
+        {
+           if (ec) {
+              std::cout << ec.message() << std::endl;
+              return;
+           }
 
-      auto const ac1 = [](auto ec, auto payload)
-      {
-         if (ec) {
-            std::cout << "Error while reading." << std::endl;
-            return;
-         }
-         std::cout << "(integer) " << get_int(payload) << std::endl;
+           std::cout << "(integer) " << get_int(payload) << std::endl;
+        }
       };
 
-      interaction c1 {gen_bulky_string("INCRBY", {"foo", "3"}), ac1};
-      session->send(std::move(c1));
+      interaction i3
+      { gen_bulky_string("GET", {"foo"})
+      , [](auto ec, auto payload)
+        {
+           if (ec) {
+              std::cout << ec.message() << std::endl;
+              return;
+           }
 
-      auto const ad1 = [](auto ec, auto payload)
-      {
-         if (ec) {
-            std::cout << "Error while reading." << std::endl;
-            return;
-         }
-
-         std::cout << "(bulky string) " << get_bulky_string(payload)
-                   << std::endl;
+           std::cout << "(bulky string) " << get_bulky_string(payload)
+                     << std::endl;
+        }
       };
 
-      interaction d1 {gen_bulky_string("GET", {"foo"}) , ad1};
-      session->send(std::move(d1));
+      interaction i4
+      { gen_bulky_string("PING", {"Arbitrary message."})
+      , [](auto ec, auto payload)
+        {
+           if (ec) {
+              std::cout << ec.message() << std::endl;
+              return;
+           }
+
+           std::cout << "(bulky string) " << get_bulky_string(payload)
+                     << std::endl;
+        }
+      };
+
+      session->send(std::move(i1));
+      session->send(std::move(i2));
+      session->send(std::move(i3));
+      session->send(std::move(i4));
 
       session->run();
       ioc.run();

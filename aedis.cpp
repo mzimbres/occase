@@ -17,11 +17,6 @@ using namespace aedis;
 
 namespace po = boost::program_options;
 
-struct aedis_op {
-   std::string ip;
-   std::string port;
-};
-
 struct test_action {
    std::string cmd;
    std::string expected;
@@ -57,14 +52,11 @@ struct test_action {
    }
 };
 
-void test_ping(aedis_op const op)
+void test_ping(redis_session_cf const cf)
 {
    boost::asio::io_context ioc;
 
-   boost::asio::ip::tcp::resolver resolver(ioc);
-   auto endpoints = resolver.resolve(op.ip, op.port);
-
-   auto session = std::make_shared<redis_session>(ioc, endpoints);
+   auto session = std::make_shared<redis_session>(cf, ioc);
    interaction a1 { gen_bulky_string({"PING"}, {})
                   , test_action {"PING", "PONG", 1, session}};
 
@@ -77,16 +69,16 @@ void test_ping(aedis_op const op)
 int main(int argc, char* argv[])
 {
    try {
-      aedis_op op;
+      redis_session_cf cf;
       po::options_description desc("Options");
       desc.add_options()
       ("help,h", "Produces help message")
       ( "port,p"
-      , po::value<std::string>(&op.port)->default_value("6379")
+      , po::value<std::string>(&cf.port)->default_value("6379")
       , "Server listening port."
       )
-      ("ip,i"
-      , po::value<std::string>(&op.ip)->default_value("127.0.0.1")
+      ("host,i"
+      , po::value<std::string>(&cf.host)->default_value("127.0.0.1")
       , "Server ip address."
       )
       ;
@@ -100,13 +92,10 @@ int main(int argc, char* argv[])
          return 0;
       }
 
-      test_ping(op);
+      test_ping(cf);
       boost::asio::io_context ioc;
 
-      boost::asio::ip::tcp::resolver resolver(ioc);
-      auto endpoints = resolver.resolve(op.ip, op.port);
-
-      auto session = std::make_shared<redis_session>(ioc, endpoints);
+      auto session = std::make_shared<redis_session>(cf, ioc);
       auto const ab1 = [](auto ec, auto payload)
       {
          if (ec) {

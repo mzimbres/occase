@@ -12,17 +12,39 @@
 #include "config.hpp"
 #include "redis_session.hpp"
 
+namespace {
+inline
+void fail_tmp(boost::system::error_code ec, char const* what)
+{
+   std::cerr << what << ": " << ec.message() << "\n";
+}
+}
+
 namespace aedis
 {
 
-void redis_session::run()
+void redis_session::on_resolve( boost::system::error_code ec
+                              , tcp::resolver::results_type results)
 {
+   if (ec)
+      return fail_tmp(ec, "resolve");
+
    auto const handler = [this](auto ec, auto Iterator)
    {
-      on_connect(ec);
+      on_connect(ec, Iterator);
    };
 
-   asio::async_connect(socket, endpoints, handler);
+   asio::async_connect(socket, results, handler);
+}
+
+void redis_session::run()
+{
+   auto handler = [this](auto ec, auto res)
+   {
+      on_resolve(ec, res);
+   };
+
+   resolver.async_resolve(cf.host, cf.port, handler);
 }
 
 void redis_session::send(interaction i)
@@ -33,7 +55,7 @@ void redis_session::send(interaction i)
 
 void redis_session::close()
 {
-   asio::post( socket.get_io_context() , [this]() { do_close(); });
+   asio::post(socket.get_io_context(), [this]() { do_close(); });
 }
 
 void redis_session::on_resp_chunk( boost::system::error_code ec
@@ -114,7 +136,8 @@ void redis_session::start_reading_resp()
                          , delim, handler);
 }
 
-void redis_session::on_connect(boost::system::error_code ec)
+void redis_session::on_connect( boost::system::error_code ec
+                              , asio::ip::tcp::endpoint const& endpoint)
 {
    if (ec) {
       std::cout << "on_connect: " << ec.message() << std::endl;
@@ -125,6 +148,19 @@ void redis_session::on_connect(boost::system::error_code ec)
    socket.set_option(option);
 
    start_reading_resp();
+
+   if (std::empty(write_queue))
+      return;
+
+   // Consumes any messages that have been eventually posted while the
+   // connection was not established.
+   auto const handler = [this](auto ec, auto n)
+   {
+      on_write(ec, n);
+   };
+
+   asio::async_write( socket, asio::buffer(write_queue.front().cmd)
+                    , handler);
 }
 
 void redis_session::on_resp()
@@ -142,7 +178,7 @@ void redis_session::on_resp()
    { on_write(ec, n); };
 
    //std::cout << "on_write: Writing more." << std::endl;
-   ::asio::async_write( socket, asio::buffer(write_queue.front().cmd)
+   asio::async_write( socket, asio::buffer(write_queue.front().cmd)
                       , handler);
 }
 
@@ -151,12 +187,11 @@ void redis_session::do_write(interaction i)
    auto const is_empty = std::empty(write_queue);
    write_queue.push(std::move(i));
 
-   if (is_empty) {
+   if (is_empty && socket.is_open()) {
       auto const handler = [this](auto ec, auto n)
       { on_write(ec, n); };
 
-      //std::cout << "async_write ===> " << write_queue.front().cmd 
-      //          << std::endl;
+      //std::cout << "is_open: " << socket.is_open() << std::endl;
       asio::async_write( socket, asio::buffer(write_queue.front().cmd)
                        , handler);
    }

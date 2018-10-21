@@ -176,6 +176,13 @@ void redis_session::on_connect( boost::system::error_code ec
 
 void redis_session::on_resp(boost::system::error_code ec)
 {
+   if (std::empty(write_queue)) {
+      std::cout << data << std::endl;
+      data.clear();
+      start_reading_resp();
+      return;
+   }
+
    write_queue.front().action(ec, std::move(data));
 
    start_reading_resp();

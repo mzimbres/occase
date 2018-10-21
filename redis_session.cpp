@@ -157,9 +157,9 @@ void redis_session::on_resp(boost::system::error_code ec)
       return;
    }
 
-   write_queue.front().action(ec, std::move(data));
-
+   auto data_tmp = std::move(data);
    start_reading_resp();
+   write_queue.front().action(ec, data_tmp);
    write_queue.pop();
 
    if (std::empty(write_queue))

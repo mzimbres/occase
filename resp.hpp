@@ -6,9 +6,11 @@
 namespace aedis
 {
 
+using const_iterator = std::string::const_iterator;
+
 int get_length(std::string::const_iterator& p);
 
-std::string get_simple_string(std::string const& str);
+std::string_view get_simple_string(char const* begin);
 std::string get_int(std::string const& str);
 std::string get_bulky_string(std::string const& str);
 

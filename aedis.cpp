@@ -67,7 +67,8 @@ int main(int argc, char* argv[])
               return;
            }
 
-           std::cout << "(simple string) " << get_simple_string(payload)
+           std::cout << "(simple string) "
+                     << get_simple_string(payload.data())
                      << std::endl;
         }
       };

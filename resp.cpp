@@ -85,13 +85,16 @@ auto handle_other(resp_response::const_iterator begin)
    return p + 2;
 }
 
-std::string get_simple_string(std::string const& str)
+std::string_view get_simple_string(char const* begin)
 {
-   if (str.front() != '+')
-      throw std::runtime_error("get_simple_string: Not a string.");
+   if (*begin != '+')
+      throw std::runtime_error("get_simple_string: Not a simple string.");
 
-   auto const p = std::next(std::cbegin(str));
-   return std::string {p, get_data_end(p)};
+   auto p = begin;
+   while (*++p != '\r');
+
+   auto const n = static_cast<std::size_t>(std::distance(++begin, p));
+   return std::string_view {begin, n};
 }
 
 std::string get_int(std::string const& str)

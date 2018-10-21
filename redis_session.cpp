@@ -56,14 +56,9 @@ void redis_session::send(interaction i)
    auto const is_empty = std::empty(write_queue);
    write_queue.push(std::move(i));
 
-   if (is_empty && socket.is_open()) {
-      auto const handler = [this](auto ec, auto n)
-      { on_write(ec, n); };
-
-      //std::cout << "is_open: " << socket.is_open() << std::endl;
+   if (is_empty && socket.is_open())
       asio::async_write( socket, asio::buffer(write_queue.front().cmd)
-                       , handler);
-   }
+                       , [this](auto ec, auto n) {on_write(ec, n);});
 }
 
 void redis_session::close()
@@ -95,22 +90,20 @@ void redis_session::on_resp_chunk( boost::system::error_code ec
       return;
    }
 
-   auto const rs = pos + n;
    auto foo = false;
    if (!bulky_str_read && counter != 0) {
-      auto const c = data[pos];
-      switch (c) {
-      case '$': foo = true; break;
-      case '+': break;
-      case '-': break;
-      case ':': break;
-      default: // '*'
-      {
-         assert(counter == 1);
-         auto p = std::cbegin(data);
-         counter = aedis::get_length(++p);
+      switch (data[pos]) {
+         case '$': foo = true; break;
+         case '+': break;
+         case '-': break;
+         case ':': break;
+         default: // '*'
+         {
+            assert(counter == 1);
+            auto p = std::cbegin(data);
+            counter = aedis::get_length(++p);
+         }
       }
-   }
    }
 
    if (counter == 0) {
@@ -118,6 +111,7 @@ void redis_session::on_resp_chunk( boost::system::error_code ec
       return;
    }
 
+   auto const rs = pos + n;
    asio::async_read_until( socket, asio::dynamic_buffer(data), delim
                          , [this, counter, rs, foo](auto ec, auto n2)
                            { on_resp_chunk( ec, n2, counter - 1
@@ -126,20 +120,17 @@ void redis_session::on_resp_chunk( boost::system::error_code ec
 
 void redis_session::start_reading_resp()
 {
-   auto const handler = [this](auto ec, std::size_t n)
-   {
-      on_resp_chunk(ec, n, 1, false, 0);
-   };
-
    asio::async_read_until( socket, asio::dynamic_buffer(data)
-                         , delim, handler);
+                         , delim
+                         , [this](auto ec, std::size_t n)
+                           { on_resp_chunk(ec, n, 1, false, 0); });
 }
 
 void redis_session::on_connect( boost::system::error_code ec
                               , asio::ip::tcp::endpoint const& endpoint)
 {
    if (ec) {
-      std::cout << "on_connect: " << ec.message() << std::endl;
+      fail_tmp(ec, "on_connect");
       return;
    }
 
@@ -153,13 +144,8 @@ void redis_session::on_connect( boost::system::error_code ec
 
    // Consumes any messages that have been eventually posted while the
    // connection was not established.
-   auto const handler = [this](auto ec, auto n)
-   {
-      on_write(ec, n);
-   };
-
    asio::async_write( socket, asio::buffer(write_queue.front().cmd)
-                    , handler);
+                    , [this](auto ec, auto n) { on_write(ec, n); });
 }
 
 void redis_session::on_resp(boost::system::error_code ec)
@@ -175,31 +161,22 @@ void redis_session::on_resp(boost::system::error_code ec)
 
    start_reading_resp();
    write_queue.pop();
-   waiting_response = false;
 
    if (std::empty(write_queue))
       return;
 
-   auto const handler = [this](auto ec, auto n)
-   { on_write(ec, n); };
-
-   //std::cout << "on_write: Writing more." << std::endl;
    asio::async_write( socket, asio::buffer(write_queue.front().cmd)
-                      , handler);
+                    , [this](auto ec, auto n) { on_write(ec, n); });
 }
 
 void redis_session::on_write( boost::system::error_code ec
                             , std::size_t n)
 {
    if (ec) {
-     std::cout << "on_write error: " << ec.message() << std::endl;
-     close();
-     return;
+      fail_tmp(ec, "on_write");
+      close();
+      return;
    }
-
-   //std::cout << "on_write popping ===> " << write_queue.front().cmd
-   //          << " " << n << std::endl;
-   waiting_response = true;
 }
 
 }

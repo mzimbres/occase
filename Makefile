@@ -43,7 +43,6 @@ SRCS += $(lib_objs:.o=.hpp)
 SRCS += $(addsuffix .cpp, $(exes))
 SRCS += config.hpp
 SRCS += client_session.hpp
-SRCS += stream.hpp
 
 AUX = Makefile
 

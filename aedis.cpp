@@ -53,7 +53,13 @@ int main(int argc, char* argv[])
               return;
            }
 
-            std::cout << data << std::endl;
+           auto const asw = get_bulky_string_array( data.data()
+                                                  , std::size(data));
+           std::cout << "(array) ";
+           for (auto const& o : asw)
+              std::cout << o << " ";
+           
+           std::cout << std::endl;
       };
 
       session->set_sub_handler(sub_handler);
@@ -82,7 +88,7 @@ int main(int argc, char* argv[])
               return;
            }
 
-           std::cout << "(integer) " << get_int(payload) << std::endl;
+           std::cout << "(integer) " << get_int(payload.data()) << std::endl;
         }
       };
 
@@ -125,8 +131,13 @@ int main(int argc, char* argv[])
               return;
            }
 
-           std::cout << "(array) " << payload
-                     << std::endl;
+           auto const asw = get_bulky_string_array( payload.data()
+                                                  , std::size(payload));
+           std::cout << "(array) ";
+           for (auto const& o : asw)
+              std::cout << o << " ";
+           
+           std::cout << std::endl;
         }
       };
 

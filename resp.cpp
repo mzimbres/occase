@@ -97,17 +97,24 @@ std::string_view get_simple_string(char const* begin)
    return std::string_view {begin, n};
 }
 
-std::string get_int(std::string const& str)
+std::string_view get_int(char const* begin)
 {
-   if (str.front() != ':')
+   if (*begin != ':')
       throw std::runtime_error("get_int: Not an integer.");
 
-   auto const p = std::next(std::cbegin(str));
-   return std::string {p, get_data_end(p)};
+   auto p = ++begin;
+   while (*p != '\r')
+      ++p;
+
+   auto const d = static_cast<std::size_t>(std::distance(begin, p));
+   return std::string_view {begin, d};
 }
 
 std::string_view get_bulky_string(char const* begin, std::size_t d)
 {
+   if (d == 0)
+      return {};
+
    if (*begin != '$')
       throw std::runtime_error("get_bulky_string: Not a bulky string.");
 
@@ -118,6 +125,31 @@ std::string_view get_bulky_string(char const* begin, std::size_t d)
       throw std::runtime_error("get_bulky_string: Inconsistent data.");
 
    return std::string_view {p + 2, l};
+}
+
+std::vector<std::string_view>
+   get_bulky_string_array(char const* begin, std::size_t s)
+{
+   if (*begin != '*')
+      throw std::runtime_error("get_bulky_string_array: Inconsistent data.");
+
+   // TODO: Add boundary checking.
+   std::vector<std::string_view> ret;
+   auto p = std::next(begin);
+   auto l = get_length(p);
+   p += 2;
+   while (l-- != 0) {
+      std::string_view v;
+      if (*p == '$')
+         v = get_bulky_string(p, s);
+      else if (*p == ':')
+         v = get_int(p);
+
+      p = &v.back() + 3;
+      ret.push_back(std::move(v));
+   }
+
+   return ret;
 }
 
 void resp_response::process_response() const

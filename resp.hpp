@@ -11,8 +11,10 @@ using const_iterator = std::string::const_iterator;
 std::size_t get_length(char const*& p);
 
 std::string_view get_simple_string(char const* begin);
-std::string get_int(std::string const& str);
+std::string_view get_int(char const* begin);
 std::string_view get_bulky_string(char const* begin, std::size_t s);
+std::vector<std::string_view>
+   get_bulky_string_array(char const* begin, std::size_t s);
 
 std::string gen_resp_cmd(std::string cmd, std::vector<std::string> param);
 

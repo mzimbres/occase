@@ -27,9 +27,12 @@ struct redis_session_cf {
    std::string port;
 };
 
+using redis_handler_type =
+   std::function<void(boost::system::error_code, std::string)>;
+
 struct interaction {
    std::string cmd;
-   std::function<void(boost::system::error_code, std::string)> action;
+   redis_handler_type action;
 };
 
 class redis_session {
@@ -42,6 +45,7 @@ private:
    std::string data;
    std::queue<interaction> write_queue;
    bool waiting_response = false;
+   redis_handler_type sub_handler = [](auto, auto){};
 
    void start_reading_resp();
 
@@ -67,6 +71,8 @@ public:
    void run();
    void send(interaction i);
    void close();
+   void set_sub_handler(redis_handler_type handler)
+   {sub_handler = handler;};
 };
 
 }

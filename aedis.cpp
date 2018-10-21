@@ -46,6 +46,18 @@ int main(int argc, char* argv[])
       boost::asio::io_context ioc;
       auto session = std::make_shared<redis_session>(cf, ioc);
 
+      auto const sub_handler = [](auto ec, auto data)
+      {
+           if (ec) {
+              std::cout << ec.message() << std::endl;
+              return;
+           }
+
+            std::cout << data << std::endl;
+      };
+
+      session->set_sub_handler(sub_handler);
+
       interaction i1
       { gen_resp_cmd("SET", {"foo", "20"})
       , [](auto ec, auto payload)

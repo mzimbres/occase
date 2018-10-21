@@ -139,13 +139,11 @@ void redis_session::on_connect( boost::system::error_code ec
 
    start_reading_resp();
 
-   if (std::empty(write_queue))
-      return;
-
    // Consumes any messages that have been eventually posted while the
    // connection was not established.
-   asio::async_write( socket, asio::buffer(write_queue.front().cmd)
-                    , [this](auto ec, auto n) { on_write(ec, n); });
+   if (!std::empty(write_queue))
+      asio::async_write( socket, asio::buffer(write_queue.front().cmd)
+                       , [this](auto ec, auto n) { on_write(ec, n); });
 }
 
 void redis_session::on_resp(boost::system::error_code ec)
@@ -162,11 +160,9 @@ void redis_session::on_resp(boost::system::error_code ec)
    write_queue.front().action(ec, data_tmp);
    write_queue.pop();
 
-   if (std::empty(write_queue))
-      return;
-
-   asio::async_write( socket, asio::buffer(write_queue.front().cmd)
-                    , [this](auto ec, auto n) { on_write(ec, n); });
+   if (!std::empty(write_queue))
+      asio::async_write( socket, asio::buffer(write_queue.front().cmd)
+                       , [this](auto ec, auto n) { on_write(ec, n); });
 }
 
 void redis_session::on_write( boost::system::error_code ec

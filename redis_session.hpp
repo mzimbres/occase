@@ -19,6 +19,9 @@
 namespace aedis
 {
 
+// TODO: Use a strategy similar to 
+// boost_1_67_0/boost/asio/impl/read.hpp : 654 and 502
+
 struct redis_session_cf {
    std::string host;
    std::string port;

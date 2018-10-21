@@ -96,32 +96,20 @@ void redis_session::on_resp_chunk( boost::system::error_code ec
    }
 
    auto const rs = pos + n;
+   auto foo = false;
    if (!bulky_str_read && counter != 0) {
       auto const c = data[pos];
       switch (c) {
-      case '$':
-      {
-         asio::async_read_until( socket
-                               , asio::dynamic_buffer(data)
-                               , delim
-                               , [this, counter, rs](auto ec, auto n2)
-                                 { on_resp_chunk( ec, n2, counter - 1
-                                                , true, rs); });
-         return;
-      }
-      break;
-      case '*':
+      case '$': foo = true; break;
+      case '+': break;
+      case '-': break;
+      case ':': break;
+      default: // '*'
       {
          assert(counter == 1);
          auto p = std::cbegin(data);
          counter = aedis::get_length(++p);
       }
-      break;
-      case '+': break;
-      case '-': break;
-      case ':': break;
-      default:
-         assert(false);
    }
    }
 
@@ -131,9 +119,9 @@ void redis_session::on_resp_chunk( boost::system::error_code ec
    }
 
    asio::async_read_until( socket, asio::dynamic_buffer(data), delim
-                         , [this, counter, rs](auto ec, auto n2)
+                         , [this, counter, rs, foo](auto ec, auto n2)
                            { on_resp_chunk( ec, n2, counter - 1
-                                          , false, rs); });
+                                          , foo, rs); });
 }
 
 void redis_session::start_reading_resp()

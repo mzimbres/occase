@@ -8,11 +8,11 @@ namespace aedis
 
 using const_iterator = std::string::const_iterator;
 
-int get_length(std::string::const_iterator& p);
+std::size_t get_length(char const*& p);
 
 std::string_view get_simple_string(char const* begin);
 std::string get_int(std::string const& str);
-std::string get_bulky_string(std::string const& str);
+std::string_view get_bulky_string(char const* begin, std::size_t s);
 
 std::string gen_resp_cmd(std::string cmd, std::vector<std::string> param);
 

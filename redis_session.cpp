@@ -100,7 +100,7 @@ void redis_session::on_resp_chunk( boost::system::error_code ec
          default: // '*'
          {
             assert(counter == 1);
-            auto p = std::cbegin(data);
+            auto const* p = data.data();
             counter = aedis::get_length(++p);
          }
       }

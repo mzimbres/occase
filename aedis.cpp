@@ -95,7 +95,8 @@ int main(int argc, char* argv[])
               return;
            }
 
-           std::cout << "(bulky string) " << get_bulky_string(payload)
+           std::cout << "(bulky string) "
+                     << get_bulky_string(payload.data(), std::size(payload))
                      << std::endl;
         }
       };
@@ -109,7 +110,8 @@ int main(int argc, char* argv[])
               return;
            }
 
-           std::cout << "(bulky string) " << get_bulky_string(payload)
+           std::cout << "(bulky string) "
+                     << get_bulky_string(payload.data(), std::size(payload))
                      << std::endl;
         }
       };

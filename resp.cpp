@@ -6,9 +6,9 @@
 namespace aedis
 {
 
-int get_length(std::string::const_iterator& p)
+std::size_t get_length(char const*& p)
 {
-   auto len = 0;
+   std::size_t len = 0;
    while (*p != '\r') {
        len = (10 * len) + (*p - '0');
        p++;
@@ -106,39 +106,42 @@ std::string get_int(std::string const& str)
    return std::string {p, get_data_end(p)};
 }
 
-std::string get_bulky_string(std::string const& str)
+std::string_view get_bulky_string(char const* begin, std::size_t d)
 {
-   if (str.front() != '$')
+   if (*begin != '$')
       throw std::runtime_error("get_bulky_string: Not a bulky string.");
 
-   // TODO: Check boundaries.
-   auto p = std::next(std::cbegin(str));
+   auto p = std::next(begin);
    auto const l = get_length(p);
-   return std::string {p + 2, p + 2 + l};
+   auto const d2 = static_cast<std::size_t>(std::distance(begin, p));
+   if (l > d - d2 - 4)
+      throw std::runtime_error("get_bulky_string: Inconsistent data.");
+
+   return std::string_view {p + 2, l};
 }
 
 void resp_response::process_response() const
 {
    //auto const end = std::cend(str);
-   auto begin = std::cbegin(str);
-   if (*begin == '*') {
-      ++begin;
-      auto len = get_length(begin);
-      std::cout << "Array with size: " << len << std::endl;
+   //auto begin = std::cbegin(str);
+   //if (*begin == '*') {
+   //   ++begin;
+   //   auto len = get_length(begin);
+   //   std::cout << "Array with size: " << len << std::endl;
 
-      for (auto i = 0; i < len; ++i) {
-         begin = handle_other(begin + 2);
-      }
+   //   for (auto i = 0; i < len; ++i) {
+   //      begin = handle_other(begin + 2);
+   //   }
 
-      std::string_view v {str.data(), std::size(str)};
-      std::cout << v << "\n";
-      return;
-   }
+   //   std::string_view v {str.data(), std::size(str)};
+   //   std::cout << v << "\n";
+   //   return;
+   //}
 
-   handle_other(begin);
+   //handle_other(begin);
 
-   std::string_view v {str.data(), std::size(str)};
-   std::cout << v << "\n";
+   //std::string_view v {str.data(), std::size(str)};
+   //std::cout << v << "\n";
 }
 
 }

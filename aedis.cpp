@@ -46,17 +46,15 @@ int main(int argc, char* argv[])
       boost::asio::io_context ioc;
       auto session = std::make_shared<redis_session>(cf, ioc);
 
-      auto const sub_handler = [](auto ec, auto data)
+      auto const sub_handler = [](auto ec, auto&& data)
       {
            if (ec) {
               std::cout << ec.message() << std::endl;
               return;
            }
 
-           auto const asw = get_bulky_string_array( data.data()
-                                                  , std::size(data));
-           std::cout << "(array) ";
-           for (auto const& o : asw)
+           //std::cout << "(array) ";
+           for (auto const& o : data)
               std::cout << o << " ";
            
            std::cout << std::endl;
@@ -66,75 +64,79 @@ int main(int argc, char* argv[])
 
       interaction i1
       { gen_resp_cmd("SET", {"foo", "20"})
-      , [](auto ec, auto payload)
+      , [](auto ec, auto&& data)
         {
            if (ec) {
               std::cout << ec.message() << std::endl;
               return;
            }
 
-           std::cout << "(simple string) "
-                     << get_simple_string(payload.data())
-                     << std::endl;
+           //std::cout << "(simple string) " << std::flush;
+           for (auto const& o : data)
+              std::cout << o << " ";
+           std::cout << std::endl;
         }
       };
 
       interaction i2
       { gen_resp_cmd("INCRBY", {"foo", "3"})
-      , [](auto ec, auto payload)
+      , [](auto ec, auto&& data)
         {
            if (ec) {
               std::cout << ec.message() << std::endl;
               return;
            }
 
-           std::cout << "(integer) " << get_int(payload.data()) << std::endl;
+           //std::cout << "(integer) ";
+           for (auto const& o : data)
+              std::cout << o << " ";
+           std::cout << std::endl;
         }
       };
 
       interaction i3
       { gen_resp_cmd("GET", {"foo"})
-      , [](auto ec, auto payload)
+      , [](auto ec, auto&& data)
         {
            if (ec) {
               std::cout << ec.message() << std::endl;
               return;
            }
 
-           std::cout << "(bulky string) "
-                     << get_bulky_string(payload.data(), std::size(payload))
-                     << std::endl;
+           //std::cout << "(bulky string) ";
+           for (auto const& o : data)
+              std::cout << o << " ";
+           std::cout << std::endl;
         }
       };
 
       interaction i4
       { gen_resp_cmd("PING", {"Arbitrary message."})
-      , [](auto ec, auto payload)
+      , [](auto ec, auto&& data)
         {
            if (ec) {
               std::cout << ec.message() << std::endl;
               return;
            }
 
-           std::cout << "(bulky string) "
-                     << get_bulky_string(payload.data(), std::size(payload))
-                     << std::endl;
+           //std::cout << "(bulky string) ";
+           for (auto const& o : data)
+              std::cout << o << " ";
+           std::cout << std::endl;
         }
       };
 
       interaction i5
       { gen_resp_cmd("SUBSCRIBE", {"foo"})
-      , [](auto ec, auto payload)
+      , [](auto ec, auto&& data)
         {
            if (ec) {
               std::cout << ec.message() << std::endl;
               return;
            }
 
-           auto const asw = get_bulky_string_array( payload.data()
-                                                  , std::size(payload));
-           std::cout << "(array) ";
-           for (auto const& o : asw)
+           //std::cout << "(array) ";
+           for (auto const& o : data)
               std::cout << o << " ";
            
            std::cout << std::endl;

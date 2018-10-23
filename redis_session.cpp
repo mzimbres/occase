@@ -74,10 +74,8 @@ void redis_session::close()
 }
 
 void redis_session::on_resp_chunk( boost::system::error_code ec
-                                 , std::size_t n
-                                 , int counter
-                                 , bool bulky_str_read
-                                 , std::size_t pos)
+                                 , std::size_t n, int counter
+                                 , bool bulky_str_read)
 {
    if (ec) {
       fail_tmp(ec, "on_resp_chunk");
@@ -91,31 +89,48 @@ void redis_session::on_resp_chunk( boost::system::error_code ec
    }
 
    auto foo = false;
-   if (!bulky_str_read && counter != 0) {
-      switch (data[pos]) {
-         case '$': foo = true; break;
-         case '+': break;
-         case '-': break;
-         case ':': break;
-         default: // '*'
-         {
-            assert(counter == 1);
-            auto const* p = data.data();
-            counter = aedis::get_length(++p);
+   if (bulky_str_read) {
+      res.push_back(data.substr(0, n - 2));
+      --counter;
+   } else {
+      if (counter != 0) {
+         switch (data.front()) {
+            case '$':
+            {
+               foo = true;
+            }
+            break;
+            case '+':
+            case '-':
+            case ':':
+            {
+               res.push_back(data.substr(1, n - 3));
+               --counter;
+            }
+            break;
+            case '*':
+            {
+               assert(counter == 1);
+               auto const* p = data.data();
+               counter = aedis::get_length(++p);
+            }
+            break;
+            default:
+               assert(false);
          }
       }
    }
+
+   data.erase(0, n);
 
    if (counter == 0) {
       asio::post(socket.get_io_context(), [this]() { on_resp({}); });
       return;
    }
 
-   auto const rs = pos + n;
    asio::async_read_until( socket, asio::dynamic_buffer(data), delim
-                         , [this, counter, rs, foo](auto ec, auto n2)
-                           { on_resp_chunk( ec, n2, counter - 1
-                                          , foo, rs); });
+                         , [this, counter, foo](auto ec, auto n2)
+                           { on_resp_chunk(ec, n2, counter, foo); });
 }
 
 void redis_session::start_reading_resp()
@@ -123,7 +138,7 @@ void redis_session::start_reading_resp()
    asio::async_read_until( socket, asio::dynamic_buffer(data)
                          , delim
                          , [this](auto ec, std::size_t n)
-                           { on_resp_chunk(ec, n, 1, false, 0); });
+                           { on_resp_chunk(ec, n, 1, false); });
 }
 
 void redis_session::on_connect( boost::system::error_code ec
@@ -148,15 +163,15 @@ void redis_session::on_connect( boost::system::error_code ec
 
 void redis_session::on_resp(boost::system::error_code ec)
 {
+   auto data_tmp = std::move(res);
    if (std::empty(write_queue)) {
-      sub_handler(ec, std::move(data));
+      sub_handler(ec, std::move(data_tmp));
       start_reading_resp();
       return;
    }
 
-   auto data_tmp = std::move(data);
    start_reading_resp();
-   write_queue.front().action(ec, data_tmp);
+   write_queue.front().action(ec, std::move(data_tmp));
    write_queue.pop();
 
    if (!std::empty(write_queue))

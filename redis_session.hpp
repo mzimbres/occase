@@ -28,7 +28,8 @@ struct redis_session_cf {
 };
 
 using redis_handler_type =
-   std::function<void(boost::system::error_code, std::string)>;
+   std::function<void( boost::system::error_code
+                     , std::vector<std::string>&&)>;
 
 struct interaction {
    std::string cmd;
@@ -43,6 +44,7 @@ private:
    tcp::resolver resolver;
    boost::asio::ip::tcp::socket socket;
    std::string data;
+   std::vector<std::string> res;
    std::queue<interaction> write_queue;
    bool waiting_response = false;
    redis_handler_type sub_handler = [](auto, auto){};
@@ -55,10 +57,8 @@ private:
                   , asio::ip::tcp::endpoint const& endpoint);
    void on_resp(boost::system::error_code ec);
    void on_resp_chunk( boost::system::error_code ec
-                     , std::size_t n
-                     , int counter
-                     , bool bulky_str_read
-                     , std::size_t pos);
+                     , std::size_t n, int counter
+                     , bool bulky_str_read);
    void on_write(boost::system::error_code ec, std::size_t n);
 
 public:
@@ -71,8 +71,8 @@ public:
    void run();
    void send(interaction i);
    void close();
-   void set_sub_handler(redis_handler_type handler)
-   {sub_handler = handler;};
+   void set_sub_handler(redis_handler_type&& handler)
+   { sub_handler = std::move(handler);};
 };
 
 }

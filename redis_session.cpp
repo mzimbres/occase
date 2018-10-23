@@ -111,8 +111,7 @@ void redis_session::on_resp_chunk( boost::system::error_code ec
             case '*':
             {
                assert(counter == 1);
-               auto const* p = data.data();
-               counter = aedis::get_length(++p);
+               counter = get_length(data.data() + 1);
             }
             break;
             default:

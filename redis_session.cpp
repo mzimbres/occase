@@ -51,13 +51,13 @@ void redis_session::run()
    resolver.async_resolve(cf.host, cf.port, handler);
 }
 
-void redis_session::send(interaction&& i)
+void redis_session::send(std::string&& msg)
 {
    auto const is_empty = std::empty(write_queue);
-   write_queue.push(std::move(i));
+   write_queue.push(std::move(msg));
 
    if (is_empty && socket.is_open())
-      asio::async_write( socket, asio::buffer(write_queue.front().cmd)
+      asio::async_write( socket, asio::buffer(write_queue.front())
                        , [this](auto ec, auto n) {on_write(ec, n);});
 }
 
@@ -156,30 +156,20 @@ void redis_session::on_connect( boost::system::error_code ec
    // Consumes any messages that have been eventually posted while the
    // connection was not established.
    if (!std::empty(write_queue))
-      asio::async_write( socket, asio::buffer(write_queue.front().cmd)
+      asio::async_write( socket, asio::buffer(write_queue.front())
                        , [this](auto ec, auto n) { on_write(ec, n); });
 }
 
 void redis_session::on_resp(boost::system::error_code ec)
 {
-   auto data_tmp = std::move(res);
-   if (std::empty(write_queue)) {
-      sub_handler(ec, std::move(data_tmp));
-      start_reading_resp();
-      return;
-   }
-
+   msg_handler(ec, std::move(res));
    start_reading_resp();
 
-   // TODO: In the action handler we have to ignore subscription messages
-   // That happen to arrive while we are sending e.g. a subscription
-   // to another channel.
-   write_queue.front().action(ec, std::move(data_tmp));
-   write_queue.pop();
-
-   if (!std::empty(write_queue))
-      asio::async_write( socket, asio::buffer(write_queue.front().cmd)
+   if (!std::empty(write_queue)) {
+      write_queue.pop();
+      asio::async_write( socket, asio::buffer(write_queue.front())
                        , [this](auto ec, auto n) { on_write(ec, n); });
+   }
 }
 
 void redis_session::on_write( boost::system::error_code ec

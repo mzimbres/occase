@@ -58,26 +58,43 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
 , redis_pub_session(cf.get_redis_session_cf(), ioc)
 {
    redis_sub_session.run();
-   aedis::interaction i
-   { aedis::gen_resp_cmd("SUBSCRIBE", {"channels_msgs"})
-   , [](auto ec, auto&& data)
-     {
-        if (ec) {
-           std::cout << ec.message() << std::endl;
-           return;
-        }
 
-        //std::cout << "(array) ";
-        for (auto const& o : data)
-           std::cout << o << " ";
-        
-        std::cout << std::endl;
-     }
+   auto const handler1 = [](auto ec, auto&& data)
+   {
+      if (ec) {
+         std::cout << ec.message() << std::endl;
+         return;
+      }
+
+      //for (auto const& o : data)
+      //   std::cout << o << " ";
+      //std::cout << std::endl;
    };
 
-   redis_sub_session.send(std::move(i));
+   redis_sub_session.set_msg_handler(handler1);
+
+   using namespace aedis;
+
+   // TODO: In the action handler we have to ignore subscription messages
+   // That happen to arrive while we are sending e.g. a subscription
+   // to another channel.
+   redis_sub_session.send(gen_resp_cmd("SUBSCRIBE", {"channels_msgs"}));
 
    redis_pub_session.run();
+
+   auto const handler2 = [](auto ec, auto&& data)
+   {
+      if (ec) {
+         std::cout << ec.message() << std::endl;
+         return;
+      }
+
+      for (auto const& o : data)
+         std::cout << o << " ";
+      std::cout << std::endl;
+   };
+
+   redis_pub_session.set_msg_handler(handler2);
 }
 
 ev_res server_mgr::on_login(json j, std::shared_ptr<server_session> s)
@@ -262,23 +279,8 @@ server_mgr::on_group_msg( std::string msg
                         , json j
                         , std::shared_ptr<server_session> s)
 {
-   aedis::interaction i
-   { aedis::gen_resp_cmd("PUBLISH", {"channels_msgs", msg})
-   , [](auto ec, auto&& data)
-     {
-        if (ec) {
-           std::cout << ec.message() << std::endl;
-           return;
-        }
-
-        for (auto const& o : data)
-           std::cout << o << " ";
-        
-        std::cout << std::endl;
-     }
-   };
-
-   redis_pub_session.send(std::move(i));
+   auto rcmd = aedis::gen_resp_cmd("PUBLISH", {"channels_msgs", msg});
+   redis_pub_session.send(std::move(rcmd));
 
    auto const to = j.at("to").get<std::string>();
 

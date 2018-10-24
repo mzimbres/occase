@@ -53,101 +53,19 @@ int main(int argc, char* argv[])
               return;
            }
 
-           //std::cout << "(array) ";
            for (auto const& o : data)
               std::cout << o << " ";
            
            std::cout << std::endl;
       };
 
-      session->set_sub_handler(sub_handler);
+      session->set_msg_handler(sub_handler);
 
-      interaction i1
-      { gen_resp_cmd("SET", {"foo", "20"})
-      , [](auto ec, auto&& data)
-        {
-           if (ec) {
-              std::cout << ec.message() << std::endl;
-              return;
-           }
-
-           //std::cout << "(simple string) " << std::flush;
-           for (auto const& o : data)
-              std::cout << o << " ";
-           std::cout << std::endl;
-        }
-      };
-
-      interaction i2
-      { gen_resp_cmd("INCRBY", {"foo", "3"})
-      , [](auto ec, auto&& data)
-        {
-           if (ec) {
-              std::cout << ec.message() << std::endl;
-              return;
-           }
-
-           //std::cout << "(integer) ";
-           for (auto const& o : data)
-              std::cout << o << " ";
-           std::cout << std::endl;
-        }
-      };
-
-      interaction i3
-      { gen_resp_cmd("GET", {"foo"})
-      , [](auto ec, auto&& data)
-        {
-           if (ec) {
-              std::cout << ec.message() << std::endl;
-              return;
-           }
-
-           //std::cout << "(bulky string) ";
-           for (auto const& o : data)
-              std::cout << o << " ";
-           std::cout << std::endl;
-        }
-      };
-
-      interaction i4
-      { gen_resp_cmd("PING", {"Arbitrary message."})
-      , [](auto ec, auto&& data)
-        {
-           if (ec) {
-              std::cout << ec.message() << std::endl;
-              return;
-           }
-
-           //std::cout << "(bulky string) ";
-           for (auto const& o : data)
-              std::cout << o << " ";
-           std::cout << std::endl;
-        }
-      };
-
-      interaction i5
-      { gen_resp_cmd("SUBSCRIBE", {"foo"})
-      , [](auto ec, auto&& data)
-        {
-           if (ec) {
-              std::cout << ec.message() << std::endl;
-              return;
-           }
-
-           //std::cout << "(array) ";
-           for (auto const& o : data)
-              std::cout << o << " ";
-           
-           std::cout << std::endl;
-        }
-      };
-
-      session->send(std::move(i1));
-      session->send(std::move(i2));
-      session->send(std::move(i3));
-      session->send(std::move(i4));
-      session->send(std::move(i5));
+      session->send(gen_resp_cmd("SET", {"foo", "20"}));
+      session->send(gen_resp_cmd("INCRBY", {"foo", "3"}));
+      session->send(gen_resp_cmd("GET", {"foo"}));
+      session->send(gen_resp_cmd("PING", {"Arbitrary message."}));
+      session->send(gen_resp_cmd("SUBSCRIBE", {"foo"}));
 
       session->run();
       ioc.run();

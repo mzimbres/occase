@@ -66,9 +66,9 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
          return;
       }
 
-      //for (auto const& o : data)
-      //   std::cout << o << " ";
-      //std::cout << std::endl;
+      for (auto const& o : data)
+         std::cout << o << " ";
+      std::cout << std::endl;
    };
 
    redis_sub_session.set_msg_handler(handler1);
@@ -89,9 +89,9 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
          return;
       }
 
-      for (auto const& o : data)
-         std::cout << o << " ";
-      std::cout << std::endl;
+      //for (auto const& o : data)
+      //   std::cout << o << " ";
+      //std::cout << std::endl;
    };
 
    redis_pub_session.set_msg_handler(handler2);

@@ -56,7 +56,7 @@ Makefile.dep:
 client: % : %.o $(client_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(boost_libs)
 
-server: % : %.o $(server_objs) $(common_objs)
+server: % : %.o $(server_objs) $(common_objs) $(aedis_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(boost_libs)
 
 menu_dump: % : %.o $(common_objs)

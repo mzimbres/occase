@@ -1,5 +1,7 @@
 #include "server_mgr.hpp"
+
 #include "server_session.hpp"
+#include "resp.hpp"
 
 ev_res on_message( server_mgr& mgr
                  , std::shared_ptr<server_session> s
@@ -48,6 +50,31 @@ ev_res on_message( server_mgr& mgr
 
    std::cerr << "Server: Unknown command " << cmd << std::endl;
    return ev_res::unknown;
+}
+
+server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
+: timeouts(cf.get_timeouts())
+, rs(cf.get_redis_session_cf(), ioc)
+{
+   rs.run();
+   aedis::interaction i
+   { aedis::gen_resp_cmd("SUBSCRIBE", {"channels_msgs"})
+   , [](auto ec, auto&& data)
+     {
+        if (ec) {
+           std::cout << ec.message() << std::endl;
+           return;
+        }
+
+        //std::cout << "(array) ";
+        for (auto const& o : data)
+           std::cout << o << " ";
+        
+        std::cout << std::endl;
+     }
+   };
+
+   rs.send(std::move(i));
 }
 
 ev_res server_mgr::on_login(json j, std::shared_ptr<server_session> s)
@@ -282,5 +309,8 @@ void server_mgr::shutdown()
    for (auto o : sessions)
       if (auto s = o.second.lock())
          s->shutdown();
+
+   std::cout << "Shuting down redis subscribe client ..." << std::endl;
+   rs.close();
 }
 

@@ -19,7 +19,7 @@ listener::listener(server_op op, boost::asio::io_context& ioc)
 : signals(ioc, SIGINT, SIGTERM)
 , acceptor(ioc)
 , socket(ioc)
-, mgr(op.mgr)
+, mgr(op.mgr, ioc)
 , session_stats_timer(ioc)
 {
    auto const shandler = [this](auto ec, auto n)

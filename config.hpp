@@ -2,6 +2,7 @@
 
 #include <string>
 
+#include <boost/asio.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/beast/websocket.hpp>
 

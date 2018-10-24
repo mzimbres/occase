@@ -69,7 +69,7 @@ public:
    { }
 
    void run();
-   void send(interaction i);
+   void send(interaction&& i);
    void close();
    void set_sub_handler(redis_handler_type&& handler)
    { sub_handler = std::move(handler);};

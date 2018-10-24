@@ -57,7 +57,7 @@ server_op get_server_op(int argc, char* argv[])
    , "Address of redis server."
    )
    ("redis-port"
-   , po::value<unsigned short>(&op.mgr.redis_port)->default_value(6379)
+   , po::value<std::string>(&op.mgr.redis_port)->default_value("6379")
    , "Port where redis server is listening."
    )
    ;

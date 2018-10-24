@@ -51,7 +51,7 @@ void redis_session::run()
    resolver.async_resolve(cf.host, cf.port, handler);
 }
 
-void redis_session::send(interaction i)
+void redis_session::send(interaction&& i)
 {
    auto const is_empty = std::empty(write_queue);
    write_queue.push(std::move(i));
@@ -170,6 +170,10 @@ void redis_session::on_resp(boost::system::error_code ec)
    }
 
    start_reading_resp();
+
+   // TODO: In the action handler we have to ignore subscription messages
+   // That happen to arrive while we are sending e.g. a subscription
+   // to another channel.
    write_queue.front().action(ec, std::move(data_tmp));
    write_queue.pop();
 

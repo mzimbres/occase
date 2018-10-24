@@ -7,6 +7,7 @@
 
 #include "config.hpp"
 #include "json_utils.hpp"
+#include "redis_session.hpp"
 
 class server_session;
 
@@ -38,7 +39,7 @@ struct session_timeouts {
 
 struct server_mgr_cf {
    std::string redis_address;
-   unsigned short redis_port;
+   std::string redis_port;
    int auth_timeout;
    int sms_timeout;
    int handshake_timeout;
@@ -54,6 +55,12 @@ struct server_mgr_cf {
       , std::chrono::seconds {pong_timeout}
       , std::chrono::seconds {close_frame_timeout}
       };
+   }
+
+   auto get_redis_session_cf()
+   {
+      return aedis::redis_session_cf
+      {redis_address, redis_port};
    }
 };
 
@@ -86,11 +93,10 @@ private:
 
    session_timeouts const timeouts;
    sessions_stats stats;
+   aedis::redis_session rs;
 
 public:
-   server_mgr(server_mgr_cf cf)
-   : timeouts(cf.get_timeouts())
-   {}
+   server_mgr(server_mgr_cf cf, asio::io_context& ioc);
    void shutdown();
    void release_user(std::string id);
 

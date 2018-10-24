@@ -93,7 +93,8 @@ private:
 
    session_timeouts const timeouts;
    sessions_stats stats;
-   aedis::redis_session rs;
+   aedis::redis_session redis_sub_session;
+   aedis::redis_session redis_pub_session;
 
 public:
    server_mgr(server_mgr_cf cf, asio::io_context& ioc);

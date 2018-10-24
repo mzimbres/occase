@@ -54,9 +54,10 @@ ev_res on_message( server_mgr& mgr
 
 server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
 : timeouts(cf.get_timeouts())
-, rs(cf.get_redis_session_cf(), ioc)
+, redis_sub_session(cf.get_redis_session_cf(), ioc)
+, redis_pub_session(cf.get_redis_session_cf(), ioc)
 {
-   rs.run();
+   redis_sub_session.run();
    aedis::interaction i
    { aedis::gen_resp_cmd("SUBSCRIBE", {"channels_msgs"})
    , [](auto ec, auto&& data)
@@ -74,7 +75,9 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
      }
    };
 
-   rs.send(std::move(i));
+   redis_sub_session.send(std::move(i));
+
+   redis_pub_session.run();
 }
 
 ev_res server_mgr::on_login(json j, std::shared_ptr<server_session> s)
@@ -259,6 +262,24 @@ server_mgr::on_group_msg( std::string msg
                         , json j
                         , std::shared_ptr<server_session> s)
 {
+   aedis::interaction i
+   { aedis::gen_resp_cmd("PUBLISH", {"channels_msgs", msg})
+   , [](auto ec, auto&& data)
+     {
+        if (ec) {
+           std::cout << ec.message() << std::endl;
+           return;
+        }
+
+        for (auto const& o : data)
+           std::cout << o << " ";
+        
+        std::cout << std::endl;
+     }
+   };
+
+   redis_pub_session.send(std::move(i));
+
    auto const to = j.at("to").get<std::string>();
 
    auto const g = channels.find(to);
@@ -310,7 +331,9 @@ void server_mgr::shutdown()
       if (auto s = o.second.lock())
          s->shutdown();
 
-   std::cout << "Shuting down redis subscribe client ..." << std::endl;
-   rs.close();
+   std::cout << "Shuting down redis subscribe session ..." << std::endl;
+   redis_sub_session.close();
+   std::cout << "Shuting down redis publish session ..." << std::endl;
+   redis_pub_session.close();
 }
 

@@ -107,9 +107,9 @@ public:
    ev_res on_create_group(json j, std::shared_ptr<server_session> s);
    ev_res on_join_group(json j, std::shared_ptr<server_session> session);
    ev_res on_user_msg(json j, std::shared_ptr<server_session> session);
-   ev_res on_group_msg( std::string msg
-                      , json j // To avoid parsing it again.
-                      , std::shared_ptr<server_session> session);
+   ev_res on_user_channel_msg( std::string msg, json j
+                             , std::shared_ptr<server_session> session);
+   void on_group_msg(std::string msg);
 
    auto const& get_timeouts() const noexcept {return timeouts;}
    auto& get_stats() noexcept {return stats;}

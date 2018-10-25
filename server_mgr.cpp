@@ -39,7 +39,7 @@ ev_res on_message( server_mgr& mgr
          return mgr.on_join_group(std::move(j), s);
 
       if (cmd == "group_msg")
-         return mgr.on_group_msg(std::move(msg), std::move(j), s);
+         return mgr.on_user_channel_msg(std::move(msg), std::move(j), s);
 
       if (cmd == "user_msg")
          return mgr.on_user_msg(std::move(j), s);
@@ -59,16 +59,24 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
 {
    redis_sub_session.run();
 
-   auto const handler1 = [](auto ec, auto&& data)
+   // TODO: Make exception safe.
+   auto const handler1 = [this](auto ec, auto&& data)
    {
       if (ec) {
          std::cout << ec.message() << std::endl;
          return;
       }
 
-      for (auto const& o : data)
-         std::cout << o << " ";
-      std::cout << std::endl;
+      if (data.front() == "message") {
+         assert(std::size(data) == 3);
+         assert(data[1] == "channels_msgs");
+         on_group_msg(std::move(data.back()));
+         return;
+      }
+
+      //for (auto const& o : data)
+      //   std::cout << o << " ";
+      //std::cout << std::endl;
    };
 
    redis_sub_session.set_msg_handler(handler1);
@@ -82,7 +90,7 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
 
    redis_pub_session.run();
 
-   auto const handler2 = [](auto ec, auto&& data)
+   auto const handler2 = [](auto ec, auto data)
    {
       if (ec) {
          std::cout << ec.message() << std::endl;
@@ -275,12 +283,44 @@ void broadcast_msg(channel_type& members, std::string msg)
 }
 
 ev_res
-server_mgr::on_group_msg( std::string msg
-                        , json j
-                        , std::shared_ptr<server_session> s)
+server_mgr::on_user_channel_msg( std::string msg, json j
+                               , std::shared_ptr<server_session> s)
 {
-   auto rcmd = aedis::gen_resp_cmd("PUBLISH", {"channels_msgs", msg});
+   auto const to = j.at("to").get<std::string>();
+
+   // Looks like this should be removed.
+   //auto const g = channels.find(to);
+   //if (g == std::end(channels)) {
+   //   // This is a non-existing channel. Perhaps the json command was
+   //   // sent with the wrong information signaling a logic error in
+   //   // the app.
+
+   //   json resp;
+   //   resp["cmd"] = "group_msg_ack";
+   //   resp["result"] = "fail";
+   //   s->send(resp.dump());
+   //   return ev_res::group_msg_fail;
+   //}
+
+   auto rcmd = aedis::gen_resp_cmd( "PUBLISH"
+                                  , {"channels_msgs", std::move(msg)});
    redis_pub_session.send(std::move(rcmd));
+
+   // TODO: This ack should (maybe) be moved to the function that
+   // receives the broadcasted message from redis subscription group.
+   // But this would cause the client to try to repeat the operation
+   // if for example redis is not available at the moment and that
+   // would cause duplicated messages.
+   json ack;
+   ack["cmd"] = "group_msg_ack";
+   ack["result"] = "ok";
+   s->send(ack.dump());
+   return ev_res::group_msg_ok;
+}
+
+void server_mgr::on_group_msg(std::string msg)
+{
+   auto const j = json::parse(msg);
 
    auto const to = j.at("to").get<std::string>();
 
@@ -289,24 +329,13 @@ server_mgr::on_group_msg( std::string msg
       // This is a non-existing group. Perhaps the json command was
       // sent with the wrong information signaling a logic error in
       // the app.
-
-      json resp;
-      resp["cmd"] = "group_msg_ack";
-      resp["result"] = "fail";
-      s->send(resp.dump());
-      return ev_res::group_msg_fail;
+      return;
    }
 
    // TODO: Change broadcast to return the number of users that the
-   // message has reached.
+   // message has reached. 
+   //std::cout << "on_group_msg: sending " << msg << std::endl;
    broadcast_msg(g->second, std::move(msg));
-
-   json ack;
-   ack["cmd"] = "group_msg_ack";
-   ack["result"] = "ok";
-   s->send(ack.dump());
-
-   return ev_res::group_msg_ok;
 }
 
 void server_mgr::release_user(std::string id)

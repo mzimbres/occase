@@ -283,18 +283,18 @@ server_mgr::on_user_channel_msg( std::string msg, json j
    auto const to = j.at("to").get<std::string>();
 
    // Looks like this should be removed.
-   //auto const g = channels.find(to);
-   //if (g == std::end(channels)) {
-   //   // This is a non-existing channel. Perhaps the json command was
-   //   // sent with the wrong information signaling a logic error in
-   //   // the app.
-
-   //   json resp;
-   //   resp["cmd"] = "group_msg_ack";
-   //   resp["result"] = "fail";
-   //   s->send(resp.dump());
-   //   return ev_res::group_msg_fail;
-   //}
+   auto const g = channels.find(to);
+   if (g == std::end(channels)) {
+      // This is a non-existing channel. Perhaps the json command was
+      // sent with the wrong information signaling a logic error in
+      // the app.
+      json resp;
+      resp["cmd"] = "group_msg_ack";
+      resp["result"] = "fail";
+      resp["id"] = j.at("id").get<int>();
+      s->send(resp.dump());
+      return ev_res::group_msg_fail;
+   }
 
    auto rcmd = aedis::gen_resp_cmd( "PUBLISH"
                                   , {"channels_msgs", std::move(msg)});

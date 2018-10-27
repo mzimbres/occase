@@ -24,12 +24,16 @@ class client_mgr_sim {
 public:
    using options_type = cmgr_sim_op;
 private:
+   struct ch_msg_helper {
+      bool ack = false;
+      bool msg = false;
+      std::string hash;
+   };
    using client_type = client_session<client_mgr_sim>;
    options_type op;
    std::stack<std::string> cmds;
-   std::stack<std::string> hashes;
-   int msg_id = 0;
-   int counter = 0;
+   std::vector<ch_msg_helper> hashes;
+   std::size_t counter = 0;
 
    void send_group_msg(std::shared_ptr<client_type> s);
 

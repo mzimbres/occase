@@ -51,7 +51,7 @@ void redis_session::run()
    resolver.async_resolve(cf.host, cf.port, handler);
 }
 
-void redis_session::send(std::string&& msg)
+void redis_session::send(std::string msg)
 {
    auto const is_empty = std::empty(write_queue);
    write_queue.push(std::move(msg));
@@ -168,11 +168,11 @@ void redis_session::on_resp(boost::system::error_code ec)
 
    if (!ec && socket.is_open()) {
       start_reading_resp();
-      if (!std::empty(write_queue)) {
+      if (!std::empty(write_queue))
          write_queue.pop();
+      if (!std::empty(write_queue))
          asio::async_write( socket, asio::buffer(write_queue.front())
                           , [this](auto ec, auto n) { on_write(ec, n); });
-      }
    }
 }
 
@@ -181,7 +181,7 @@ void redis_session::on_write( boost::system::error_code ec
 {
    if (ec) {
       fail_tmp(ec, "on_write");
-      close();
+      //close();
       return;
    }
 }

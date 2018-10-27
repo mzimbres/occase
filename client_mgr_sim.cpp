@@ -5,10 +5,11 @@
 
 client_mgr_sim::client_mgr_sim(options_type op_)
 : op(op_)
+//, counters(op.msgs_per_group * op.number_of_groups + 1000)
 {
    for (auto i = 0; i < op.number_of_groups; ++i) {
       auto const hash = to_str(i);
-      hashes.push({0, hash});
+      hashes.push(hash);
       json cmd;
       cmd["cmd"] = "join_group";
       cmd["hash"] = hash;
@@ -60,7 +61,21 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
    if (cmd == "group_msg_ack") {
       auto const res = j.at("result").get<std::string>();
       if (res == op.expected) {
-         ++hashes.top().ack_received;
+         //auto const id = j.at("id").get<int>();
+         //++counters.at(id); // TODO: boundary checking.
+         //std::cout << "group_msg_ack counter: " << hashes.top() << std::endl;
+         if (counter == op.msgs_per_group) {
+            std::cout << "Done with hash " << hashes.top() << std::endl;
+            hashes.pop();
+            counter = 0;
+         }
+
+         if (std::empty(hashes)) {
+            //std::cout << "Test sim: send_group_msg_ack ok." << std::endl;
+            return -1;
+         }
+
+         send_group_msg(s);
          return 1;
       }
 
@@ -72,18 +87,22 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
    if (cmd == "group_msg") {
       // TODO: Output some error if the number of messages received is
       // wrong.
-      //auto const body = j.at("msg").get<std::string>();
+      auto const body = j.at("msg").get<std::string>();
       //std::cout << "Group msg: " << body << std::endl;
       //std::cout << j << std::endl;
-      if (hashes.top().ack_received == op.msgs_per_group)
-         hashes.pop();
+      //std::cout << "group_msg counter: " << hashes.top().ack_received << std::endl;
+      //auto const id = j.at("id").get<int>();
+      //if (counters.at(id) == op.msgs_per_group) {
+      //   std::cout << "Done with hash " << hashes.top() << std::endl;
+      //   hashes.pop();
+      //}
 
-      if (std::empty(hashes)) {
-         //std::cout << "Test sim: send_group_msg_ack ok." << std::endl;
-         return -1;
-      }
+      //if (std::empty(hashes)) {
+      //   //std::cout << "Test sim: send_group_msg_ack ok." << std::endl;
+      //   return -1;
+      //}
 
-      send_group_msg(s);
+      //send_group_msg(s);
       return 1;
    }
 
@@ -116,10 +135,12 @@ void client_mgr_sim::send_group_msg(std::shared_ptr<client_type> s)
    json j_msg;
    j_msg["cmd"] = "group_msg";
    j_msg["from"] = op.user;
-   j_msg["to"] = hashes.top().hash;
+   j_msg["to"] = hashes.top();
    j_msg["msg"] = "Group message";
+   j_msg["id"] = msg_id++;
    s->send_msg(j_msg.dump());
-   std::cout << j_msg << std::endl;
+   //std::cout << j_msg << std::endl;
+   ++counter;
 }
 
 client_mgr_sim::~client_mgr_sim()

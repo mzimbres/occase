@@ -63,9 +63,9 @@ public:
    { }
 
    void run();
-   void send(std::string&& i);
+   void send(std::string msg);
    void close();
-   void set_msg_handler(redis_handler_type&& handler)
+   void set_msg_handler(redis_handler_type handler)
    { msg_handler = std::move(handler);};
 };
 

@@ -309,6 +309,7 @@ server_mgr::on_user_channel_msg( std::string msg, json j
    json ack;
    ack["cmd"] = "group_msg_ack";
    ack["result"] = "ok";
+   ack["id"] = j.at("id").get<int>();
    s->send(ack.dump());
    return ev_res::group_msg_ok;
 }

@@ -8,7 +8,7 @@ client_mgr_sim::client_mgr_sim(options_type op_)
 {
    for (auto i = 0; i < op.number_of_groups; ++i) {
       auto const hash = to_str(i);
-      hashes.push(hash);
+      hashes.push({0, hash});
       json cmd;
       cmd["cmd"] = "join_group";
       cmd["hash"] = hash;
@@ -60,16 +60,7 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
    if (cmd == "group_msg_ack") {
       auto const res = j.at("result").get<std::string>();
       if (res == op.expected) {
-         if (++counter == op.msgs_per_group) {
-            hashes.pop();
-            counter = 0;
-         }
-
-         if (std::empty(hashes)) {
-            //std::cout << "Test sim: send_group_msg_ack ok." << std::endl;
-            return -1;
-         }
-         send_group_msg(s);
+         ++hashes.top().ack_received;
          return 1;
       }
 
@@ -81,8 +72,18 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
    if (cmd == "group_msg") {
       // TODO: Output some error if the number of messages received is
       // wrong.
-      auto const body = j.at("msg").get<std::string>();
-      std::cout << "Group msg: " << body << std::endl;
+      //auto const body = j.at("msg").get<std::string>();
+      //std::cout << "Group msg: " << body << std::endl;
+      //std::cout << j << std::endl;
+      if (hashes.top().ack_received == op.msgs_per_group)
+         hashes.pop();
+
+      if (std::empty(hashes)) {
+         //std::cout << "Test sim: send_group_msg_ack ok." << std::endl;
+         return -1;
+      }
+
+      send_group_msg(s);
       return 1;
    }
 
@@ -110,10 +111,20 @@ int client_mgr_sim::on_closed(boost::system::error_code ec)
 
 void client_mgr_sim::send_group_msg(std::shared_ptr<client_type> s)
 {
+   // For each one of these messages sent we shall receive first one
+   // ack and then it again in the channel it was sent.
    json j_msg;
    j_msg["cmd"] = "group_msg";
-   j_msg["to"] = hashes.top();
-   j_msg["msg"] = "Group message to: " + hashes.top();
+   j_msg["from"] = op.user;
+   j_msg["to"] = hashes.top().hash;
+   j_msg["msg"] = "Group message";
    s->send_msg(j_msg.dump());
+   std::cout << j_msg << std::endl;
+}
+
+client_mgr_sim::~client_mgr_sim()
+{
+   if (!std::empty(hashes))
+      std::cout << "client_mgr_sim: Test fails." << std::endl;
 }
 

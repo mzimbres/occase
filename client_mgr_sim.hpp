@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <utility>
 #include <stdexcept>
 
 #include "config.hpp"
@@ -23,16 +24,20 @@ class client_mgr_sim {
 public:
    using options_type = cmgr_sim_op;
 private:
+   struct msg_counter_helper {
+      int ack_received;
+      std::string hash;
+   };
    using client_type = client_session<client_mgr_sim>;
    options_type op;
    std::stack<std::string> cmds;
-   std::stack<std::string> hashes;
-   int counter = 0;
+   std::stack<msg_counter_helper> hashes;
 
    void send_group_msg(std::shared_ptr<client_type> s);
 
 public:
    client_mgr_sim(options_type op);
+   ~client_mgr_sim();
    int on_read(std::string msg, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec);
    int on_handshake(std::shared_ptr<client_type> s);

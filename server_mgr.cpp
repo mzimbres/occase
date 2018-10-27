@@ -237,7 +237,7 @@ server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
    }
 
    auto const from = s->get_id();
-   g->second.insert({from, s});
+   g->second[from] = s; // Overwrites any previous session.
 
    json resp;
    resp["cmd"] = "join_group_ack";
@@ -266,6 +266,7 @@ void broadcast_msg(channel_type& members, std::string msg)
          //    between them.
          // This is perhaps unlikely but should be avoided in the
          // future.
+         //std::cout << "on_group_msg: sending to " << s->get_id() << " " << msg << std::endl;
          s->send(msg);
          ++begin;
          continue;
@@ -330,7 +331,6 @@ void server_mgr::on_group_msg(std::string msg)
 
    // TODO: Change broadcast to return the number of users that the
    // message has reached. 
-   //std::cout << "on_group_msg: sending " << msg << std::endl;
    broadcast_msg(g->second, std::move(msg));
 }
 

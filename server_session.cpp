@@ -27,6 +27,7 @@ server_session::server_session(tcp::socket socket, server_mgr& mgr_)
 
 server_session::~server_session()
 {
+   //std::cout << "I am dying: " << user_id << std::endl;
    mgr.release_user(user_id);
    --mgr.get_stats().number_of_sessions;
 }

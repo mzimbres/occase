@@ -72,7 +72,7 @@ public:
    auto const& get_sms() const
       { return sms; }
    void set_id(std::string id)
-      {user_id = std::move(id);};
+      {user_id = std::move(id); };
    auto const& get_id() const noexcept
       {return user_id;}
    auto is_waiting_sms() const noexcept

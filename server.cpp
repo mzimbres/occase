@@ -60,6 +60,10 @@ server_op get_server_op(int argc, char* argv[])
    , po::value<std::string>(&op.mgr.redis_port)->default_value("6379")
    , "Port where redis server is listening."
    )
+   ("redis-group-channel"
+   , po::value<std::string>(&op.mgr.redis_group_channel)->default_value("group_msgs")
+   , "The name of the redis channel where group messages will be broadcasted."
+   )
    ;
 
    po::variables_map vm;        

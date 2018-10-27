@@ -56,6 +56,7 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
 : timeouts(cf.get_timeouts())
 , redis_sub_session(cf.get_redis_session_cf(), ioc)
 , redis_pub_session(cf.get_redis_session_cf(), ioc)
+, redis_group_channel(cf.redis_group_channel)
 {
    using namespace aedis;
 
@@ -69,7 +70,7 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
 
       if (data.front() == "message") {
          assert(std::size(data) == 3);
-         assert(data[1] == "channels_msgs");
+         assert(data[1] == redis_group_channel);
          on_group_msg(std::move(data.back()));
          return;
       }
@@ -81,7 +82,7 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
 
    redis_sub_session.set_msg_handler(handler1);
    redis_sub_session.run();
-   redis_sub_session.send(gen_resp_cmd("SUBSCRIBE", {"channels_msgs"}));
+   redis_sub_session.send(gen_resp_cmd( "SUBSCRIBE", {redis_group_channel}));
 
    auto const handler2 = [](auto ec, auto data)
    {
@@ -298,7 +299,7 @@ server_mgr::on_user_channel_msg( std::string msg, json j
    }
 
    auto rcmd = aedis::gen_resp_cmd( "PUBLISH"
-                                  , {"channels_msgs", std::move(msg)});
+                                  , { redis_group_channel, std::move(msg)});
 
    redis_pub_session.send(std::move(rcmd));
 

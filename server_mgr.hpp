@@ -40,6 +40,8 @@ struct session_timeouts {
 struct server_mgr_cf {
    std::string redis_address;
    std::string redis_port;
+   std::string redis_group_channel;
+
    int auth_timeout;
    int sms_timeout;
    int handshake_timeout;
@@ -95,6 +97,7 @@ private:
    sessions_stats stats;
    aedis::redis_session redis_sub_session;
    aedis::redis_session redis_pub_session;
+   std::string redis_group_channel;
 
 public:
    server_mgr(server_mgr_cf cf, asio::io_context& ioc);

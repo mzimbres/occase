@@ -78,6 +78,7 @@ void redis_session::on_resp_chunk( boost::system::error_code ec
                                  , bool bulky_str_read)
 {
    if (ec) {
+      fail_tmp(ec, "on_resp_chunck");
       asio::post(socket.get_io_context(), [this, ec]() { on_resp(ec); });
       return;
    }
@@ -164,12 +165,14 @@ void redis_session::on_connect( boost::system::error_code ec
 void redis_session::on_resp(boost::system::error_code ec)
 {
    msg_handler(ec, std::move(res));
-   start_reading_resp();
 
-   if (!std::empty(write_queue) && socket.is_open()) {
-      write_queue.pop();
-      asio::async_write( socket, asio::buffer(write_queue.front())
-                       , [this](auto ec, auto n) { on_write(ec, n); });
+   if (!ec && socket.is_open()) {
+      start_reading_resp();
+      if (!std::empty(write_queue)) {
+         write_queue.pop();
+         asio::async_write( socket, asio::buffer(write_queue.front())
+                          , [this](auto ec, auto n) { on_write(ec, n); });
+      }
    }
 }
 

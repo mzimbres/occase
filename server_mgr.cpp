@@ -57,7 +57,7 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
 , redis_sub_session(cf.get_redis_session_cf(), ioc)
 , redis_pub_session(cf.get_redis_session_cf(), ioc)
 {
-   redis_sub_session.run();
+   using namespace aedis;
 
    // TODO: Make exception safe.
    auto const handler1 = [this](auto ec, auto&& data)
@@ -80,15 +80,8 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
    };
 
    redis_sub_session.set_msg_handler(handler1);
-
-   using namespace aedis;
-
-   // TODO: In the action handler we have to ignore subscription messages
-   // That happen to arrive while we are sending e.g. a subscription
-   // to another channel.
+   redis_sub_session.run();
    redis_sub_session.send(gen_resp_cmd("SUBSCRIBE", {"channels_msgs"}));
-
-   redis_pub_session.run();
 
    auto const handler2 = [](auto ec, auto data)
    {
@@ -103,6 +96,7 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
    };
 
    redis_pub_session.set_msg_handler(handler2);
+   redis_pub_session.run();
 }
 
 ev_res server_mgr::on_login(json j, std::shared_ptr<server_session> s)
@@ -304,6 +298,7 @@ server_mgr::on_user_channel_msg( std::string msg, json j
 
    auto rcmd = aedis::gen_resp_cmd( "PUBLISH"
                                   , {"channels_msgs", std::move(msg)});
+
    redis_pub_session.send(std::move(rcmd));
 
    // TODO: This ack should (maybe) be moved to the function that

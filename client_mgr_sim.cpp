@@ -44,7 +44,7 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
 
          cmds.pop();
          if (std::empty(cmds)) {
-            //std::cout << "Test sim: join groups ok." << std::endl;
+            std::cout << "Test sim: join groups ok." << std::endl;
             send_group_msg(s);
             return 1;
          }
@@ -62,7 +62,10 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
       auto const res = j.at("result").get<std::string>();
       if (res == op.expected) {
          auto const id = j.at("id").get<int>();
+         if (hashes.at(id).ack)
+            throw std::runtime_error("client_mgr_sim::on_read4");
          hashes.at(id).ack = true;
+         //std::cout << "acka" << std::endl;
          return 1;
       }
 
@@ -74,12 +77,15 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
    if (cmd == "group_msg") {
       //auto const body = j.at("msg").get<std::string>();
       //std::cout << "Group msg: " << body << std::endl;
-      //std::cout << j << std::endl;
+      std::cout << j << std::endl;
       auto const from = j.at("from").get<std::string>();
       if (from != op.user)
          return 1;
 
       auto const id = j.at("id").get<int>();
+      if (hashes.at(id).msg)
+         throw std::runtime_error("client_mgr_sim::on_read5");
+
       hashes.at(id).msg = true;
 
       if (counter == std::size(hashes)) {

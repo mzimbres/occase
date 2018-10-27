@@ -128,9 +128,9 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
 
    buffer.consume(std::size(buffer));
 
-   // Here we are canceling the handshake timeout. The timer will
-   // however be called every time this function is called.
-   // TODO: Instead of cancel implement as activity with
+   // Here we are canceling the after handshake timeout. The timer
+   // will however be called every time this function is called.
+   // TODO: Instead of canceling implement as activity with
    // expires_after.
    timer.cancel();
    auto const r = mgr.on_read(str, this->shared_from_this());
@@ -185,7 +185,9 @@ void client_session<Mgr>::do_close()
 
    //std::cout << "do_close" << std::endl;
    auto handler = [p = this->shared_from_this()](auto ec)
-   { p->on_close(ec); };
+   {
+      p->on_close(ec);
+   };
 
    ws.async_close(beast::websocket::close_code::normal, handler);
 }
@@ -260,8 +262,7 @@ client_session<Mgr>::on_connect( boost::system::error_code ec
 }
 
 template <class Mgr>
-void
-client_session<Mgr>::on_handshake(boost::system::error_code ec)
+void client_session<Mgr>::on_handshake(boost::system::error_code ec)
 {
    //std::cout << "on_handshake" << std::endl;
    if (ec)
@@ -273,12 +274,13 @@ client_session<Mgr>::on_handshake(boost::system::error_code ec)
 
    mgr.on_handshake(this->shared_from_this());
 
-   // This means the mgr wants us to set a timer that will fire if
-   // not canceled on timer. The canceling should happen on the
-   // on_read when the server gracefully closes the connection. It
-   // should do so since we are not sending any auth or login
-   // command.
-
+   // This timer is used by the login test to see if the server times
+   // out the connection when we do not send any command after the
+   // handshake. I will be canceled on the on_read when it completes
+   // with beast::websocket::error::closed, since the server is
+   // expected to gracefully close the connection.  The timer is also
+   // being used to test the acknowledge of the first message sent to
+   // the server.
    timer.expires_after(op.auth_timeout);
 
    auto handler = [p = this->shared_from_this()](auto ec)
@@ -331,8 +333,7 @@ void client_session<Mgr>::on_resolve( boost::system::error_code ec
    if (ec)
       return fail_tmp(ec, "resolve");
 
-   auto const handler =
-      [p = this->shared_from_this()](auto ec, auto Iterator)
+   auto const handler = [p = this->shared_from_this()](auto ec, auto Iterator)
    {
       p->on_connect(ec, Iterator);
    };

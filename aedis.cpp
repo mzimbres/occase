@@ -44,9 +44,9 @@ int main(int argc, char* argv[])
       }
 
       boost::asio::io_context ioc;
-      auto session = std::make_shared<redis_session>(cf, ioc);
+      redis_session sub_session(cf, ioc);
 
-      auto const sub_handler = [](auto ec, auto&& data)
+      auto const handler = [](auto ec, auto&& data)
       {
            if (ec) {
               std::cout << ec.message() << std::endl;
@@ -59,15 +59,21 @@ int main(int argc, char* argv[])
            std::cout << std::endl;
       };
 
-      session->set_msg_handler(sub_handler);
+      sub_session.set_msg_handler(handler);
+      sub_session.send(gen_resp_cmd("SUBSCRIBE", {"foo"}));
+      sub_session.run();
 
-      session->send(gen_resp_cmd("SET", {"foo", "20"}));
-      session->send(gen_resp_cmd("INCRBY", {"foo", "3"}));
-      session->send(gen_resp_cmd("GET", {"foo"}));
-      session->send(gen_resp_cmd("PING", {"Arbitrary message."}));
-      session->send(gen_resp_cmd("SUBSCRIBE", {"foo"}));
+      redis_session pub_session(cf, ioc);
+      pub_session.set_msg_handler(handler);
 
-      session->run();
+      pub_session.send(gen_resp_cmd("SET", {"foo", "20"}));
+      pub_session.send(gen_resp_cmd("INCRBY", {"foo", "3"}));
+      pub_session.send(gen_resp_cmd("GET", {"foo"}));
+      pub_session.send(gen_resp_cmd("PING", {"Arbitrary message."}));
+      for (auto i = 0; i < 2000; ++i)
+         pub_session.send(gen_resp_cmd("PUBLISH", {"foo", "Message."}));
+
+      pub_session.run();
       ioc.run();
    } catch (std::exception& e) {
       std::cerr << "Exception: " << e.what() << "\n";

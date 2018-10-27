@@ -63,7 +63,7 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
    auto const handler1 = [this](auto ec, auto&& data)
    {
       if (ec) {
-         std::cout << ec.message() << std::endl;
+         std::cout << "sub_handler: " << ec.message() << std::endl;
          return;
       }
 
@@ -93,7 +93,7 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
    auto const handler2 = [](auto ec, auto data)
    {
       if (ec) {
-         std::cout << ec.message() << std::endl;
+         std::cout << "pub_handler: " << ec.message() << std::endl;
          return;
       }
 

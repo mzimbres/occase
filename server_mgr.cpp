@@ -279,6 +279,7 @@ server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
 
 void broadcast_msg(channel_type& members, std::string msg)
 {
+   //std::cout << "Broadcast size: " << std::size(members) << std::endl;
    auto begin = std::begin(members);
    auto end = std::end(members);
    while (begin != end) {
@@ -391,10 +392,11 @@ server_mgr::on_user_msg( std::string msg, json j
    // redis server. This would be a big optimization in the case of
    // small number of nodes.
    json ack;
-   ack["cmd"] = "user_msg_ack";
+   ack["cmd"] = "user_msg_server_ack";
    ack["result"] = "ok";
    ack["id"] = j.at("id").get<int>();
    s->send(ack.dump());
+   //std::cout << ack << std::endl;
    return ev_res::user_msg_ok;
 }
 
@@ -407,11 +409,19 @@ void server_mgr::shutdown()
       if (auto s = o.second.lock())
          s->shutdown();
 
-   std::cout << "Shuting down redis group subscribe session ..." << std::endl;
+   std::cout << "Shuting down redis group subscribe session ..."
+             << std::endl;
+
    redis_gsub_session.close();
-   std::cout << "Shuting down redis publish session ..." << std::endl;
+
+   std::cout << "Shuting down redis publish session ..."
+             << std::endl;
+
    redis_pub_session.close();
-   std::cout << "Shuting down redis user msg subscribe session ..." << std::endl;
+
+   std::cout << "Shuting down redis user msg subscribe session ..."
+             << std::endl;
+
    redis_ksub_session.close();
 }
 

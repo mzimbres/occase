@@ -81,8 +81,12 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
       //std::cout << "Group msg: " << body << std::endl;
       //std::cout << j << std::endl;
       auto const from = j.at("from").get<std::string>();
-      if (from != op.user)
+      if (from != op.user) {
+         users.push(from);
+         //std::cout << "Pushing on " << op.user << " stack: " << from
+         //          << std::endl;
          return 1;
+      }
 
       auto const id = j.at("id").get<int>();
       if (hashes.at(id).msg)
@@ -90,17 +94,34 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
 
       hashes.at(id).msg = true;
 
-      if (counter == std::size(hashes)) {
+      if (group_counter == std::size(hashes)) {
          for (auto const& o : hashes)
             if (!o.ack || !o.msg)
                std::cout << "client_mgr_sim: Test fails." << std::endl;
 
-         //std::cout << "FINISH." << std::endl;
-         return -1;
+         //std::cout << "FINISH group messages." << std::endl;
+         // Now we begin sending messages to the users from which we
+         // received any group message.
+         if (std::empty(users))
+            return -1;
+
+         std::cout << "Users stack size " << std::size(users) << std::endl;
+         send_user_msg(s);
+         return 1;
       }
 
       //std::cout << "Receiving group_msg:     " << op.user << " " << id << " " << hashes.at(id).hash <<std::endl;
       send_group_msg(s);
+      return 1;
+   }
+
+   if (cmd == "user_msg_server_ack") {
+      auto const id = j.at("id").get<int>();
+      std::cout << "Ack received from " << id << std::endl;
+      users.pop();
+      if (std::empty(users))
+         return -1;
+      send_user_msg(s);
       return 1;
    }
 
@@ -129,16 +150,30 @@ int client_mgr_sim::on_closed(boost::system::error_code ec)
 void client_mgr_sim::send_group_msg(std::shared_ptr<client_type> s)
 {
    // For each one of these messages sent we shall receive first one
-   // ack and then it again in the channel it was sent.
+   // server ack and then it again from the broadcast channel it was
+   // sent.
    json j_msg;
    j_msg["cmd"] = "group_msg";
    j_msg["from"] = op.user;
-   j_msg["to"] = hashes.at(counter).hash;
+   j_msg["to"] = hashes.at(group_counter).hash;
    j_msg["msg"] = "Group message";
-   j_msg["id"] = counter;
+   j_msg["id"] = group_counter;
    s->send_msg(j_msg.dump());
-   //std::cout << "Sending   group_msg      " << op.user << " " << counter << " " << hashes.at(counter).hash << std::endl;
-   counter++;
+   //std::cout << "Sending   group_msg      " << op.user << " " << group_counter << " " << hashes.at(group_counter).hash << std::endl;
+   group_counter++;
+}
+
+void client_mgr_sim::send_user_msg(std::shared_ptr<client_type> s)
+{
+   json j_msg;
+   j_msg["cmd"] = "user_msg";
+   j_msg["from"] = users.top();
+   j_msg["to"] = "define"; // TODO
+   j_msg["msg"] = "User message";
+   j_msg["id"] = user_counter;
+   s->send_msg(j_msg.dump());
+   //std::cout << "Sending   user_msg       " << op.user << " " << user_counter << std::endl;
+   user_counter++;
 }
 
 client_mgr_sim::~client_mgr_sim()

@@ -33,9 +33,12 @@ private:
    options_type op;
    std::stack<std::string> cmds;
    std::vector<ch_msg_helper> hashes;
-   std::size_t counter = 0;
+   std::size_t group_counter = 0;
+   std::size_t user_counter = 0;
+   std::stack<std::string> users;
 
    void send_group_msg(std::shared_ptr<client_type> s);
+   void send_user_msg(std::shared_ptr<client_type> s);
 
 public:
    client_mgr_sim(options_type op);

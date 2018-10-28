@@ -391,6 +391,13 @@ server_mgr::on_user_msg( std::string msg, json j
    // node and send him his message directly to avoid overloading the
    // redis server. This would be a big optimization in the case of
    // small number of nodes.
+
+   auto const scmd = gen_resp_cmd( "RPUSH"
+                                 , { user_msg_prefix + s->get_id()
+                                   , std::move(msg)});
+
+   redis_pub_session.send(std::move(scmd));
+
    json ack;
    ack["cmd"] = "user_msg_server_ack";
    ack["result"] = "ok";

@@ -99,7 +99,9 @@ private:
    aedis::redis_session redis_ksub_session;
    aedis::redis_session redis_pub_session;
    std::string redis_group_channel;
-   std::string user_msg_channel_prefix {"__keyspace@0__:user_msg:"};
+   std::string keyspace_prefix {"__keyspace@0__:"};
+   std::string user_msg_prefix {"user_msg:"};
+   std::string user_msg_channel_prefix = keyspace_prefix + user_msg_prefix;
 
 public:
    server_mgr(server_mgr_cf cf, asio::io_context& ioc);

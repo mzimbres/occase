@@ -167,8 +167,8 @@ void client_mgr_sim::send_user_msg(std::shared_ptr<client_type> s)
 {
    json j_msg;
    j_msg["cmd"] = "user_msg";
-   j_msg["from"] = users.top();
-   j_msg["to"] = "define"; // TODO
+   j_msg["from"] = op.user;
+   j_msg["to"] = users.top(); // TODO
    j_msg["msg"] = "User message";
    j_msg["id"] = user_counter;
    s->send_msg(j_msg.dump());

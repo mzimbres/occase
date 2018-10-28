@@ -116,8 +116,8 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
    }
 
    if (cmd == "user_msg_server_ack") {
-      auto const id = j.at("id").get<int>();
-      std::cout << "Ack received from " << id << std::endl;
+      //auto const id = j.at("id").get<int>();
+      //std::cout << "Ack received from " << id << std::endl;
       users.pop();
       if (std::empty(users))
          return -1;

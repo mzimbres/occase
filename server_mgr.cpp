@@ -62,7 +62,7 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
 , redis_group_channel(cf.redis_group_channel)
 {
    // TODO: Make exception safe.
-   auto const handler1 = [this](auto ec, auto&& data)
+   auto const handler1 = [this](auto ec, auto data)
    {
       if (ec) {
          std::cout << "sub_handler: " << ec.message() << std::endl;
@@ -86,16 +86,24 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
    redis_gsub_session.send(gen_resp_cmd( "SUBSCRIBE", {redis_group_channel}));
 
    // TODO: Make exception safe.
-   auto const handler3 = [this](auto ec, auto&& data)
+   auto const handler3 = [this](auto ec, auto data)
    {
       if (ec) {
          std::cout << "sub_handler: " << ec.message() << std::endl;
          return;
       }
 
-      for (auto const& o : data)
-         std::cout << o << " ";
-      std::cout << std::endl;
+      //message __keyspace@0__:user_msg:0000000004 rpush
+      if (data.front() == "message") {
+         // Is an assertion enough?
+         assert(std::size(data) == 3);
+         assert(data.back() == "rpush");
+         auto const n = data[1].rfind(":");
+         assert(n != std::string::npos);
+         std::cout << "We have a message for "
+                   << data[1].substr(n + 1)
+                   << std::endl;
+      }
    };
 
    redis_ksub_session.set_msg_handler(handler3);

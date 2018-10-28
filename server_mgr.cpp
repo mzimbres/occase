@@ -3,6 +3,8 @@
 #include "server_session.hpp"
 #include "resp.hpp"
 
+using namespace aedis;
+
 ev_res on_message( server_mgr& mgr
                  , std::shared_ptr<server_session> s
                  , std::string msg)
@@ -42,7 +44,7 @@ ev_res on_message( server_mgr& mgr
          return mgr.on_user_channel_msg(std::move(msg), std::move(j), s);
 
       if (cmd == "user_msg")
-         return mgr.on_user_msg(std::move(j), s);
+         return mgr.on_user_msg(std::move(msg), std::move(j), s);
 
       std::cerr << "Server: Unknown command " << cmd << std::endl;
       return ev_res::unknown;
@@ -54,12 +56,11 @@ ev_res on_message( server_mgr& mgr
 
 server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
 : timeouts(cf.get_timeouts())
-, redis_sub_session(cf.get_redis_session_cf(), ioc)
+, redis_gsub_session(cf.get_redis_session_cf(), ioc)
+, redis_ksub_session(cf.get_redis_session_cf(), ioc)
 , redis_pub_session(cf.get_redis_session_cf(), ioc)
 , redis_group_channel(cf.redis_group_channel)
 {
-   using namespace aedis;
-
    // TODO: Make exception safe.
    auto const handler1 = [this](auto ec, auto&& data)
    {
@@ -80,9 +81,25 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
       //std::cout << std::endl;
    };
 
-   redis_sub_session.set_msg_handler(handler1);
-   redis_sub_session.run();
-   redis_sub_session.send(gen_resp_cmd( "SUBSCRIBE", {redis_group_channel}));
+   redis_gsub_session.set_msg_handler(handler1);
+   redis_gsub_session.run();
+   redis_gsub_session.send(gen_resp_cmd( "SUBSCRIBE", {redis_group_channel}));
+
+   // TODO: Make exception safe.
+   auto const handler3 = [this](auto ec, auto&& data)
+   {
+      if (ec) {
+         std::cout << "sub_handler: " << ec.message() << std::endl;
+         return;
+      }
+
+      for (auto const& o : data)
+         std::cout << o << " ";
+      std::cout << std::endl;
+   };
+
+   redis_ksub_session.set_msg_handler(handler3);
+   redis_ksub_session.run();
 
    auto const handler2 = [](auto ec, auto data)
    {
@@ -159,6 +176,13 @@ ev_res server_mgr::on_auth(json j, std::shared_ptr<server_session> s)
    resp["cmd"] = "auth_ack";
    resp["result"] = "ok";
    s->send(resp.dump());
+
+   // Subscribes the user to receive his messages.
+   auto scmd = gen_resp_cmd( "SUBSCRIBE"
+                           , { user_msg_channel_prefix + s->get_id() });
+
+   redis_ksub_session.send(std::move(scmd));
+
    return ev_res::auth_ok;
 }
 
@@ -298,8 +322,8 @@ server_mgr::on_user_channel_msg( std::string msg, json j
       return ev_res::group_msg_fail;
    }
 
-   auto rcmd = aedis::gen_resp_cmd( "PUBLISH"
-                                  , { redis_group_channel, std::move(msg)});
+   auto rcmd = gen_resp_cmd( "PUBLISH"
+                           , { redis_group_channel, std::move(msg)});
 
    redis_pub_session.send(std::move(rcmd));
 
@@ -341,12 +365,16 @@ void server_mgr::release_user(std::string id)
 }
 
 ev_res
-server_mgr::on_user_msg(json j, std::shared_ptr<server_session> s)
+server_mgr::on_user_msg( std::string msg, json j
+                       , std::shared_ptr<server_session> s)
 {
-   //auto const from = j["from"].get<user_bind>();
-   //auto const to = j["to"].get<user_bind>();
-
-   //users.at(to.index).send(j.dump());
+   // TODO: The ack to the user should be sent only after the message
+   // has been sent to redis and we get a confirmation.
+   json ack;
+   ack["cmd"] = "user_msg_ack";
+   ack["result"] = "ok";
+   ack["id"] = j.at("id").get<int>();
+   s->send(ack.dump());
    return ev_res::user_msg_ok;
 }
 
@@ -359,9 +387,11 @@ void server_mgr::shutdown()
       if (auto s = o.second.lock())
          s->shutdown();
 
-   std::cout << "Shuting down redis subscribe session ..." << std::endl;
-   redis_sub_session.close();
+   std::cout << "Shuting down redis group subscribe session ..." << std::endl;
+   redis_gsub_session.close();
    std::cout << "Shuting down redis publish session ..." << std::endl;
    redis_pub_session.close();
+   std::cout << "Shuting down redis user msg subscribe session ..." << std::endl;
+   redis_ksub_session.close();
 }
 

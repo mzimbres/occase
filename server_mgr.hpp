@@ -95,9 +95,11 @@ private:
 
    session_timeouts const timeouts;
    sessions_stats stats;
-   aedis::redis_session redis_sub_session;
+   aedis::redis_session redis_gsub_session;
+   aedis::redis_session redis_ksub_session;
    aedis::redis_session redis_pub_session;
    std::string redis_group_channel;
+   std::string user_msg_channel_prefix {"__keyspace@0__:user_msg:"};
 
 public:
    server_mgr(server_mgr_cf cf, asio::io_context& ioc);
@@ -109,7 +111,8 @@ public:
    ev_res on_sms_confirmation(json j, std::shared_ptr<server_session> s);
    ev_res on_create_group(json j, std::shared_ptr<server_session> s);
    ev_res on_join_group(json j, std::shared_ptr<server_session> session);
-   ev_res on_user_msg(json j, std::shared_ptr<server_session> session);
+   ev_res on_user_msg( std::string msg, json j
+                     , std::shared_ptr<server_session> session);
    ev_res on_user_channel_msg( std::string msg, json j
                              , std::shared_ptr<server_session> session);
    void on_group_msg(std::string msg);

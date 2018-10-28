@@ -92,13 +92,14 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
       if (data.front() == "message") {
          // Is an assertion enough?
          assert(std::size(data) == 3);
-         assert(data.back() == "rpush");
-         auto const n = data[1].rfind(":");
-         assert(n != std::string::npos);
-         user_msg_handler(data[1].substr(n + 1));
-         //std::cout << "We have a message for "
-         //          << data[1].substr(n + 1)
-         //          << std::endl;
+         if (data.back() == "rpush") {
+            auto const n = data[1].rfind(":");
+            assert(n != std::string::npos);
+            user_msg_handler(data[1].substr(n + 1));
+            //std::cout << "We have a message for "
+            //          << data[1].substr(n + 1)
+            //          << std::endl;
+         }
       }
    };
 
@@ -112,11 +113,13 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
          return;
       }
 
-      if (lrange) {
-         for (auto const& o : data)
-            std::cout << o << " ";
-         std::cout << std::endl;
-         lrange = false;
+      if (!std::empty(lrange_key)) {
+         assert(std::size(data) == 1);
+         std::cout << lrange_key << " ===> " << data.back() << std::endl;
+         lrange_key = {};
+         //for (auto const& o : data)
+         //   std::cout << o << " ";
+         //std::cout << std::endl;
       }
 
    };
@@ -353,14 +356,13 @@ void server_mgr::user_msg_handler(std::string user_id)
 {
    // We have to retrieve the user message.
    
-   auto rcmd = gen_resp_cmd( "LRANGE"
-                           , { user_msg_prefix + user_id
-                             , "0", "-1"});
+   auto const key = user_msg_prefix + user_id;
+   auto rcmd = gen_resp_cmd( "LPOP" , {std::move(key)});
 
    redis_pub_session.send(std::move(rcmd));
    // TODO: This variable should be set only when the write operation
    // completes, namely on the on_write function.
-   lrange = true;
+   lrange_key = key;
 
    //auto const s = sessions.find(user_id);
    //if (s == std::end(sessions)) {

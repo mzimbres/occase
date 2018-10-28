@@ -102,7 +102,7 @@ private:
    std::string keyspace_prefix {"__keyspace@0__:"};
    std::string user_msg_prefix {"user_msg:"};
    std::string user_msg_channel_prefix = keyspace_prefix + user_msg_prefix;
-   bool lrange = false;
+   std::string lrange_key;
 
    void group_msg_handler(std::string msg);
    void user_msg_handler(std::string user_id);

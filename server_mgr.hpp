@@ -104,7 +104,7 @@ private:
 public:
    server_mgr(server_mgr_cf cf, asio::io_context& ioc);
    void shutdown();
-   void release_user(std::string id);
+   void release_auth_session(std::string id);
 
    ev_res on_login(json j, std::shared_ptr<server_session> s);
    ev_res on_auth(json j, std::shared_ptr<server_session> s);
@@ -113,7 +113,7 @@ public:
    ev_res on_join_group(json j, std::shared_ptr<server_session> session);
    ev_res on_user_msg( std::string msg, json j
                      , std::shared_ptr<server_session> session);
-   ev_res on_user_channel_msg( std::string msg, json j
+   ev_res on_user_group_msg( std::string msg, json j
                              , std::shared_ptr<server_session> session);
    void on_group_msg(std::string msg);
 

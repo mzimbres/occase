@@ -41,7 +41,7 @@ ev_res on_message( server_mgr& mgr
          return mgr.on_join_group(std::move(j), s);
 
       if (cmd == "group_msg")
-         return mgr.on_user_channel_msg(std::move(msg), std::move(j), s);
+         return mgr.on_user_group_msg(std::move(msg), std::move(j), s);
 
       if (cmd == "user_msg")
          return mgr.on_user_msg(std::move(msg), std::move(j), s);
@@ -170,18 +170,17 @@ ev_res server_mgr::on_auth(json j, std::shared_ptr<server_session> s)
 
    s->set_id(from);
    s->promote();
-   //new_user.first.second->set_session(s);
+   assert(s->is_auth());
+
+   auto const scmd = gen_resp_cmd( "SUBSCRIBE"
+                                 , { user_msg_channel_prefix + s->get_id() });
+
+   redis_ksub_session.send(std::move(scmd));
 
    json resp;
    resp["cmd"] = "auth_ack";
    resp["result"] = "ok";
    s->send(resp.dump());
-
-   // Subscribes the user to receive his messages.
-   auto scmd = gen_resp_cmd( "SUBSCRIBE"
-                           , { user_msg_channel_prefix + s->get_id() });
-
-   redis_ksub_session.send(std::move(scmd));
 
    return ev_res::auth_ok;
 }
@@ -206,10 +205,16 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
    auto const id = s->get_id();
    assert(!std::empty(id));
    auto const new_user = sessions.insert({tel, s});
+   assert(s->is_auth());
 
    // This would be odd. The entry already exists on the index map
    // which means we did something wrong in the login command.
    assert(new_user.second);
+
+   auto const scmd = gen_resp_cmd( "SUBSCRIBE"
+                                 , { user_msg_channel_prefix + s->get_id() });
+
+   redis_ksub_session.send(std::move(scmd));
 
    json resp;
    resp["cmd"] = "sms_confirmation_ack";
@@ -303,8 +308,8 @@ void broadcast_msg(channel_type& members, std::string msg)
 }
 
 ev_res
-server_mgr::on_user_channel_msg( std::string msg, json j
-                               , std::shared_ptr<server_session> s)
+server_mgr::on_user_group_msg( std::string msg, json j
+                             , std::shared_ptr<server_session> s)
 {
    auto const to = j.at("to").get<std::string>();
 
@@ -327,11 +332,6 @@ server_mgr::on_user_channel_msg( std::string msg, json j
 
    redis_pub_session.send(std::move(rcmd));
 
-   // TODO: This ack should (maybe) be moved to the function that
-   // receives the broadcasted message from redis subscription group.
-   // But this would cause the client to try to repeat the operation
-   // if for example redis is not available at the moment and that
-   // would cause duplicated messages.
    json ack;
    ack["cmd"] = "group_msg_ack";
    ack["result"] = "ok";
@@ -348,20 +348,38 @@ void server_mgr::on_group_msg(std::string msg)
 
    auto const g = channels.find(to);
    if (g == std::end(channels)) {
-      // This is a non-existing group. Perhaps the json command was
-      // sent with the wrong information signaling a logic error in
-      // the app.
+      // Should not happen as the group is checked on
+      // on_user_group:msg before being sent to redis for broadcast.
       return;
    }
 
-   // TODO: Change broadcast to return the number of users that the
-   // message has reached. 
    broadcast_msg(g->second, std::move(msg));
 }
 
-void server_mgr::release_user(std::string id)
+void server_mgr::release_auth_session(std::string id)
 {
-   sessions.erase(id);
+   auto const match = sessions.find(id);
+   if (match == std::end(sessions)) {
+      // This is a bug, all autheticated sessions should be in the
+      // sessions map.
+      assert(false);
+      return;
+   }
+
+   sessions.erase(match); // We do not need the return value.
+
+   // TODO: Think of a better strategy to unsubscribe from user
+   // message channels. Every unsubscribe operation is O(n) on the
+   // number of channel the connection has been subscribed to and we
+   // are planning for hundreds of thousends of users on a single
+   // node. We can for example split the users in many subscription
+   // connections.  Other possible strategy would be to subscribe to
+   // all user mesage channels and ignore those for which the user is
+   // not online in this node. That however does not scale well.
+   auto const scmd = gen_resp_cmd( "UNSUBSCRIBE"
+                                 , { user_msg_channel_prefix + id});
+
+   redis_ksub_session.send(std::move(scmd));
 }
 
 ev_res

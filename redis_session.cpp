@@ -99,7 +99,14 @@ void redis_session::on_resp_chunk( boost::system::error_code ec
          switch (data.front()) {
             case '$':
             {
-               foo = true;
+               // TODO: Do not push in the vector but find a way to
+               // report nil.
+               if (data.compare(1, 2, "-1") == 0) {
+                  res.push_back({});
+                  --counter;
+               } else {
+                  foo = true;
+               }
             }
             break;
             case '+':

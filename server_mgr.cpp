@@ -386,8 +386,10 @@ ev_res
 server_mgr::on_user_msg( std::string msg, json j
                        , std::shared_ptr<server_session> s)
 {
-   // TODO: The ack to the user should be sent only after the message
-   // has been sent to redis and we get a confirmation.
+   // TODO: Search the sessions map if the user is online and in this
+   // node and send him his message directly to avoid overloading the
+   // redis server. This would be a big optimization in the case of
+   // small number of nodes.
    json ack;
    ack["cmd"] = "user_msg_ack";
    ack["result"] = "ok";

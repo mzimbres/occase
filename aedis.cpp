@@ -70,9 +70,12 @@ int main(int argc, char* argv[])
       pub_session.send(gen_resp_cmd("INCRBY", {"foo", "3"}));
       pub_session.send(gen_resp_cmd("GET", {"foo"}));
       pub_session.send(gen_resp_cmd("PING", {"Arbitrary message."}));
-      for (auto i = 0; i < 2000; ++i)
+      for (auto i = 0; i < 2; ++i)
          pub_session.send(gen_resp_cmd("PUBLISH", {"foo", "Message."}));
 
+      pub_session.send(gen_resp_cmd("PING", {"Arbitrary message2."}));
+      pub_session.send(gen_resp_cmd("LPOP", {"nonsense"}));
+      pub_session.send(gen_resp_cmd("PING", {"Arbitrary message3."}));
       pub_session.run();
       ioc.run();
    } catch (std::exception& e) {

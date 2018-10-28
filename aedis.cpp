@@ -76,6 +76,8 @@ int main(int argc, char* argv[])
       pub_session.send(gen_resp_cmd("PING", {"Arbitrary message2."}));
       pub_session.send(gen_resp_cmd("LPOP", {"nonsense"}));
       pub_session.send(gen_resp_cmd("PING", {"Arbitrary message3."}));
+      pub_session.send(gen_resp_cmd("RPUSH", {"nonsense", "one", "two", "three"}));
+      pub_session.send(gen_resp_cmd("LRANGE", {"nonsense", "0", "-1"}));
       pub_session.run();
       ioc.run();
    } catch (std::exception& e) {

@@ -72,13 +72,9 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
       if (data.front() == "message") {
          assert(std::size(data) == 3);
          assert(data[1] == redis_group_channel);
-         on_group_msg(std::move(data.back()));
+         group_msg_handler(std::move(data.back()));
          return;
       }
-
-      //for (auto const& o : data)
-      //   std::cout << o << " ";
-      //std::cout << std::endl;
    };
 
    redis_gsub_session.set_msg_handler(handler1);
@@ -93,32 +89,36 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
          return;
       }
 
-      //message __keyspace@0__:user_msg:0000000004 rpush
       if (data.front() == "message") {
          // Is an assertion enough?
          assert(std::size(data) == 3);
          assert(data.back() == "rpush");
          auto const n = data[1].rfind(":");
          assert(n != std::string::npos);
-         std::cout << "We have a message for "
-                   << data[1].substr(n + 1)
-                   << std::endl;
+         user_msg_handler(data[1].substr(n + 1));
+         //std::cout << "We have a message for "
+         //          << data[1].substr(n + 1)
+         //          << std::endl;
       }
    };
 
    redis_ksub_session.set_msg_handler(handler3);
    redis_ksub_session.run();
 
-   auto const handler2 = [](auto ec, auto data)
+   auto const handler2 = [this](auto ec, auto data)
    {
       if (ec) {
          std::cout << "pub_handler: " << ec.message() << std::endl;
          return;
       }
 
-      //for (auto const& o : data)
-      //   std::cout << o << " ";
-      //std::cout << std::endl;
+      if (lrange) {
+         for (auto const& o : data)
+            std::cout << o << " ";
+         std::cout << std::endl;
+         lrange = false;
+      }
+
    };
 
    redis_pub_session.set_msg_handler(handler2);
@@ -349,7 +349,29 @@ server_mgr::on_user_group_msg( std::string msg, json j
    return ev_res::group_msg_ok;
 }
 
-void server_mgr::on_group_msg(std::string msg)
+void server_mgr::user_msg_handler(std::string user_id)
+{
+   // We have to retrieve the user message.
+   
+   auto rcmd = gen_resp_cmd( "LRANGE"
+                           , { user_msg_prefix + user_id
+                             , "0", "-1"});
+
+   redis_pub_session.send(std::move(rcmd));
+   // TODO: This variable should be set only when the write operation
+   // completes, namely on the on_write function.
+   lrange = true;
+
+   //auto const s = sessions.find(user_id);
+   //if (s == std::end(sessions)) {
+   //   // Should not happen as we unsubscribe from the user message
+   //   // channel we the user goes offline.
+   //   assert(false);
+   //   return;
+   //}
+}
+
+void server_mgr::group_msg_handler(std::string msg)
 {
    auto const j = json::parse(msg);
 

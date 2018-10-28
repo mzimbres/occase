@@ -82,7 +82,7 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
       //std::cout << j << std::endl;
       auto const from = j.at("from").get<std::string>();
       if (from != op.user) {
-         users.push(from);
+         users_tmp.insert(from);
          //std::cout << "Pushing on " << op.user << " stack: " << from
          //          << std::endl;
          return 1;
@@ -102,8 +102,13 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
          //std::cout << "FINISH group messages." << std::endl;
          // Now we begin sending messages to the users from which we
          // received any group message.
-         if (std::empty(users))
+         for (auto const& o : users_tmp)
+            users.push(o);
+
+         if (std::empty(users)) {
+            std::cout << "Users stack empty. Leaving ..." << std::endl;
             return -1;
+         }
 
          std::cout << "Users stack size " << std::size(users) << std::endl;
          send_user_msg(s);

@@ -102,6 +102,10 @@ private:
    std::string keyspace_prefix {"__keyspace@0__:"};
    std::string user_msg_prefix {"user_msg:"};
    std::string user_msg_channel_prefix = keyspace_prefix + user_msg_prefix;
+   bool lrange = false;
+
+   void group_msg_handler(std::string msg);
+   void user_msg_handler(std::string user_id);
 
 public:
    server_mgr(server_mgr_cf cf, asio::io_context& ioc);
@@ -117,7 +121,6 @@ public:
                      , std::shared_ptr<server_session> session);
    ev_res on_user_group_msg( std::string msg, json j
                              , std::shared_ptr<server_session> session);
-   void on_group_msg(std::string msg);
 
    auto const& get_timeouts() const noexcept {return timeouts;}
    auto& get_stats() noexcept {return stats;}

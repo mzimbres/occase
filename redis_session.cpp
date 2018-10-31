@@ -143,6 +143,9 @@ void redis_session::on_resp_chunk( boost::system::error_code ec
 
 void redis_session::start_reading_resp()
 {
+   async_read_resp( socket, asio::dynamic_buffer(data)
+                  , [](auto ec, std::size_t n) { });
+
    asio::async_read_until( socket, asio::dynamic_buffer(data)
                          , delim
                          , [this](auto ec, std::size_t n)

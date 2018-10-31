@@ -9,12 +9,84 @@
 #include <cstring>
 #include <iostream>
 #include <functional>
+#include <type_traits>
 
 #include <boost/asio.hpp>
 #include <boost/asio/bind_executor.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
 #include "config.hpp"
+
+namespace detail
+{
+
+template < typename AsyncReadStream
+         , typename DynamicBuffer
+         , typename ReadHandler>
+class read_resp_op {
+// private:
+public:
+   AsyncReadStream& stream_;
+   DynamicBuffer buffers_;
+   int start_;
+   std::size_t total_transferred_;
+   ReadHandler handler_;
+public:
+   template <typename BufferSequence>
+   read_resp_op( AsyncReadStream& stream
+               , BufferSequence buffers
+               , ReadHandler handler)
+   : stream_(stream)
+   , buffers_(std::move(buffers))
+   , start_(0)
+   , total_transferred_(0)
+   , handler_(std::move(handler))
+   { }
+
+   read_resp_op(read_resp_op const& other)
+   : stream_(other.stream_)
+   , buffers_(other.buffers_)
+   , start_(other.start_)
+   , total_transferred_(other.total_transferred_)
+   , handler_(other.handler_)
+   { }
+
+   read_resp_op(read_resp_op&& other)
+   : stream_(other.stream_)
+   , buffers_(BOOST_ASIO_MOVE_CAST(DynamicBuffer)(other.buffers_))
+   , start_(other.start_)
+   , total_transferred_(other.total_transferred_)
+   , handler_(BOOST_ASIO_MOVE_CAST(ReadHandler)(other.handler_))
+   { }
+
+   void operator()( boost::system::error_code const& ec
+                  , std::size_t bytes_transferred
+                  , int start = 0)
+   {
+      stream_.async_read_some( buffers_.prepare(0)
+                                , std::move(*this));
+      handler_(ec, static_cast<const std::size_t&>(total_transferred_));
+   }
+};
+
+}
+
+template < typename AsyncReadStream
+         , typename DynamicBuffer
+         , typename ReadHandler>
+inline void
+async_read_resp( AsyncReadStream& s
+               , DynamicBuffer&& buffers
+               , ReadHandler handler)
+{
+  detail::read_resp_op< AsyncReadStream
+                        , typename std::decay<DynamicBuffer>::type
+                        , ReadHandler
+                        >( s
+                         , std::move(buffers)
+                         , std::move(handler)
+                         )(boost::system::error_code(), 0, 1);
+}
 
 namespace aedis
 {
@@ -36,11 +108,10 @@ private:
 
    redis_session_cf cf;
    tcp::resolver resolver;
-   boost::asio::ip::tcp::socket socket;
+   tcp::socket socket;
    std::string data;
    std::vector<std::string> res;
    std::queue<std::string> write_queue;
-   bool waiting_response = false;
    redis_handler_type msg_handler = [](auto, auto){};
 
    void start_reading_resp();

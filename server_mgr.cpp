@@ -77,7 +77,7 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
       }
    };
 
-   redis_gsub_session.set_msg_handler(handler1);
+   redis_gsub_session.set_on_msg_handler(handler1);
    redis_gsub_session.run();
    redis_gsub_session.send(gen_resp_cmd( "SUBSCRIBE", {redis_group_channel}));
 
@@ -103,7 +103,7 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
       }
    };
 
-   redis_ksub_session.set_msg_handler(handler3);
+   redis_ksub_session.set_on_msg_handler(handler3);
    redis_ksub_session.run();
 
    auto const handler2 = [this](auto ec, auto data)
@@ -124,7 +124,7 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
 
    };
 
-   redis_pub_session.set_msg_handler(handler2);
+   redis_pub_session.set_on_msg_handler(handler2);
    redis_pub_session.run();
 }
 

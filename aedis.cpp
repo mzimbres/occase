@@ -59,12 +59,12 @@ int main(int argc, char* argv[])
            std::cout << std::endl;
       };
 
-      sub_session.set_msg_handler(handler);
+      sub_session.set_on_msg_handler(handler);
       sub_session.send(gen_resp_cmd("SUBSCRIBE", {"foo"}));
       sub_session.run();
 
       redis_session pub_session(cf, ioc);
-      pub_session.set_msg_handler(handler);
+      pub_session.set_on_msg_handler(handler);
 
       pub_session.send(gen_resp_cmd("SET", {"foo", "20"}));
       pub_session.send(gen_resp_cmd("INCRBY", {"foo", "3"}));

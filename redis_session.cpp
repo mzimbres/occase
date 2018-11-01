@@ -73,83 +73,16 @@ void redis_session::close()
       fail_tmp(ec, "close");
 }
 
-void redis_session::on_resp_chunk( boost::system::error_code ec
-                                 , std::size_t n, int counter
-                                 , bool bulky_str_read)
-{
-   if (ec) {
-      fail_tmp(ec, "on_resp_chunck");
-      asio::post(socket.get_io_context(), [this, ec]() { on_resp(ec); });
-      return;
-   }
-
-   if (n < 4) {
-      std::cout << "on_resp_chunk: Invalid redis response. Aborting ..."
-                << std::endl;
-      // TODO: Call on_resp here with error.
-      return;
-   }
-
-   auto foo = false;
-   if (bulky_str_read) {
-      res.push_back(data.substr(0, n - 2));
-      --counter;
-   } else {
-      if (counter != 0) {
-         switch (data.front()) {
-            case '$':
-            {
-               // TODO: Do not push in the vector but find a way to
-               // report nil.
-               if (data.compare(1, 2, "-1") == 0) {
-                  res.push_back({});
-                  --counter;
-               } else {
-                  foo = true;
-               }
-            }
-            break;
-            case '+':
-            case '-':
-            case ':':
-            {
-               res.push_back(data.substr(1, n - 3));
-               --counter;
-            }
-            break;
-            case '*':
-            {
-               assert(counter == 1);
-               counter = get_length(data.data() + 1);
-            }
-            break;
-            default:
-               assert(false);
-         }
-      }
-   }
-
-   data.erase(0, n);
-
-   if (counter == 0) {
-      asio::post(socket.get_io_context(), [this]() { on_resp({}); });
-      return;
-   }
-
-   asio::async_read_until( socket, asio::dynamic_buffer(data), delim
-                         , [this, counter, foo](auto ec, auto n2)
-                           { on_resp_chunk(ec, n2, counter, foo); });
-}
-
 void redis_session::start_reading_resp()
 {
-   async_read_resp( socket, asio::dynamic_buffer(data)
-                  , [](auto ec, std::size_t n) { });
+   auto const handler = [this]( boost::system::error_code ec
+                              , std::vector<std::string> res)
+   {
+      on_resp(ec, std::move(res));
+   };
 
-   asio::async_read_until( socket, asio::dynamic_buffer(data)
-                         , delim
-                         , [this](auto ec, std::size_t n)
-                           { on_resp_chunk(ec, n, 1, false); });
+   data.clear();
+   async_read_resp(socket, &data, handler);
 }
 
 void redis_session::on_connect( boost::system::error_code ec
@@ -172,7 +105,8 @@ void redis_session::on_connect( boost::system::error_code ec
                        , [this](auto ec, auto n) { on_write(ec, n); });
 }
 
-void redis_session::on_resp(boost::system::error_code ec)
+void redis_session::on_resp( boost::system::error_code ec
+                           , std::vector<std::string> res)
 {
    msg_handler(ec, std::move(res));
 

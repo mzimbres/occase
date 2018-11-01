@@ -3,9 +3,6 @@
 #include <iostream>
 #include <iterator>
 
-namespace aedis
-{
-
 std::size_t get_length(char const* p)
 {
    std::size_t len = 0;
@@ -37,7 +34,5 @@ std::string gen_resp_cmd(std::string cmd, std::vector<std::string> param)
       add_bulky_str(payload, o);
 
    return payload;
-}
-
 }
 

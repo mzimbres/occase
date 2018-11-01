@@ -1,6 +1,7 @@
 #pragma once
 
 #include <boost/asio.hpp>
+#include <boost/asio/async_result.hpp>
 
 #include "resp.hpp"
 
@@ -117,6 +118,18 @@ template <class ReadHandler>
 void async_read_resp( boost::asio::ip::tcp::socket& s
                     , std::string* data, ReadHandler handler)
 {
-  read_resp_op<ReadHandler>(s, data, std::move(handler))({}, 0, true);
+   // TODO: Write a similar macro to check the handler signature.
+   //BOOST_ASIO_READ_HANDLER_CHECK(ReadHandler, handler) type_check;
+
+   using foo_type = 
+   asio::async_completion< ReadHandler
+                         , void ( boost::system::error_code
+                                , std::vector<std::string>)
+                         >;
+
+   foo_type init(handler);
+
+   read_resp_op< typename foo_type::completion_handler_type
+               >(s, data, init.completion_handler)({}, 0, true);
 }
 

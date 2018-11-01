@@ -113,10 +113,10 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
          return;
       }
 
-      if (!std::empty(lrange_key)) {
+      if (pub_is_lpop) {
          assert(std::size(data) == 1);
-         std::cout << lrange_key << " ===> " << data.back() << std::endl;
-         lrange_key = {};
+         std::cout << " ===> " << data.back() << std::endl;
+         pub_is_lpop = false;
          //for (auto const& o : data)
          //   std::cout << o << " ";
          //std::cout << std::endl;
@@ -125,6 +125,23 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
    };
 
    redis_pub_session.set_on_msg_handler(handler2);
+
+   auto const handler4 = [this](auto ec, auto size)
+   {
+      if (ec) {
+         std::cout << "pub_handler:on_write: " << ec.message() << std::endl;
+         return;
+      }
+
+      assert(!std::empty(pub_cmds));
+      auto const cmd = pub_cmds.top();
+      pub_cmds.pop();
+      //std::cout << "on_write: " << cmd << std::endl;
+      if (cmd == 1)
+         pub_is_lpop = true;
+   };
+
+   redis_pub_session.set_on_write_handler(handler4);
    redis_pub_session.run();
 }
 
@@ -343,6 +360,7 @@ server_mgr::on_user_group_msg( std::string msg, json j
                            , { redis_group_channel, std::move(msg)});
 
    redis_pub_session.send(std::move(rcmd));
+   pub_cmds.push(2);
 
    json ack;
    ack["cmd"] = "group_msg_ack";
@@ -359,10 +377,9 @@ void server_mgr::user_msg_handler(std::string user_id)
    auto const key = user_msg_prefix + user_id;
    auto rcmd = gen_resp_cmd( "LPOP" , {std::move(key)});
 
+   //std::cout << "sending to " << key << std::endl;
    redis_pub_session.send(std::move(rcmd));
-   // TODO: This variable should be set only when the write operation
-   // completes, namely on the on_write function.
-   lrange_key = key;
+   pub_cmds.push(1);
 
    //auto const s = sessions.find(user_id);
    //if (s == std::end(sessions)) {
@@ -429,6 +446,7 @@ server_mgr::on_user_msg( std::string msg, json j
                                    , std::move(msg)});
 
    redis_pub_session.send(std::move(scmd));
+   pub_cmds.push(2);
 
    json ack;
    ack["cmd"] = "user_msg_server_ack";

@@ -9,9 +9,9 @@
 #include <boost/asio/bind_executor.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
-#include "resp.hpp"
 #include "config.hpp"
 #include "redis_session.hpp"
+#include "async_read_resp.hpp"
 
 namespace
 {

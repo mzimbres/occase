@@ -1,13 +1,14 @@
-boost_lib     = /opt/boost_1_67_0/lib
+boost_inc_dir = /opt/boost_1_67_0/include
+boost_lib_dir = /opt/boost_1_67_0/lib
+json_inc_dir  = /opt/nlohmann_3_1_2
+
 boost_libs    =
-boost_libs    += $(boost_lib)/libboost_system.a
-boost_libs    += $(boost_lib)/libboost_program_options.a
-boost_include = /opt/boost_1_67_0/include
-json_include  = /opt/nlohmann_3_1_2
+boost_libs    += $(boost_lib_dir)/libboost_system.a
+boost_libs    += $(boost_lib_dir)/libboost_program_options.a
 
 DEBUG         = -g -ggdb3
 LDFLAGS       = -lpthread
-CPPFLAGS      = -I. -I$(boost_include) -I$(json_include) \
+CPPFLAGS      = -I. -I$(boost_inc_dir) -I$(json_inc_dir) \
                 -std=c++17 $(DEBUG) -Wall # -Werror
 
 DIST_NAME   = sellit
@@ -37,15 +38,16 @@ exe_objs = $(addsuffix .o, $(exes))
 
 lib_objs = $(server_objs) $(client_objs) $(aedis_objs) $(common_objs)
 
-SRCS =
-SRCS += $(lib_objs:.o=.cpp)
-SRCS += $(lib_objs:.o=.hpp)
-SRCS += $(addsuffix .cpp, $(exes))
-SRCS += config.hpp
-SRCS += client_session.hpp
-SRCS += session_launcher.hpp
+srcs =
+srcs += $(lib_objs:.o=.cpp)
+srcs += $(lib_objs:.o=.hpp)
+srcs += $(addsuffix .cpp, $(exes))
+srcs += config.hpp
+srcs += client_session.hpp
+srcs += session_launcher.hpp
+srcs += async_read_resp.hpp
 
-AUX = Makefile
+aux = Makefile
 
 all: $(exes)
 
@@ -70,7 +72,7 @@ aedis: % : %.o $(aedis_objs)
 clean:
 	rm -f $(exes) $(exe_objs) $(lib_objs) $(DIST_NAME).tar.gz Makefile.dep
 
-$(DIST_NAME).tar.gz: $(SRCS) $(AUX)
+$(DIST_NAME).tar.gz: $(srcs) $(aux)
 	rm -f $@
 	mkdir $(DIST_NAME)
 	ln $^ $(DIST_NAME)

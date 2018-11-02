@@ -51,15 +51,15 @@ void redis_session::run()
    resolver.async_resolve(cf.host, cf.port, handler);
 }
 
-void redis_session::send(std::string msg)
+void redis_session::send(std::string msg, redis_cmds cmd)
 {
    auto const is_empty = std::empty(write_queue);
-   write_queue.push(std::move(msg));
+   write_queue.push({cmd, std::move(msg)});
 
    if (is_empty && socket.is_open())
-      asio::async_write( socket, asio::buffer(write_queue.front())
+      asio::async_write( socket, asio::buffer(write_queue.front().msg)
                        , [this](auto ec, auto n)
-                         {on_write_handler(ec, n);});
+                         {on_write(ec, n);});
 }
 
 void redis_session::close()
@@ -102,24 +102,37 @@ void redis_session::on_connect( boost::system::error_code ec
    // Consumes any messages that have been eventually posted while the
    // connection was not established.
    if (!std::empty(write_queue))
-      asio::async_write( socket, asio::buffer(write_queue.front())
+      asio::async_write( socket, asio::buffer(write_queue.front().msg)
                        , [this](auto ec, auto n)
-                         { on_write_handler(ec, n); });
+                         { on_write(ec, n); });
 }
 
 void redis_session::on_resp( boost::system::error_code ec
                            , std::vector<std::string> res)
 {
-   on_msg_handler(ec, std::move(res));
+   auto cmd = redis_cmds::publish;
+   if (!std::empty(write_queue))
+      cmd = write_queue.front().cmd;
+
+   on_msg_handler(ec, std::move(res), cmd);
 
    if (!ec && socket.is_open()) {
       start_reading_resp();
       if (!std::empty(write_queue))
          write_queue.pop();
       if (!std::empty(write_queue))
-         asio::async_write( socket, asio::buffer(write_queue.front())
+         asio::async_write( socket, asio::buffer(write_queue.front().msg)
                           , [this](auto ec, auto n)
-                            { on_write_handler(ec, n); });
+                            { on_write(ec, n); });
+   }
+}
+
+void redis_session::on_write( boost::system::error_code ec
+                            , std::size_t n)
+{
+   if (ec) {
+      fail_tmp(ec, "on_write");
+      return;
    }
 }
 

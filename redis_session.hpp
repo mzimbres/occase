@@ -18,6 +18,19 @@
 #include "resp.hpp"
 #include "config.hpp"
 
+enum class redis_cmds
+{ get
+, incrby
+, lpop
+, lrange
+, ping
+, rpush
+, publish
+, set
+, subscribe
+, unsubscribe
+};
+
 namespace aedis
 {
 
@@ -30,19 +43,21 @@ class redis_session {
 public:
    using redis_on_msg_handler =
       std::function<void ( boost::system::error_code
-                         , std::vector<std::string>)>;
-
-   using redis_on_write_handler =
-      std::function<void(boost::system::error_code, std::size_t)>;
+                         , std::vector<std::string>
+                         , redis_cmds)>;
 
 private:
+   struct msg_helper {
+      redis_cmds cmd;
+      std::string msg;
+   };
+
    redis_session_cf cf;
    tcp::resolver resolver;
    tcp::socket socket;
    std::string data;
-   std::queue<std::string> write_queue;
-   redis_on_msg_handler on_msg_handler = [](auto, auto) {};
-   redis_on_write_handler on_write_handler = [](auto, auto) {};
+   std::queue<msg_helper> write_queue;
+   redis_on_msg_handler on_msg_handler = [](auto, auto, auto) {};
 
    void start_reading_resp();
 
@@ -52,6 +67,8 @@ private:
                   , asio::ip::tcp::endpoint const& endpoint);
    void on_resp( boost::system::error_code ec
                , std::vector<std::string> res);
+   void on_write( boost::system::error_code ec
+                , std::size_t n);
 
 public:
    redis_session(redis_session_cf cf_, asio::io_context& ioc)
@@ -61,12 +78,10 @@ public:
    { }
 
    void run();
-   void send(std::string msg);
+   void send(std::string msg, redis_cmds cmd);
    void close();
    void set_on_msg_handler(redis_on_msg_handler handler)
    { on_msg_handler = std::move(handler);};
-   void set_on_write_handler(redis_on_write_handler handler)
-   { on_write_handler = std::move(handler);};
 };
 
 }

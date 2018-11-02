@@ -46,7 +46,7 @@ int main(int argc, char* argv[])
       boost::asio::io_context ioc;
       redis_session sub_session(cf, ioc);
 
-      auto const handler = [](auto ec, auto&& data)
+      auto const handler = [](auto ec, auto data, auto cmd)
       {
            if (ec) {
               std::cout << ec.message() << std::endl;
@@ -60,24 +60,35 @@ int main(int argc, char* argv[])
       };
 
       sub_session.set_on_msg_handler(handler);
-      sub_session.send(gen_resp_cmd("SUBSCRIBE", {"foo"}));
+      sub_session.send( gen_resp_cmd("SUBSCRIBE", {"foo"})
+                      , redis_cmds::subscribe);
       sub_session.run();
 
       redis_session pub_session(cf, ioc);
       pub_session.set_on_msg_handler(handler);
 
-      pub_session.send(gen_resp_cmd("SET", {"foo", "20"}));
-      pub_session.send(gen_resp_cmd("INCRBY", {"foo", "3"}));
-      pub_session.send(gen_resp_cmd("GET", {"foo"}));
-      pub_session.send(gen_resp_cmd("PING", {"Arbitrary message."}));
+      pub_session.send( gen_resp_cmd("SET", {"foo", "20"})
+                      , redis_cmds::set );
+      pub_session.send( gen_resp_cmd("INCRBY", {"foo", "3"})
+                      , redis_cmds::incrby);
+      pub_session.send( gen_resp_cmd("GET", {"foo"})
+                      , redis_cmds::get);
+      pub_session.send( gen_resp_cmd("PING", {"Arbitrary message."})
+                      , redis_cmds::ping);
       for (auto i = 0; i < 2; ++i)
-         pub_session.send(gen_resp_cmd("PUBLISH", {"foo", "Message."}));
+         pub_session.send( gen_resp_cmd("PUBLISH", {"foo", "Message."})
+                         , redis_cmds::publish);
 
-      pub_session.send(gen_resp_cmd("PING", {"Arbitrary message2."}));
-      pub_session.send(gen_resp_cmd("LPOP", {"nonsense"}));
-      pub_session.send(gen_resp_cmd("PING", {"Arbitrary message3."}));
-      pub_session.send(gen_resp_cmd("RPUSH", {"nonsense", "one", "two", "three"}));
-      pub_session.send(gen_resp_cmd("LRANGE", {"nonsense", "0", "-1"}));
+      pub_session.send( gen_resp_cmd("PING", {"Arbitrary message2."})
+                      , redis_cmds::ping);
+      pub_session.send( gen_resp_cmd("LPOP", {"nonsense"})
+                      , redis_cmds::lpop);
+      pub_session.send( gen_resp_cmd("PING", {"Arbitrary message3."})
+                      , redis_cmds::ping);
+      pub_session.send( gen_resp_cmd("RPUSH", {"nonsense", "one", "two", "three"})
+                      , redis_cmds::rpush);
+      pub_session.send( gen_resp_cmd("LRANGE", {"nonsense", "0", "-1"})
+                      , redis_cmds::lrange);
       pub_session.run();
       ioc.run();
    } catch (std::exception& e) {

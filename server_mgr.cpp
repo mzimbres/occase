@@ -62,7 +62,7 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
 , redis_group_channel(cf.redis_group_channel)
 {
    // TODO: Make exception safe.
-   auto const handler1 = [this](auto ec, auto data)
+   auto const handler1 = [this](auto ec, auto data, auto cmd)
    {
       if (ec) {
          std::cout << "sub_handler: " << ec.message() << std::endl;
@@ -79,10 +79,11 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
 
    redis_gsub_session.set_on_msg_handler(handler1);
    redis_gsub_session.run();
-   redis_gsub_session.send(gen_resp_cmd( "SUBSCRIBE", {redis_group_channel}));
+   redis_gsub_session.send( gen_resp_cmd( "SUBSCRIBE", {redis_group_channel})
+                          , redis_cmds::subscribe);
 
    // TODO: Make exception safe.
-   auto const handler3 = [this](auto ec, auto data)
+   auto const handler3 = [this](auto ec, auto data, auto cmd)
    {
       if (ec) {
          std::cout << "sub_handler: " << ec.message() << std::endl;
@@ -106,17 +107,16 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
    redis_ksub_session.set_on_msg_handler(handler3);
    redis_ksub_session.run();
 
-   auto const handler2 = [this](auto ec, auto data)
+   auto const handler2 = [this](auto ec, auto data, auto cmd)
    {
       if (ec) {
          std::cout << "pub_handler: " << ec.message() << std::endl;
          return;
       }
 
-      if (pub_is_lpop) {
+      if (cmd == redis_cmds::lpop) {
          assert(std::size(data) == 1);
          std::cout << " ===> " << data.back() << std::endl;
-         pub_is_lpop = false;
          //for (auto const& o : data)
          //   std::cout << o << " ";
          //std::cout << std::endl;
@@ -125,23 +125,6 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
    };
 
    redis_pub_session.set_on_msg_handler(handler2);
-
-   auto const handler4 = [this](auto ec, auto size)
-   {
-      if (ec) {
-         std::cout << "pub_handler:on_write: " << ec.message() << std::endl;
-         return;
-      }
-
-      assert(!std::empty(pub_cmds));
-      auto const cmd = pub_cmds.top();
-      pub_cmds.pop();
-      //std::cout << "on_write: " << cmd << std::endl;
-      if (cmd == 1)
-         pub_is_lpop = true;
-   };
-
-   redis_pub_session.set_on_write_handler(handler4);
    redis_pub_session.run();
 }
 
@@ -203,7 +186,7 @@ ev_res server_mgr::on_auth(json j, std::shared_ptr<server_session> s)
    auto const scmd = gen_resp_cmd( "SUBSCRIBE"
                                  , { user_msg_channel_prefix + s->get_id() });
 
-   redis_ksub_session.send(std::move(scmd));
+   redis_ksub_session.send(std::move(scmd), redis_cmds::subscribe);
 
    json resp;
    resp["cmd"] = "auth_ack";
@@ -242,7 +225,7 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
    auto const scmd = gen_resp_cmd( "SUBSCRIBE"
                                  , { user_msg_channel_prefix + s->get_id() });
 
-   redis_ksub_session.send(std::move(scmd));
+   redis_ksub_session.send(std::move(scmd), redis_cmds::subscribe);
 
    json resp;
    resp["cmd"] = "sms_confirmation_ack";
@@ -359,8 +342,7 @@ server_mgr::on_user_group_msg( std::string msg, json j
    auto rcmd = gen_resp_cmd( "PUBLISH"
                            , { redis_group_channel, std::move(msg)});
 
-   redis_pub_session.send(std::move(rcmd));
-   pub_cmds.push(2);
+   redis_pub_session.send(std::move(rcmd), redis_cmds::publish);
 
    json ack;
    ack["cmd"] = "group_msg_ack";
@@ -378,8 +360,7 @@ void server_mgr::user_msg_handler(std::string user_id)
    auto rcmd = gen_resp_cmd( "LPOP" , {std::move(key)});
 
    //std::cout << "sending to " << key << std::endl;
-   redis_pub_session.send(std::move(rcmd));
-   pub_cmds.push(1);
+   redis_pub_session.send(std::move(rcmd), redis_cmds::lpop);
 
    //auto const s = sessions.find(user_id);
    //if (s == std::end(sessions)) {
@@ -429,7 +410,7 @@ void server_mgr::release_auth_session(std::string id)
    auto const scmd = gen_resp_cmd( "UNSUBSCRIBE"
                                  , { user_msg_channel_prefix + id});
 
-   redis_ksub_session.send(std::move(scmd));
+   redis_ksub_session.send(std::move(scmd), redis_cmds::unsubscribe);
 }
 
 ev_res
@@ -445,8 +426,7 @@ server_mgr::on_user_msg( std::string msg, json j
                                  , { user_msg_prefix + s->get_id()
                                    , std::move(msg)});
 
-   redis_pub_session.send(std::move(scmd));
-   pub_cmds.push(2);
+   redis_pub_session.send(std::move(scmd), redis_cmds::rpush);
 
    json ack;
    ack["cmd"] = "user_msg_server_ack";

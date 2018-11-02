@@ -18,19 +18,6 @@
 #include "resp.hpp"
 #include "config.hpp"
 
-enum class redis_cmds
-{ get
-, incrby
-, lpop
-, lrange
-, ping
-, rpush
-, publish
-, set
-, subscribe
-, unsubscribe
-};
-
 namespace aedis
 {
 
@@ -44,19 +31,14 @@ public:
    using redis_on_msg_handler =
       std::function<void ( boost::system::error_code
                          , std::vector<std::string>
-                         , redis_cmds)>;
+                         , redis_cmd)>;
 
 private:
-   struct msg_helper {
-      redis_cmds cmd;
-      std::string msg;
-   };
-
    redis_session_cf cf;
    tcp::resolver resolver;
    tcp::socket socket;
    std::string data;
-   std::queue<msg_helper> write_queue;
+   std::queue<redis_req> write_queue;
    redis_on_msg_handler on_msg_handler = [](auto, auto, auto) {};
 
    void start_reading_resp();
@@ -78,7 +60,7 @@ public:
    { }
 
    void run();
-   void send(std::string msg, redis_cmds cmd);
+   void send(redis_req req);
    void close();
    void set_on_msg_handler(redis_on_msg_handler handler)
    { on_msg_handler = std::move(handler);};

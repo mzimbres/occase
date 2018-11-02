@@ -13,6 +13,23 @@ std::size_t get_length(char const* p)
    return len;
 }
 
+char const* get_redis_cmd_as_str(redis_cmd cmd)
+{
+   switch (cmd) {
+      case redis_cmd::get:         return "GET";
+      case redis_cmd::incrby:      return "INCRBY";
+      case redis_cmd::lpop:        return "LPOP";
+      case redis_cmd::lrange:      return "LRANGE";
+      case redis_cmd::ping:        return "PING";
+      case redis_cmd::rpush:       return "RPUSH";
+      case redis_cmd::publish:     return "PUBLISH";
+      case redis_cmd::set:         return "SET";
+      case redis_cmd::subscribe:   return "SUBSCRIBE";
+      case redis_cmd::unsubscribe: return "UNSUBSCRIBE";
+      default: return "";
+   }
+}
+
 void add_bulky_str(std::string& payload, std::string const& param)
 {
    payload += "$";
@@ -22,17 +39,17 @@ void add_bulky_str(std::string& payload, std::string const& param)
    payload += "\r\n";
 }
 
-std::string gen_resp_cmd(std::string cmd, std::vector<std::string> param)
+redis_req gen_resp_cmd(redis_cmd cmd, std::vector<std::string> param)
 {
    std::string payload = "*";
    payload += std::to_string(std::size(param) + 1);
    payload += "\r\n";
 
-   add_bulky_str(payload, cmd);
+   add_bulky_str(payload, get_redis_cmd_as_str(cmd));
 
    for (auto const& o : param)
       add_bulky_str(payload, o);
 
-   return payload;
+   return {cmd, std::move(payload)};
 }
 

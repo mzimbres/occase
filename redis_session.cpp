@@ -51,10 +51,10 @@ void redis_session::run()
    resolver.async_resolve(cf.host, cf.port, handler);
 }
 
-void redis_session::send(std::string msg, redis_cmds cmd)
+void redis_session::send(redis_req req)
 {
    auto const is_empty = std::empty(write_queue);
-   write_queue.push({cmd, std::move(msg)});
+   write_queue.push(std::move(req));
 
    if (is_empty && socket.is_open())
       asio::async_write( socket, asio::buffer(write_queue.front().msg)
@@ -110,7 +110,7 @@ void redis_session::on_connect( boost::system::error_code ec
 void redis_session::on_resp( boost::system::error_code ec
                            , std::vector<std::string> res)
 {
-   auto cmd = redis_cmds::publish;
+   auto cmd = redis_cmd::unsolicited;
    if (!std::empty(write_queue))
       cmd = write_queue.front().cmd;
 

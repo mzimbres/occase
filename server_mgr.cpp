@@ -79,8 +79,8 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
 
    redis_gsub_session.set_on_msg_handler(handler1);
    redis_gsub_session.run();
-   redis_gsub_session.send( gen_resp_cmd( "SUBSCRIBE", {redis_group_channel})
-                          , redis_cmds::subscribe);
+   redis_gsub_session.send(gen_resp_cmd( redis_cmd::subscribe
+                                       , {redis_group_channel}));
 
    // TODO: Make exception safe.
    auto const handler3 = [this](auto ec, auto data, auto cmd)
@@ -114,7 +114,7 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
          return;
       }
 
-      if (cmd == redis_cmds::lpop) {
+      if (cmd == redis_cmd::lpop) {
          assert(std::size(data) == 1);
          std::cout << " ===> " << data.back() << std::endl;
          //for (auto const& o : data)
@@ -183,10 +183,10 @@ ev_res server_mgr::on_auth(json j, std::shared_ptr<server_session> s)
    s->promote();
    assert(s->is_auth());
 
-   auto const scmd = gen_resp_cmd( "SUBSCRIBE"
+   auto const scmd = gen_resp_cmd( redis_cmd::subscribe
                                  , { user_msg_channel_prefix + s->get_id() });
 
-   redis_ksub_session.send(std::move(scmd), redis_cmds::subscribe);
+   redis_ksub_session.send(std::move(scmd));
 
    json resp;
    resp["cmd"] = "auth_ack";
@@ -222,10 +222,10 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
    // which means we did something wrong in the login command.
    assert(new_user.second);
 
-   auto const scmd = gen_resp_cmd( "SUBSCRIBE"
+   auto const scmd = gen_resp_cmd( redis_cmd::subscribe
                                  , { user_msg_channel_prefix + s->get_id() });
 
-   redis_ksub_session.send(std::move(scmd), redis_cmds::subscribe);
+   redis_ksub_session.send(std::move(scmd));
 
    json resp;
    resp["cmd"] = "sms_confirmation_ack";
@@ -339,10 +339,10 @@ server_mgr::on_user_group_msg( std::string msg, json j
       return ev_res::group_msg_fail;
    }
 
-   auto rcmd = gen_resp_cmd( "PUBLISH"
+   auto rcmd = gen_resp_cmd( redis_cmd::publish
                            , { redis_group_channel, std::move(msg)});
 
-   redis_pub_session.send(std::move(rcmd), redis_cmds::publish);
+   redis_pub_session.send(std::move(rcmd));
 
    json ack;
    ack["cmd"] = "group_msg_ack";
@@ -357,10 +357,10 @@ void server_mgr::user_msg_handler(std::string user_id)
    // We have to retrieve the user message.
    
    auto const key = user_msg_prefix + user_id;
-   auto rcmd = gen_resp_cmd( "LPOP" , {std::move(key)});
+   auto const rcmd = gen_resp_cmd(redis_cmd::lpop, {std::move(key)});
 
    //std::cout << "sending to " << key << std::endl;
-   redis_pub_session.send(std::move(rcmd), redis_cmds::lpop);
+   redis_pub_session.send(std::move(rcmd));
 
    //auto const s = sessions.find(user_id);
    //if (s == std::end(sessions)) {
@@ -407,10 +407,10 @@ void server_mgr::release_auth_session(std::string id)
    // connections.  Other possible strategy would be to subscribe to
    // all user mesage channels and ignore those for which the user is
    // not online in this node. That however does not scale well.
-   auto const scmd = gen_resp_cmd( "UNSUBSCRIBE"
+   auto const scmd = gen_resp_cmd( redis_cmd::unsubscribe
                                  , { user_msg_channel_prefix + id});
 
-   redis_ksub_session.send(std::move(scmd), redis_cmds::unsubscribe);
+   redis_ksub_session.send(std::move(scmd));
 }
 
 ev_res
@@ -422,11 +422,11 @@ server_mgr::on_user_msg( std::string msg, json j
    // redis server. This would be a big optimization in the case of
    // small number of nodes.
 
-   auto const scmd = gen_resp_cmd( "RPUSH"
+   auto const scmd = gen_resp_cmd( redis_cmd::rpush
                                  , { user_msg_prefix + s->get_id()
                                    , std::move(msg)});
 
-   redis_pub_session.send(std::move(scmd), redis_cmds::rpush);
+   redis_pub_session.send(std::move(scmd));
 
    json ack;
    ack["cmd"] = "user_msg_server_ack";

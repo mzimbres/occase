@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <string>
+#include <initializer_list>
 
 std::size_t get_length(char const* p);
 
@@ -24,5 +25,6 @@ struct redis_req {
    std::string msg;
 };
 
-redis_req gen_resp_cmd(redis_cmd cmd, std::vector<std::string> param);
+redis_req
+gen_resp_cmd(redis_cmd cmd, std::initializer_list<std::string> param);
 

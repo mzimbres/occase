@@ -184,7 +184,7 @@ server_mgr::redis_key_msg_handler( boost::system::error_code const& ec
 
          // We have to retrieve the user message.
          auto const key = user_msg_prefix + data[1].substr(n + 1);
-         auto const rcmd = gen_resp_cmd(redis_cmd::lpop, {std::move(key)});
+         auto const rcmd = gen_resp_cmd(redis_cmd::lpop, {key});
 
          //std::cout << "sending to " << key << std::endl;
          redis_pub_session.send(std::move(rcmd));
@@ -380,8 +380,7 @@ server_mgr::on_user_group_msg( std::string msg, json j
       return ev_res::group_msg_fail;
    }
 
-   auto rcmd = gen_resp_cmd( redis_cmd::publish
-                           , { redis_group_channel, std::move(msg)});
+   auto rcmd = gen_resp_cmd(redis_cmd::publish, { redis_group_channel, msg});
 
    redis_pub_session.send(std::move(rcmd));
 
@@ -429,8 +428,7 @@ server_mgr::on_user_msg( std::string msg, json j
    // small number of nodes.
 
    auto const scmd = gen_resp_cmd( redis_cmd::rpush
-                                 , { user_msg_prefix + s->get_id()
-                                   , std::move(msg)});
+                                 , { user_msg_prefix + s->get_id(), msg});
 
    redis_pub_session.send(std::move(scmd));
 

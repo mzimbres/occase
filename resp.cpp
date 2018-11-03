@@ -39,7 +39,8 @@ void add_bulky_str(std::string& payload, std::string const& param)
    payload += "\r\n";
 }
 
-redis_req gen_resp_cmd(redis_cmd cmd, std::vector<std::string> param)
+redis_req
+gen_resp_cmd(redis_cmd cmd, std::initializer_list<std::string> param)
 {
    std::string payload = "*";
    payload += std::to_string(std::size(param) + 1);

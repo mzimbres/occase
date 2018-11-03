@@ -76,10 +76,10 @@ void redis_session::close()
 
 void redis_session::start_reading_resp()
 {
-   auto const handler = [this]( boost::system::error_code ec
-                              , std::vector<std::string> res)
+   auto const handler = [this]( boost::system::error_code const& ec
+                              , std::vector<std::string> const& res)
    {
-      on_resp(ec, std::move(res));
+      on_resp(ec, res);
    };
 
    data.clear();
@@ -107,14 +107,14 @@ void redis_session::on_connect( boost::system::error_code ec
                          { on_write(ec, n); });
 }
 
-void redis_session::on_resp( boost::system::error_code ec
-                           , std::vector<std::string> res)
+void redis_session::on_resp( boost::system::error_code const& ec
+                           , std::vector<std::string> const& res)
 {
    auto cmd = redis_cmd::unsolicited;
    if (!std::empty(write_queue))
       cmd = write_queue.front().cmd;
 
-   on_msg_handler(ec, std::move(res), cmd);
+   on_msg_handler(ec, res, cmd);
 
    if (!ec && socket.is_open()) {
       start_reading_resp();

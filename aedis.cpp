@@ -46,7 +46,7 @@ int main(int argc, char* argv[])
       boost::asio::io_context ioc;
       redis_session sub_session(cf, ioc);
 
-      auto const handler = [](auto ec, auto data, auto cmd)
+      auto const handler = [](auto const& ec, auto const& data, auto cmd)
       {
            if (ec) {
               std::cout << ec.message() << std::endl;

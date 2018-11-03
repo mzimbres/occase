@@ -104,8 +104,10 @@ private:
    std::string user_msg_prefix {"user_msg:"};
    std::string user_msg_channel_prefix = keyspace_prefix + user_msg_prefix;
 
-   void group_msg_handler(std::string msg);
    void user_msg_handler(std::string user_id);
+   void redis_group_sub_handler( boost::system::error_code const& ec
+                               , std::vector<std::string> const& resp
+                               , redis_cmd cmd);
 
 public:
    server_mgr(server_mgr_cf cf, asio::io_context& ioc);

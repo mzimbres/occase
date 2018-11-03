@@ -104,7 +104,7 @@ public:
       data->erase(0, n);
 
       if (counter == 0) {
-         handler({}, std::move(res));
+         handler({}, res);
          return;
       }
 
@@ -123,8 +123,8 @@ void async_read_resp( boost::asio::ip::tcp::socket& s
 
    using foo_type = 
    asio::async_completion< ReadHandler
-                         , void ( boost::system::error_code
-                                , std::vector<std::string>)
+                         , void ( boost::system::error_code const&
+                                , std::vector<std::string> const&)
                          >;
 
    foo_type init(handler);

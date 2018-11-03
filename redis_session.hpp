@@ -29,8 +29,8 @@ struct redis_session_cf {
 class redis_session {
 public:
    using redis_on_msg_handler =
-      std::function<void ( boost::system::error_code
-                         , std::vector<std::string>
+      std::function<void ( boost::system::error_code const&
+                         , std::vector<std::string> const&
                          , redis_cmd)>;
 
 private:
@@ -47,8 +47,8 @@ private:
                   , tcp::resolver::results_type results);
    void on_connect( boost::system::error_code ec
                   , asio::ip::tcp::endpoint const& endpoint);
-   void on_resp( boost::system::error_code ec
-               , std::vector<std::string> res);
+   void on_resp( boost::system::error_code const& ec
+               , std::vector<std::string> const& res);
    void on_write( boost::system::error_code ec
                 , std::size_t n);
 

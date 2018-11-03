@@ -101,10 +101,10 @@ private:
    redis_session redis_gsub_session;
    redis_session redis_ksub_session;
    redis_session redis_pub_session;
-   std::string redis_group_channel;
-   std::string keyspace_prefix {"__keyspace@0__:"};
-   std::string user_msg_prefix {"user_msg:"};
-   std::string user_msg_channel_prefix = keyspace_prefix + user_msg_prefix;
+   std::string const redis_group_channel;
+   std::string const keyspace_prefix {"__keyspace@0__:"};
+   std::string const user_msg_prefix {"user_msg:"};
+   std::string const user_msg_channel_prefix = keyspace_prefix + user_msg_prefix;
 
    void redis_group_msg_handler( boost::system::error_code const& ec
                                , std::vector<std::string> const& resp

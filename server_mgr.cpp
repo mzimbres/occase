@@ -205,11 +205,21 @@ server_mgr::redis_pub_msg_handler( boost::system::error_code const& ec
    if (req.cmd == redis_cmd::get) {
       assert(std::size(data) == 1);
       auto const menu = json::parse(data.back());
-      auto const hashes = get_hashes(std::move(menu));
-      for (auto const& o : hashes)
-         std::cout << o << "\n";
+      auto const codes = get_hashes(std::move(menu));
+      if (std::empty(codes)) { // TODO: Report error here.
+         std::cerr << "Group codes array empty." << std::endl;
+      }
 
-      // After creating the groups we can stablish other redis
+      for (auto const& gc : codes) {
+         auto const new_group = channels.insert({gc, {}});
+         if (new_group.second) {
+            std::cout << "Successfully created channel: " << gc << std::endl;
+         } else {
+            std::cout << "Channel " << gc << " already exists." << std::endl;
+         }
+      }
+
+      // After creating the groups we can establish other redis
       // connections.
       auto const handler1 = [this]( auto const& ec , auto const& data
                                   , auto const& req)

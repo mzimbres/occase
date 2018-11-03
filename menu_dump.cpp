@@ -125,7 +125,7 @@ int main(int argc, char* argv[])
         " 3: Example 3.\n"
       )
       ("indentation,i"
-      , po::value<int>(&op.indentation)->default_value(3)
+      , po::value<int>(&op.indentation)->default_value(-1)
       , "Indentation of the menu output.")
       ("hash,a", "Output channel codes only.")
    ;

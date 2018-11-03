@@ -4,7 +4,11 @@
 #include <string>
 
 #include <nlohmann/json.hpp>
+
 using json = nlohmann::json;
+
+namespace rt
+{
 
 struct group_info {
    std::vector<std::string> header;
@@ -14,4 +18,6 @@ struct group_info {
 void to_json(json& j, const group_info& g);
 
 void from_json(json const& j, group_info& g);
+
+}
 

@@ -11,6 +11,9 @@
 #include "config.hpp"
 #include "json_utils.hpp"
 
+namespace rt
+{
+
 template <class Mgr>
 class client_session;
 
@@ -51,4 +54,6 @@ public:
    int on_connect() const noexcept { return 1;}
    auto get_user() const {return op.user;}
 };
+
+}
 

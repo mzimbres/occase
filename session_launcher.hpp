@@ -5,6 +5,9 @@
 
 #include <boost/asio.hpp>
 
+namespace rt
+{
+
 struct launcher_op {
    int begin;
    int end;
@@ -81,4 +84,6 @@ public:
       ++lop.begin;
    }
 };
+
+}
 

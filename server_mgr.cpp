@@ -3,7 +3,8 @@
 #include "server_session.hpp"
 #include "resp.hpp"
 
-using namespace aedis;
+namespace rt
+{
 
 ev_res on_message( server_mgr& mgr
                  , std::shared_ptr<server_session> s
@@ -468,5 +469,7 @@ void server_mgr::shutdown()
              << std::endl;
 
    redis_ksub_session.close();
+}
+
 }
 

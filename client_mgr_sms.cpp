@@ -2,6 +2,9 @@
 
 #include "client_session.hpp"
 
+namespace rt
+{
+
 int client_mgr_sms::on_read(std::string msg, std::shared_ptr<client_type> s)
 {
    auto const j = json::parse(msg);
@@ -90,4 +93,6 @@ int client_mgr_auth::on_closed(boost::system::error_code ec)
    throw std::runtime_error("client_mgr_auth::on_closed");
    return -1;
 };
+
+}
 

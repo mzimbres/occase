@@ -10,6 +10,9 @@
 #include "json_utils.hpp"
 #include "redis_session.hpp"
 
+namespace rt
+{
+
 class server_session;
 
 enum class ev_res
@@ -62,8 +65,7 @@ struct server_mgr_cf {
 
    auto get_redis_session_cf()
    {
-      return aedis::redis_session_cf
-      {redis_address, redis_port};
+      return redis_session_cf {redis_address, redis_port};
    }
 };
 
@@ -96,9 +98,9 @@ private:
 
    session_timeouts const timeouts;
    sessions_stats stats;
-   aedis::redis_session redis_gsub_session;
-   aedis::redis_session redis_ksub_session;
-   aedis::redis_session redis_pub_session;
+   redis_session redis_gsub_session;
+   redis_session redis_ksub_session;
+   redis_session redis_pub_session;
    std::string redis_group_channel;
    std::string keyspace_prefix {"__keyspace@0__:"};
    std::string user_msg_prefix {"user_msg:"};
@@ -136,4 +138,6 @@ public:
 ev_res on_message( server_mgr& mgr
                  , std::shared_ptr<server_session> s
                  , std::string msg);
+
+}
 

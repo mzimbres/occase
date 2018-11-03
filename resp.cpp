@@ -3,6 +3,9 @@
 #include <iostream>
 #include <iterator>
 
+namespace rt
+{
+
 std::size_t get_length(char const* p)
 {
    std::size_t len = 0;
@@ -54,5 +57,7 @@ gen_resp_cmd( redis_cmd cmd
       add_bulky_str(payload, o);
 
    return {cmd, std::move(payload), user_id};
+}
+
 }
 

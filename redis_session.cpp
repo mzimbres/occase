@@ -24,7 +24,7 @@ void fail_tmp(boost::system::error_code ec, char const* what)
 
 }
 
-namespace aedis
+namespace rt
 {
 
 void redis_session::on_resolve( boost::system::error_code ec

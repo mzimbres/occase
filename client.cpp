@@ -24,6 +24,8 @@
 #include "session_launcher.hpp"
 #include "client_mgr_accept_timer.hpp"
 
+using namespace rt;
+
 namespace po = boost::program_options;
 
 struct client_op {

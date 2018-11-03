@@ -8,6 +8,9 @@
 #include "config.hpp"
 #include "server_session.hpp"
 
+namespace rt
+{
+
 struct server_op {
    bool help = false;
    std::string ip;
@@ -34,4 +37,6 @@ public:
    ~listener();
    void run();
 };
+
+}
 

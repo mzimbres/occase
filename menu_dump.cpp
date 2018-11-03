@@ -2,6 +2,9 @@
 
 #include "menu_parser.hpp"
 
+namespace rt
+{
+
 void test2()
 {
    auto const menu = gen_location_menu();
@@ -100,6 +103,10 @@ void test0()
    for (auto const& o : cmds)
       std::cout << o << std::endl;
 }
+
+}
+
+using namespace rt;
 
 int main()
 {

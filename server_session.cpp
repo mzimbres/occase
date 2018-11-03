@@ -15,6 +15,9 @@ void fail(boost::system::error_code ec, char const* what)
 
 }
 
+namespace rt
+{
+
 server_session::server_session(tcp::socket socket, server_mgr& mgr_)
 : ws(std::move(socket))
 , strand(ws.get_executor())
@@ -418,5 +421,7 @@ void server_session::do_send(std::string msg)
 
    if (is_empty && !closing)
       do_write(msg_queue.front());
+}
+
 }
 

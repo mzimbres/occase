@@ -15,6 +15,9 @@ void fail(boost::system::error_code ec, char const* what)
 
 }
 
+namespace rt
+{
+
 listener::listener(server_op op, boost::asio::io_context& ioc)
 : signals(ioc, SIGINT, SIGTERM)
 , acceptor(ioc)
@@ -129,5 +132,7 @@ void listener::on_accept(boost::system::error_code ec)
    std::make_shared<server_session>(std::move(socket), mgr)->accept();
 
    do_accept();
+}
+
 }
 

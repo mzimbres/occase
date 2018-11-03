@@ -4,6 +4,9 @@
 
 #include "client_session.hpp"
 
+namespace rt
+{
+
 int cmgr_handshake_tm::on_read(std::string msg, std::shared_ptr<client_type> s) const 
 {
    throw std::runtime_error("Error.");
@@ -52,5 +55,7 @@ int client_mgr_accept_timer::on_write(std::shared_ptr<client_type> s)
    // not be called.
    throw std::runtime_error("client_mgr_accept_timer::on_write");
    return 1;
+}
+
 }
 

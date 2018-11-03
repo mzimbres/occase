@@ -3,6 +3,9 @@
 #include "menu_parser.hpp"
 #include "client_session.hpp"
 
+namespace rt
+{
+
 client_mgr_sim::client_mgr_sim(options_type op_)
 : op(op_)
 {
@@ -189,5 +192,7 @@ void client_mgr_sim::send_user_msg(std::shared_ptr<client_type> s)
 
 client_mgr_sim::~client_mgr_sim()
 {
+}
+
 }
 

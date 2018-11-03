@@ -18,7 +18,7 @@
 #include "resp.hpp"
 #include "config.hpp"
 
-namespace aedis
+namespace rt
 {
 
 struct redis_session_cf {

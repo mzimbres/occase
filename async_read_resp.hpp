@@ -8,6 +8,10 @@
 // TODO: Improve this according to
 // boost_1_67_0/boost/asio/impl/read.hpp : 654 and 502
 //
+
+namespace rt
+{
+
 template <class ReadHandler>
 class read_resp_op {
 private:
@@ -131,5 +135,7 @@ void async_read_resp( boost::asio::ip::tcp::socket& s
 
    read_resp_op< typename foo_type::completion_handler_type
                >(s, data, init.completion_handler)({}, 0, true);
+}
+
 }
 

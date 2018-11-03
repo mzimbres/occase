@@ -6,6 +6,9 @@
 
 #include "json_utils.hpp"
 
+namespace rt
+{
+
 std::string to_str_raw(int i, int width, char fill)
 {
    std::ostringstream oss;
@@ -197,5 +200,7 @@ json gen_location_menu()
 
    auto const hash_patches = gen_hash_patches(j);
    return j.patch(std::move(hash_patches));
+}
+
 }
 

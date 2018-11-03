@@ -15,6 +15,9 @@
 #include "config.hpp"
 #include "server_mgr.hpp"
 
+namespace rt
+{
+
 class server_session :
    public std::enable_shared_from_this<server_session> {
 private:
@@ -82,4 +85,6 @@ public:
    auto is_waiting_auth() const noexcept
       {return std::empty(user_id) && std::empty(sms);};
 };
+
+}
 

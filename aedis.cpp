@@ -13,7 +13,7 @@
 #include "redis_session.hpp"
 #include "resp.hpp"
 
-using namespace aedis;
+using namespace rt;
 
 namespace po = boost::program_options;
 

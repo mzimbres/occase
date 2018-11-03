@@ -10,6 +10,8 @@
 
 #include "listener.hpp"
 
+using namespace rt;
+
 namespace po = boost::program_options;
 
 server_op get_server_op(int argc, char* argv[])

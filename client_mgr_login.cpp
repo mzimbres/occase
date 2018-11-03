@@ -2,6 +2,9 @@
 
 #include "client_session.hpp"
 
+namespace rt
+{
+
 client_mgr_login::client_mgr_login(cmgr_login_cf op_)
 : op(op_)
 { }
@@ -63,5 +66,7 @@ int client_mgr_login_typo::on_handshake(std::shared_ptr<client_type> s)
 {
    s->send_msg(cmd);
    return 1;
+}
+
 }
 

@@ -5,6 +5,9 @@
 
 #include "json_utils.hpp"
 
+namespace rt
+{
+
 json gen_location_menu();
 
 // Generates a vector with all create_group command for a given menu.
@@ -16,4 +19,6 @@ json gen_group_info(json menu);
 std::vector<std::string> get_hashes(json menu);
 
 std::string to_str(int i);
+
+}
 

@@ -19,6 +19,9 @@
 #include "config.hpp"
 #include "json_utils.hpp"
 
+namespace rt
+{
+
 struct client_session_cf {
    std::string host;
    std::string port;
@@ -351,5 +354,7 @@ void client_session<Mgr>::run()
 
    // Look up the domain name
    resolver.async_resolve(op.host, op.port, handler);
+}
+
 }
 

@@ -405,7 +405,7 @@ server_mgr::on_user_group_msg( std::string msg, json j
    return ev_res::group_msg_ok;
 }
 
-void server_mgr::release_auth_session(std::string id)
+void server_mgr::release_auth_session(std::string const& id)
 {
    auto const match = sessions.find(id);
    if (match == std::end(sessions)) {
@@ -417,14 +417,6 @@ void server_mgr::release_auth_session(std::string id)
 
    sessions.erase(match); // We do not need the return value.
 
-   // TODO: Think of a better strategy to unsubscribe from user
-   // message channels. Every unsubscribe operation is O(n) on the
-   // number of channel the connection has been subscribed to and we
-   // are planning for hundreds of thousends of users on a single
-   // node. We can for example split the users in many subscription
-   // connections.  Other possible strategy would be to subscribe to
-   // all user mesage channels and ignore those for which the user is
-   // not online in this node. That however does not scale well.
    auto const scmd = gen_resp_cmd( redis_cmd::unsubscribe
                                  , { user_msg_channel_prefix + id});
 
@@ -439,7 +431,6 @@ server_mgr::on_user_msg( std::string msg, json j
    // node and send him his message directly to avoid overloading the
    // redis server. This would be a big optimization in the case of
    // small number of nodes.
-
    auto const scmd = gen_resp_cmd( redis_cmd::rpush
                                  , { user_msg_prefix + s->get_id(), msg});
 

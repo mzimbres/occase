@@ -117,7 +117,7 @@ private:
 public:
    server_mgr(server_mgr_cf cf, asio::io_context& ioc);
    void shutdown();
-   void release_auth_session(std::string id);
+   void release_auth_session(std::string const& id);
 
    ev_res on_login(json j, std::shared_ptr<server_session> s);
    ev_res on_auth(json j, std::shared_ptr<server_session> s);

@@ -96,7 +96,7 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
                                , auto const& data
                                , auto cmd)
    {
-      redis_group_sub_handler(ec, data, cmd);
+      redis_group_msg_handler(ec, data, cmd);
    };
 
    redis_gsub_session.set_on_msg_handler(handler1);
@@ -108,23 +108,7 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
                                , auto const& data
                                , auto cmd)
    {
-      if (ec) {
-         std::cout << "sub_handler: " << ec.message() << std::endl;
-         return;
-      }
-
-      if (data.front() == "message") {
-         // Is an assertion enough?
-         assert(std::size(data) == 3);
-         if (data.back() == "rpush") {
-            auto const n = data[1].rfind(":");
-            assert(n != std::string::npos);
-            user_msg_handler(data[1].substr(n + 1));
-            //std::cout << "We have a message for "
-            //          << data[1].substr(n + 1)
-            //          << std::endl;
-         }
-      }
+      redis_key_msg_handler(ec, data, cmd);
    };
 
    redis_ksub_session.set_on_msg_handler(handler3);
@@ -152,7 +136,7 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
 }
 
 void
-server_mgr::redis_group_sub_handler( boost::system::error_code const& ec
+server_mgr::redis_group_msg_handler( boost::system::error_code const& ec
                                    , std::vector<std::string> const& data
                                    , redis_cmd cmd)
 {
@@ -178,6 +162,41 @@ server_mgr::redis_group_sub_handler( boost::system::error_code const& ec
 
       broadcast_msg(g->second, data.back());
       return;
+   }
+}
+
+void 
+server_mgr::redis_key_msg_handler( boost::system::error_code const& ec
+                                 , std::vector<std::string> const& data
+                                 , redis_cmd cmd)
+{
+   if (ec) {
+      std::cout << "sub_handler: " << ec.message() << std::endl;
+      return;
+   }
+
+   if (cmd == redis_cmd::unsolicited) {
+      if (data.back() == "rpush") {
+         assert(data.front() == "message");
+         assert(std::size(data) == 3);
+         auto const n = data[1].rfind(":");
+         assert(n != std::string::npos);
+
+         // We have to retrieve the user message.
+         auto const key = user_msg_prefix + data[1].substr(n + 1);
+         auto const rcmd = gen_resp_cmd(redis_cmd::lpop, {std::move(key)});
+
+         //std::cout << "sending to " << key << std::endl;
+         redis_pub_session.send(std::move(rcmd));
+
+         //auto const s = sessions.find(user_id);
+         //if (s == std::end(sessions)) {
+         //   // Should not happen as we unsubscribe from the user message
+         //   // channel we the user goes offline.
+         //   assert(false);
+         //   return;
+         //}
+      }
    }
 }
 
@@ -372,25 +391,6 @@ server_mgr::on_user_group_msg( std::string msg, json j
    ack["id"] = j.at("id").get<int>();
    s->send(ack.dump());
    return ev_res::group_msg_ok;
-}
-
-void server_mgr::user_msg_handler(std::string user_id)
-{
-   // We have to retrieve the user message.
-   
-   auto const key = user_msg_prefix + user_id;
-   auto const rcmd = gen_resp_cmd(redis_cmd::lpop, {std::move(key)});
-
-   //std::cout << "sending to " << key << std::endl;
-   redis_pub_session.send(std::move(rcmd));
-
-   //auto const s = sessions.find(user_id);
-   //if (s == std::end(sessions)) {
-   //   // Should not happen as we unsubscribe from the user message
-   //   // channel we the user goes offline.
-   //   assert(false);
-   //   return;
-   //}
 }
 
 void server_mgr::release_auth_session(std::string id)

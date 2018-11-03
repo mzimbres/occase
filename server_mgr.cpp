@@ -164,10 +164,11 @@ server_mgr::redis_key_msg_handler( boost::system::error_code const& ec
          assert(n != std::string::npos);
 
          // We have to retrieve the user message.
-         auto const key = user_msg_prefix + data[1].substr(n + 1);
-         auto const rcmd = gen_resp_cmd(redis_cmd::lpop, {key});
+         auto const user_id = data[1].substr(n + 1);
+         auto const key = user_msg_prefix + user_id;
+         auto const rcmd = gen_resp_cmd(redis_cmd::lpop, {key}, user_id);
 
-         //std::cout << "sending to " << key << std::endl;
+         //std::cout << "sending to " << user_id << std::endl;
          redis_pub_session.send(std::move(rcmd));
 
          //auto const s = sessions.find(user_id);
@@ -193,7 +194,7 @@ server_mgr::redis_pub_msg_handler( boost::system::error_code const& ec
 
    if (req.cmd == redis_cmd::lpop) {
       assert(std::size(data) == 1);
-      std::cout << " ===> " << data.back() << std::endl;
+      std::cout << req.user_id << " ===> " << data.back() << std::endl;
       //for (auto const& o : data)
       //   std::cout << o << " ";
       //std::cout << std::endl;

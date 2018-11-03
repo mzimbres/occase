@@ -23,8 +23,10 @@ enum class redis_cmd
 struct redis_req {
    redis_cmd cmd = redis_cmd::unsolicited;
    std::string msg;
+   std::string user_id;
 };
 
 redis_req
-gen_resp_cmd(redis_cmd cmd, std::initializer_list<std::string> param);
+gen_resp_cmd( redis_cmd cmd, std::initializer_list<std::string> param
+            , std::string const& user_id = {});
 

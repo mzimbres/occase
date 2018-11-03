@@ -110,6 +110,9 @@ private:
    void redis_key_msg_handler( boost::system::error_code const& ec
                              , std::vector<std::string> const& resp
                              , redis_cmd cmd);
+   void redis_pub_msg_handler( boost::system::error_code const& ec
+                             , std::vector<std::string> const& resp
+                             , redis_cmd cmd);
 
 public:
    server_mgr(server_mgr_cf cf, asio::io_context& ioc);

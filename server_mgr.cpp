@@ -92,44 +92,25 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
 , redis_pub_session(cf.get_redis_session_cf(), ioc)
 , redis_group_channel(cf.redis_group_channel)
 {
-   auto const handler1 = [this]( auto const& ec
-                               , auto const& data
+   auto const handler1 = [this]( auto const& ec , auto const& data
                                , auto cmd)
-   {
-      redis_group_msg_handler(ec, data, cmd);
-   };
+   { redis_group_msg_handler(ec, data, cmd); };
 
    redis_gsub_session.set_on_msg_handler(handler1);
    redis_gsub_session.run();
    redis_gsub_session.send(gen_resp_cmd( redis_cmd::subscribe
                                        , {redis_group_channel}));
 
-   auto const handler3 = [this]( auto const& ec
-                               , auto const& data
+   auto const handler3 = [this]( auto const& ec , auto const& data
                                , auto cmd)
-   {
-      redis_key_msg_handler(ec, data, cmd);
-   };
+   { redis_key_msg_handler(ec, data, cmd); };
 
    redis_ksub_session.set_on_msg_handler(handler3);
    redis_ksub_session.run();
 
-   auto const handler2 = [this](auto const& ec, auto const& data, auto cmd)
-   {
-      if (ec) {
-         std::cout << "pub_handler: " << ec.message() << std::endl;
-         return;
-      }
-
-      if (cmd == redis_cmd::lpop) {
-         assert(std::size(data) == 1);
-         std::cout << " ===> " << data.back() << std::endl;
-         //for (auto const& o : data)
-         //   std::cout << o << " ";
-         //std::cout << std::endl;
-      }
-
-   };
+   auto const handler2 = [this]( auto const& ec , auto const& data
+                               , auto cmd)
+   { redis_pub_msg_handler(ec, data, cmd); };
 
    redis_pub_session.set_on_msg_handler(handler2);
    redis_pub_session.run();
@@ -197,6 +178,25 @@ server_mgr::redis_key_msg_handler( boost::system::error_code const& ec
          //   return;
          //}
       }
+   }
+}
+
+void
+server_mgr::redis_pub_msg_handler( boost::system::error_code const& ec
+                                 , std::vector<std::string> const& data
+                                 , redis_cmd cmd)
+{
+   if (ec) {
+      std::cout << "pub_handler: " << ec.message() << std::endl;
+      return;
+   }
+
+   if (cmd == redis_cmd::lpop) {
+      assert(std::size(data) == 1);
+      std::cout << " ===> " << data.back() << std::endl;
+      //for (auto const& o : data)
+      //   std::cout << o << " ";
+      //std::cout << std::endl;
    }
 }
 

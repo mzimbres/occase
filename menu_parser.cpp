@@ -72,7 +72,8 @@ struct hash_gen_iter {
                              + "."
                              + to_str_raw(i, 2, '0');
             auto header = st.top().back().header;
-            auto const category = sub_desc + " : " + o["name"].get<std::string>();
+            auto const category = sub_desc + " : "
+                                + o["name"].get<std::string>();
             header.push_back(category);
             tmp.push_back({o, path, value, header});
             ++i;

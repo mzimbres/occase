@@ -63,7 +63,7 @@ server: % : %.o $(server_objs) $(common_objs) $(aedis_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(boost_libs)
 
 menu_dump: % : %.o $(common_objs)
-	$(CXX) -o $@ $^ $(CPPFLAGS)
+	$(CXX) -o $@ $^ $(CPPFLAGS) $(boost_libs)
 
 aedis: % : %.o $(aedis_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(boost_libs)

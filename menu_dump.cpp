@@ -1,28 +1,32 @@
 #include <iostream>
 
+#include <boost/program_options/options_description.hpp>
+#include <boost/program_options/parsers.hpp>
+#include <boost/program_options/variables_map.hpp>
+
 #include "menu_parser.hpp"
 
-namespace rt
-{
+using namespace rt;
 
-void test2()
+struct menu_op {
+   int menu;
+   int indentation;
+   bool hash = false;
+};
+
+void op0(menu_op op)
 {
    auto const menu = gen_location_menu();
-   //std::cout << menu.dump(4) << std::endl;
 
-   std::cout << menu.dump() << std::endl;
+   if (op.hash) {
+      // TODO: Output codes with indentation.
+      auto const hashes = get_hashes(menu);
+      for (auto const& o : hashes)
+         std::cout << o << "\n";
+      return;
+   }
 
-   auto const cmds = gen_create_groups(menu);
-   for (auto const& o : cmds)
-      std::cout << o << std::endl;
-
-   auto j_infos = gen_group_info(menu);
-   std::cout << j_infos.dump(4) << std::endl;
-
-   auto cmds3 = get_hashes(menu);
-   for (auto const& o : cmds3)
-      std::cout << o << " ";
-   std::cout << std::endl;
+   std::cout << menu.dump(op.indentation) << std::endl;
 }
 
 json gen_location_menu1()
@@ -40,7 +44,7 @@ json gen_location_menu1()
    return j;
 }
 
-void test1()
+void op2()
 {
    auto menu = gen_location_menu1();
    //std::cout << menu.dump(4) << std::endl;
@@ -73,7 +77,7 @@ json gen_location_menu3()
    return j;
 }
 
-void test3()
+void op3()
 {
    auto menu = gen_location_menu3();
    //std::cout << menu.dump(4) << std::endl;
@@ -94,7 +98,7 @@ json gen_location_menu0()
    return j;
 }
 
-void test0()
+void op1()
 {
    auto menu = gen_location_menu0();
    //std::cout << menu.dump(4) << std::endl;
@@ -104,18 +108,48 @@ void test0()
       std::cout << o << std::endl;
 }
 
-}
+namespace po = boost::program_options;
 
-using namespace rt;
-
-int main()
+int main(int argc, char* argv[])
 {
-   test0();
-   std::cout << "__________________________________________" << std::endl;
-   test1();
-   std::cout << "__________________________________________" << std::endl;
-   test2();
-   std::cout << "__________________________________________" << std::endl;
-   test3();
+   menu_op op;
+   po::options_description desc("Options");
+   desc.add_options()
+      ("help,h", "produce help message")
+      ("menu,m"
+      , po::value<int>(&op.menu)->default_value(0)
+      , "Choose the menu. Available options:\n"
+        " 0: Atibaia - Sao Paulo.\n"
+        " 1: Example 1.\n"
+        " 2: Example 2.\n"
+        " 3: Example 3.\n"
+      )
+      ("indentation,i"
+      , po::value<int>(&op.indentation)->default_value(3)
+      , "Indentation of the menu output.")
+      ("hash,a", "Output channel codes only.")
+   ;
+
+   po::variables_map vm;        
+   po::store(po::parse_command_line(argc, argv, desc), vm);
+   po::notify(vm);    
+
+   if (vm.count("help")) {
+      std::cout << desc << "\n";
+      return 0;
+   }
+
+   if (vm.count("hash"))
+      op.hash = true;
+
+   switch (op.menu) {
+      case 1: op1(); break;
+      case 2: op2(); break;
+      case 3: op3(); break;
+      default:
+         op0(op);
+   }
+
+   return 0;
 }
 

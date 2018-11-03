@@ -110,11 +110,10 @@ void redis_session::on_connect( boost::system::error_code ec
 void redis_session::on_resp( boost::system::error_code const& ec
                            , std::vector<std::string> const& res)
 {
-   auto cmd = redis_cmd::unsolicited;
-   if (!std::empty(write_queue))
-      cmd = write_queue.front().cmd;
-
-   on_msg_handler(ec, res, cmd);
+   if (std::empty(write_queue))
+      on_msg_handler(ec, res, {});
+   else
+      on_msg_handler(ec, res, write_queue.front());
 
    if (!ec && socket.is_open()) {
       start_reading_resp();

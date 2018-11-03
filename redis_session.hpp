@@ -28,10 +28,10 @@ struct redis_session_cf {
 
 class redis_session {
 public:
-   using redis_on_msg_handler =
+   using redis_on_msg_handler_type =
       std::function<void ( boost::system::error_code const&
                          , std::vector<std::string> const&
-                         , redis_cmd)>;
+                         , redis_req const&)>;
 
 private:
    redis_session_cf cf;
@@ -39,7 +39,7 @@ private:
    tcp::socket socket;
    std::string data;
    std::queue<redis_req> write_queue;
-   redis_on_msg_handler on_msg_handler = [](auto, auto, auto) {};
+   redis_on_msg_handler_type on_msg_handler = [](auto, auto, auto) {};
 
    void start_reading_resp();
 
@@ -62,7 +62,7 @@ public:
    void run();
    void send(redis_req req);
    void close();
-   void set_on_msg_handler(redis_on_msg_handler handler)
+   void set_on_msg_handler(redis_on_msg_handler_type handler)
    { on_msg_handler = std::move(handler);};
 };
 

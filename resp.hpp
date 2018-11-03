@@ -21,7 +21,7 @@ enum class redis_cmd
 };
 
 struct redis_req {
-   redis_cmd cmd;
+   redis_cmd cmd = redis_cmd::unsolicited;
    std::string msg;
 };
 

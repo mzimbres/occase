@@ -93,8 +93,8 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
 , redis_group_channel(cf.redis_group_channel)
 {
    auto const handler1 = [this]( auto const& ec , auto const& data
-                               , auto cmd)
-   { redis_group_msg_handler(ec, data, cmd); };
+                               , auto const& req)
+   { redis_group_msg_handler(ec, data, req); };
 
    redis_gsub_session.set_on_msg_handler(handler1);
    redis_gsub_session.run();
@@ -102,15 +102,15 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
                                        , {redis_group_channel}));
 
    auto const handler3 = [this]( auto const& ec , auto const& data
-                               , auto cmd)
-   { redis_key_msg_handler(ec, data, cmd); };
+                               , auto const& req)
+   { redis_key_msg_handler(ec, data, req); };
 
    redis_ksub_session.set_on_msg_handler(handler3);
    redis_ksub_session.run();
 
    auto const handler2 = [this]( auto const& ec , auto const& data
-                               , auto cmd)
-   { redis_pub_msg_handler(ec, data, cmd); };
+                               , auto const& req)
+   { redis_pub_msg_handler(ec, data, req); };
 
    redis_pub_session.set_on_msg_handler(handler2);
    redis_pub_session.run();
@@ -119,14 +119,14 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
 void
 server_mgr::redis_group_msg_handler( boost::system::error_code const& ec
                                    , std::vector<std::string> const& data
-                                   , redis_cmd cmd)
+                                   , redis_req const& req)
 {
    if (ec) {
       std::cout << "sub_handler: " << ec.message() << std::endl;
       return;
    }
 
-   if (cmd == redis_cmd::unsolicited) {
+   if (req.cmd == redis_cmd::unsolicited) {
       assert(data.front() == "message");
       assert(std::size(data) == 3);
       assert(data[1] == redis_group_channel);
@@ -149,14 +149,14 @@ server_mgr::redis_group_msg_handler( boost::system::error_code const& ec
 void 
 server_mgr::redis_key_msg_handler( boost::system::error_code const& ec
                                  , std::vector<std::string> const& data
-                                 , redis_cmd cmd)
+                                 , redis_req const& req)
 {
    if (ec) {
       std::cout << "sub_handler: " << ec.message() << std::endl;
       return;
    }
 
-   if (cmd == redis_cmd::unsolicited) {
+   if (req.cmd == redis_cmd::unsolicited) {
       if (data.back() == "rpush") {
          assert(data.front() == "message");
          assert(std::size(data) == 3);
@@ -184,14 +184,14 @@ server_mgr::redis_key_msg_handler( boost::system::error_code const& ec
 void
 server_mgr::redis_pub_msg_handler( boost::system::error_code const& ec
                                  , std::vector<std::string> const& data
-                                 , redis_cmd cmd)
+                                 , redis_req const& req)
 {
    if (ec) {
       std::cout << "pub_handler: " << ec.message() << std::endl;
       return;
    }
 
-   if (cmd == redis_cmd::lpop) {
+   if (req.cmd == redis_cmd::lpop) {
       assert(std::size(data) == 1);
       std::cout << " ===> " << data.back() << std::endl;
       //for (auto const& o : data)

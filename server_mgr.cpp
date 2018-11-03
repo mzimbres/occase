@@ -70,7 +70,7 @@ void broadcast_msg(channel_type& members, std::string const& msg)
          // 4. The user reconnects and we read and send him his
          //    messages from the database.
          // 5. We traverse the channels sending him the latest messages
-         //    the he missed while he was offline and this message is
+         //    that he missed while he was offline and this message is
          //    between them.
          // This is perhaps unlikely but should be avoided in the
          // future.
@@ -194,10 +194,22 @@ server_mgr::redis_pub_msg_handler( boost::system::error_code const& ec
 
    if (req.cmd == redis_cmd::lpop) {
       assert(std::size(data) == 1);
-      std::cout << req.user_id << " ===> " << data.back() << std::endl;
-      //for (auto const& o : data)
-      //   std::cout << o << " ";
-      //std::cout << std::endl;
+      //std::cout << req.user_id << " ===> " << data.back() << std::endl;
+      auto const match = sessions.find(req.user_id);
+      if (match == std::end(sessions)) {
+         // TODO: The user went offline. We have to enqueue the
+         // message again. Rethink this.
+         return;
+      }
+
+      if (auto s = match->second.lock()) {
+         s->send(data.back());
+      } else {
+         // The user went offline but the session was not removed from
+         // the map. This is perhaps not a bug but undesirable as we
+         // do not have garbage collector for expired sessions.
+         assert(false);
+      }
    }
 }
 

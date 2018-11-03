@@ -106,11 +106,11 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
             users.push(o);
 
          if (std::empty(users)) {
-            std::cout << "Users stack empty. Leaving ..." << std::endl;
+            //std::cout << "Users stack empty. Leaving ..." << std::endl;
             return -1;
          }
 
-         std::cout << "Users stack size " << std::size(users) << std::endl;
+         //std::cout << "Users stack size " << std::size(users) << std::endl;
          send_user_msg(s);
          return 1;
       }
@@ -127,6 +127,12 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
       if (std::empty(users))
          return -1;
       send_user_msg(s);
+      return 1;
+   }
+
+   if (cmd == "user_msg") {
+      auto const msg = j.at("msg").get<std::string>();
+      std::cout << msg << std::endl;
       return 1;
    }
 

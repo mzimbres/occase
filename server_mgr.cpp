@@ -204,8 +204,9 @@ server_mgr::redis_pub_msg_handler( boost::system::error_code const& ec
 
    if (req.cmd == redis_cmd::get) {
       assert(std::size(data) == 1);
-      auto const menu = json::parse(data.back());
-      auto const codes = get_hashes(std::move(menu));
+      menu = data.back();
+      auto const j_menu = json::parse(data.back());
+      auto const codes = get_hashes(std::move(j_menu));
       if (std::empty(codes)) { // TODO: Report error here.
          std::cerr << "Group codes array empty." << std::endl;
       }

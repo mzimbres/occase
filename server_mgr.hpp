@@ -105,6 +105,7 @@ private:
    std::string const keyspace_prefix {"__keyspace@0__:"};
    std::string const user_msg_prefix {"user_msg:"};
    std::string const user_msg_channel_prefix = keyspace_prefix + user_msg_prefix;
+   std::string menu;
 
    void redis_group_msg_handler( boost::system::error_code const& ec
                                , std::vector<std::string> const& resp

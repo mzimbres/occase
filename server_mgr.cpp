@@ -94,6 +94,7 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
 , redis_pub_session(cf.get_redis_session_cf(), ioc)
 , redis_group_channel(cf.redis_group_channel)
 , redis_menu_key(cf.redis_menu_key)
+, stats_timer(ioc)
 {
    auto const handler = [this]( auto const& ec , auto const& data
                                , auto const& req)
@@ -106,6 +107,7 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
    redis_pub_session.send(gen_resp_cmd( redis_cmd::get
                                       , {redis_menu_key}
                                       , redis_menu_key));
+   do_stats_logger();
 }
 
 void
@@ -497,6 +499,29 @@ void server_mgr::shutdown()
              << std::endl;
 
    redis_ksub_session.close();
+
+   stats_timer.cancel();
+}
+
+void server_mgr::do_stats_logger()
+{
+   stats_timer.expires_after(std::chrono::seconds{1});
+
+   auto handler = [this](auto ec)
+   {
+      if (ec) {
+         std::cout << "stats_timer: " << ec.message() << std::endl;
+         return;
+      }
+      
+      std::cout << "Current number of sessions: "
+                << stats.number_of_sessions
+                << std::endl;
+
+      do_stats_logger();
+   };
+
+   stats_timer.async_wait(handler);
 }
 
 }

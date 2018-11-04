@@ -26,9 +26,7 @@ private:
    tcp::acceptor acceptor;
    tcp::socket socket;
    server_mgr mgr;
-   boost::asio::steady_timer session_stats_timer;
 
-   void do_stats_logger();
    void do_accept();
    void on_accept(boost::system::error_code ec);
 

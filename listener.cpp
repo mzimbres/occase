@@ -23,7 +23,6 @@ listener::listener(server_op op, boost::asio::io_context& ioc)
 , acceptor(ioc)
 , socket(ioc)
 , mgr(op.mgr, ioc)
-, session_stats_timer(ioc)
 {
    auto const shandler = [this](auto ec, auto n)
    {
@@ -32,7 +31,6 @@ listener::listener(server_op op, boost::asio::io_context& ioc)
                 << std::endl;
 
       acceptor.cancel();
-      session_stats_timer.cancel();
       mgr.shutdown();
    };
 
@@ -63,8 +61,7 @@ listener::listener(server_op op, boost::asio::io_context& ioc)
    //std::cout << "max_listen_connections: "
    //          << boost::asio::socket_base::max_listen_connections << std::endl;
 
-   acceptor.listen(
-         boost::asio::socket_base::max_listen_connections, ec);
+   acceptor.listen(boost::asio::socket_base::max_listen_connections, ec);
    if (ec) {
       fail(ec, "listen");
       return;
@@ -75,36 +72,12 @@ listener::~listener()
 {
 }
 
-void listener::do_stats_logger()
-{
-   session_stats_timer.expires_after(std::chrono::seconds{1});
-
-   auto handler = [this](auto ec)
-   {
-      if (ec) {
-         if (ec == boost::asio::error::operation_aborted)
-            return;
-
-         return;
-      }
-      
-      std::cout << "Current number of sessions: "
-                << mgr.get_stats().number_of_sessions
-                << std::endl;
-
-      do_stats_logger();
-   };
-
-   session_stats_timer.async_wait(handler);
-}
-
 void listener::run()
 {
    if (!acceptor.is_open())
       return;
 
    do_accept();
-   do_stats_logger();
 }
 
 void listener::do_accept()

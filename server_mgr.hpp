@@ -6,6 +6,9 @@
 #include <string>
 #include <unordered_map>
 
+#include <boost/asio.hpp>
+#include <boost/asio/steady_timer.hpp>
+
 #include "config.hpp"
 #include "json_utils.hpp"
 #include "redis_session.hpp"
@@ -110,6 +113,8 @@ private:
    std::string const user_msg_channel_prefix = keyspace_prefix + user_msg_prefix;
    std::string menu;
 
+   boost::asio::steady_timer stats_timer;
+
    void redis_group_msg_handler( boost::system::error_code const& ec
                                , std::vector<std::string> const& resp
                                , redis_req const& cmd);
@@ -119,6 +124,7 @@ private:
    void redis_pub_msg_handler( boost::system::error_code const& ec
                              , std::vector<std::string> const& resp
                              , redis_req const& cmd);
+   void do_stats_logger();
 
 public:
    server_mgr(server_mgr_cf cf, asio::io_context& ioc);

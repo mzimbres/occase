@@ -291,7 +291,6 @@ void test_simulation(client_op const& op)
 
    auto const next = [&ioc, &op, &sim_op]()
    {
-      std::cout << "Calling next." << std::endl;
       auto const s2 = std::make_shared< session_launcher<client_mgr_sim>
                       >( ioc
                        , cmgr_sim_op

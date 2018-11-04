@@ -103,27 +103,13 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
             if (!o.ack || !o.msg)
                std::cout << "client_mgr_sim: Test fails." << std::endl;
 
-         //std::cout << "FINISH group messages." << std::endl;
-
+         std::cout << "FINISH group messages." << op.user  << std::endl;
          return -1;
       }
 
       //std::cout << "Receiving group_msg:     " << op.user << " " << id
       //          << " " << hashes.at(id).hash <<std::endl;
       send_group_msg(s);
-      return 1;
-   }
-
-   if (cmd == "user_msg_server_ack") {
-      //auto const id = j.at("id").get<int>();
-      //std::cout << "Server ack received from " << id << std::endl;
-      return 1;
-   }
-
-   if (cmd == "user_msg") {
-      auto const from = j.at("from").get<std::string>();
-      auto const msg = j.at("msg").get<std::string>();
-      std::cout << from << " " << msg << std::endl;
       return 1;
    }
 

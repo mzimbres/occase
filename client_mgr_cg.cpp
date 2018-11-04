@@ -73,6 +73,7 @@ int client_mgr_cg::on_handshake(std::shared_ptr<client_type> s)
    json j;
    j["cmd"] = "auth";
    j["from"] = op.user;
+   j["menu_version"] = -1;
    s->send_msg(j.dump());
    return 1;
 }

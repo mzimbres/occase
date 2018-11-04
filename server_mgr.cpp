@@ -76,7 +76,8 @@ void broadcast_msg(channel_type& members, std::string const& msg)
          //    between them.
          // This is perhaps unlikely but should be avoided in the
          // future.
-         //std::cout << "on_group_msg: sending to " << s->get_id() << " " << msg << std::endl;
+         //std::cout << "on_group_msg: sending to " << s->get_id()
+         //          << " " << msg << std::endl;
          s->send(msg);
          ++begin;
          continue;
@@ -310,6 +311,11 @@ ev_res server_mgr::on_auth(json j, std::shared_ptr<server_session> s)
    json resp;
    resp["cmd"] = "auth_ack";
    resp["result"] = "ok";
+
+   auto const menu_version = j.at("menu_version").get<int>();
+   if (menu_version == -1)
+      resp["menu"] = menu;
+
    s->send(resp.dump());
 
    return ev_res::auth_ok;

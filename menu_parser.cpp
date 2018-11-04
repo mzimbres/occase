@@ -178,6 +178,7 @@ json gen_sim_menu(int l)
    json j;
    j["name"] = "Root";
    j["sub_desc"] = "Root children";
+   j["menu_version"] = 1;
 
    std::vector<json> js;
    for (auto i = 0; i < l; ++i) {
@@ -239,6 +240,7 @@ json gen_location_menu()
    json j;
    j["name"] = "SP";
    j["sub_desc"] = "Cidade";
+   j["menu_version"] = 1;
    j["sub"] = j3;
 
    auto const hash_patches = gen_hash_patches(j);

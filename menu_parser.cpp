@@ -178,7 +178,18 @@ json gen_sim_menu()
    json j;
    j["name"] = "Root";
    j["sub_desc"] = "Root children";
-   j["sub"] = gen_sim_leaf_node(4, "0.");
+
+   std::vector<json> js;
+   for (auto i = 0; i < 3; ++i) {
+      auto const name = std::to_string(i);
+      json j_tmp;
+      j_tmp["name"] = name;
+      j_tmp["sub_desc"] = "Children";
+      j_tmp["sub"] = gen_sim_leaf_node(4, name + ".");
+      js.push_back(j_tmp);
+   }
+
+   j["sub"] = js;
 
    auto const hash_patches = gen_hash_patches(j);
    return j.patch(std::move(hash_patches));

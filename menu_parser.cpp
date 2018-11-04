@@ -162,6 +162,28 @@ std::vector<json> gen_hash_patches(json menu)
    return patches;
 }
 
+std::vector<json> gen_sim_leaf_node(int size, std::string name_prefix)
+{
+   std::vector<json> jv;
+   for (auto i = 0; i < size; ++i) {
+      auto const name = name_prefix + std::to_string(i);
+      jv.push_back({{"hash", ""}, {"sub", {}}, {"name", name}});
+   }
+
+   return jv;
+}
+
+json gen_sim_menu()
+{
+   json j;
+   j["name"] = "Root";
+   j["sub_desc"] = "Root children";
+   j["sub"] = gen_sim_leaf_node(4, "0.");
+
+   auto const hash_patches = gen_hash_patches(j);
+   return j.patch(std::move(hash_patches));
+}
+
 json gen_location_menu()
 {
    std::vector<json> j1 =

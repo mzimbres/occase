@@ -14,10 +14,8 @@ struct menu_op {
    bool hash = false;
 };
 
-void op0(menu_op op)
+void foo(json menu, menu_op op)
 {
-   auto const menu = gen_location_menu();
-
    if (op.hash) {
       // TODO: Output codes with indentation.
       auto const hashes = get_hashes(menu);
@@ -27,6 +25,18 @@ void op0(menu_op op)
    }
 
    std::cout << menu.dump(op.indentation) << std::endl;
+}
+
+void op0(menu_op op)
+{
+   auto const menu = gen_location_menu();
+   foo(menu, op);
+}
+
+void op3(menu_op op)
+{
+   auto const menu = gen_sim_menu();
+   foo(menu, op);
 }
 
 json gen_location_menu1()
@@ -77,16 +87,6 @@ json gen_location_menu3()
    return j;
 }
 
-void op3()
-{
-   auto menu = gen_location_menu3();
-   //std::cout << menu.dump(4) << std::endl;
-
-   auto const cmds = gen_create_groups(menu);
-   for (auto const& o : cmds)
-      std::cout << o << std::endl;
-}
-
 json gen_location_menu0()
 {
    json j;
@@ -122,7 +122,7 @@ int main(int argc, char* argv[])
         " 0: Atibaia - Sao Paulo.\n"
         " 1: Example 1.\n"
         " 2: Example 2.\n"
-        " 3: Example 3.\n"
+        " 3: Simulated.\n"
       )
       ("indentation,i"
       , po::value<int>(&op.indentation)->default_value(-1)
@@ -145,7 +145,7 @@ int main(int argc, char* argv[])
    switch (op.menu) {
       case 1: op1(); break;
       case 2: op2(); break;
-      case 3: op3(); break;
+      case 3: op3(op); break;
       default:
          op0(op);
    }

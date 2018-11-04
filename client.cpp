@@ -159,7 +159,17 @@ struct client_op {
    auto make_sim_cf() const
    {
       return launcher_op
-      { initial_user, initial_user + 3 * users_size
+      { initial_user, initial_user + 2 * users_size
+      , std::chrono::milliseconds {launch_interval}
+      , {"Launch of sim clients:         "}
+      };
+   }
+
+   auto make_gmsg_check_cf() const
+   {
+      return launcher_op
+      { initial_user + 2 * users_size
+      , initial_user + 3 * users_size
       , std::chrono::milliseconds {launch_interval}
       , {"Launch of sim clients:         "}
       };
@@ -277,12 +287,21 @@ void test_simulation(client_op const& op)
 {
    boost::asio::io_context ioc;
 
+   auto const sim_op =  op.make_sim_cf();
+   auto const n = sim_op.end - sim_op.begin;
+   std::make_shared< session_launcher<client_mgr_gmsg_check>
+                   >( ioc
+                    , cmgr_gmsg_check_op {"", n, op.msgs_per_group}
+                    , op.make_session_cf()
+                    , op.make_gmsg_check_cf()
+                    )->run({});
+
    std::make_shared< session_launcher<client_mgr_sim>
                    >( ioc
                     , cmgr_sim_op
                       { "", "ok", op.msgs_per_group}
                     , op.make_session_cf()
-                    , op.make_sim_cf()
+                    , sim_op
                     )->run({});
 
    ioc.run();

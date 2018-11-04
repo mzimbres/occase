@@ -66,6 +66,10 @@ server_op get_server_op(int argc, char* argv[])
    , po::value<std::string>(&op.mgr.redis_group_channel)->default_value("group_msgs")
    , "The name of the redis channel where group messages will be broadcasted."
    )
+   ("redis-menu-key"
+   , po::value<std::string>(&op.mgr.redis_menu_key)->default_value("menu")
+   , "Redis key holding the menu."
+   )
    ;
 
    po::variables_map vm;        

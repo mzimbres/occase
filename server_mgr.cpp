@@ -93,6 +93,7 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
 , redis_ksub_session(cf.get_redis_session_cf(), ioc)
 , redis_pub_session(cf.get_redis_session_cf(), ioc)
 , redis_group_channel(cf.redis_group_channel)
+, redis_menu_key(cf.redis_menu_key)
 {
    auto const handler = [this]( auto const& ec , auto const& data
                                , auto const& req)
@@ -102,8 +103,9 @@ server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
    redis_pub_session.run();
 
    // Asynchronously retrieves the menu.
-   auto const cmd = gen_resp_cmd(redis_cmd::get, {"menu"}, "menu");
-   redis_pub_session.send(std::move(cmd));
+   redis_pub_session.send(gen_resp_cmd( redis_cmd::get
+                                      , {redis_menu_key}
+                                      , redis_menu_key));
 }
 
 void

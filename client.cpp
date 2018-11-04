@@ -16,7 +16,6 @@
 
 #include "config.hpp"
 #include "menu_parser.hpp"
-#include "client_mgr_cg.hpp"
 #include "client_mgr_sms.hpp"
 #include "client_mgr_sim.hpp"
 #include "client_session.hpp"

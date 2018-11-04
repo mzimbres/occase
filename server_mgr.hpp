@@ -25,8 +25,6 @@ enum class ev_res
 , auth_fail
 , sms_confirmation_ok
 , sms_confirmation_fail
-, create_group_ok
-, create_group_fail
 , join_group_ok
 , join_group_fail
 , group_msg_ok
@@ -135,7 +133,6 @@ public:
    ev_res on_login(json j, std::shared_ptr<server_session> s);
    ev_res on_auth(json j, std::shared_ptr<server_session> s);
    ev_res on_sms_confirmation(json j, std::shared_ptr<server_session> s);
-   ev_res on_create_group(json j, std::shared_ptr<server_session> s);
    ev_res on_join_group(json j, std::shared_ptr<server_session> session);
    ev_res on_user_msg( std::string msg, json j
                      , std::shared_ptr<server_session> session);

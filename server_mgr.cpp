@@ -36,9 +36,6 @@ ev_res on_message( server_mgr& mgr
    }
 
    if (s->is_auth()) {
-      if (cmd == "create_group")
-         return mgr.on_create_group(std::move(j), s);
-
       if (cmd == "join_group")
          return mgr.on_join_group(std::move(j), s);
 
@@ -357,35 +354,6 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
    resp["result"] = "ok";
    s->send(resp.dump());
    return ev_res::sms_confirmation_ok;
-}
-
-ev_res
-server_mgr::on_create_group(json j, std::shared_ptr<server_session> s)
-{
-   auto const hash = j.at("hash").get<std::string>();
-
-   auto const new_group = channels.insert({hash, {}});
-   if (!new_group.second) {
-      // Group already exists.
-      json resp;
-      resp["cmd"] = "create_group_ack";
-      resp["result"] = "fail";
-      resp["code"] = hash;
-      auto const tmp = resp.dump();
-      s->send(tmp);
-      //std::cout << tmp << std::endl;
-      return ev_res::create_group_fail;
-   }
-
-   json resp;
-   resp["cmd"] = "create_group_ack";
-   resp["result"] = "ok";
-   resp["code"] = hash;
-   auto const tmp = resp.dump();
-   //std::cout << tmp << std::endl;
-
-   s->send(std::move(tmp));
-   return ev_res::create_group_ok;
 }
 
 ev_res

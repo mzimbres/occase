@@ -1,4 +1,4 @@
-#include "client_mgr_sim.hpp"
+#include "client_mgr_user_msg.hpp"
 
 #include "menu_parser.hpp"
 #include "client_session.hpp"
@@ -6,12 +6,12 @@
 namespace rt
 {
 
-client_mgr_sim::client_mgr_sim(options_type op_)
+client_mgr_user_msg::client_mgr_user_msg(options_type op_)
 : op(op_)
 {
 }
 
-int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
+int client_mgr_user_msg::on_read(std::string msg, std::shared_ptr<client_type> s)
 {
    auto const j = json::parse(msg);
    //std::cout << j << std::endl;
@@ -37,7 +37,7 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
       }
 
       std::cout << "Test sim: Error." << std::endl;
-      throw std::runtime_error("client_mgr_sim::on_read1");
+      throw std::runtime_error("client_mgr_user_msg::on_read1");
       return -1;
    }
 
@@ -61,7 +61,7 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
       }
 
       std::cout << "Test sim: join_group_ack fail." << std::endl;
-      throw std::runtime_error("client_mgr_sim::on_read2");
+      throw std::runtime_error("client_mgr_user_msg::on_read2");
       return -1;
    }
 
@@ -69,15 +69,15 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
       auto const res = j.at("result").get<std::string>();
       if (res == op.expected) {
          auto const id = j.at("id").get<int>();
-         std::cout << "Receiving group_msg_ack: " << op.user << " " << id << " " << hashes.at(id).hash << std::endl;
          if (hashes.at(id).ack)
-            throw std::runtime_error("client_mgr_sim::on_read4");
+            throw std::runtime_error("client_mgr_user_msg::on_read4");
          hashes.at(id).ack = true;
+         //std::cout << "Receiving group_msg_ack: " << op.user << " " << id << " " << hashes.at(id).hash << std::endl;
          return 1;
       }
 
       std::cout << "Test sim: send_group_msg_ack: fail." << std::endl;
-      throw std::runtime_error("client_mgr_sim::on_read3");
+      throw std::runtime_error("client_mgr_user_msg::on_read3");
       return -1;
    }
 
@@ -87,12 +87,16 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
       //std::cout << j << std::endl;
       auto const from = j.at("from").get<std::string>();
       //std::cout << from << " != " << op.user << std::endl;
-      if (from != op.user)
+      if (from != op.user) {
+         users.insert(from);
+         //std::cout << "Pushing on " << op.user << " stack: " << from
+         //          << std::endl;
          return 1;
+      }
 
       auto const id = j.at("id").get<int>();
       if (hashes.at(id).msg)
-         throw std::runtime_error("client_mgr_sim::on_read5");
+         throw std::runtime_error("client_mgr_user_msg::on_read5");
 
       hashes.at(id).msg = true;
 
@@ -101,15 +105,23 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
          //std::cout << group_counter << " " << std::size(hashes) << std::endl;
          for (auto const& o : hashes)
             if (!o.ack || !o.msg)
-               std::cout << "client_mgr_sim: Test fails." << std::endl;
+               std::cout << "client_mgr_user_msg: Test fails." << std::endl;
 
          //std::cout << "FINISH group messages." << std::endl;
+         // Now we begin sending messages to the users from which we
+         // received any group message.
+         if (std::empty(users)) {
+            std::cout << "Users set empty. Leaving ..." << std::endl;
+            return -1;
+         }
+
+         //for (auto const& o : users)
+         //   send_user_msg(s, o);
 
          return -1;
       }
 
-      std::cout << "Receiving group_msg:     " << op.user << " " << id
-                << " " << hashes.at(id).hash <<std::endl;
+      //std::cout << "Receiving group_msg:     " << op.user << " " << id << " " << hashes.at(id).hash <<std::endl;
       send_group_msg(s);
       return 1;
    }
@@ -128,11 +140,11 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
    }
 
    std::cout << "Server error: Unknown command." << std::endl;
-   throw std::runtime_error("client_mgr_sim::on_read4");
+   throw std::runtime_error("client_mgr_user_msg::on_read4");
    return -1;
 }
 
-int client_mgr_sim::on_handshake(std::shared_ptr<client_type> s)
+int client_mgr_user_msg::on_handshake(std::shared_ptr<client_type> s)
 {
    json j;
    j["cmd"] = "auth";
@@ -143,14 +155,14 @@ int client_mgr_sim::on_handshake(std::shared_ptr<client_type> s)
    return 1;
 }
 
-int client_mgr_sim::on_closed(boost::system::error_code ec)
+int client_mgr_user_msg::on_closed(boost::system::error_code ec)
 {
    std::cout << "Test sim: fail." << std::endl;
-   throw std::runtime_error("client_mgr_sim::on_closed");
+   throw std::runtime_error("client_mgr_user_msg::on_closed");
    return -1;
 };
 
-void client_mgr_sim::send_group_msg(std::shared_ptr<client_type> s)
+void client_mgr_user_msg::send_group_msg(std::shared_ptr<client_type> s)
 {
    // For each one of these messages sent we shall receive first one
    // server ack and then it again from the broadcast channel it was
@@ -162,13 +174,27 @@ void client_mgr_sim::send_group_msg(std::shared_ptr<client_type> s)
    j_msg["msg"] = "Group message";
    j_msg["id"] = group_counter;
    s->send_msg(j_msg.dump());
-   std::cout << "Sending   group_msg      " << op.user << " "
-             << group_counter << " " << hashes.at(group_counter).hash
-             << std::endl;
+   //std::cout << "Sending   group_msg      " << op.user << " "
+   //          << group_counter << " " << hashes.at(group_counter).hash
+   //          << std::endl;
    group_counter++;
 }
 
-client_mgr_sim::~client_mgr_sim()
+void client_mgr_user_msg::send_user_msg( std::shared_ptr<client_type> s
+                                  , std::string to)
+{
+   json j_msg;
+   j_msg["cmd"] = "user_msg";
+   j_msg["from"] = op.user;
+   j_msg["to"] = to;
+   j_msg["msg"] = "User message";
+   j_msg["id"] = user_counter;
+   s->send_msg(j_msg.dump());
+   //std::cout << "Sending   user_msg       " << op.user << " " << user_counter << std::endl;
+   user_counter++;
+}
+
+client_mgr_user_msg::~client_mgr_user_msg()
 {
 }
 

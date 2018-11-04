@@ -28,6 +28,7 @@ client_objs += client_mgr_login.o
 client_objs += client_mgr_sms.o
 client_objs += client_mgr_accept_timer.o
 client_objs += client_mgr_sim.o
+client_objs += client_mgr_user_msg.o
 
 aedis_objs =
 aedis_objs += redis_session.o

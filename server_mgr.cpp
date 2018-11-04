@@ -268,6 +268,7 @@ ev_res server_mgr::on_login(json j, std::shared_ptr<server_session> s)
    json resp;
    resp["cmd"] = "login_ack";
    resp["result"] = "ok";
+   resp["menu"] = menu;
    s->send(resp.dump());
    return ev_res::login_ok;
 }

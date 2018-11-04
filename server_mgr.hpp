@@ -56,6 +56,7 @@ struct server_mgr_cf {
    int close_frame_timeout;
 
    std::string redis_menu_key;
+   std::string redis_msg_prefix;
 
    auto get_timeouts() const noexcept
    {
@@ -108,9 +109,9 @@ private:
    redis_session redis_pub_session;
    std::string const redis_group_channel;
    std::string const redis_menu_key;
-   std::string const keyspace_prefix {"__keyspace@0__:"};
-   std::string const user_msg_prefix {"user_msg:"};
-   std::string const user_msg_channel_prefix = keyspace_prefix + user_msg_prefix;
+   std::string const redis_keyspace_prefix {"__keyspace@0__:"};
+   std::string const redis_msg_prefix;
+   std::string const redis_notify_prefix;
    std::string menu;
 
    boost::asio::steady_timer stats_timer;

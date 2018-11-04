@@ -70,6 +70,11 @@ server_op get_server_op(int argc, char* argv[])
    , po::value<std::string>(&op.mgr.redis_menu_key)->default_value("menu")
    , "Redis key holding the menu."
    )
+   ("redis-msg-prefix"
+   , po::value<std::string>(&op.mgr.redis_msg_prefix)->default_value("msg")
+   , "That prefix that will be incorporated in the keys that hold"
+     " user messages."
+   )
    ;
 
    po::variables_map vm;        

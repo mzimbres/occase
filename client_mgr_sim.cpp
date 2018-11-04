@@ -198,6 +198,8 @@ int client_mgr_gmsg_check::on_read( std::string msg
             cmds.push(cmd.dump());
          }
          tot_msgs = op.n_publishers * std::size(h) * op.msgs_per_channel;
+         std::cout << "Number of expected msgs for " << op.user
+                   << " " << tot_msgs << std::endl;
          s->send_msg(cmds.top());
          return 1;
       }
@@ -214,7 +216,7 @@ int client_mgr_gmsg_check::on_read( std::string msg
 
          cmds.pop();
          if (std::empty(cmds)) {
-            //std::cout << "Test sim: join groups ok." << std::endl;
+            //std::cout << op.user << ": ready." << std::endl;
             return 1;
          }
 
@@ -235,8 +237,8 @@ int client_mgr_gmsg_check::on_read( std::string msg
       //auto const from = j.at("from").get<std::string>();
       //std::cout << from << " != " << op.user << std::endl;
       --tot_msgs;
-      std::cout << "Remaining msgs for user " << op.user << ": "
-                << tot_msgs << std::endl;
+      //std::cout << "Remaining msgs for user " << op.user << ": "
+      //          << tot_msgs << std::endl;
       if (tot_msgs == 0) {
          std::cout << "Test finished for user: " << op.user << std::endl;
          return -1;

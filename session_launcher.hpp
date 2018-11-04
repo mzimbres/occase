@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <stdexcept>
+#include <functional>
 
 #include <boost/asio.hpp>
 
@@ -29,6 +30,7 @@ private:
    client_session_cf ccf;
    launcher_op lop;
    boost::asio::steady_timer timer;
+   std::function<void(void)> call = [](){};
  
 public:
    session_launcher( boost::asio::io_context& ioc_
@@ -42,19 +44,13 @@ public:
    , timer(ioc)
    {}
 
+   void set_call(std::function<void(void)> c)
+   {
+      call = c;
+   }
+
    ~session_launcher()
    {
-      // TODO: Implement this.
-      //std::vector<std::shared_ptr<client_session<client_mgr_sim>>> sessions;
-      //auto sent = 0;
-      //auto recv = 0;
-      //for (auto const& session : sessions) {
-      //   sent += session->get_sent_msgs();
-      //   recv += session->get_recv_msgs();
-      //}
-
-      //std::cout << "Sent:     " << sent << std::endl;
-      //std::cout << "Received: " << recv << std::endl;
    }
 
    void run(boost::system::error_code ec)
@@ -66,6 +62,12 @@ public:
          if (!std::empty(lop.final_msg))
             std::cout << lop.final_msg << " "
                       << lop.end << std::endl;
+         timer.expires_after(lop.interval);
+
+         auto handler = [p = this->shared_from_this()](auto ec)
+         { p->call(); };
+
+         timer.async_wait(handler);
          return;
       }
 

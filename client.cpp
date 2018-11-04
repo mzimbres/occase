@@ -159,7 +159,7 @@ struct client_op {
    auto make_sim_cf() const
    {
       return launcher_op
-      { initial_user, initial_user + 2 * users_size
+      { initial_user, initial_user + 1 * users_size
       , std::chrono::milliseconds {launch_interval}
       , {"Launch of sim clients:         "}
       };
@@ -168,7 +168,7 @@ struct client_op {
    auto make_gmsg_check_cf() const
    {
       return launcher_op
-      { initial_user + 2 * users_size
+      { initial_user + 1 * users_size
       , initial_user + 3 * users_size
       , std::chrono::milliseconds {launch_interval}
       , {"Launch of sim clients:         "}
@@ -288,21 +288,30 @@ void test_simulation(client_op const& op)
    boost::asio::io_context ioc;
 
    auto const sim_op =  op.make_sim_cf();
-   auto const n = sim_op.end - sim_op.begin;
-   std::make_shared< session_launcher<client_mgr_gmsg_check>
+
+   auto const next = [&ioc, &op, &sim_op]()
+   {
+      std::cout << "Calling next." << std::endl;
+      auto const s2 = std::make_shared< session_launcher<client_mgr_sim>
+                      >( ioc
+                       , cmgr_sim_op
+                         { "", "ok", op.msgs_per_group}
+                       , op.make_session_cf()
+                       , sim_op
+                       );
+      s2->run({});
+   };
+
+   auto const s = std::make_shared< session_launcher<client_mgr_gmsg_check>
                    >( ioc
-                    , cmgr_gmsg_check_op {"", n, op.msgs_per_group}
+                    , cmgr_gmsg_check_op
+                      {"", sim_op.end - sim_op.begin
+                      , op.msgs_per_group}
                     , op.make_session_cf()
                     , op.make_gmsg_check_cf()
-                    )->run({});
-
-   std::make_shared< session_launcher<client_mgr_sim>
-                   >( ioc
-                    , cmgr_sim_op
-                      { "", "ok", op.msgs_per_group}
-                    , op.make_session_cf()
-                    , sim_op
-                    )->run({});
+                    );
+   s->set_call(next);
+   s->run({});
 
    ioc.run();
 }

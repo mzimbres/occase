@@ -11,6 +11,7 @@ using namespace rt;
 struct menu_op {
    int menu;
    int indentation;
+   int sim_length;
    bool hash = false;
 };
 
@@ -35,7 +36,7 @@ void op0(menu_op op)
 
 void op3(menu_op op)
 {
-   auto const menu = gen_sim_menu();
+   auto const menu = gen_sim_menu(op.sim_length);
    foo(menu, op);
 }
 
@@ -127,6 +128,9 @@ int main(int argc, char* argv[])
       ("indentation,i"
       , po::value<int>(&op.indentation)->default_value(-1)
       , "Indentation of the menu output.")
+      ("sim-length,l"
+      , po::value<int>(&op.sim_length)->default_value(2)
+      , "Length of simulated children.")
       ("hash,a", "Output channel codes only.")
    ;
 

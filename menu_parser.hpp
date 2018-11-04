@@ -9,7 +9,7 @@ namespace rt
 {
 
 json gen_location_menu();
-json gen_sim_menu();
+json gen_sim_menu(int l);
 
 // Generates a vector with all create_group command for a given menu.
 std::vector<std::string> gen_create_groups(json menu);

@@ -40,7 +40,6 @@ struct client_op {
    int auth_timeout = 3;
    int sim_runs = 2;
    int group_begin;
-   int number_of_groups;
    int msgs_per_group;
 
    auto make_session_cf() const
@@ -168,21 +167,6 @@ struct client_op {
    }
 };
 
-void basic_tests6(client_op const& op)
-{
-   boost::asio::io_context ioc;
-   std::make_shared<client_session<client_mgr_cg>
-                   >( ioc
-                    , op.make_session_cf()
-                    , client_mgr_cg::options_type
-                      { "Marcelo2"
-                      , "fail"
-                      , op.group_begin
-                      , op.number_of_groups}
-                    )->run();
-   ioc.run();
-}
-
 // Run tests while registering users and creating groups.
 void prepare_server(client_op const& op)
 {
@@ -265,16 +249,6 @@ void prepare_server(client_op const& op)
                     , op.make_wrong_sms_cf3()
                     )->run({});
 
-   std::make_shared<client_session<client_mgr_cg>
-                   >( ioc
-                    , op.make_session_cf()
-                    , client_mgr_cg::options_type
-                      { "Marcelo1"
-                      , "ok"
-                      , op.group_begin
-                      , op.number_of_groups}
-                    )->run();
-
    json j1;
    j1["cmd"] = "logrn";
    j1["tel"] = "aaaa";
@@ -307,8 +281,7 @@ void test_simulation(client_op const& op)
    std::make_shared< session_launcher<client_mgr_sim>
                    >( ioc
                     , cmgr_sim_op
-                      { "", "ok", op.number_of_groups
-                      , op.msgs_per_group}
+                      { "", "ok", op.msgs_per_group}
                     , op.make_session_cf()
                     , op.make_sim_cf()
                     )->run({});
@@ -393,10 +366,6 @@ int main(int argc, char* argv[])
          , po::value<int>(&op.group_begin)->default_value(0)
          , "Code of the first group."
          )
-         ("number-of-groups,a"
-         , po::value<int>(&op.number_of_groups)->default_value(20)
-         , "Number of groups to generate."
-         )
 
          ("msgs-per-group,b"
          , po::value<int>(&op.msgs_per_group)->default_value(20)
@@ -415,7 +384,6 @@ int main(int argc, char* argv[])
 
       std::cout << "==========================================" << std::endl;
       prepare_server(op);
-      basic_tests6(op);
       std::cout << "Basic tests:        ok" << std::endl;
 
       timer t;

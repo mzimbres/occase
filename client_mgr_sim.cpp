@@ -9,15 +9,6 @@ namespace rt
 client_mgr_sim::client_mgr_sim(options_type op_)
 : op(op_)
 {
-   for (auto i = 0; i < op.number_of_groups; ++i) {
-      auto const hash = to_str(i);
-      for (auto i = 0; i < op.msgs_per_group; ++i)
-         hashes.push_back({false, false, hash});
-      json cmd;
-      cmd["cmd"] = "join_group";
-      cmd["hash"] = hash;
-      cmds.push(cmd.dump());
-   }
 }
 
 int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
@@ -30,6 +21,17 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
       auto const res = j.at("result").get<std::string>();
       if (res == "ok") {
          //std::cout << "Sending " << cmds.top() << std::endl;
+         auto const menu_str = j.at("menu").get<std::string>();
+         auto const jmenu = json::parse(menu_str);
+         auto const h = get_hashes(jmenu);
+         for (auto const& o : h) {
+            for (auto i = 0; i < op.msgs_per_group; ++i)
+               hashes.push_back({false, false, o});
+            json cmd;
+            cmd["cmd"] = "join_group";
+            cmd["hash"] = o;
+            cmds.push(cmd.dump());
+         }
          s->send_msg(cmds.top());
          return 1;
       }
@@ -84,8 +86,9 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
       //std::cout << "Group msg: " << body << std::endl;
       //std::cout << j << std::endl;
       auto const from = j.at("from").get<std::string>();
+      //std::cout << from << " != " << op.user << std::endl;
       if (from != op.user) {
-         users_tmp.insert(from);
+         users.insert(from);
          //std::cout << "Pushing on " << op.user << " stack: " << from
          //          << std::endl;
          return 1;
@@ -97,7 +100,9 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
 
       hashes.at(id).msg = true;
 
+      //std::cout << group_counter << " " << std::size(hashes) << std::endl;
       if (group_counter == std::size(hashes)) {
+         //std::cout << group_counter << " " << std::size(hashes) << std::endl;
          for (auto const& o : hashes)
             if (!o.ack || !o.msg)
                std::cout << "client_mgr_sim: Test fails." << std::endl;
@@ -105,17 +110,15 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
          //std::cout << "FINISH group messages." << std::endl;
          // Now we begin sending messages to the users from which we
          // received any group message.
-         for (auto const& o : users_tmp)
-            users.push(o);
-
          if (std::empty(users)) {
-            //std::cout << "Users stack empty. Leaving ..." << std::endl;
+            std::cout << "Users set empty. Leaving ..." << std::endl;
             return -1;
          }
 
-         //std::cout << "Users stack size " << std::size(users) << std::endl;
-         send_user_msg(s);
-         return 1;
+         //for (auto const& o : users)
+         //   send_user_msg(s, o);
+
+         return -1;
       }
 
       //std::cout << "Receiving group_msg:     " << op.user << " " << id << " " << hashes.at(id).hash <<std::endl;
@@ -125,17 +128,14 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
 
    if (cmd == "user_msg_server_ack") {
       //auto const id = j.at("id").get<int>();
-      //std::cout << "Ack received from " << id << std::endl;
-      users.pop();
-      if (std::empty(users))
-         return -1;
-      send_user_msg(s);
+      //std::cout << "Server ack received from " << id << std::endl;
       return 1;
    }
 
    if (cmd == "user_msg") {
+      auto const from = j.at("from").get<std::string>();
       auto const msg = j.at("msg").get<std::string>();
-      std::cout << msg << std::endl;
+      std::cout << from << " " << msg << std::endl;
       return 1;
    }
 
@@ -174,16 +174,19 @@ void client_mgr_sim::send_group_msg(std::shared_ptr<client_type> s)
    j_msg["msg"] = "Group message";
    j_msg["id"] = group_counter;
    s->send_msg(j_msg.dump());
-   //std::cout << "Sending   group_msg      " << op.user << " " << group_counter << " " << hashes.at(group_counter).hash << std::endl;
+   //std::cout << "Sending   group_msg      " << op.user << " "
+   //          << group_counter << " " << hashes.at(group_counter).hash
+   //          << std::endl;
    group_counter++;
 }
 
-void client_mgr_sim::send_user_msg(std::shared_ptr<client_type> s)
+void client_mgr_sim::send_user_msg( std::shared_ptr<client_type> s
+                                  , std::string to)
 {
    json j_msg;
    j_msg["cmd"] = "user_msg";
    j_msg["from"] = op.user;
-   j_msg["to"] = users.top(); // TODO
+   j_msg["to"] = to;
    j_msg["msg"] = "User message";
    j_msg["id"] = user_counter;
    s->send_msg(j_msg.dump());

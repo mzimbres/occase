@@ -20,7 +20,6 @@ class client_session;
 struct cmgr_sim_op {
    std::string user;
    std::string expected;
-   int number_of_groups;
    int msgs_per_group;
 };
 
@@ -39,11 +38,10 @@ private:
    std::vector<ch_msg_helper> hashes;
    std::size_t group_counter = 0;
    std::size_t user_counter = 0;
-   std::set<std::string> users_tmp;
-   std::stack<std::string> users;
+   std::set<std::string> users;
 
    void send_group_msg(std::shared_ptr<client_type> s);
-   void send_user_msg(std::shared_ptr<client_type> s);
+   void send_user_msg(std::shared_ptr<client_type> s, std::string to);
 
 public:
    client_mgr_sim(options_type op);

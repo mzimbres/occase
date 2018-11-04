@@ -181,11 +181,20 @@ json gen_sim_menu()
 
    std::vector<json> js;
    for (auto i = 0; i < 3; ++i) {
-      auto const name = std::to_string(i);
+      auto const name1 = std::to_string(i);
+      std::vector<json> js1;
+      for (auto j = 0; j < 2; ++j) {
+         auto const name2 = name1 + "." + std::to_string(j);
+         json j_tmp2;
+         j_tmp2["name"] = name2;
+         j_tmp2["sub_desc"] = "Children";
+         j_tmp2["sub"] = gen_sim_leaf_node(4, name2 + ".");
+         js1.push_back(j_tmp2);
+      }
       json j_tmp;
-      j_tmp["name"] = name;
+      j_tmp["name"] = name1;
       j_tmp["sub_desc"] = "Children";
-      j_tmp["sub"] = gen_sim_leaf_node(4, name + ".");
+      j_tmp["sub"] = js1;
       js.push_back(j_tmp);
    }
 

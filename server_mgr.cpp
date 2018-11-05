@@ -85,8 +85,9 @@ void broadcast_msg(channel_type& members, std::string const& msg)
    }
 }
 
-server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc)
-: timeouts(cf.get_timeouts())
+server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc_)
+: ioc(ioc_)
+, timeouts(cf.get_timeouts())
 , redis_gsub_session(cf.get_redis_session_cf(), ioc)
 , redis_ksub_session(cf.get_redis_session_cf(), ioc)
 , redis_pub_session(cf.get_redis_session_cf(), ioc)
@@ -125,17 +126,23 @@ server_mgr::redis_group_msg_handler( boost::system::error_code const& ec
       assert(std::size(data) == 3);
       assert(data[1] == redis_group_channel);
 
-      auto const j = json::parse(data.back());
-      auto const to = j.at("to").get<std::string>();
-      auto const g = channels.find(to);
-      if (g == std::end(channels)) {
-         // Should not happen as the group is checked on
-         // on_user_group:msg before being sent to redis for broadcast.
-         assert(false);
-         return;
-      }
+      auto const tmp = [this, msg = std::move(data.back())]()
+      {
+         auto const j = json::parse(msg);
+         auto const to = j.at("to").get<std::string>();
+         auto const g = channels.find(to);
+         if (g == std::end(channels)) {
+            // Should not happen as the group is checked on
+            // on_user_group:msg before being sent to redis for broadcast.
+            assert(false);
+            return;
+         }
 
-      broadcast_msg(g->second, data.back());
+         broadcast_msg(g->second, msg);
+      };
+
+      asio::post(ioc, tmp);
+
       return;
    }
 }

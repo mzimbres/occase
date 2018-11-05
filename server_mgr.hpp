@@ -92,6 +92,7 @@ using channel_type =
 
 class server_mgr {
 private:
+   asio::io_context& ioc;
    // Maps a user id (telephone, email, etc.) to a user obj.
    std::unordered_map< std::string
                      , std::weak_ptr<server_session>> sessions;

@@ -9,11 +9,11 @@ boost_libs    += $(boost_lib_dir)/libboost_program_options.a
 DEBUG         = -g -ggdb3
 LDFLAGS       = -lpthread
 CPPFLAGS      = -I. -I$(boost_inc_dir) -I$(json_inc_dir) \
-                -std=c++17 -O2 #$(DEBUG) -Wall # -Werror
+                -std=c++17 -O2 $(DEBUG) -Wall # -Werror
 
 DIST_NAME   = sellit
 
-exes = client server menu_dump aedis
+exes = client server menu_dump aedis read_only_tests
 
 common_objs = json_utils.o
 common_objs += menu_parser.o
@@ -57,6 +57,9 @@ Makefile.dep:
 -include Makefile.dep
 
 client: % : %.o $(client_objs) $(common_objs)
+	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(boost_libs)
+
+read_only_tests: % : %.o $(client_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(boost_libs)
 
 server: % : %.o $(server_objs) $(common_objs) $(aedis_objs)

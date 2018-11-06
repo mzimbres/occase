@@ -19,9 +19,7 @@
 #include "client_mgr_sms.hpp"
 #include "client_mgr_sim.hpp"
 #include "client_session.hpp"
-#include "client_mgr_login.hpp"
 #include "session_launcher.hpp"
-#include "client_mgr_accept_timer.hpp"
 
 using namespace rt;
 
@@ -33,7 +31,6 @@ struct client_op {
    std::string sms;
    int initial_user = 0;
    int users_size = 10;
-   int handshake_tm_test_size = 10;
    int handshake_tm = 3;
    int launch_interval = 100;
    int auth_timeout = 3;
@@ -49,51 +46,6 @@ struct client_op {
       , std::chrono::seconds {handshake_tm}
       , std::chrono::seconds {auth_timeout}
       };
-   }
-
-   auto make_handshake_laucher_op() const
-   {
-      return launcher_op
-      { 0, handshake_tm_test_size
-      , std::chrono::milliseconds {launch_interval}
-      , {"Handshake test launch:         "}
-      };
-   }
-
-   auto make_after_handshake_laucher_op() const
-   {
-      return launcher_op
-      { 0, handshake_tm_test_size
-      , std::chrono::milliseconds {launch_interval}
-      , {"After handshake test launch:   "}
-      };
-   }
-
-   auto make_sms_tm_laucher_op1() const
-   {
-      return launcher_op
-      { initial_user
-      , initial_user + users_size
-      , std::chrono::milliseconds {launch_interval}
-      , {"Login test with ret = -1:      "}};
-   }
-
-   auto make_sms_tm_laucher_op2() const
-   {
-      return launcher_op
-      { initial_user
-      , initial_user + users_size
-      , std::chrono::milliseconds {launch_interval}
-      , {"Login test with ret = -2:      "}};
-   }
-
-   auto make_sms_tm_laucher_op3() const
-   {
-      return launcher_op
-      { initial_user
-      , initial_user + users_size
-      , std::chrono::milliseconds {launch_interval}
-      , {"Login test with ret = -3:      "}};
    }
 
    auto make_correct_sms_cf1() const
@@ -126,36 +78,6 @@ struct client_op {
       };
    }
 
-   auto make_wrong_sms_cf1() const
-   {
-      return launcher_op
-      { initial_user + 3 * users_size
-      , initial_user + 4 * users_size
-      , std::chrono::milliseconds {launch_interval}
-      , {"Wrong sms test with ret = -1:  "}
-      };
-   }
-
-   auto make_wrong_sms_cf2() const
-   {
-      return launcher_op
-      { initial_user + 4 * users_size
-      , initial_user + 5 * users_size
-      , std::chrono::milliseconds {launch_interval}
-      , {"Wrong sms test with ret = -2:  "}
-      };
-   }
-
-   auto make_wrong_sms_cf3() const
-   {
-      return launcher_op
-      { initial_user + 5 * users_size
-      , initial_user + 6 * users_size
-      , std::chrono::milliseconds {launch_interval}
-      , {"Wrong sms test with ret = -3:  "}
-      };
-   }
-
    auto make_sim_cf() const
    {
       return launcher_op
@@ -181,41 +103,6 @@ void prepare_server(client_op const& op)
 {
    boost::asio::io_context ioc;
 
-   std::make_shared< session_launcher<cmgr_handshake_tm>
-                   >( ioc
-                    , cmgr_handshake_op {}
-                    , op.make_session_cf()
-                    , op.make_handshake_laucher_op()
-                    )->run({});
-
-   std::make_shared< session_launcher<client_mgr_accept_timer>
-                   >( ioc
-                    , cmgr_handshake_op {}
-                    , op.make_session_cf()
-                    , op.make_after_handshake_laucher_op()
-                    )->run({});
-
-   std::make_shared< session_launcher<client_mgr_login>
-                   >( ioc
-                    , cmgr_login_cf { "" , "ok" , -1}
-                    , op.make_session_cf()
-                    , op.make_sms_tm_laucher_op1()
-                    )->run({});
-
-   std::make_shared< session_launcher<client_mgr_login>
-                   >( ioc
-                    , cmgr_login_cf { "" , "ok" , -2}
-                    , op.make_session_cf()
-                    , op.make_sms_tm_laucher_op2()
-                    )->run({});
-
-   std::make_shared< session_launcher<client_mgr_login>
-                   >( ioc
-                    , cmgr_login_cf { "" , "ok" , -3}
-                    , op.make_session_cf()
-                    , op.make_sms_tm_laucher_op3()
-                    )->run({});
-
    std::make_shared< session_launcher<client_mgr_sms>
                    >( ioc
                     , cmgr_sms_op {"", "ok", op.sms, -1}
@@ -236,50 +123,6 @@ void prepare_server(client_op const& op)
                     , op.make_session_cf()
                     , op.make_correct_sms_cf3()
                     )->run({});
-
-   std::make_shared< session_launcher<client_mgr_sms>
-                   >( ioc
-                    , cmgr_sms_op {"", "fail", "8r47", -1}
-                    , op.make_session_cf()
-                    , op.make_wrong_sms_cf1()
-                    )->run({});
-
-   std::make_shared< session_launcher<client_mgr_sms>
-                   >( ioc
-                    , cmgr_sms_op {"", "fail", "8r47", -2}
-                    , op.make_session_cf()
-                    , op.make_wrong_sms_cf2()
-                    )->run({});
-
-   std::make_shared< session_launcher<client_mgr_sms>
-                   >( ioc
-                    , cmgr_sms_op {"", "fail", "8r47", -3}
-                    , op.make_session_cf()
-                    , op.make_wrong_sms_cf3()
-                    )->run({});
-
-   json j1;
-   j1["cmd"] = "logrn";
-   j1["tel"] = "aaaa";
-
-   json j2;
-   j2["crd"] = "login";
-   j2["tel"] = "bbbb";
-
-   json j3;
-   j3["crd"] = "login";
-   j3["Teal"] = "cccc";
-
-   std::vector<std::string> cmds
-   { {j1.dump()} , {j2.dump()} , {j3.dump()} };
-
-   // Sends commands with typos and expects the server to not crash!
-   for (auto const& cmd : cmds)
-      std::make_shared<client_session<client_mgr_login_typo>
-                      >( ioc
-                       , op.make_session_cf()
-                       , cmd)->run();
-
    ioc.run();
 }
 
@@ -363,12 +206,6 @@ int main(int argc, char* argv[])
          , "Interval used to launch test clients."
          )
 
-         ("handshake-test-size,s"
-         , po::value<int>(&op.handshake_tm_test_size)->default_value(10)
-         , "Number of handshake test clients. Also used for the "
-           "after handshake timeout i.e. the time the client has "
-           "the send the first command."
-         )
          ("handshake-timeout,k"
          , po::value<int>(&op.handshake_tm)->default_value(3)
          , "Time before which the server should have given "
@@ -410,7 +247,7 @@ int main(int argc, char* argv[])
 
       std::cout << "==========================================" << std::endl;
       prepare_server(op);
-      std::cout << "Basic tests:        ok" << std::endl;
+      std::cout << "==========================================" << std::endl;
 
       timer t;
       while (op.sim_runs != 0) {

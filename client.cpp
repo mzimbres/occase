@@ -167,7 +167,7 @@ int main(int argc, char* argv[])
          )
 
          ("msgs-per-group,b"
-         , po::value<int>(&op.msgs_per_group)->default_value(20)
+         , po::value<int>(&op.msgs_per_group)->default_value(3)
          , "Number of messages per group used in the simulation."
          )
       ;

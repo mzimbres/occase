@@ -34,7 +34,7 @@ void op0(menu_op op)
    foo(menu, op);
 }
 
-void op3(menu_op op)
+void op1(menu_op op)
 {
    auto const menu = gen_sim_menu(op.sim_length);
    foo(menu, op);
@@ -53,18 +53,6 @@ json gen_location_menu1()
    j["sub"] = j3;
 
    return j;
-}
-
-void op2()
-{
-   auto menu = gen_location_menu1();
-   //std::cout << menu.dump(4) << std::endl;
-
-   std::cout << menu.dump() << std::endl;
-
-   auto const cmds = gen_create_groups(menu);
-   for (auto const& o : cmds)
-      std::cout << o << std::endl;
 }
 
 json gen_location_menu3()
@@ -99,16 +87,6 @@ json gen_location_menu0()
    return j;
 }
 
-void op1()
-{
-   auto menu = gen_location_menu0();
-   //std::cout << menu.dump(4) << std::endl;
-
-   auto const cmds = gen_create_groups(menu);
-   for (auto const& o : cmds)
-      std::cout << o << std::endl;
-}
-
 namespace po = boost::program_options;
 
 int main(int argc, char* argv[])
@@ -121,9 +99,7 @@ int main(int argc, char* argv[])
       , po::value<int>(&op.menu)->default_value(0)
       , "Choose the menu. Available options:\n"
         " 0: Atibaia - Sao Paulo.\n"
-        " 1: Example 1.\n"
-        " 2: Example 2.\n"
-        " 3: Simulated.\n"
+        " 1: Simulated.\n"
       )
       ("indentation,i"
       , po::value<int>(&op.indentation)->default_value(-1)
@@ -147,9 +123,7 @@ int main(int argc, char* argv[])
       op.hash = true;
 
    switch (op.menu) {
-      case 1: op1(); break;
-      case 2: op2(); break;
-      case 3: op3(op); break;
+      case 1: op1(op); break;
       default:
          op0(op);
    }

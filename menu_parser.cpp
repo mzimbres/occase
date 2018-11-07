@@ -92,42 +92,6 @@ struct hash_gen_iter {
    }
 };
 
-std::vector<std::string> gen_create_groups(json menu)
-{
-   if (std::empty(menu))
-      return {};
-
-   std::vector<std::string> cmds;
-   hash_gen_iter iter(menu);
-   while (!iter.end()) {
-      json cmd;
-      cmd["cmd"] = "create_group";
-      cmd["hash"] = iter.current.value_prefix;
-      cmds.push_back(cmd.dump());
-      iter.next();
-   };
-
-   return cmds;
-}
-
-json gen_group_info(json menu)
-{
-   if (std::empty(menu))
-      return {};
-
-   std::vector<group_info> infos;
-   hash_gen_iter iter(menu);
-   while (!iter.end()) {
-      infos.push_back({iter.current.header, iter.current.value_prefix});
-      iter.next();
-   };
-
-   json j_infos;
-   j_infos["cmd"] = "group_infos";
-   j_infos["infos"] = infos;
-   return j_infos;
-}
-
 std::vector<std::string> get_hashes(json menu)
 {
    if (std::empty(menu))

@@ -13,7 +13,7 @@ CPPFLAGS      = -I. -I$(boost_inc_dir) -I$(json_inc_dir) \
 
 DIST_NAME   = sellit
 
-exes = client server menu_dump aedis read_only_tests
+exes = client server menu_dump aedis read_only_tests reg_users_tests
 
 common_objs = json_utils.o
 common_objs += menu_parser.o
@@ -60,6 +60,9 @@ client: % : %.o $(client_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(boost_libs)
 
 read_only_tests: % : %.o $(client_objs) $(common_objs)
+	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(boost_libs)
+
+reg_users_tests: % : %.o $(client_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(boost_libs)
 
 server: % : %.o $(server_objs) $(common_objs) $(aedis_objs)

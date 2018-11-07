@@ -34,8 +34,6 @@ struct client_op {
    int handshake_tm = 3;
    int launch_interval = 100;
    int auth_timeout = 3;
-   int sim_runs = 2;
-   int msgs_per_group;
 
    auto make_session_cf() const
    {
@@ -47,75 +45,63 @@ struct client_op {
       };
    }
 
-   auto make_sim_cf() const
+   auto make_correct_sms_cf1() const
    {
       return launcher_op
-      { initial_user, initial_user + 1 * users_size
+      { initial_user
+      , initial_user + users_size
       , std::chrono::milliseconds {launch_interval}
-      , {"Launch of sim clients:         "}
+      , {"Correct sms test with ret = -1:"}
       };
    }
 
-   auto make_gmsg_check_cf() const
+   auto make_correct_sms_cf2() const
    {
       return launcher_op
-      { initial_user + 1 * users_size
+      { initial_user + users_size
+      , initial_user + 2 * users_size
+      , std::chrono::milliseconds {launch_interval}
+      , {"Correct sms test with ret = -2:"}
+      };
+   }
+
+   auto make_correct_sms_cf3() const
+   {
+      return launcher_op
+      { initial_user + 2 * users_size
       , initial_user + 3 * users_size
       , std::chrono::milliseconds {launch_interval}
-      , {"Launch of sim clients:         "}
+      , {"Correct sms test with ret = -3:"}
       };
    }
 };
 
-void test_simulation(client_op const& op)
+void reg_users_tests(client_op const& op)
 {
    boost::asio::io_context ioc;
 
-   auto const sim_op =  op.make_sim_cf();
-
-   auto const next = [&ioc, &op, &sim_op]()
-   {
-      auto const s2 = std::make_shared< session_launcher<client_mgr_sim>
-                      >( ioc
-                       , cmgr_sim_op
-                         { "", "ok", op.msgs_per_group}
-                       , op.make_session_cf()
-                       , sim_op
-                       );
-      s2->run({});
-   };
-
-   auto const s = std::make_shared< session_launcher<client_mgr_gmsg_check>
+   std::make_shared< session_launcher<client_mgr_sms>
                    >( ioc
-                    , cmgr_gmsg_check_op
-                      {"", sim_op.end - sim_op.begin
-                      , op.msgs_per_group}
+                    , cmgr_sms_op {"", "ok", op.sms, -1}
                     , op.make_session_cf()
-                    , op.make_gmsg_check_cf()
-                    );
-   s->set_call(next);
-   s->run({});
+                    , op.make_correct_sms_cf1()
+                    )->run({});
 
+   std::make_shared< session_launcher<client_mgr_sms>
+                   >( ioc
+                    , cmgr_sms_op {"", "ok", op.sms, -2}
+                    , op.make_session_cf()
+                    , op.make_correct_sms_cf2()
+                    )->run({});
+
+   std::make_shared< session_launcher<client_mgr_sms>
+                   >( ioc
+                    , cmgr_sms_op {"", "ok", op.sms, -3}
+                    , op.make_session_cf()
+                    , op.make_correct_sms_cf3()
+                    )->run({});
    ioc.run();
 }
-
-class timer {
-private:
-  std::chrono::time_point<std::chrono::system_clock> m_start;
-public:
-  timer() : m_start(std::chrono::system_clock::now()) {}
-  auto get_count() const
-  { 
-    auto const end = std::chrono::system_clock::now();
-    auto diff = end - m_start;
-    auto diff2 = std::chrono::duration_cast<std::chrono::seconds>(diff);
-    return diff2.count();
-  }
-  ~timer()
-  {
-    std::cout << "Time elapsed: " << get_count() << "s" << std::endl;
-  }
-};
 
 int main(int argc, char* argv[])
 {
@@ -160,16 +146,6 @@ int main(int argc, char* argv[])
          ("auth-timeout,l"
          , po::value<int>(&op.auth_timeout)->default_value(3)
          , "Time after before which the server should giveup witing for auth cmd.")
-
-         ("simulations,r"
-         , po::value<int>(&op.sim_runs)->default_value(2)
-         , "Number of simulation runs."
-         )
-
-         ("msgs-per-group,b"
-         , po::value<int>(&op.msgs_per_group)->default_value(20)
-         , "Number of messages per group used in the simulation."
-         )
       ;
 
       po::variables_map vm;        
@@ -181,13 +157,7 @@ int main(int argc, char* argv[])
          return 0;
       }
 
-      timer t;
-      while (op.sim_runs != 0) {
-         test_simulation(op);
-         std::cout << "Simulation run " << op.sim_runs
-                   << " completed." << std::endl;
-         --op.sim_runs;
-      }
+      reg_users_tests(op);
 
       return 0;
    } catch (std::exception const& e) {

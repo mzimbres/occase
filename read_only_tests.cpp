@@ -262,9 +262,7 @@ int main(int argc, char* argv[])
          return 0;
       }
 
-      std::cout << "==========================================" << std::endl;
       read_only_tests(op);
-      std::cout << "==========================================" << std::endl;
 
       return 0;
    } catch (std::exception const& e) {

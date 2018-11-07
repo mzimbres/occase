@@ -24,7 +24,7 @@ server_objs += server_session.o
 server_objs += listener.o
 
 client_objs =
-client_objs += client_mgr_login.o
+client_objs += client_mgr_register.o
 client_objs += client_mgr_sms.o
 client_objs += client_mgr_accept_timer.o
 client_objs += client_mgr_sim.o

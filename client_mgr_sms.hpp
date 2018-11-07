@@ -12,7 +12,7 @@ namespace rt
 template <class Mgr>
 class client_session;
 
-// Performs a login followed by an sms confirmation.
+// Performs a register followed by an sms confirmation.
 
 struct cmgr_sms_op {
    std::string user;

@@ -10,7 +10,7 @@ int client_mgr_sms::on_read(std::string msg, std::shared_ptr<client_type> s)
    auto const j = json::parse(msg);
    auto const cmd = j["cmd"].get<std::string>();
 
-   if (cmd == "login_ack") {
+   if (cmd == "register_ack") {
       auto const res = j.at("result").get<std::string>();
       if (res == "ok") {
          json j1;
@@ -18,7 +18,7 @@ int client_mgr_sms::on_read(std::string msg, std::shared_ptr<client_type> s)
          j1["tel"] = op.user;
          j1["sms"] = op.sms;
          s->send_msg(j1.dump());
-         //std::cout << "login_ack ok: " << op.user << std::endl;
+         //std::cout << "register_ack ok: " << op.user << std::endl;
          return 1;
       }
 
@@ -50,7 +50,7 @@ int client_mgr_sms::on_read(std::string msg, std::shared_ptr<client_type> s)
 int client_mgr_sms::on_handshake(std::shared_ptr<client_type> s)
 {
    json j;
-   j["cmd"] = "login";
+   j["cmd"] = "register";
    j["tel"] = op.user;
    s->send_msg(j.dump());
    return 1;

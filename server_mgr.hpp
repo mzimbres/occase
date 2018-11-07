@@ -19,8 +19,8 @@ namespace rt
 class server_session;
 
 enum class ev_res
-{ login_ok
-, login_fail
+{ register_ok
+, register_fail
 , auth_ok
 , auth_fail
 , sms_confirmation_ok
@@ -131,14 +131,14 @@ public:
    void shutdown();
    void release_auth_session(std::string const& id);
 
-   ev_res on_login(json j, std::shared_ptr<server_session> s);
+   ev_res on_register(json j, std::shared_ptr<server_session> s);
    ev_res on_auth(json j, std::shared_ptr<server_session> s);
    ev_res on_sms_confirmation(json j, std::shared_ptr<server_session> s);
-   ev_res on_join_group(json j, std::shared_ptr<server_session> session);
+   ev_res on_subscribe(json j, std::shared_ptr<server_session> session);
    ev_res on_user_msg( std::string msg, json j
                      , std::shared_ptr<server_session> session);
-   ev_res on_user_group_msg( std::string msg, json j
-                             , std::shared_ptr<server_session> session);
+   ev_res on_publish( std::string msg, json j
+                    , std::shared_ptr<server_session> session);
 
    auto const& get_timeouts() const noexcept {return timeouts;}
    auto& get_stats() noexcept {return stats;}

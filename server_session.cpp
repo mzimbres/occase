@@ -108,8 +108,8 @@ void server_session::on_accept(boost::system::error_code ec)
    }
 
    // The cancelling of this timer should happen when either
-   // 1. The session is autheticated or a login is performed.
-   // 2. The user requests a login.
+   // 1. The session is autheticated or a register is performed.
+   // 2. The user requests a register.
    timer.expires_after(mgr.get_timeouts().auth);
 
    auto const handler = [p = shared_from_this()](auto ec)
@@ -283,9 +283,9 @@ void server_session::do_ping()
 void server_session::handle_ev(ev_res r)
 {
    switch (r) {
-      case ev_res::login_ok:
+      case ev_res::register_ok:
       {
-         // Successful login request which means the ongoing
+         // Successful register request which means the ongoing
          // connection timer  has to be canceled.  This is where we
          // have to set the sms timeout.
          auto const n = timer.expires_after(mgr.get_timeouts().sms);
@@ -306,7 +306,7 @@ void server_session::handle_ev(ev_res r)
          timer.async_wait(boost::asio::bind_executor(strand, handler));
 
          // If we get here, it means that there was no ongoing timer.
-         // But I do not see any reason for accepting a login command
+         // But I do not see any reason for accepting a register command
          // on an stablished session, this is a logic error.
          assert(n > 0);
       }
@@ -321,7 +321,7 @@ void server_session::handle_ev(ev_res r)
          do_ping();
       }
       break;
-      case ev_res::login_fail:
+      case ev_res::register_fail:
       case ev_res::auth_fail:
       case ev_res::sms_confirmation_fail:
       {

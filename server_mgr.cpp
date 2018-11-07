@@ -17,8 +17,8 @@ ev_res on_message( server_mgr& mgr
    auto const cmd = j.at("cmd").get<std::string>();
 
    if (s->is_waiting_auth()) {
-      if (cmd == "login")
-         return mgr.on_login(std::move(j), s);
+      if (cmd == "register")
+         return mgr.on_register(std::move(j), s);
 
       if (cmd == "auth")
          return mgr.on_auth(std::move(j), s);
@@ -36,11 +36,11 @@ ev_res on_message( server_mgr& mgr
    }
 
    if (s->is_auth()) {
-      if (cmd == "join_group")
-         return mgr.on_join_group(std::move(j), s);
+      if (cmd == "subscribe")
+         return mgr.on_subscribe(std::move(j), s);
 
-      if (cmd == "group_msg")
-         return mgr.on_user_group_msg(std::move(msg), std::move(j), s);
+      if (cmd == "publish")
+         return mgr.on_publish(std::move(msg), std::move(j), s);
 
       if (cmd == "user_msg")
          return mgr.on_user_msg(std::move(msg), std::move(j), s);
@@ -251,7 +251,7 @@ server_mgr::redis_pub_msg_handler( boost::system::error_code const& ec
    }
 }
 
-ev_res server_mgr::on_login(json j, std::shared_ptr<server_session> s)
+ev_res server_mgr::on_register(json j, std::shared_ptr<server_session> s)
 {
    auto const tel = j.at("tel").get<std::string>();
 
@@ -259,10 +259,10 @@ ev_res server_mgr::on_login(json j, std::shared_ptr<server_session> s)
    if (sessions.find(tel) != std::end(sessions)) {
       // The user already exists in the system.
       json resp;
-      resp["cmd"] = "login_ack";
+      resp["cmd"] = "register_ack";
       resp["result"] = "fail";
       s->send(resp.dump());
-      return ev_res::login_fail;
+      return ev_res::register_fail;
    }
 
    s->set_id(tel);
@@ -271,11 +271,11 @@ ev_res server_mgr::on_login(json j, std::shared_ptr<server_session> s)
    s->set_sms("8347");
 
    json resp;
-   resp["cmd"] = "login_ack";
+   resp["cmd"] = "register_ack";
    resp["result"] = "ok";
    resp["menu"] = menu;
    s->send(resp.dump());
-   return ev_res::login_ok;
+   return ev_res::register_ok;
 }
 
 ev_res server_mgr::on_auth(json j, std::shared_ptr<server_session> s)
@@ -348,7 +348,7 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
    assert(s->is_auth());
 
    // This would be odd. The entry already exists on the index map
-   // which means we did something wrong in the login command.
+   // which means we did something wrong in the register command.
    assert(new_user.second);
 
    auto const scmd = gen_resp_cmd( redis_cmd::subscribe
@@ -364,7 +364,7 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
 }
 
 ev_res
-server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
+server_mgr::on_subscribe(json j, std::shared_ptr<server_session> s)
 {
    auto const hash = j.at("hash").get<std::string>();
 
@@ -389,8 +389,8 @@ server_mgr::on_join_group(json j, std::shared_ptr<server_session> s)
 }
 
 ev_res
-server_mgr::on_user_group_msg( std::string msg, json j
-                             , std::shared_ptr<server_session> s)
+server_mgr::on_publish( std::string msg, json j
+                      , std::shared_ptr<server_session> s)
 {
    auto const to = j.at("to").get<std::string>();
 

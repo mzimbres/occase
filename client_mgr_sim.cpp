@@ -28,7 +28,7 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
             for (auto i = 0; i < op.msgs_per_group; ++i)
                hashes.push_back({false, false, o});
             json cmd;
-            cmd["cmd"] = "join_group";
+            cmd["cmd"] = "subscribe";
             cmd["hash"] = o;
             cmds.push(cmd.dump());
          }
@@ -81,7 +81,7 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
       return -1;
    }
 
-   if (cmd == "group_msg") {
+   if (cmd == "publish") {
       //auto const body = j.at("msg").get<std::string>();
       //std::cout << "Group msg: " << body << std::endl;
       //std::cout << j << std::endl;
@@ -107,7 +107,7 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
          return -1;
       }
 
-      //std::cout << "Receiving group_msg:     " << op.user << " " << id
+      //std::cout << "Receiving publish:     " << op.user << " " << id
       //          << " " << hashes.at(id).hash <<std::endl;
       send_group_msg(s);
       return 1;
@@ -142,13 +142,13 @@ void client_mgr_sim::send_group_msg(std::shared_ptr<client_type> s)
    // server ack and then it again from the broadcast channel it was
    // sent.
    json j_msg;
-   j_msg["cmd"] = "group_msg";
+   j_msg["cmd"] = "publish";
    j_msg["from"] = op.user;
    j_msg["to"] = hashes.at(group_counter).hash;
    j_msg["msg"] = "Group message";
    j_msg["id"] = group_counter;
    s->send_msg(j_msg.dump());
-   //std::cout << "Sending   group_msg      " << op.user << " "
+   //std::cout << "Sending   publish      " << op.user << " "
    //          << group_counter << " " << hashes.at(group_counter).hash
    //          << std::endl;
    group_counter++;
@@ -179,7 +179,7 @@ int client_mgr_gmsg_check::on_read( std::string msg
          auto const h = get_hashes(jmenu);
          for (auto const& o : h) {
             json cmd;
-            cmd["cmd"] = "join_group";
+            cmd["cmd"] = "subscribe";
             cmd["hash"] = o;
             cmds.push(cmd.dump());
          }
@@ -216,7 +216,7 @@ int client_mgr_gmsg_check::on_read( std::string msg
       return -1;
    }
 
-   if (cmd == "group_msg") {
+   if (cmd == "publish") {
       //auto const body = j.at("msg").get<std::string>();
       //std::cout << "Group msg check: " << body << std::endl;
       //std::cout << j << std::endl;

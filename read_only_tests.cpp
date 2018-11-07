@@ -70,7 +70,7 @@ struct options {
       { initial_user
       , initial_user + users_size
       , std::chrono::milliseconds {launch_interval}
-      , {"Login test with ret = -1:      "}};
+      , {"Register test with ret = -1:      "}};
    }
 
    auto make_sms_tm_laucher_op2() const
@@ -79,7 +79,7 @@ struct options {
       { initial_user
       , initial_user + users_size
       , std::chrono::milliseconds {launch_interval}
-      , {"Login test with ret = -2:      "}};
+      , {"Register test with ret = -2:      "}};
    }
 
    auto make_sms_tm_laucher_op3() const
@@ -88,7 +88,7 @@ struct options {
       { initial_user
       , initial_user + users_size
       , std::chrono::milliseconds {launch_interval}
-      , {"Login test with ret = -3:      "}};
+      , {"Register test with ret = -3:      "}};
    }
 
    auto make_wrong_sms_cf1() const
@@ -140,23 +140,23 @@ void read_only_tests(options const& op)
                     , op.make_after_handshake_laucher_op()
                     )->run({});
 
-   std::make_shared< session_launcher<client_mgr_login>
+   std::make_shared< session_launcher<client_mgr_register>
                    >( ioc
-                    , cmgr_login_cf { "" , "ok" , -1}
+                    , cmgr_register_cf { "" , "ok" , -1}
                     , op.make_session_cf()
                     , op.make_sms_tm_laucher_op1()
                     )->run({});
 
-   std::make_shared< session_launcher<client_mgr_login>
+   std::make_shared< session_launcher<client_mgr_register>
                    >( ioc
-                    , cmgr_login_cf { "" , "ok" , -2}
+                    , cmgr_register_cf { "" , "ok" , -2}
                     , op.make_session_cf()
                     , op.make_sms_tm_laucher_op2()
                     )->run({});
 
-   std::make_shared< session_launcher<client_mgr_login>
+   std::make_shared< session_launcher<client_mgr_register>
                    >( ioc
-                    , cmgr_login_cf { "" , "ok" , -3}
+                    , cmgr_register_cf { "" , "ok" , -3}
                     , op.make_session_cf()
                     , op.make_sms_tm_laucher_op3()
                     )->run({});
@@ -187,11 +187,11 @@ void read_only_tests(options const& op)
    j1["tel"] = "aaaa";
 
    json j2;
-   j2["crd"] = "login";
+   j2["crd"] = "register";
    j2["tel"] = "bbbb";
 
    json j3;
-   j3["crd"] = "login";
+   j3["crd"] = "register";
    j3["Teal"] = "cccc";
 
    std::vector<std::string> cmds
@@ -199,7 +199,7 @@ void read_only_tests(options const& op)
 
    // Sends commands with typos and expects the server to not crash!
    for (auto const& cmd : cmds)
-      std::make_shared<client_session<client_mgr_login_typo>
+      std::make_shared<client_session<client_mgr_register_typo>
                       >( ioc
                        , op.make_session_cf()
                        , cmd)->run();

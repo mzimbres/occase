@@ -12,7 +12,6 @@ namespace rt
 {
 
 struct server_op {
-   bool help = false;
    std::string ip;
    unsigned short port;
    server_mgr_cf mgr;

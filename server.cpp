@@ -14,8 +14,9 @@ using namespace rt;
 
 namespace po = boost::program_options;
 
-server_op get_server_op(int argc, char* argv[])
+std::vector<server_op> get_server_op(int argc, char* argv[])
 {
+   int instances = 1;
    server_op op;
    po::options_description desc("Options");
    desc.add_options()
@@ -27,6 +28,13 @@ server_op get_server_op(int argc, char* argv[])
    ("ip,d"
    , po::value<std::string>(&op.ip)->default_value("127.0.0.1")
    , "Server ip address."
+   )
+   ("instances"
+   , po::value<int>(&instances)->default_value(1)
+   , "The number of share-nothing server instances, each"
+     " one consuming one thread and having its own io_context"
+     " object. They will continuously occupy the ports"
+     " begining at --port."
    )
    ("sms-timeout,s"
    , po::value<int>(&op.mgr.sms_timeout)->default_value(2)
@@ -83,21 +91,27 @@ server_op get_server_op(int argc, char* argv[])
 
    if (vm.count("help")) {
       std::cout << desc << "\n";
-      op.help = true;
+      return {};
    }
 
-   return op;
+   std::vector<server_op> ops;
+   for (auto i = 0; i < instances; ++i) {
+      ops.push_back(op);
+      ops.back().port += i;
+   }
+
+   return {op};
 }
 
 int main(int argc, char* argv[])
 {
    try {
-      auto const op = get_server_op(argc, argv);
-      if (op.help)
+      auto const ops = get_server_op(argc, argv);
+      if (std::empty(ops))
          return 0;
 
       boost::asio::io_context ioc {1};
-      listener lst {op, ioc};
+      listener lst {ops.back(), ioc};
       lst.run();
       ioc.run();
 

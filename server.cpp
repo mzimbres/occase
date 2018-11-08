@@ -1,3 +1,4 @@
+#include <thread>
 #include <memory>
 #include <string>
 #include <chrono>
@@ -100,8 +101,19 @@ std::vector<server_op> get_server_op(int argc, char* argv[])
       ops.back().port += i;
    }
 
-   return {op};
+   return ops;
 }
+
+struct instance {
+   server_op op;
+   void operator()() const
+   {
+      boost::asio::io_context ioc {1};
+      listener lst {op, ioc};
+      lst.run();
+      ioc.run();
+   }
+};
 
 int main(int argc, char* argv[])
 {
@@ -110,10 +122,15 @@ int main(int argc, char* argv[])
       if (std::empty(ops))
          return 0;
 
-      boost::asio::io_context ioc {1};
-      listener lst {ops.back(), ioc};
-      lst.run();
-      ioc.run();
+      std::vector<std::thread> instances;
+      for (unsigned i = 0; i < std::size(ops) - 1; ++i)
+         instances.push_back(std::thread {instance{ops[i]}});
+
+      instance inst {ops.back()};
+      inst();
+
+      for (auto& o : instances)
+         o.join();
 
       return 0;
    } catch (std::exception const& e) {

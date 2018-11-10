@@ -387,8 +387,6 @@ void server_session::on_write( boost::system::error_code ec
       return;
    }
 
-   buffer.consume(std::size(buffer)); // Clear the buffer
-
    msg_queue.pop();
 
    if (msg_queue.empty())

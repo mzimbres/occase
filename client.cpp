@@ -18,6 +18,7 @@
 #include "menu_parser.hpp"
 #include "client_mgr_sms.hpp"
 #include "client_mgr_sim.hpp"
+#include "client_mgr_gmsg_check.hpp"
 #include "client_session.hpp"
 #include "session_launcher.hpp"
 

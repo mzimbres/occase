@@ -9,7 +9,7 @@ boost_libs    += $(boost_lib_dir)/libboost_program_options.a
 DEBUG         = -g -ggdb3
 LDFLAGS       = -lpthread
 CPPFLAGS      = -I. -I$(boost_inc_dir) -I$(json_inc_dir) \
-                -std=c++17 -O2 $(DEBUG) -Wall # -Werror
+                -std=c++17 $(DEBUG) -Wall # -Werror
 
 DIST_NAME   = sellit
 
@@ -28,6 +28,7 @@ client_objs += client_mgr_register.o
 client_objs += client_mgr_sms.o
 client_objs += client_mgr_accept_timer.o
 client_objs += client_mgr_sim.o
+client_objs += client_mgr_gmsg_check.o
 client_objs += client_mgr_user_msg.o
 
 aedis_objs =

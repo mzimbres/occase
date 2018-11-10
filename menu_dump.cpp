@@ -1,3 +1,6 @@
+#include <stack>
+#include <string>
+#include <sstream>
 #include <iostream>
 
 #include <boost/program_options/options_description.hpp>
@@ -14,6 +17,49 @@ struct menu_op {
    int sim_length;
    bool hash = false;
 };
+
+struct menu_node {
+   std::string name;
+   std::vector<menu_node*> children;
+};
+
+void bar(menu_op)
+{
+   std::string menu_str =
+   "Brasil\r\n"
+   "   Sao Paulo\r\n"
+   "      Atibaia\r\n"
+   "         Vila Santista\r\n"
+   "         Jardim Siriema\r\n"
+   "      Braganca\r\n"
+   "      Piracaia\r\n"
+   "      Sao Paulo\r\n"
+   "         Mooca\r\n"
+   "         Bixiga\r\n"
+   "         Vila Leopoldina\r\n"
+   "   Rio de Janeiro\r\n"
+   "      Teresópolis\r\n"
+   "      Niteroi\r\n"
+   "   Amazonas\r\n"
+   "      Manaus\r\n"
+   "   Paraiba\r\n"
+   "   Bahia\r\n"
+   ;
+
+   std::cout << menu_str << std::endl;
+
+   //std::string sep = "   ";
+   //std::stringstream ss(menu_str);
+   //std::string line;
+   //menu_node root;
+   //std::stack<menu_node*> stack;
+   //std::string next_sep = "";
+   //while (std::getline(ss, line)) {
+   //   if (line.compare(0, std::size(next_sep), next_set) == 0)
+   //      next_set += sep;
+   //   std::cout << line << std::endl;
+   //}
+}
 
 void foo(json menu, menu_op op)
 {
@@ -100,6 +146,7 @@ int main(int argc, char* argv[])
       , "Choose the menu. Available options:\n"
         " 0: Atibaia - Sao Paulo.\n"
         " 1: Simulated.\n"
+        " 2: New menu.\n"
       )
       ("indentation,i"
       , po::value<int>(&op.indentation)->default_value(-1)
@@ -124,6 +171,7 @@ int main(int argc, char* argv[])
 
    switch (op.menu) {
       case 1: op1(op); break;
+      case 2: bar(op); break;
       default:
          op0(op);
    }

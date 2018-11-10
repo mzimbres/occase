@@ -57,7 +57,7 @@ private:
    void on_read( boost::system::error_code ec
                , std::size_t bytes_transferred);
    void on_close(boost::system::error_code ec);
-   void do_write(std::string msg);
+   void do_write();
 
 public:
    using mgr_op_type = typename Mgr::options_type;
@@ -163,19 +163,19 @@ void client_session<Mgr>::send_msg(std::string msg)
    msg_queue.push(std::move(msg));
 
    if (is_empty)
-      do_write(msg_queue.front());
+      do_write();
 }
 
 template <class Mgr>
-void client_session<Mgr>::do_write(std::string msg)
+void client_session<Mgr>::do_write()
 {
    //std::cout << "Sending: " << msg << std::endl;
-   text = std::move(msg);
-
    auto handler = [p = this->shared_from_this()](auto ec, auto res)
-   { p->on_write(ec, res); };
+   {
+      p->on_write(ec, res);
+   };
 
-   ws.async_write(asio::buffer(text), handler);
+   ws.async_write(asio::buffer(msg_queue.front()), handler);
 }
 
 template <class Mgr>
@@ -323,7 +323,7 @@ void client_session<Mgr>::on_write( boost::system::error_code ec
    if (msg_queue.empty())
       return; // No more message to send to the client.
 
-   do_write(msg_queue.front());
+   do_write();
 
    if (ec)
       fail_tmp(ec, "write");

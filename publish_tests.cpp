@@ -30,8 +30,8 @@ struct client_op {
    std::string host {"127.0.0.1"};
    std::string port {"8080"};
    std::string sms;
-   int initial_user = 0;
-   int users_size = 10;
+   int publish_users = 10;
+   int listen_users = 10;
    int handshake_tm = 3;
    int launch_interval = 100;
    int auth_timeout = 3;
@@ -51,7 +51,7 @@ struct client_op {
    auto make_sim_cf() const
    {
       return launcher_op
-      { initial_user, initial_user + 1 * users_size
+      { 0, publish_users
       , std::chrono::milliseconds {launch_interval}
       , {"Launch of sim clients:         "}
       };
@@ -60,8 +60,7 @@ struct client_op {
    auto make_gmsg_check_cf() const
    {
       return launcher_op
-      { initial_user + 1 * users_size
-      , initial_user + 3 * users_size
+      { publish_users, listen_users
       , std::chrono::milliseconds {launch_interval}
       , {"Launch of sim clients:         "}
       };
@@ -135,13 +134,14 @@ int main(int argc, char* argv[])
          , "Server ip address."
          )
 
-         ("initial-user"
-         , po::value<int>(&op.initial_user)->default_value(0)
-         , "Id of the first user."
+         ("publish-users,u"
+         , po::value<int>(&op.publish_users)->default_value(2)
+         , "Number of publish users."
          )
-         ("users,u"
-         , po::value<int>(&op.users_size)->default_value(10)
-         , "Number of users."
+
+         ("listen-users,c"
+         , po::value<int>(&op.listen_users)->default_value(10)
+         , "Number of listen users."
          )
 
          ("launch-interval,g"

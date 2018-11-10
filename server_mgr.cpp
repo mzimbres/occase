@@ -1,5 +1,7 @@
 #include "server_mgr.hpp"
 
+#include <mutex>
+
 #include "resp.hpp"
 #include "menu_parser.hpp"
 #include "server_session.hpp"
@@ -487,6 +489,9 @@ void server_mgr::shutdown()
    stats_timer.cancel();
 }
 
+// TODO: Remove this global once there is a solution to the logger.
+std::mutex m;
+
 void server_mgr::do_stats_logger()
 {
    stats_timer.expires_after(std::chrono::seconds{1});
@@ -498,6 +503,7 @@ void server_mgr::do_stats_logger()
          return;
       }
       
+      std::lock_guard mut(m);
       std::cout << "Current number of sessions: "
                 << stats.number_of_sessions
                 << std::endl;

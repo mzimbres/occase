@@ -67,6 +67,24 @@ struct client_op {
    }
 };
 
+class timer {
+private:
+  std::chrono::time_point<std::chrono::system_clock> m_start;
+public:
+  timer() : m_start(std::chrono::system_clock::now()) {}
+  auto get_count() const
+  { 
+    auto const end = std::chrono::system_clock::now();
+    auto diff = end - m_start;
+    auto diff2 = std::chrono::duration_cast<std::chrono::seconds>(diff);
+    return diff2.count();
+  }
+  ~timer()
+  {
+    std::cout << "Time elapsed: " << get_count() << "s" << std::endl;
+  }
+};
+
 void test_simulation(client_op const& op)
 {
    boost::asio::io_context ioc;
@@ -75,6 +93,7 @@ void test_simulation(client_op const& op)
 
    auto const next = [&ioc, &op, &sim_op]()
    {
+      timer t;
       auto const s2 = std::make_shared< session_launcher<client_mgr_sim>
                       >( ioc
                        , cmgr_sim_op
@@ -98,24 +117,6 @@ void test_simulation(client_op const& op)
 
    ioc.run();
 }
-
-class timer {
-private:
-  std::chrono::time_point<std::chrono::system_clock> m_start;
-public:
-  timer() : m_start(std::chrono::system_clock::now()) {}
-  auto get_count() const
-  { 
-    auto const end = std::chrono::system_clock::now();
-    auto diff = end - m_start;
-    auto diff2 = std::chrono::duration_cast<std::chrono::seconds>(diff);
-    return diff2.count();
-  }
-  ~timer()
-  {
-    std::cout << "Time elapsed: " << get_count() << "s" << std::endl;
-  }
-};
 
 int main(int argc, char* argv[])
 {
@@ -181,11 +182,11 @@ int main(int argc, char* argv[])
          return 0;
       }
 
-      timer t;
       while (op.sim_runs != 0) {
          test_simulation(op);
-         std::cout << "Simulation run " << op.sim_runs
-                   << " completed." << std::endl;
+         std::cout
+            << "===========================================================> "
+            << op.sim_runs << std::endl;
          --op.sim_runs;
       }
 

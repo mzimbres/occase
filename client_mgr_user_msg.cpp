@@ -28,7 +28,7 @@ int client_mgr_user_msg::on_read(std::string msg, std::shared_ptr<client_type> s
             for (auto i = 0; i < op.msgs_per_group; ++i)
                hashes.push_back({false, false, o});
             json cmd;
-            cmd["cmd"] = "join_group";
+            cmd["cmd"] = "subscribe_ack";
             cmd["hash"] = o;
             cmds.push(cmd.dump());
          }
@@ -41,7 +41,7 @@ int client_mgr_user_msg::on_read(std::string msg, std::shared_ptr<client_type> s
       return -1;
    }
 
-   if (cmd == "join_group_ack") {
+   if (cmd == "subscribe_ack") {
       auto const res = j.at("result").get<std::string>();
       if (res == op.expected) {
          if (std::empty(cmds))
@@ -55,12 +55,12 @@ int client_mgr_user_msg::on_read(std::string msg, std::shared_ptr<client_type> s
          }
 
          //std::cout << "sending " << cmds.top() << std::endl;
-         //std::cout << "join_group_ack: " << op.user << std::endl;
+         //std::cout << "subscribe_ack: " << op.user << std::endl;
          s->send_msg(cmds.top());
          return 1;
       }
 
-      std::cout << "Test sim: join_group_ack fail." << std::endl;
+      std::cout << "Test sim: subscribe_ack fail." << std::endl;
       throw std::runtime_error("client_mgr_user_msg::on_read2");
       return -1;
    }

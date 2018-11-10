@@ -42,7 +42,7 @@ int client_mgr_gmsg_check::on_read( std::string msg
       return -1;
    }
 
-   if (cmd == "join_group_ack") {
+   if (cmd == "subscribe_ack") {
       auto const res = j.at("result").get<std::string>();
       if (res == "ok") {
          if (std::empty(cmds))
@@ -55,7 +55,7 @@ int client_mgr_gmsg_check::on_read( std::string msg
          }
 
          //std::cout << "sending " << cmds.top() << std::endl;
-         //std::cout << "join_group_ack: " << op.user << std::endl;
+         //std::cout << "subscribe_ack: " << op.user << std::endl;
          s->send_msg(cmds.top());
          return 1;
       }
@@ -80,6 +80,7 @@ int client_mgr_gmsg_check::on_read( std::string msg
       return 1;
    }
 
+   std::cout << j << std::endl;
    throw std::runtime_error("client_mgr_gmsg_check::on_read4");
    return -1;
 }

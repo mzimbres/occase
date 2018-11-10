@@ -373,7 +373,7 @@ server_mgr::on_subscribe(json j, std::shared_ptr<server_session> s)
    auto const g = channels.find(hash);
    if (g == std::end(channels)) {
       json resp;
-      resp["cmd"] = "join_group_ack";
+      resp["cmd"] = "subscribe_ack";
       resp["result"] = "fail";
       s->send(resp.dump());
       return ev_res::join_group_fail;
@@ -383,7 +383,7 @@ server_mgr::on_subscribe(json j, std::shared_ptr<server_session> s)
    g->second[from] = s; // Overwrites any previous session.
 
    json resp;
-   resp["cmd"] = "join_group_ack";
+   resp["cmd"] = "subscribe_ack";
    resp["result"] = "ok";
 
    s->send(resp.dump());

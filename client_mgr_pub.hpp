@@ -23,7 +23,7 @@ struct cmgr_sim_op {
    int msgs_per_group;
 };
 
-class client_mgr_sim {
+class client_mgr_pub {
 public:
    using options_type = cmgr_sim_op;
 private:
@@ -32,7 +32,7 @@ private:
       bool msg = false;
       std::string hash;
    };
-   using client_type = client_session<client_mgr_sim>;
+   using client_type = client_session<client_mgr_pub>;
    options_type op;
    std::stack<std::string> cmds;
    std::vector<ch_msg_helper> hashes;
@@ -41,8 +41,8 @@ private:
                       , int c) const;
 
 public:
-   client_mgr_sim(options_type op);
-   ~client_mgr_sim();
+   client_mgr_pub(options_type op);
+   ~client_mgr_pub();
    int on_read(std::string msg, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec);
    int on_handshake(std::shared_ptr<client_type> s);

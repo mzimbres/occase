@@ -17,7 +17,7 @@
 #include "config.hpp"
 #include "menu_parser.hpp"
 #include "client_mgr_sms.hpp"
-#include "client_mgr_sim.hpp"
+#include "client_mgr_pub.hpp"
 #include "client_mgr_gmsg_check.hpp"
 #include "client_session.hpp"
 #include "session_launcher.hpp"
@@ -95,7 +95,7 @@ void test_simulation(client_op const& op)
    auto const next = [&ioc, &op, &sim_op]()
    {
       timer t;
-      auto const s2 = std::make_shared< session_launcher<client_mgr_sim>
+      auto const s2 = std::make_shared< session_launcher<client_mgr_pub>
                       >( ioc
                        , cmgr_sim_op
                          { "", "ok", op.msgs_per_group}

@@ -1,4 +1,4 @@
-#include "client_mgr_sim.hpp"
+#include "client_mgr_pub.hpp"
 
 #include "menu_parser.hpp"
 #include "client_session.hpp"
@@ -6,12 +6,12 @@
 namespace rt
 {
 
-client_mgr_sim::client_mgr_sim(options_type op_)
+client_mgr_pub::client_mgr_pub(options_type op_)
 : op(op_)
 {
 }
 
-int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
+int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
 {
    auto const j = json::parse(msg);
    //std::cout << j << std::endl;
@@ -37,7 +37,7 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
       }
 
       std::cout << "Test sim: Error." << std::endl;
-      throw std::runtime_error("client_mgr_sim::on_read1");
+      throw std::runtime_error("client_mgr_pub::on_read1");
       return -1;
    }
 
@@ -61,7 +61,7 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
       }
 
       std::cout << "Test sim: join_group_ack fail." << std::endl;
-      throw std::runtime_error("client_mgr_sim::on_read2");
+      throw std::runtime_error("client_mgr_pub::on_read2");
       return -1;
    }
 
@@ -71,13 +71,13 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
          auto const id = j.at("id").get<int>();
          //std::cout << "Receiving group_msg_ack: " << op.user << " " << id << " " << hashes.at(id).hash << std::endl;
          if (hashes.at(id).ack)
-            throw std::runtime_error("client_mgr_sim::on_read4");
+            throw std::runtime_error("client_mgr_pub::on_read4");
          hashes.at(id).ack = true;
          return 1;
       }
 
       std::cout << "Test sim: send_group_msg_ack: fail." << std::endl;
-      throw std::runtime_error("client_mgr_sim::on_read3");
+      throw std::runtime_error("client_mgr_pub::on_read3");
       return -1;
    }
 
@@ -92,7 +92,7 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
 
       auto const id = j.at("id").get<unsigned>();
       if (hashes.at(id).msg)
-         throw std::runtime_error("client_mgr_sim::on_read5");
+         throw std::runtime_error("client_mgr_pub::on_read5");
 
       hashes.at(id).msg = true;
 
@@ -101,7 +101,7 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
          //std::cout << id << " " << std::size(hashes) << std::endl;
          for (auto const& o : hashes)
             if (!o.ack || !o.msg)
-               std::cout << "client_mgr_sim: Test fails." << std::endl;
+               std::cout << "client_mgr_pub: Test fails." << std::endl;
 
          std::cout << "FINISH group messages." << op.user  << std::endl;
          return -1;
@@ -114,11 +114,11 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
    }
 
    std::cout << "Server error: Unknown command." << std::endl;
-   throw std::runtime_error("client_mgr_sim::on_read4");
+   throw std::runtime_error("client_mgr_pub::on_read4");
    return -1;
 }
 
-int client_mgr_sim::on_handshake(std::shared_ptr<client_type> s)
+int client_mgr_pub::on_handshake(std::shared_ptr<client_type> s)
 {
    json j;
    j["cmd"] = "auth";
@@ -129,14 +129,14 @@ int client_mgr_sim::on_handshake(std::shared_ptr<client_type> s)
    return 1;
 }
 
-int client_mgr_sim::on_closed(boost::system::error_code ec)
+int client_mgr_pub::on_closed(boost::system::error_code ec)
 {
    std::cout << "Test sim: fail." << std::endl;
-   throw std::runtime_error("client_mgr_sim::on_closed");
+   throw std::runtime_error("client_mgr_pub::on_closed");
    return -1;
 };
 
-void client_mgr_sim::send_group_msg( std::shared_ptr<client_type> s
+void client_mgr_pub::send_group_msg( std::shared_ptr<client_type> s
                                    , int c) const
 {
    // For each one of these messages sent we shall receive first one
@@ -154,7 +154,7 @@ void client_mgr_sim::send_group_msg( std::shared_ptr<client_type> s
    //          << std::endl;
 }
 
-client_mgr_sim::~client_mgr_sim()
+client_mgr_pub::~client_mgr_pub()
 {
 }
 

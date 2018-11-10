@@ -13,7 +13,7 @@ CPPFLAGS      = -I. -I$(boost_inc_dir) -I$(json_inc_dir) \
 
 DIST_NAME   = sellit
 
-exes = client server menu_dump aedis read_only_tests reg_users_tests
+exes = publish_tests server menu_dump aedis read_only_tests reg_users_tests
 
 common_objs = json_utils.o
 common_objs += menu_parser.o
@@ -27,7 +27,7 @@ client_objs =
 client_objs += client_mgr_register.o
 client_objs += client_mgr_sms.o
 client_objs += client_mgr_accept_timer.o
-client_objs += client_mgr_sim.o
+client_objs += client_mgr_pub.o
 client_objs += client_mgr_gmsg_check.o
 client_objs += client_mgr_user_msg.o
 
@@ -57,7 +57,7 @@ Makefile.dep:
 
 -include Makefile.dep
 
-client: % : %.o $(client_objs) $(common_objs)
+publish_tests: % : %.o $(client_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(boost_libs)
 
 read_only_tests: % : %.o $(client_objs) $(common_objs)

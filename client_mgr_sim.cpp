@@ -50,7 +50,7 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
          cmds.pop();
          if (std::empty(cmds)) {
             //std::cout << "Test sim: join groups ok." << std::endl;
-            send_group_msg(s);
+            send_group_msg(s, 0);
             return 1;
          }
 
@@ -90,15 +90,15 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
       if (from != op.user)
          return 1;
 
-      auto const id = j.at("id").get<int>();
+      auto const id = j.at("id").get<unsigned>();
       if (hashes.at(id).msg)
          throw std::runtime_error("client_mgr_sim::on_read5");
 
       hashes.at(id).msg = true;
 
-      //std::cout << group_counter << " " << std::size(hashes) << std::endl;
-      if (group_counter == std::size(hashes)) {
-         //std::cout << group_counter << " " << std::size(hashes) << std::endl;
+      //std::cout << id << " " << std::size(hashes) << std::endl;
+      if (id == std::size(hashes) - 1) {
+         //std::cout << id << " " << std::size(hashes) << std::endl;
          for (auto const& o : hashes)
             if (!o.ack || !o.msg)
                std::cout << "client_mgr_sim: Test fails." << std::endl;
@@ -109,7 +109,7 @@ int client_mgr_sim::on_read(std::string msg, std::shared_ptr<client_type> s)
 
       //std::cout << "Receiving publish:     " << op.user << " " << id
       //          << " " << hashes.at(id).hash <<std::endl;
-      send_group_msg(s);
+      send_group_msg(s, id + 1);
       return 1;
    }
 
@@ -136,7 +136,8 @@ int client_mgr_sim::on_closed(boost::system::error_code ec)
    return -1;
 };
 
-void client_mgr_sim::send_group_msg(std::shared_ptr<client_type> s)
+void client_mgr_sim::send_group_msg( std::shared_ptr<client_type> s
+                                   , int c) const
 {
    // For each one of these messages sent we shall receive first one
    // server ack and then it again from the broadcast channel it was
@@ -144,14 +145,13 @@ void client_mgr_sim::send_group_msg(std::shared_ptr<client_type> s)
    json j_msg;
    j_msg["cmd"] = "publish";
    j_msg["from"] = op.user;
-   j_msg["to"] = hashes.at(group_counter).hash;
+   j_msg["to"] = hashes.at(c).hash;
    j_msg["msg"] = "Group message";
-   j_msg["id"] = group_counter;
+   j_msg["id"] = c;
    s->send_msg(j_msg.dump());
    //std::cout << "Sending   publish      " << op.user << " "
-   //          << group_counter << " " << hashes.at(group_counter).hash
+   //          << c << " " << hashes.at(c).hash
    //          << std::endl;
-   group_counter++;
 }
 
 client_mgr_sim::~client_mgr_sim()

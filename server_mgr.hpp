@@ -48,7 +48,7 @@ struct server_mgr_cf {
    std::string redis_group_channel;
 
    int auth_timeout;
-   int sms_timeout;
+   int code_timeout;
    int handshake_timeout;
    int pong_timeout;
    int close_frame_timeout;
@@ -60,7 +60,7 @@ struct server_mgr_cf {
    {
       return session_timeouts
       { std::chrono::seconds {auth_timeout}
-      , std::chrono::seconds {sms_timeout}
+      , std::chrono::seconds {code_timeout}
       , std::chrono::seconds {handshake_timeout}
       , std::chrono::seconds {pong_timeout}
       , std::chrono::seconds {close_frame_timeout}

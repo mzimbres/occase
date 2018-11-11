@@ -16,7 +16,7 @@
 
 #include "config.hpp"
 #include "menu_parser.hpp"
-#include "client_mgr_sms.hpp"
+#include "client_mgr_confirm_code.hpp"
 #include "client_mgr_pub.hpp"
 #include "client_mgr_gmsg_check.hpp"
 #include "client_session.hpp"
@@ -29,7 +29,7 @@ namespace po = boost::program_options;
 struct client_op {
    std::string host {"127.0.0.1"};
    std::string port {"8080"};
-   std::string sms;
+   std::string code;
    int publish_users = 10;
    int listen_users = 10;
    int handshake_tm = 3;
@@ -154,8 +154,8 @@ int main(int argc, char* argv[])
          , "Time before which the server should have given "
            "up on the handshake in seconds.")
 
-         ("sms,m"
-         , po::value<std::string>(&op.sms)->default_value("8347")
+         ("code,m"
+         , po::value<std::string>(&op.code)->default_value("8347")
          , "The code sent via email for account validation."
          )
 

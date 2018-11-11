@@ -70,8 +70,8 @@ public:
 
    void promote()
       { code.clear(); }
-   void set_code(std::string sms_)
-      {code = std::move(sms_);}
+   void set_code(std::string code_)
+      {code = std::move(code_);}
    auto const& get_code() const
       { return code; }
    void set_id(std::string id)

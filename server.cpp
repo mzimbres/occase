@@ -37,9 +37,9 @@ std::vector<server_op> get_server_op(int argc, char* argv[])
      " object. They will continuously occupy the ports"
      " begining at --port."
    )
-   ("sms-timeout,s"
-   , po::value<int>(&op.mgr.sms_timeout)->default_value(2)
-   , "SMS confirmation timeout in seconds."
+   ("code-timeout,s"
+   , po::value<int>(&op.mgr.code_timeout)->default_value(2)
+   , "Code confirmation timeout in seconds."
    )
    ("auth-timeout,a"
    , po::value<int>(&op.mgr.auth_timeout)->default_value(2)

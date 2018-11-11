@@ -3,7 +3,6 @@
 #include <memory>
 
 #include "json_utils.hpp"
-
 #include "config.hpp"
 
 namespace rt
@@ -21,26 +20,22 @@ struct cmgr_handshake_op {
    std::string user;
 };
 
-class cmgr_handshake_tm {
-private:
+struct cmgr_handshake_tm {
    using client_type = client_session<cmgr_handshake_tm>;
-
-public:
    using options_type = cmgr_handshake_op;
-   cmgr_handshake_tm(cmgr_handshake_op)
-   {
-      //std::cout << "Hi." << std::endl;
-   }
-   ~cmgr_handshake_tm()
-   {
-      //std::cout << "Bye1 bye1." << std::endl;
-   }
-   int on_read(std::string msg, std::shared_ptr<client_type> s) const;
-   int on_closed(boost::system::error_code ec) const;
-   int on_write(std::shared_ptr<client_type> s) const;
-   int on_handshake(std::shared_ptr<client_type> s) const;
-   int on_connect() const;
-   auto get_user() const {return "aaaaaa";}
+   cmgr_handshake_tm(cmgr_handshake_op) noexcept { }
+   auto on_read(std::string msg, std::shared_ptr<client_type> s) const 
+      { throw std::runtime_error("Error."); return 1; }
+   auto on_closed(boost::system::error_code ec) const 
+      { throw std::runtime_error("Error."); return 1; }
+   auto on_write(std::shared_ptr<client_type> s) const
+      { throw std::runtime_error("Error."); return 1; }
+   auto on_handshake(std::shared_ptr<client_type> s) const 
+      { throw std::runtime_error("Error."); return 1; }
+   auto on_connect() const noexcept
+      { return -1; }
+   auto get_user() const noexcept
+      {return "Dummy";}
 };
 
 class client_mgr_accept_timer {
@@ -49,21 +44,19 @@ private:
 
 public:
    using options_type = cmgr_handshake_op;
-   client_mgr_accept_timer(cmgr_handshake_op)
-   {
-      //std::cout << "Hi." << std::endl;
-   }
-   ~client_mgr_accept_timer()
-   {
-      //std::cout << "Bye2 bye2." << std::endl;
-   }
-
-   int on_read(std::string msg, std::shared_ptr<client_type> s);
-   int on_closed(boost::system::error_code ec);
-   int on_write(std::shared_ptr<client_type> s);
-   int on_handshake(std::shared_ptr<client_type> s) { return -1;}
-   int on_connect() const noexcept { return 1;}
-   auto get_user() const {return "aaaaaa";}
+   client_mgr_accept_timer(cmgr_handshake_op) noexcept { }
+   auto on_read(std::string msg, std::shared_ptr<client_type> s)
+      { throw std::runtime_error("accept_timer::on_read"); return -1; }
+   auto on_closed(boost::system::error_code ec) const noexcept
+      { return -1; }
+   auto on_write(std::shared_ptr<client_type> s)
+      { throw std::runtime_error("accept_timer::on_write"); return 1; }
+   auto on_handshake(std::shared_ptr<client_type> s)
+      { return -1;}
+   auto on_connect() const noexcept
+      { return 1;}
+   auto get_user() const noexcept
+      {return "aaaaaa";}
 };
 
 }

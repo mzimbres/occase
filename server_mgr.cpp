@@ -23,7 +23,7 @@ ev_res on_message( server_mgr& mgr
          return mgr.on_register(std::move(j), s);
 
       if (cmd == "auth")
-         return mgr.on_auth(std::move(j), s);
+         return mgr.on_login(std::move(j), s);
 
       std::cerr << "Server: Unknown command " << cmd << std::endl;
       return ev_res::unknown;
@@ -280,7 +280,7 @@ ev_res server_mgr::on_register(json j, std::shared_ptr<server_session> s)
    return ev_res::register_ok;
 }
 
-ev_res server_mgr::on_auth(json j, std::shared_ptr<server_session> s)
+ev_res server_mgr::on_login(json j, std::shared_ptr<server_session> s)
 {
    auto const from = j.at("from").get<std::string>();
 
@@ -292,7 +292,7 @@ ev_res server_mgr::on_auth(json j, std::shared_ptr<server_session> s)
       resp["cmd"] = "auth_ack";
       resp["result"] = "fail";
       s->send(resp.dump());
-      return ev_res::auth_fail;
+      return ev_res::login_fail;
    }
 
    // TODO: Query the database to validate the session.
@@ -302,7 +302,7 @@ ev_res server_mgr::on_auth(json j, std::shared_ptr<server_session> s)
    //   resp["cmd"] = "auth_ack";
    //   resp["result"] = "fail";
    //   s->send(resp.dump());
-   //   return ev_res::auth_fail;
+   //   return ev_res::login_fail;
    //}
 
    s->set_id(from);
@@ -324,7 +324,7 @@ ev_res server_mgr::on_auth(json j, std::shared_ptr<server_session> s)
 
    s->send(resp.dump());
 
-   return ev_res::auth_ok;
+   return ev_res::login_ok;
 }
 
 ev_res
@@ -338,7 +338,7 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
       resp["cmd"] = "sms_confirmation_ack";
       resp["result"] = "fail";
       s->send(resp.dump());
-      return ev_res::sms_confirmation_fail;
+      return ev_res::code_confirmation_fail;
    }
 
    s->promote();
@@ -362,7 +362,7 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
    resp["cmd"] = "sms_confirmation_ack";
    resp["result"] = "ok";
    s->send(resp.dump());
-   return ev_res::sms_confirmation_ok;
+   return ev_res::code_confirmation_ok;
 }
 
 ev_res
@@ -376,7 +376,7 @@ server_mgr::on_subscribe(json j, std::shared_ptr<server_session> s)
       resp["cmd"] = "subscribe_ack";
       resp["result"] = "fail";
       s->send(resp.dump());
-      return ev_res::join_group_fail;
+      return ev_res::subscribe_fail;
    }
 
    auto const from = s->get_id();
@@ -387,7 +387,7 @@ server_mgr::on_subscribe(json j, std::shared_ptr<server_session> s)
    resp["result"] = "ok";
 
    s->send(resp.dump());
-   return ev_res::join_group_ok;
+   return ev_res::subscribe_ok;
 }
 
 ev_res
@@ -407,7 +407,7 @@ server_mgr::on_publish( std::string msg, json j
       resp["result"] = "fail";
       resp["id"] = j.at("id").get<int>();
       s->send(resp.dump());
-      return ev_res::group_msg_fail;
+      return ev_res::publish_fail;
    }
 
    auto rcmd = gen_resp_cmd(redis_cmd::publish, { redis_group_channel, msg});
@@ -419,7 +419,7 @@ server_mgr::on_publish( std::string msg, json j
    ack["result"] = "ok";
    ack["id"] = j.at("id").get<int>();
    s->send(ack.dump());
-   return ev_res::group_msg_ok;
+   return ev_res::publish_ok;
 }
 
 void server_mgr::release_auth_session(std::string const& id)

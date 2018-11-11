@@ -21,14 +21,14 @@ class server_session;
 enum class ev_res
 { register_ok
 , register_fail
-, auth_ok
-, auth_fail
-, sms_confirmation_ok
-, sms_confirmation_fail
-, join_group_ok
-, join_group_fail
-, group_msg_ok
-, group_msg_fail
+, login_ok
+, login_fail
+, code_confirmation_ok
+, code_confirmation_fail
+, subscribe_ok
+, subscribe_fail
+, publish_ok
+, publish_fail
 , user_msg_ok
 , user_msg_fail
 , unknown
@@ -132,7 +132,7 @@ public:
    void release_auth_session(std::string const& id);
 
    ev_res on_register(json j, std::shared_ptr<server_session> s);
-   ev_res on_auth(json j, std::shared_ptr<server_session> s);
+   ev_res on_login(json j, std::shared_ptr<server_session> s);
    ev_res on_sms_confirmation(json j, std::shared_ptr<server_session> s);
    ev_res on_subscribe(json j, std::shared_ptr<server_session> session);
    ev_res on_user_msg( std::string msg, json j

@@ -311,19 +311,19 @@ void server_session::handle_ev(ev_res r)
          assert(n > 0);
       }
       break;
-      case ev_res::sms_confirmation_ok:
+      case ev_res::code_confirmation_ok:
       {
          do_ping();
       }
       break;
-      case ev_res::auth_ok:
+      case ev_res::login_ok:
       {
          do_ping();
       }
       break;
       case ev_res::register_fail:
-      case ev_res::auth_fail:
-      case ev_res::sms_confirmation_fail:
+      case ev_res::login_fail:
+      case ev_res::code_confirmation_fail:
       {
          timer.cancel();
          do_close();

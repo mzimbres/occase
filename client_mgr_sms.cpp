@@ -22,8 +22,6 @@ int client_mgr_code::on_read(std::string msg, std::shared_ptr<client_type> s)
          return 1;
       }
 
-      std::cout << j << std::endl;
-      std::cout << "Test fail: " << op.user << std::endl;
       throw std::runtime_error("client_mgr_code::on_read1");
       return -1;
    }
@@ -42,7 +40,6 @@ int client_mgr_code::on_read(std::string msg, std::shared_ptr<client_type> s)
       return -1;
    }
 
-   std::cout << "Server error: Unknown command." << std::endl;
    throw std::runtime_error("client_mgr_code::on_read3");
    return -1;
 }
@@ -74,7 +71,6 @@ int client_mgr_auth::on_read(std::string msg, std::shared_ptr<client_type> s)
       return -1;
    }
 
-   std::cout << "Server error: Unknown command." << std::endl;
    throw std::runtime_error("client_mgr_auth::on_read");
    return -1;
 }
@@ -87,12 +83,6 @@ int client_mgr_auth::on_handshake(std::shared_ptr<client_type> s)
    s->send_msg(j.dump());
    return 1;
 }
-
-int client_mgr_auth::on_closed(boost::system::error_code ec)
-{
-   throw std::runtime_error("client_mgr_auth::on_closed");
-   return -1;
-};
 
 }
 

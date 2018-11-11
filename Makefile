@@ -26,7 +26,6 @@ server_objs += listener.o
 client_objs =
 client_objs += client_mgr_register.o
 client_objs += client_mgr_sms.o
-client_objs += client_mgr_accept_timer.o
 client_objs += client_mgr_pub.o
 client_objs += client_mgr_gmsg_check.o
 client_objs += client_mgr_user_msg.o
@@ -47,6 +46,7 @@ srcs += config.hpp
 srcs += client_session.hpp
 srcs += session_launcher.hpp
 srcs += async_read_resp.hpp
+srcs += client_mgr_accept_timer.hpp
 
 aux = Makefile
 

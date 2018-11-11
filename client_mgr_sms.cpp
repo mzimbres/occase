@@ -14,7 +14,7 @@ int client_mgr_sms::on_read(std::string msg, std::shared_ptr<client_type> s)
       auto const res = j.at("result").get<std::string>();
       if (res == "ok") {
          json j1;
-         j1["cmd"] = "sms_confirmation";
+         j1["cmd"] = "code_confirmation";
          j1["tel"] = op.user;
          j1["sms"] = op.sms;
          s->send_msg(j1.dump());
@@ -28,13 +28,13 @@ int client_mgr_sms::on_read(std::string msg, std::shared_ptr<client_type> s)
       return -1;
    }
 
-   if (cmd == "sms_confirmation_ack") {
+   if (cmd == "code_confirmation_ack") {
       //std::cout << j << std::endl;
       auto const res = j.at("result").get<std::string>();
 
       if (res == op.expected) {
          // Successfull end
-         //std::cout << "Test sms_confirmation: ok." << std::endl;
+         //std::cout << "Test code_confirmation: ok." << std::endl;
          return op.end_ret;
       }
 

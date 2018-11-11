@@ -30,8 +30,8 @@ ev_res on_message( server_mgr& mgr
    }
 
    if (s->is_waiting_sms()) {
-      if (cmd == "sms_confirmation")
-         return mgr.on_sms_confirmation(std::move(j), s);
+      if (cmd == "code_confirmation")
+         return mgr.on_code_confirmation(std::move(j), s);
 
       std::cerr << "Server: Unknown command " << cmd << std::endl;
       return ev_res::unknown;
@@ -328,14 +328,14 @@ ev_res server_mgr::on_login(json j, std::shared_ptr<server_session> s)
 }
 
 ev_res
-server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
+server_mgr::on_code_confirmation(json j, std::shared_ptr<server_session> s)
 {
    auto const tel = j.at("tel").get<std::string>();
    auto const sms = j.at("sms").get<std::string>();
 
    if (sms != s->get_sms()) {
       json resp;
-      resp["cmd"] = "sms_confirmation_ack";
+      resp["cmd"] = "code_confirmation_ack";
       resp["result"] = "fail";
       s->send(resp.dump());
       return ev_res::code_confirmation_fail;
@@ -359,7 +359,7 @@ server_mgr::on_sms_confirmation(json j, std::shared_ptr<server_session> s)
    redis_ksub_session.send(std::move(scmd));
 
    json resp;
-   resp["cmd"] = "sms_confirmation_ack";
+   resp["cmd"] = "code_confirmation_ack";
    resp["result"] = "ok";
    s->send(resp.dump());
    return ev_res::code_confirmation_ok;

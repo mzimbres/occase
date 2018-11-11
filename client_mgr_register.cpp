@@ -30,7 +30,7 @@ int client_mgr_register::on_handshake(std::shared_ptr<client_type> s)
 {
    json j;
    j["cmd"] = "register";
-   j["tel"] = op.user;
+   j["from"] = op.user;
    s->send_msg(j.dump());
    return 1;
 }

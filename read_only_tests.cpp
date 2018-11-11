@@ -184,11 +184,11 @@ void read_only_tests(options const& op)
 
    json j1;
    j1["cmd"] = "logrn";
-   j1["tel"] = "aaaa";
+   j1["from"] = "aaaa";
 
    json j2;
    j2["crd"] = "register";
-   j2["tel"] = "bbbb";
+   j2["from"] = "bbbb";
 
    json j3;
    j3["crd"] = "register";

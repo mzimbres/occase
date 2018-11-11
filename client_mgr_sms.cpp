@@ -15,7 +15,7 @@ int client_mgr_code::on_read(std::string msg, std::shared_ptr<client_type> s)
       if (res == "ok") {
          json j1;
          j1["cmd"] = "code_confirmation";
-         j1["tel"] = op.user;
+         j1["from"] = op.user;
          j1["code"] = op.code;
          s->send_msg(j1.dump());
          //std::cout << "register_ack ok: " << op.user << std::endl;
@@ -48,7 +48,7 @@ int client_mgr_code::on_handshake(std::shared_ptr<client_type> s)
 {
    json j;
    j["cmd"] = "register";
-   j["tel"] = op.user;
+   j["from"] = op.user;
    s->send_msg(j.dump());
    return 1;
 }

@@ -255,10 +255,10 @@ server_mgr::redis_pub_msg_handler( boost::system::error_code const& ec
 
 ev_res server_mgr::on_register(json j, std::shared_ptr<server_session> s)
 {
-   auto const tel = j.at("tel").get<std::string>();
+   auto const from = j.at("from").get<std::string>();
 
    // TODO: Replace this with a query to the database.
-   if (sessions.find(tel) != std::end(sessions)) {
+   if (sessions.find(from) != std::end(sessions)) {
       // The user already exists in the system.
       json resp;
       resp["cmd"] = "register_ack";
@@ -267,7 +267,7 @@ ev_res server_mgr::on_register(json j, std::shared_ptr<server_session> s)
       return ev_res::register_fail;
    }
 
-   s->set_id(tel);
+   s->set_id(from);
 
    // TODO: Use a random number generator with six digits.
    s->set_code("8347");
@@ -330,7 +330,7 @@ ev_res server_mgr::on_login(json j, std::shared_ptr<server_session> s)
 ev_res
 server_mgr::on_code_confirmation(json j, std::shared_ptr<server_session> s)
 {
-   auto const id = j.at("tel").get<std::string>();
+   auto const from = j.at("from").get<std::string>();
    auto const code = j.at("code").get<std::string>();
 
    if (code != s->get_code()) {
@@ -345,7 +345,7 @@ server_mgr::on_code_confirmation(json j, std::shared_ptr<server_session> s)
 
    // Inserts the user in the system.
    assert(!std::empty(s->get_id()));
-   auto const new_user = sessions.insert({id, s});
+   auto const new_user = sessions.insert({from, s});
    assert(s->is_auth());
 
    // This would be odd. The entry already exists on the index map

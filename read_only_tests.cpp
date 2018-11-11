@@ -64,7 +64,7 @@ struct options {
       };
    }
 
-   auto make_sms_tm_laucher_op1() const
+   auto make_code_tm_laucher_op1() const
    {
       return launcher_op
       { initial_user
@@ -73,7 +73,7 @@ struct options {
       , {"Register test with ret = -1:      "}};
    }
 
-   auto make_sms_tm_laucher_op2() const
+   auto make_code_tm_laucher_op2() const
    {
       return launcher_op
       { initial_user
@@ -82,7 +82,7 @@ struct options {
       , {"Register test with ret = -2:      "}};
    }
 
-   auto make_sms_tm_laucher_op3() const
+   auto make_code_tm_laucher_op3() const
    {
       return launcher_op
       { initial_user
@@ -91,33 +91,33 @@ struct options {
       , {"Register test with ret = -3:      "}};
    }
 
-   auto make_wrong_sms_cf1() const
+   auto make_wrong_code_cf1() const
    {
       return launcher_op
       { initial_user + 3 * users_size
       , initial_user + 4 * users_size
       , std::chrono::milliseconds {launch_interval}
-      , {"Wrong sms test with ret = -1:  "}
+      , {"Wrong code test with ret = -1:  "}
       };
    }
 
-   auto make_wrong_sms_cf2() const
+   auto make_wrong_code_cf2() const
    {
       return launcher_op
       { initial_user + 4 * users_size
       , initial_user + 5 * users_size
       , std::chrono::milliseconds {launch_interval}
-      , {"Wrong sms test with ret = -2:  "}
+      , {"Wrong code test with ret = -2:  "}
       };
    }
 
-   auto make_wrong_sms_cf3() const
+   auto make_wrong_code_cf3() const
    {
       return launcher_op
       { initial_user + 5 * users_size
       , initial_user + 6 * users_size
       , std::chrono::milliseconds {launch_interval}
-      , {"Wrong sms test with ret = -3:  "}
+      , {"Wrong code test with ret = -3:  "}
       };
    }
 };
@@ -144,42 +144,42 @@ void read_only_tests(options const& op)
                    >( ioc
                     , cmgr_register_cf { "" , "ok" , -1}
                     , op.make_session_cf()
-                    , op.make_sms_tm_laucher_op1()
+                    , op.make_code_tm_laucher_op1()
                     )->run({});
 
    std::make_shared< session_launcher<client_mgr_register>
                    >( ioc
                     , cmgr_register_cf { "" , "ok" , -2}
                     , op.make_session_cf()
-                    , op.make_sms_tm_laucher_op2()
+                    , op.make_code_tm_laucher_op2()
                     )->run({});
 
    std::make_shared< session_launcher<client_mgr_register>
                    >( ioc
                     , cmgr_register_cf { "" , "ok" , -3}
                     , op.make_session_cf()
-                    , op.make_sms_tm_laucher_op3()
+                    , op.make_code_tm_laucher_op3()
                     )->run({});
 
-   std::make_shared< session_launcher<client_mgr_sms>
+   std::make_shared< session_launcher<client_mgr_code>
                    >( ioc
-                    , cmgr_sms_op {"", "fail", "8r47", -1}
+                    , cmgr_code_op {"", "fail", "8r47", -1}
                     , op.make_session_cf()
-                    , op.make_wrong_sms_cf1()
+                    , op.make_wrong_code_cf1()
                     )->run({});
 
-   std::make_shared< session_launcher<client_mgr_sms>
+   std::make_shared< session_launcher<client_mgr_code>
                    >( ioc
-                    , cmgr_sms_op {"", "fail", "8r47", -2}
+                    , cmgr_code_op {"", "fail", "8r47", -2}
                     , op.make_session_cf()
-                    , op.make_wrong_sms_cf2()
+                    , op.make_wrong_code_cf2()
                     )->run({});
 
-   std::make_shared< session_launcher<client_mgr_sms>
+   std::make_shared< session_launcher<client_mgr_code>
                    >( ioc
-                    , cmgr_sms_op {"", "fail", "8r47", -3}
+                    , cmgr_code_op {"", "fail", "8r47", -3}
                     , op.make_session_cf()
-                    , op.make_wrong_sms_cf3()
+                    , op.make_wrong_code_cf3()
                     )->run({});
 
    json j1;

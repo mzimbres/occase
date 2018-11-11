@@ -331,7 +331,7 @@ ev_res
 server_mgr::on_code_confirmation(json j, std::shared_ptr<server_session> s)
 {
    auto const id = j.at("tel").get<std::string>();
-   auto const code = j.at("sms").get<std::string>();
+   auto const code = j.at("code").get<std::string>();
 
    if (code != s->get_code()) {
       json resp;

@@ -12,25 +12,25 @@ namespace rt
 template <class Mgr>
 class client_session;
 
-// Performs a register followed by an sms confirmation.
+// Performs a register followed by a code confirmation.
 
-struct cmgr_sms_op {
+struct cmgr_code_op {
    std::string user;
    std::string expected;
-   std::string sms;
+   std::string code;
    int end_ret;
 };
 
-class client_mgr_sms {
+class client_mgr_code {
 public:
-   using options_type = cmgr_sms_op;
+   using options_type = cmgr_code_op;
 
 private:
-   using client_type = client_session<client_mgr_sms>;
+   using client_type = client_session<client_mgr_code>;
    options_type op;
 
 public:
-   client_mgr_sms(options_type op_)
+   client_mgr_code(options_type op_)
    : op(op_)
    { }
 
@@ -42,7 +42,7 @@ public:
 };
 
 // Tries to authenticate a session with the user bind provided on the
-// sms commands.
+// code commands.
 
 struct cmgr_auth_op {
    std::string user;

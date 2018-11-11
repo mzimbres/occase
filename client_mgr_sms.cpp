@@ -5,7 +5,7 @@
 namespace rt
 {
 
-int client_mgr_sms::on_read(std::string msg, std::shared_ptr<client_type> s)
+int client_mgr_code::on_read(std::string msg, std::shared_ptr<client_type> s)
 {
    auto const j = json::parse(msg);
    auto const cmd = j["cmd"].get<std::string>();
@@ -16,7 +16,7 @@ int client_mgr_sms::on_read(std::string msg, std::shared_ptr<client_type> s)
          json j1;
          j1["cmd"] = "code_confirmation";
          j1["tel"] = op.user;
-         j1["sms"] = op.sms;
+         j1["code"] = op.code;
          s->send_msg(j1.dump());
          //std::cout << "register_ack ok: " << op.user << std::endl;
          return 1;
@@ -24,7 +24,7 @@ int client_mgr_sms::on_read(std::string msg, std::shared_ptr<client_type> s)
 
       std::cout << j << std::endl;
       std::cout << "Test fail: " << op.user << std::endl;
-      throw std::runtime_error("client_mgr_sms::on_read1");
+      throw std::runtime_error("client_mgr_code::on_read1");
       return -1;
    }
 
@@ -38,16 +38,16 @@ int client_mgr_sms::on_read(std::string msg, std::shared_ptr<client_type> s)
          return op.end_ret;
       }
 
-      throw std::runtime_error("client_mgr_sms::on_read2");
+      throw std::runtime_error("client_mgr_code::on_read2");
       return -1;
    }
 
    std::cout << "Server error: Unknown command." << std::endl;
-   throw std::runtime_error("client_mgr_sms::on_read3");
+   throw std::runtime_error("client_mgr_code::on_read3");
    return -1;
 }
 
-int client_mgr_sms::on_handshake(std::shared_ptr<client_type> s)
+int client_mgr_code::on_handshake(std::shared_ptr<client_type> s)
 {
    json j;
    j["cmd"] = "register";

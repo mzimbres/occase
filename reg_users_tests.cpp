@@ -28,7 +28,7 @@ namespace po = boost::program_options;
 struct client_op {
    std::string host {"127.0.0.1"};
    std::string port {"8080"};
-   std::string sms;
+   std::string code;
    int initial_user = 0;
    int users_size = 10;
    int handshake_tm = 3;
@@ -45,33 +45,33 @@ struct client_op {
       };
    }
 
-   auto make_correct_sms_cf1() const
+   auto make_correct_code_cf1() const
    {
       return launcher_op
       { initial_user
       , initial_user + users_size
       , std::chrono::milliseconds {launch_interval}
-      , {"Correct sms test with ret = -1:"}
+      , {"Correct code test with ret = -1:"}
       };
    }
 
-   auto make_correct_sms_cf2() const
+   auto make_correct_code_cf2() const
    {
       return launcher_op
       { initial_user + users_size
       , initial_user + 2 * users_size
       , std::chrono::milliseconds {launch_interval}
-      , {"Correct sms test with ret = -2:"}
+      , {"Correct code test with ret = -2:"}
       };
    }
 
-   auto make_correct_sms_cf3() const
+   auto make_correct_code_cf3() const
    {
       return launcher_op
       { initial_user + 2 * users_size
       , initial_user + 3 * users_size
       , std::chrono::milliseconds {launch_interval}
-      , {"Correct sms test with ret = -3:"}
+      , {"Correct code test with ret = -3:"}
       };
    }
 };
@@ -80,25 +80,25 @@ void reg_users_tests(client_op const& op)
 {
    boost::asio::io_context ioc;
 
-   std::make_shared< session_launcher<client_mgr_sms>
+   std::make_shared< session_launcher<client_mgr_code>
                    >( ioc
-                    , cmgr_sms_op {"", "ok", op.sms, -1}
+                    , cmgr_code_op {"", "ok", op.code, -1}
                     , op.make_session_cf()
-                    , op.make_correct_sms_cf1()
+                    , op.make_correct_code_cf1()
                     )->run({});
 
-   std::make_shared< session_launcher<client_mgr_sms>
+   std::make_shared< session_launcher<client_mgr_code>
                    >( ioc
-                    , cmgr_sms_op {"", "ok", op.sms, -2}
+                    , cmgr_code_op {"", "ok", op.code, -2}
                     , op.make_session_cf()
-                    , op.make_correct_sms_cf2()
+                    , op.make_correct_code_cf2()
                     )->run({});
 
-   std::make_shared< session_launcher<client_mgr_sms>
+   std::make_shared< session_launcher<client_mgr_code>
                    >( ioc
-                    , cmgr_sms_op {"", "ok", op.sms, -3}
+                    , cmgr_code_op {"", "ok", op.code, -3}
                     , op.make_session_cf()
-                    , op.make_correct_sms_cf3()
+                    , op.make_correct_code_cf3()
                     )->run({});
    ioc.run();
 }
@@ -138,8 +138,8 @@ int main(int argc, char* argv[])
          , "Time before which the server should have given "
            "up on the handshake in seconds.")
 
-         ("sms,m"
-         , po::value<std::string>(&op.sms)->default_value("8347")
+         ("code,m"
+         , po::value<std::string>(&op.code)->default_value("8347")
          , "The code sent via email for account validation."
          )
 

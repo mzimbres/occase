@@ -34,11 +34,14 @@ private:
 
 public:
    using options_type = cmgr_register_cf;
-   client_mgr_register(options_type op);
+   client_mgr_register(options_type op_) : op(op_) { }
+
    int on_read(std::string msg, std::shared_ptr<client_type> s);
-   int on_closed(boost::system::error_code ec) { return -1; }
+   int on_closed(boost::system::error_code ec) const noexcept
+      { return -1; }
    int on_handshake(std::shared_ptr<client_type> s);
-   int on_connect() const noexcept { return 1;}
+   int on_connect() const noexcept
+      { return 1;}
    auto get_user() const {return op.user;}
 };
 
@@ -53,12 +56,17 @@ private:
 
 public:
    using options_type = std::string;
-   client_mgr_register_typo(std::string cmd);
-   int on_read(std::string msg, std::shared_ptr<client_type> s);
-   int on_closed(boost::system::error_code ec);
-   int on_handshake(std::shared_ptr<client_type> s);
-   int on_connect() const noexcept { return 1;}
-   auto get_user() const {return "ccccccc";}
+   client_mgr_register_typo(std::string cmd_) : cmd(cmd_) { }
+   auto on_read( std::string msg
+              , std::shared_ptr<client_type> s) const
+      { throw std::runtime_error("register_typo::on_read"); return -1; }
+   auto on_closed(boost::system::error_code ec) const noexcept
+      { return -1; }
+   int on_handshake(std::shared_ptr<client_type> s) const;
+   auto on_connect() const noexcept
+      { return 1;}
+   auto get_user() const noexcept
+      { return "ccccccc"; }
 };
 
 }

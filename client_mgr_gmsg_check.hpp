@@ -27,7 +27,6 @@ public:
 private:
    using client_type = client_session<client_mgr_gmsg_check>;
    options_type op;
-   std::stack<std::string> cmds;
    int tot_msgs;
 
 public:

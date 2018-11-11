@@ -21,20 +21,16 @@ int client_mgr_gmsg_check::on_read( std::string msg
    if (cmd == "auth_ack") {
       auto const res = j.at("result").get<std::string>();
       if (res == "ok") {
-         //std::cout << "Sending " << cmds.top() << std::endl;
          auto const menu_str = j.at("menu").get<std::string>();
          auto const jmenu = json::parse(menu_str);
-         auto const h = get_hashes(jmenu);
-         for (auto const& o : h) {
-            json cmd;
-            cmd["cmd"] = "subscribe";
-            cmd["channels"] = std::vector<std::string>{o};
-            cmds.push(cmd.dump());
-         }
-         tot_msgs = op.n_publishers * std::size(h) * op.msgs_per_channel;
-         std::cout << "Number of expected msgs for " << op.user
-                   << " " << tot_msgs << std::endl;
-         s->send_msg(cmds.top());
+         auto const channels = get_hashes(jmenu);
+         tot_msgs = op.n_publishers * std::size(channels)
+                  * op.msgs_per_channel;
+         std::cout << op.user << " expects: " << tot_msgs << std::endl;
+         json j_sub;
+         j_sub["cmd"] = "subscribe";
+         j_sub["channels"] = channels;
+         s->send_msg(j_sub.dump());
          return 1;
       }
 
@@ -44,24 +40,9 @@ int client_mgr_gmsg_check::on_read( std::string msg
 
    if (cmd == "subscribe_ack") {
       auto const res = j.at("result").get<std::string>();
-      if (res == "ok") {
-         if (std::empty(cmds))
-            throw std::runtime_error("Stack not suposed to be empty.");
-
-         cmds.pop();
-         if (std::empty(cmds)) {
-            //std::cout << op.user << ": ready." << std::endl;
-            return 1;
-         }
-
-         //std::cout << "sending " << cmds.top() << std::endl;
-         //std::cout << "subscribe_ack: " << op.user << std::endl;
-         s->send_msg(cmds.top());
-         return 1;
-      }
-
-      throw std::runtime_error("client_mgr_gmsg_check::on_read2");
-      return -1;
+      if (res != "ok")
+         throw std::runtime_error("client_mgr_gmsg_check::on_read2");
+      return 1;
    }
 
    if (cmd == "publish") {

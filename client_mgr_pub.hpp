@@ -27,14 +27,15 @@ class client_mgr_pub {
 public:
    using options_type = cmgr_sim_op;
 private:
+   using client_type = client_session<client_mgr_pub>;
+
    struct ch_msg_helper {
       bool ack = false;
       bool msg = false;
       std::string hash;
    };
-   using client_type = client_session<client_mgr_pub>;
+
    options_type op;
-   std::stack<std::string> cmds;
    std::vector<ch_msg_helper> hashes;
 
    void send_group_msg( std::shared_ptr<client_type> s

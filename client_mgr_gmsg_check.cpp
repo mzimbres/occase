@@ -6,11 +6,6 @@
 namespace rt
 {
 
-client_mgr_gmsg_check::client_mgr_gmsg_check(options_type op_)
-: op(op_)
-{
-}
-
 int client_mgr_gmsg_check::on_read( std::string msg
                                   , std::shared_ptr<client_type> s)
 {

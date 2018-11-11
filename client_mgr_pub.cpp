@@ -6,11 +6,6 @@
 namespace rt
 {
 
-client_mgr_pub::client_mgr_pub(options_type op_)
-: op(op_)
-{
-}
-
 int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
 {
    auto const j = json::parse(msg);
@@ -90,7 +85,7 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
             if (!o.ack || !o.msg)
                std::cout << "client_mgr_pub: Test fails." << std::endl;
 
-         std::cout << "FINISH group messages." << op.user  << std::endl;
+         std::cout << "FINISH: " << op.user  << std::endl;
          return -1;
       }
 
@@ -139,10 +134,6 @@ void client_mgr_pub::send_group_msg( std::shared_ptr<client_type> s
    //std::cout << "Sending   publish      " << op.user << " "
    //          << c << " " << hashes.at(c).hash
    //          << std::endl;
-}
-
-client_mgr_pub::~client_mgr_pub()
-{
 }
 
 }

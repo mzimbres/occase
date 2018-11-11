@@ -30,7 +30,9 @@ private:
    int tot_msgs;
 
 public:
-   client_mgr_gmsg_check(options_type op);
+   client_mgr_gmsg_check(options_type op_)
+   : op(op_) { }
+
    int on_read(std::string msg, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec);
    int on_handshake(std::shared_ptr<client_type> s);

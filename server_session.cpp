@@ -287,8 +287,8 @@ void server_session::handle_ev(ev_res r)
       {
          // Successful register request which means the ongoing
          // connection timer  has to be canceled.  This is where we
-         // have to set the sms timeout.
-         auto const n = timer.expires_after(mgr.get_timeouts().sms);
+         // have to set the code timeout.
+         auto const n = timer.expires_after(mgr.get_timeouts().code);
 
          auto const handler = [p = shared_from_this()](auto ec)
          {
@@ -296,7 +296,7 @@ void server_session::handle_ev(ev_res r)
                if (ec == boost::asio::error::operation_aborted)
                   return;
 
-               fail(ec, "SMS timer"); // TODO: Check what to do here.
+               fail(ec, "Code timer"); // TODO: Check what to do here.
                return;
             }
 

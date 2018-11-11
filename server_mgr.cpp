@@ -29,7 +29,7 @@ ev_res on_message( server_mgr& mgr
       return ev_res::unknown;
    }
 
-   if (s->is_waiting_sms()) {
+   if (s->is_waiting_code()) {
       if (cmd == "code_confirmation")
          return mgr.on_code_confirmation(std::move(j), s);
 
@@ -270,7 +270,7 @@ ev_res server_mgr::on_register(json j, std::shared_ptr<server_session> s)
    s->set_id(tel);
 
    // TODO: Use a random number generator with six digits.
-   s->set_sms("8347");
+   s->set_code("8347");
 
    json resp;
    resp["cmd"] = "register_ack";
@@ -330,10 +330,10 @@ ev_res server_mgr::on_login(json j, std::shared_ptr<server_session> s)
 ev_res
 server_mgr::on_code_confirmation(json j, std::shared_ptr<server_session> s)
 {
-   auto const tel = j.at("tel").get<std::string>();
-   auto const sms = j.at("sms").get<std::string>();
+   auto const id = j.at("tel").get<std::string>();
+   auto const code = j.at("sms").get<std::string>();
 
-   if (sms != s->get_sms()) {
+   if (code != s->get_code()) {
       json resp;
       resp["cmd"] = "code_confirmation_ack";
       resp["result"] = "fail";
@@ -344,9 +344,8 @@ server_mgr::on_code_confirmation(json j, std::shared_ptr<server_session> s)
    s->promote();
 
    // Inserts the user in the system.
-   auto const id = s->get_id();
-   assert(!std::empty(id));
-   auto const new_user = sessions.insert({tel, s});
+   assert(!std::empty(s->get_id()));
+   auto const new_user = sessions.insert({id, s});
    assert(s->is_auth());
 
    // This would be odd. The entry already exists on the index map

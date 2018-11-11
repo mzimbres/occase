@@ -36,7 +36,7 @@ enum class ev_res
 
 struct session_timeouts {
    std::chrono::seconds auth {2};
-   std::chrono::seconds sms {2};
+   std::chrono::seconds code {2};
    std::chrono::seconds handshake {2};
    std::chrono::seconds pong {2};
    std::chrono::seconds close {2};

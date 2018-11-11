@@ -402,7 +402,7 @@ server_mgr::on_publish( std::string msg, json j
       // sent with the wrong information signaling a logic error in
       // the app.
       json resp;
-      resp["cmd"] = "group_msg_ack";
+      resp["cmd"] = "publish_ack";
       resp["result"] = "fail";
       resp["id"] = j.at("id").get<int>();
       s->send(resp.dump());
@@ -414,7 +414,7 @@ server_mgr::on_publish( std::string msg, json j
    redis_pub_session.send(std::move(rcmd));
 
    json ack;
-   ack["cmd"] = "group_msg_ack";
+   ack["cmd"] = "publish_ack";
    ack["result"] = "ok";
    ack["id"] = j.at("id").get<int>();
    s->send(ack.dump());

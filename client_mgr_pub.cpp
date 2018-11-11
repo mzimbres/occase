@@ -65,11 +65,11 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
       return -1;
    }
 
-   if (cmd == "group_msg_ack") {
+   if (cmd == "publish_ack") {
       auto const res = j.at("result").get<std::string>();
       if (res == op.expected) {
          auto const id = j.at("id").get<int>();
-         //std::cout << "Receiving group_msg_ack: " << op.user << " " << id << " " << hashes.at(id).hash << std::endl;
+         //std::cout << "Receiving publish_ack: " << op.user << " " << id << " " << hashes.at(id).hash << std::endl;
          if (hashes.at(id).ack)
             throw std::runtime_error("client_mgr_pub::on_read4");
          hashes.at(id).ack = true;

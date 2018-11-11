@@ -28,8 +28,8 @@ int client_mgr_user_msg::on_read(std::string msg, std::shared_ptr<client_type> s
             for (auto i = 0; i < op.msgs_per_group; ++i)
                hashes.push_back({false, false, o});
             json cmd;
-            cmd["cmd"] = "subscribe_ack";
-            cmd["hash"] = o;
+            cmd["cmd"] = "subscribe";
+            cmd["channels"] = std::vector<std::string>{o};
             cmds.push(cmd.dump());
          }
          s->send_msg(cmds.top());

@@ -29,7 +29,7 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
                hashes.push_back({false, false, o});
             json cmd;
             cmd["cmd"] = "subscribe";
-            cmd["hash"] = o;
+            cmd["channels"] = std::vector<std::string> {o};
             cmds.push(cmd.dump());
          }
          s->send_msg(cmds.top());
@@ -49,7 +49,8 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
 
          cmds.pop();
          if (std::empty(cmds)) {
-            //std::cout << "Test sim: join groups ok." << std::endl;
+            auto const count = j.at("count").get<int>();
+            std::cout << "subscribe ok: " << count << std::endl;
             send_group_msg(s, 0);
             return 1;
          }

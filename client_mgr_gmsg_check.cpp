@@ -28,7 +28,7 @@ int client_mgr_gmsg_check::on_read( std::string msg
          for (auto const& o : h) {
             json cmd;
             cmd["cmd"] = "subscribe";
-            cmd["hash"] = o;
+            cmd["channels"] = std::vector<std::string>{o};
             cmds.push(cmd.dump());
          }
          tot_msgs = op.n_publishers * std::size(h) * op.msgs_per_channel;

@@ -367,24 +367,31 @@ server_mgr::on_code_confirmation(json j, std::shared_ptr<server_session> s)
 ev_res
 server_mgr::on_subscribe(json j, std::shared_ptr<server_session> s)
 {
-   auto const hash = j.at("hash").get<std::string>();
+   auto const codes = j.at("channels").get<std::vector<std::string>>();
+   auto const from = s->get_id();
 
-   auto const g = channels.find(hash);
-   if (g == std::end(channels)) {
+   if (std::empty(codes)) {
       json resp;
       resp["cmd"] = "subscribe_ack";
-      resp["result"] = "fail";
-      s->send(resp.dump());
-      return ev_res::subscribe_fail;
+      resp["result"] = "ok";
+      resp["count"] = 0;
+      return ev_res::subscribe_ok;
    }
 
-   auto const from = s->get_id();
-   g->second[from] = s; // Overwrites any previous session.
+   auto n_channels = 0;
+   for (auto const& o : codes) {
+      auto const g = channels.find(o);
+      if (g == std::end(channels))
+         continue;
+
+      g->second[from] = s; // Overwrites any previous session.
+      ++n_channels;
+   }
 
    json resp;
    resp["cmd"] = "subscribe_ack";
    resp["result"] = "ok";
-
+   resp["count"] = n_channels;
    s->send(resp.dump());
    return ev_res::subscribe_ok;
 }

@@ -17,7 +17,7 @@ using namespace rt;
 
 namespace po = boost::program_options;
 
-void pub(redis_session_cf const& cf)
+void pub(redis_session_cf const& cf, int count)
 {
    auto const pub_handler = []( auto const& ec
                           , auto const& data
@@ -35,9 +35,12 @@ void pub(redis_session_cf const& cf)
    boost::asio::io_context ioc;
    redis_session pub_session(cf, ioc);
    pub_session.set_on_msg_handler(pub_handler);
-   for (auto i = 0; i < 10000; ++i)
+   for (auto i = 0; i < count; ++i) {
+      auto const msg = std::to_string(i);
       pub_session.send(gen_resp_cmd( redis_cmd::publish
-                                   , {"foo", std::to_string(i)}));
+                                   , {"foo", msg}));
+      std::cout << "Sent: " << msg << std::endl;
+   }
    pub_session.run();
 
    ioc.run();
@@ -70,6 +73,7 @@ int main(int argc, char* argv[])
 {
    try {
       auto test = 0;
+      auto count = 0;
       redis_session_cf cf;
       po::options_description desc("Options");
       desc.add_options()
@@ -86,6 +90,10 @@ int main(int argc, char* argv[])
       , po::value<int>(&test)->default_value(-1)
       , "1 for pub, 2 for sub."
       )
+      ("count,c"
+      , po::value<int>(&count)->default_value(20)
+      , "Count."
+      )
       ;
 
       po::variables_map vm;        
@@ -98,7 +106,7 @@ int main(int argc, char* argv[])
       }
 
       if (test == 1) {
-         pub(cf);
+         pub(cf, count);
          return 0;
       }
 

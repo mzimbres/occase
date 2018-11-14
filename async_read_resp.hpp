@@ -61,7 +61,7 @@ public:
          return;
       }
 
-      if (ec || n < 4) {
+      if (ec || n < 3) {
          handler(ec, {});
          return;
       }

@@ -60,7 +60,7 @@ struct client_op {
    auto make_gmsg_check_cf() const
    {
       return launcher_op
-      { publish_users, listen_users
+      { publish_users, publish_users + listen_users
       , std::chrono::milliseconds {launch_interval}
       , {"Launch of sim clients:         "}
       };

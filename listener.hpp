@@ -24,13 +24,15 @@ private:
    boost::asio::signal_set signals;
    tcp::acceptor acceptor;
    tcp::socket socket;
-   server_mgr mgr;
+   server_mgr& mgr;
 
    void do_accept();
    void on_accept(boost::system::error_code ec);
 
 public:
-   listener(server_op op, boost::asio::io_context& ioc);
+   listener( server_op op
+           , boost::asio::io_context& ioc
+           , server_mgr& mgr_);
    ~listener();
    void run();
 };

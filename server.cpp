@@ -109,7 +109,8 @@ struct instance {
    void operator()() const
    {
       boost::asio::io_context ioc {1};
-      listener lst {op, ioc};
+      server_mgr mgr {op.mgr, ioc};
+      listener lst {op, ioc, mgr};
       lst.run();
       ioc.run();
    }

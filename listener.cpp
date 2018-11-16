@@ -18,11 +18,13 @@ void fail(boost::system::error_code ec, char const* what)
 namespace rt
 {
 
-listener::listener(server_op op, boost::asio::io_context& ioc)
+listener::listener( server_op op
+                  , boost::asio::io_context& ioc
+                  , server_mgr& mgr_)
 : signals(ioc, SIGINT, SIGTERM)
 , acceptor(ioc)
 , socket(ioc)
-, mgr(op.mgr, ioc)
+, mgr(mgr_)
 {
    auto const shandler = [this](auto ec, auto n)
    {

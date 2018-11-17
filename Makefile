@@ -22,6 +22,7 @@ server_objs =
 server_objs += server_mgr.o
 server_objs += server_session.o
 server_objs += listener.o
+server_objs += mgr_arena.o
 
 client_objs =
 client_objs += client_mgr_register.o
@@ -47,7 +48,6 @@ srcs += client_session.hpp
 srcs += session_launcher.hpp
 srcs += async_read_resp.hpp
 srcs += client_mgr_accept_timer.hpp
-srcs += mgr_arena.hpp
 srcs += acceptors.hpp
 
 aux = Makefile

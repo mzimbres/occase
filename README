@@ -1,0 +1,1 @@
+./menu_dump -m 1 -l 30 | redis-cli -x set menu

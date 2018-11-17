@@ -20,7 +20,7 @@ namespace rt
 {
 
 listener::listener( listener_cf op
-                  , std::vector<std::shared_ptr<mgr_arena>> const& arenas_
+                  , std::vector<std::unique_ptr<mgr_arena>> const& arenas_
                   , boost::asio::io_context& ioc)
 : acceptor(ioc)
 , arenas(arenas_)

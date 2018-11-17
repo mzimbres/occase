@@ -118,7 +118,7 @@ struct acceptor_pool {
    listener lst;
 
    acceptor_pool( std::vector<listener_cf> const& lts_cf
-                , std::vector< std::shared_ptr<mgr_arena>
+                , std::vector< std::unique_ptr<mgr_arena>
                               > const& arenas)
    : signals(ioc, SIGINT, SIGTERM)
    , lst {lts_cf.front(), arenas, ioc}
@@ -148,9 +148,9 @@ int main(int argc, char* argv[])
       if (std::empty(op.lts))
          return 0;
 
-      std::vector<std::shared_ptr<mgr_arena>> arenas;
+      std::vector<std::unique_ptr<mgr_arena>> arenas;
       for (unsigned i = 0; i < std::size(op.lts); ++i) {
-         arenas.push_back(std::make_shared<mgr_arena>(op.mgr));
+         arenas.push_back(std::make_unique<mgr_arena>(op.mgr));
          arenas.back()->run();
       }
 

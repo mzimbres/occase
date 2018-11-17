@@ -27,7 +27,7 @@ struct config {
 auto get_server_op(int argc, char* argv[])
 {
    unsigned short port;
-   std::string ip;
+   std::vector<std::string> ips;
    config cf;
    po::options_description desc("Options");
    desc.add_options()
@@ -36,9 +36,10 @@ auto get_server_op(int argc, char* argv[])
    , po::value<unsigned short>(&port)->default_value(8080)
    , "Server listening port."
    )
-   ("ip,d"
-   , po::value<std::string>(&ip)->default_value("127.0.0.1")
-   , "Server ip address."
+   ("ips,d"
+   , po::value<std::vector<std::string>>(&ips)->multitoken()//->default_value(std::vector<std::string>{{"127.0.0.1"}})
+   , "Ip addresses to which the server should bind. Defaults to "
+     " localhost."
    )
    ("workers,w"
    , po::value<int>(&cf.workers)->default_value(1)
@@ -105,8 +106,11 @@ auto get_server_op(int argc, char* argv[])
       return config {true};
    }
 
-   cf.lts_cf.push_back({ip, port});
-   //cf.lts_cf.port = static_cast<unsigned short>(port);
+   if (std::empty(ips))
+      ips.push_back("127.0.0.1");
+
+   for (auto const& o : ips)
+      cf.lts_cf.push_back({o, port});
 
    return cf;
 }

@@ -26,7 +26,7 @@ listener::listener( listener_cf op
 , arenas(arenas_)
 {
    for (auto const& o : arenas)
-      sockets.emplace_back(o->mgr.get_io_context());
+      sockets.emplace_back(o->get_io_context());
 
    auto const address = boost::asio::ip::make_address(op.ip);
    tcp::endpoint endpoint {address, op.port};
@@ -98,7 +98,7 @@ void listener::on_accept(boost::system::error_code ec)
    auto const n = next % std::size(sockets);
    std::make_shared< server_session
                    >( std::move(sockets[n])
-                    , arenas[n]->mgr)->accept();
+                    , arenas[n]->get_mgr())->accept();
    ++next;
 
    do_accept();

@@ -9,16 +9,12 @@
 namespace rt
 {
 
-struct mgr_arena {
+class mgr_arena {
+private:
    boost::asio::io_context ioc {1};
    boost::asio::signal_set signals;
    server_mgr mgr;
    std::thread thread;
-
-   mgr_arena(server_mgr_cf const& cf)
-   : signals(ioc, SIGINT, SIGTERM)
-   , mgr {cf, ioc}
-   { }
 
    void run()
    {
@@ -36,7 +32,15 @@ struct mgr_arena {
       thread = std::thread {[this](){ioc.run();}};
    }
 
+public:
+   mgr_arena(server_mgr_cf const& cf)
+   : signals(ioc, SIGINT, SIGTERM)
+   , mgr {cf, ioc}
+   { run(); }
+
    void join() { thread.join(); }
+   auto& get_io_context() {return ioc;}
+   auto& get_mgr() {return mgr;}
 };
 
 }

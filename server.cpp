@@ -3,6 +3,7 @@
 #include <string>
 #include <chrono>
 #include <iterator>
+#include <algorithm>
 
 #include <boost/asio/signal_set.hpp>
 #include <boost/program_options/options_description.hpp>
@@ -122,6 +123,9 @@ struct acceptor_pool {
                               > const& arenas)
    : signals(ioc, SIGINT, SIGTERM)
    , lst {lts_cf.front(), arenas, ioc}
+   { run(); }
+
+   void run()
    {
       lst.run();
       auto const sigh = [this](auto ec, auto n)
@@ -133,10 +137,6 @@ struct acceptor_pool {
       };
 
       signals.async_wait(sigh);
-   }
-
-   void run()
-   {
       ioc.run();
    }
 };
@@ -148,11 +148,12 @@ int main(int argc, char* argv[])
       if (std::empty(op.lts))
          return 0;
 
+      auto const generator = [mgr = op.mgr]()
+      { return std::make_unique<mgr_arena>(mgr); };
+
       std::vector<std::unique_ptr<mgr_arena>> arenas;
-      for (unsigned i = 0; i < std::size(op.lts); ++i) {
-         arenas.push_back(std::make_unique<mgr_arena>(op.mgr));
-         arenas.back()->run();
-      }
+      std::generate_n(std::back_inserter(arenas), std::size(op.lts)
+                     , generator);
 
       acceptor_pool acc_pool {op.lts, arenas};
       acc_pool.run();

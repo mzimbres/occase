@@ -47,6 +47,7 @@ srcs += client_session.hpp
 srcs += session_launcher.hpp
 srcs += async_read_resp.hpp
 srcs += client_mgr_accept_timer.hpp
+srcs += mgr_arena.hpp
 
 aux = Makefile
 

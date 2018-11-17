@@ -66,12 +66,12 @@ void redis_session::close()
 {
    boost::system::error_code ec;
    socket.shutdown(tcp::socket::shutdown_send, ec);
-   if (ec)
-      fail_tmp(ec, "close");
+   //if (ec)
+   //   fail_tmp(ec, "redis-close");
 
    socket.close(ec);
-   if (ec)
-      fail_tmp(ec, "close");
+   //if (ec)
+   //   fail_tmp(ec, "redis-close");
 }
 
 void redis_session::start_reading_resp()

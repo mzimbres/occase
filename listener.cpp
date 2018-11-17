@@ -4,6 +4,7 @@
 
 #include "server_session.hpp"
 #include "server_mgr.hpp"
+#include "mgr_arena.hpp"
 
 namespace
 {
@@ -18,24 +19,14 @@ void fail(boost::system::error_code ec, char const* what)
 namespace rt
 {
 
-listener::listener( server_op op
-                  , server_mgr& mgr_)
-: mgr(mgr_)
-, signals(mgr.get_io_context(), SIGINT, SIGTERM)
-, acceptor(mgr.get_io_context())
-, socket(mgr.get_io_context())
+listener::listener( listener_cf op
+                  , std::vector<std::shared_ptr<mgr_arena>> const& arenas_
+                  , boost::asio::io_context& ioc)
+: acceptor(ioc)
+, arenas(arenas_)
 {
-   auto const shandler = [this](auto ec, auto n)
-   {
-      // TODO: Verify ec here.
-      std::cout << "\nBeginning the shutdown operations ..."
-                << std::endl;
-
-      acceptor.cancel();
-      mgr.shutdown();
-   };
-
-   signals.async_wait(shandler);
+   for (auto const& o : arenas)
+      sockets.emplace_back(o->mgr.get_io_context());
 
    auto const address = boost::asio::ip::make_address(op.ip);
    tcp::endpoint endpoint {address, op.port};
@@ -88,7 +79,8 @@ void listener::do_accept()
       on_accept(ec);
    };
 
-   acceptor.async_accept(socket, handler);
+   auto const n = next % std::size(sockets);
+   acceptor.async_accept(sockets[n], handler);
 }
 
 void listener::on_accept(boost::system::error_code ec)
@@ -103,7 +95,11 @@ void listener::on_accept(boost::system::error_code ec)
       return;
    }
 
-   std::make_shared<server_session>(std::move(socket), mgr)->accept();
+   auto const n = next % std::size(sockets);
+   std::make_shared< server_session
+                   >( std::move(sockets[n])
+                    , arenas[n]->mgr)->accept();
+   ++next;
 
    do_accept();
 }

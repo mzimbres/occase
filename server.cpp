@@ -10,24 +10,32 @@
 #include <boost/program_options/variables_map.hpp>
 
 #include "listener.hpp"
+#include "mgr_arena.hpp"
 
 using namespace rt;
 
 namespace po = boost::program_options;
 
-std::vector<server_op> get_server_op(int argc, char* argv[])
+struct config {
+   server_mgr_cf mgr;
+   std::vector<listener_cf> lts;
+};
+
+auto get_server_op(int argc, char* argv[])
 {
    int instances = 1;
-   server_op op;
+   unsigned short port;
+   std::string ip;
+   config op;
    po::options_description desc("Options");
    desc.add_options()
    ("help,h", "Produces help message")
    ( "port,p"
-   , po::value<unsigned short>(&op.port)->default_value(8080)
+   , po::value<unsigned short>(&port)->default_value(8080)
    , "Server listening port."
    )
    ("ip,d"
-   , po::value<std::string>(&op.ip)->default_value("127.0.0.1")
+   , po::value<std::string>(&ip)->default_value("127.0.0.1")
    , "Server ip address."
    )
    ("instances"
@@ -92,26 +100,43 @@ std::vector<server_op> get_server_op(int argc, char* argv[])
 
    if (vm.count("help")) {
       std::cout << desc << "\n";
-      return {};
+      return config {};
    }
 
-   std::vector<server_op> ops;
+   std::vector<listener_cf> ops;
    for (auto i = 0; i < instances; ++i) {
-      ops.push_back(op);
-      ops.back().port += i;
+      auto const p = static_cast<unsigned short>(port + i);
+      op.lts.push_back({ip, p});
    }
 
-   return ops;
+   return op;
 }
 
-struct instance {
-   server_op op;
-   void operator()() const
+struct acceptor_pool {
+   boost::asio::io_context ioc {1};
+   boost::asio::signal_set signals;
+   listener lst;
+
+   acceptor_pool( std::vector<listener_cf> const& lts_cf
+                , std::vector< std::shared_ptr<mgr_arena>
+                              > const& arenas)
+   : signals(ioc, SIGINT, SIGTERM)
+   , lst {lts_cf.front(), arenas, ioc}
    {
-      boost::asio::io_context ioc {1};
-      server_mgr mgr {op.mgr, ioc};
-      listener lst {op, mgr};
       lst.run();
+      auto const sigh = [this](auto ec, auto n)
+      {
+         // TODO: Verify ec here.
+         std::cout << "\nBeginning the shutdown operations ..."
+                   << std::endl;
+         lst.shutdown();
+      };
+
+      signals.async_wait(sigh);
+   }
+
+   void run()
+   {
       ioc.run();
    }
 };
@@ -119,18 +144,22 @@ struct instance {
 int main(int argc, char* argv[])
 {
    try {
-      auto const ops = get_server_op(argc, argv);
-      if (std::empty(ops))
+      auto const op = get_server_op(argc, argv);
+      if (std::empty(op.lts))
          return 0;
 
-      std::vector<std::thread> instances;
-      for (unsigned i = 0; i < std::size(ops) - 1; ++i)
-         instances.push_back(std::thread {instance{ops[i]}});
+      std::vector<std::shared_ptr<mgr_arena>> arenas;
+      std::vector<std::thread> threads;
+      for (unsigned i = 0; i < std::size(op.lts); ++i) {
+         arenas.push_back(std::make_shared<mgr_arena>(op.mgr));
+         auto const tmp = [p = arenas.back()]() { p->run(); };
+         threads.push_back(std::thread {tmp});
+      }
 
-      instance inst {ops.back()};
-      inst();
+      acceptor_pool acc_pool {op.lts, arenas};
+      acc_pool.run();
 
-      for (auto& o : instances)
+      for (auto& o : threads)
          o.join();
 
       return 0;

@@ -6,6 +6,14 @@
 #include "menu_parser.hpp"
 #include "server_session.hpp"
 
+namespace
+{
+ 
+// TODO: Remove this global once there is a solution to the logger.
+std::mutex m;
+
+}
+
 namespace rt
 {
 
@@ -494,9 +502,6 @@ void server_mgr::shutdown()
 
    stats_timer.cancel();
 }
-
-// TODO: Remove this global once there is a solution to the logger.
-std::mutex m;
 
 void server_mgr::do_stats_logger()
 {

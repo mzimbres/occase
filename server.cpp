@@ -149,18 +149,16 @@ int main(int argc, char* argv[])
          return 0;
 
       std::vector<std::shared_ptr<mgr_arena>> arenas;
-      std::vector<std::thread> threads;
       for (unsigned i = 0; i < std::size(op.lts); ++i) {
          arenas.push_back(std::make_shared<mgr_arena>(op.mgr));
-         auto const tmp = [p = arenas.back()]() { p->run(); };
-         threads.push_back(std::thread {tmp});
+         arenas.back()->run();
       }
 
       acceptor_pool acc_pool {op.lts, arenas};
       acc_pool.run();
 
-      for (auto& o : threads)
-         o.join();
+      for (auto& o : arenas)
+         o->join();
 
       return 0;
    } catch (std::exception const& e) {

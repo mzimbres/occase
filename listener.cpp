@@ -19,12 +19,11 @@ namespace rt
 {
 
 listener::listener( server_op op
-                  , boost::asio::io_context& ioc
                   , server_mgr& mgr_)
-: signals(ioc, SIGINT, SIGTERM)
-, acceptor(ioc)
-, socket(ioc)
-, mgr(mgr_)
+: mgr(mgr_)
+, signals(mgr.get_io_context(), SIGINT, SIGTERM)
+, acceptor(mgr.get_io_context())
+, socket(mgr.get_io_context())
 {
    auto const shandler = [this](auto ec, auto n)
    {

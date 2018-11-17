@@ -21,18 +21,16 @@ class server_mgr;
 
 class listener {
 private:
+   server_mgr& mgr;
    boost::asio::signal_set signals;
    tcp::acceptor acceptor;
    tcp::socket socket;
-   server_mgr& mgr;
 
    void do_accept();
    void on_accept(boost::system::error_code ec);
 
 public:
-   listener( server_op op
-           , boost::asio::io_context& ioc
-           , server_mgr& mgr_);
+   listener(server_op op, server_mgr& mgr_);
    ~listener();
    void run();
 };

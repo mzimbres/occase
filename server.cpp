@@ -110,7 +110,7 @@ struct instance {
    {
       boost::asio::io_context ioc {1};
       server_mgr mgr {op.mgr, ioc};
-      listener lst {op, ioc, mgr};
+      listener lst {op, mgr};
       lst.run();
       ioc.run();
    }

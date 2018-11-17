@@ -142,6 +142,7 @@ public:
 
    auto const& get_timeouts() const noexcept {return timeouts;}
    auto& get_stats() noexcept {return stats;}
+   auto& get_io_context() {return ioc;}
 };
 
 ev_res on_message( server_mgr& mgr

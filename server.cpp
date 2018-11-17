@@ -5,12 +5,11 @@
 #include <iterator>
 #include <algorithm>
 
-#include <boost/asio/signal_set.hpp>
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
 
-#include "listener.hpp"
+#include "acceptors.hpp"
 #include "mgr_arena.hpp"
 
 using namespace rt;
@@ -115,34 +114,6 @@ auto get_server_op(int argc, char* argv[])
    return cf;
 }
 
-struct acceptor_pool {
-   boost::asio::io_context ioc {1};
-   boost::asio::signal_set signals;
-   listener lst;
-
-   acceptor_pool( std::vector<listener_cf> const& lts_cf
-                , std::vector< std::unique_ptr<mgr_arena>
-                              > const& arenas)
-   : signals(ioc, SIGINT, SIGTERM)
-   , lst {lts_cf.front(), arenas, ioc}
-   { run(); }
-
-   void run()
-   {
-      lst.run();
-      auto const sigh = [this](auto ec, auto n)
-      {
-         // TODO: Verify ec here.
-         std::cout << "\nBeginning the shutdown operations ..."
-                   << std::endl;
-         lst.shutdown();
-      };
-
-      signals.async_wait(sigh);
-      ioc.run();
-   }
-};
-
 int main(int argc, char* argv[])
 {
    try {
@@ -156,7 +127,7 @@ int main(int argc, char* argv[])
       std::vector<std::unique_ptr<mgr_arena>> arenas;
       std::generate_n(std::back_inserter(arenas), cf.workers, generator);
 
-      acceptor_pool acc_pool {cf.lts_cf, arenas};
+      acceptors acc_pool {cf.lts_cf, arenas};
       acc_pool.run();
 
       for (auto& o : arenas)

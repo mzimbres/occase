@@ -9,7 +9,7 @@
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
 
-#include "acceptors.hpp"
+#include "acceptor_arena.hpp"
 #include "mgr_arena.hpp"
 
 using namespace rt;
@@ -115,7 +115,7 @@ int main(int argc, char* argv[])
       std::vector<std::unique_ptr<mgr_arena>> arenas;
       std::generate_n(std::back_inserter(arenas), cf.workers, generator);
 
-      acceptors acc_pool {cf.port, arenas};
+      acceptor_arena acc_pool {cf.port, arenas};
       acc_pool.run();
 
       for (auto& o : arenas)

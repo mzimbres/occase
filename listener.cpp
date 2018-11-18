@@ -25,6 +25,7 @@ listener::listener( boost::asio::ip::tcp::endpoint const& endpoint
 : acceptor(ioc, endpoint)
 , arenas(arenas_)
 {
+   std::cout << "Binding server to " << acceptor.local_endpoint() << std::endl;
    for (auto const& o : arenas)
       sockets.emplace_back(o->get_io_context());
 }

@@ -12,18 +12,15 @@
 namespace rt
 {
 
-struct listener_cf {
-   std::string ip;
-   unsigned short port;
-};
+// TODO: Add ipv6 support.
 
-struct acceptors {
+struct acceptor_arena {
    boost::asio::io_context ioc {1};
    boost::asio::signal_set signals;
    listener lst;
 
-   acceptors( unsigned short port
-            , std::vector<std::unique_ptr<mgr_arena>> const& arenas)
+   acceptor_arena( unsigned short port
+                 , std::vector<std::unique_ptr<mgr_arena>> const& arenas)
    : signals(ioc, SIGINT, SIGTERM)
    , lst { {boost::asio::ip::tcp::v4(), port}, arenas, ioc}
    {

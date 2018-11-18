@@ -87,17 +87,18 @@ public:
 
 void test_simulation(client_op const& op)
 {
+   timer t;
    boost::asio::io_context ioc;
 
    auto const sim_op =  op.make_sim_cf();
 
+   // Sends one more message to test the unsubscribe command.
    auto const next = [&ioc, &op, &sim_op]()
    {
-      timer t;
       auto const s2 = std::make_shared< session_launcher<client_mgr_pub>
                       >( ioc
                        , cmgr_sim_op
-                         { "", "ok", op.msgs_per_group}
+                         { "", "ok", op.msgs_per_group + 1}
                        , op.make_session_cf()
                        , sim_op
                        );

@@ -399,6 +399,7 @@ server_mgr::on_unsubscribe(json j, std::shared_ptr<server_session> s)
    resp["cmd"] = "unsubscribe_ack";
    resp["result"] = "ok";
    resp["count"] = n_channels;
+   resp["channels"] = codes;
    s->send(resp.dump());
    return ev_res::unsubscribe_ok;
 }

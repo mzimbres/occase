@@ -19,49 +19,14 @@ void fail(boost::system::error_code ec, char const* what)
 namespace rt
 {
 
-listener::listener( listener_cf op
+listener::listener( boost::asio::ip::tcp::endpoint const& endpoint
                   , std::vector<std::unique_ptr<mgr_arena>> const& arenas_
                   , boost::asio::io_context& ioc)
-: acceptor(ioc)
+: acceptor(ioc, endpoint)
 , arenas(arenas_)
 {
    for (auto const& o : arenas)
       sockets.emplace_back(o->get_io_context());
-
-   auto const address = boost::asio::ip::make_address(op.ip);
-   tcp::endpoint endpoint {address, op.port};
-
-   boost::system::error_code ec;
-   acceptor.open(endpoint.protocol(), ec);
-   if (ec) {
-      fail(ec, "open");
-      return;
-   }
-
-   acceptor.set_option(boost::asio::socket_base::reuse_address(true));
-   if (ec) {
-      fail(ec, "set_option");
-      return;
-   }
-
-   acceptor.bind(endpoint, ec);
-   if (ec) {
-      fail(ec, "bind");
-      return;
-   }
-
-   //std::cout << "max_listen_connections: "
-   //          << boost::asio::socket_base::max_listen_connections << std::endl;
-
-   acceptor.listen(boost::asio::socket_base::max_listen_connections, ec);
-   if (ec) {
-      fail(ec, "listen");
-      return;
-   }
-}
-
-listener::~listener()
-{
 }
 
 void listener::run()

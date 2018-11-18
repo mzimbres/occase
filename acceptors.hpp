@@ -12,6 +12,11 @@
 namespace rt
 {
 
+struct listener_cf {
+   std::string ip;
+   unsigned short port;
+};
+
 struct acceptors {
    boost::asio::io_context ioc {1};
    boost::asio::signal_set signals;
@@ -20,8 +25,11 @@ struct acceptors {
    acceptors( std::vector<listener_cf> const& lts_cf
             , std::vector<std::unique_ptr<mgr_arena>> const& arenas)
    : signals(ioc, SIGINT, SIGTERM)
-   , lst {lts_cf.front(), arenas, ioc}
-   { run(); }
+   , lst { {boost::asio::ip::make_address(lts_cf.front().ip), lts_cf.front().port}
+         , arenas, ioc}
+   {
+      run();
+   }
 
    void run()
    {

@@ -20,25 +20,19 @@ struct config {
    bool help = false;
    server_mgr_cf mgr;
    int workers;
-   std::vector<listener_cf> lts_cf;
+   unsigned short port;
 };
 
 auto get_server_op(int argc, char* argv[])
 {
-   unsigned short port;
    std::vector<std::string> ips;
    config cf;
    po::options_description desc("Options");
    desc.add_options()
    ("help,h", "Produces help message")
    ( "port,p"
-   , po::value<unsigned short>(&port)->default_value(8080)
+   , po::value<unsigned short>(&cf.port)->default_value(8080)
    , "Server listening port."
-   )
-   ("ips,d"
-   , po::value<std::vector<std::string>>(&ips)->multitoken()//->default_value(std::vector<std::string>{{"127.0.0.1"}})
-   , "Ip addresses to which the server should bind. Defaults to "
-     " localhost."
    )
    ("workers,w"
    , po::value<int>(&cf.workers)->default_value(1)
@@ -105,12 +99,6 @@ auto get_server_op(int argc, char* argv[])
       return config {true};
    }
 
-   if (std::empty(ips))
-      ips.push_back("127.0.0.1");
-
-   for (auto const& o : ips)
-      cf.lts_cf.push_back({o, port});
-
    return cf;
 }
 
@@ -127,7 +115,7 @@ int main(int argc, char* argv[])
       std::vector<std::unique_ptr<mgr_arena>> arenas;
       std::generate_n(std::back_inserter(arenas), cf.workers, generator);
 
-      acceptors acc_pool {cf.lts_cf, arenas};
+      acceptors acc_pool {cf.port, arenas};
       acc_pool.run();
 
       for (auto& o : arenas)

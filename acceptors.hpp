@@ -22,11 +22,10 @@ struct acceptors {
    boost::asio::signal_set signals;
    listener lst;
 
-   acceptors( std::vector<listener_cf> const& lts_cf
+   acceptors( unsigned short port
             , std::vector<std::unique_ptr<mgr_arena>> const& arenas)
    : signals(ioc, SIGINT, SIGTERM)
-   , lst { {boost::asio::ip::make_address(lts_cf.front().ip), lts_cf.front().port}
-         , arenas, ioc}
+   , lst { {boost::asio::ip::tcp::v4(), port}, arenas, ioc}
    {
       run();
    }

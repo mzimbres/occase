@@ -63,38 +63,6 @@ ev_res on_message( server_mgr& mgr
    return ev_res::unknown;
 }
 
-void broadcast_msg(channel_type& members, std::string const& msg)
-{
-   //std::cout << "Broadcast size: " << std::size(members) << std::endl;
-   auto begin = std::begin(members);
-   auto end = std::end(members);
-   while (begin != end) {
-      if (auto s = begin->second.lock()) {
-         // The user is online. We can just forward his message.
-         // TODO: We incurr here the possibility of sending repeated
-         // messages to the user. The scenario is as follows
-         // 1. We send a message bellow and it is buffered.
-         // 2. The user disconnects before receiving the message.
-         // 3. The message are saved on the database.
-         // 4. The user reconnects and we read and send him his
-         //    messages from the database.
-         // 5. We traverse the channels sending him the latest messages
-         //    that he missed while he was offline and this message is
-         //    between them.
-         // This is perhaps unlikely but should be avoided in the
-         // future.
-         //std::cout << "on_group_msg: sending to " << s->get_id()
-         //          << " " << msg << std::endl;
-         s->send(msg);
-         ++begin;
-         continue;
-      }
-
-      // Removes users that are not online anymore.
-      begin = members.erase(begin);
-   }
-}
-
 server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc_)
 : ioc(ioc_)
 , timeouts(cf.get_timeouts())
@@ -136,22 +104,18 @@ server_mgr::redis_group_msg_handler( boost::system::error_code const& ec
       assert(std::size(data) == 3);
       assert(data[1] == redis_group_channel);
 
-      auto const tmp = [this, msg = std::move(data.back())]()
-      {
-         auto const j = json::parse(msg);
-         auto const to = j.at("to").get<std::string>();
-         auto const g = channels.find(to);
-         if (g == std::end(channels)) {
-            // Should not happen as the group is checked on
-            // on_user_group:msg before being sent to redis for broadcast.
-            assert(false);
-            return;
-         }
+      auto const j = json::parse(data.back());
+      auto const to = j.at("to").get<std::string>();
+      auto const g = channels.find(to);
+      if (g == std::end(channels)) {
+         // Should not happen as the group is checked on
+         // on_user_group:msg before being sent to redis for broadcast.
+         // TODO: Handle this error.
+         assert(false);
+         return;
+      }
 
-         broadcast_msg(g->second, msg);
-      };
-
-      asio::post(ioc, tmp);
+      g->second.broadcast(data.back());
 
       return;
    }
@@ -392,7 +356,7 @@ server_mgr::on_subscribe(json j, std::shared_ptr<server_session> s)
       if (g == std::end(channels))
          continue;
 
-      g->second[from] = s; // Overwrites any previous session.
+      g->second.add_member(s);
       ++n_channels;
    }
 

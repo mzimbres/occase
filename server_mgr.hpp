@@ -10,6 +10,7 @@
 #include <boost/asio/steady_timer.hpp>
 
 #include "config.hpp"
+#include "channel.hpp"
 #include "json_utils.hpp"
 #include "redis_session.hpp"
 
@@ -77,19 +78,6 @@ struct sessions_stats {
    int number_of_sessions {0};
 };
 
-// The number of members in a channel is expected be on the
-// thousands, let us say 10k. The operations performed are
-//
-// 1. Insert very often. Can be on the back.
-// 2. Traverse very often.
-// 3. Remove: Once in a while, requires searching.
-// 
-// Would like to use a vector but cannot pay for the linear search
-// time, even if not occurring very often.
-using channel_type =
-   std::unordered_map< std::string
-                     , std::weak_ptr<server_session>>;
-
 class server_mgr {
 private:
    asio::io_context& ioc;
@@ -97,9 +85,8 @@ private:
    std::unordered_map< std::string
                      , std::weak_ptr<server_session>> sessions;
 
-   // Maps a channel id to a map of server sessions that subscribed to
-   // that channel.
-   std::unordered_map<std::string, channel_type> channels;
+   // Maps a channel id to the corresponding channel object.
+   std::unordered_map<std::string, channel> channels;
 
    session_timeouts const timeouts;
    sessions_stats stats;

@@ -55,6 +55,9 @@ ev_res on_message( server_mgr& mgr
       if (cmd == "user_msg")
          return mgr.on_user_msg(std::move(msg), std::move(j), s);
 
+      if (cmd == "unsubscribe")
+         return mgr.on_unsubscribe(std::move(j), s);
+
       std::cerr << "Server: Unknown command " << cmd << std::endl;
       return ev_res::unknown;
    }
@@ -367,6 +370,39 @@ server_mgr::on_subscribe(json j, std::shared_ptr<server_session> s)
    s->send(resp.dump());
    return ev_res::subscribe_ok;
 }
+
+ev_res
+server_mgr::on_unsubscribe(json j, std::shared_ptr<server_session> s)
+{
+   auto const codes = j.at("channels").get<std::vector<std::string>>();
+   auto const from = s->get_id();
+
+   if (std::empty(codes)) {
+      json resp;
+      resp["cmd"] = "unsubscribe_ack";
+      resp["result"] = "ok";
+      resp["count"] = 0;
+      return ev_res::subscribe_ok;
+   }
+
+   auto n_channels = 0;
+   for (auto const& o : codes) {
+      auto const g = channels.find(o);
+      if (g == std::end(channels))
+         continue;
+
+      g->second.remove_member(from);
+      ++n_channels;
+   }
+
+   json resp;
+   resp["cmd"] = "unsubscribe_ack";
+   resp["result"] = "ok";
+   resp["count"] = n_channels;
+   s->send(resp.dump());
+   return ev_res::unsubscribe_ok;
+}
+
 
 ev_res
 server_mgr::on_publish( std::string msg, json j

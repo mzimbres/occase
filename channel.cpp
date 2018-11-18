@@ -44,5 +44,13 @@ void channel::add_member(std::shared_ptr<server_session> s)
    members[from] = s; // Overwrites any previous session.
 }
 
+void channel::remove_member(std::string const& member)
+{
+   // We could return the count here. But since I am still considering
+   // changing the strategy and use a vector instead of an unordered
+   // map, I will let this open.
+   members.erase(member);
+}
+
 }
 

@@ -28,6 +28,8 @@ enum class ev_res
 , code_confirmation_fail
 , subscribe_ok
 , subscribe_fail
+, unsubscribe_ok
+, unsubscribe_fail
 , publish_ok
 , publish_fail
 , user_msg_ok
@@ -122,6 +124,7 @@ public:
    ev_res on_login(json j, std::shared_ptr<server_session> s);
    ev_res on_code_confirmation(json j, std::shared_ptr<server_session> s);
    ev_res on_subscribe(json j, std::shared_ptr<server_session> session);
+   ev_res on_unsubscribe(json j, std::shared_ptr<server_session> session);
    ev_res on_user_msg( std::string msg, json j
                      , std::shared_ptr<server_session> session);
    ev_res on_publish( std::string msg, json j

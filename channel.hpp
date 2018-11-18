@@ -27,6 +27,7 @@ private:
 public:
    void broadcast(std::string const& msg);
    void add_member(std::shared_ptr<server_session> s);
+   void remove_member(std::string const& member);
 };
 
 }

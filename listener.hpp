@@ -17,7 +17,6 @@ class listener {
 private:
    boost::asio::ip::tcp::acceptor acceptor;
    std::vector<std::unique_ptr<mgr_arena>> const& arenas;
-   std::vector<tcp::socket> sockets;
    long long next = 0;
 
    void do_accept();

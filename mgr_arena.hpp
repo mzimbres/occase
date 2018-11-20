@@ -13,6 +13,7 @@ class mgr_arena {
 private:
    boost::asio::io_context ioc {1};
    boost::asio::signal_set signals;
+   boost::asio::ip::tcp::socket socket;
    server_mgr mgr;
    std::thread thread;
 
@@ -23,6 +24,7 @@ public:
    void join() { thread.join(); }
    auto& get_io_context() {return ioc;}
    auto& get_mgr() {return mgr;}
+   auto& get_socket() {return socket;}
 };
 
 }

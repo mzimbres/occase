@@ -6,6 +6,7 @@ namespace rt
 mgr_arena::mgr_arena(server_mgr_cf const& cf)
 : signals(ioc, SIGINT, SIGTERM)
 , mgr {cf, ioc}
+, socket {ioc}
 {
    run();
 }

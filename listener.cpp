@@ -25,9 +25,8 @@ listener::listener( boost::asio::ip::tcp::endpoint const& endpoint
 : acceptor(ioc, endpoint)
 , arenas(arenas_)
 {
-   std::cout << "Binding server to " << acceptor.local_endpoint() << std::endl;
-   for (auto const& o : arenas)
-      sockets.emplace_back(o->get_io_context());
+   std::cout << "Binding server to " << acceptor.local_endpoint()
+             << std::endl;
 }
 
 void listener::run()
@@ -40,13 +39,10 @@ void listener::run()
 
 void listener::do_accept()
 {
-   auto handler = [this](auto ec)
-   {
-      on_accept(ec);
-   };
-
-   auto const n = next % std::size(sockets);
-   acceptor.async_accept(sockets[n], handler);
+   auto const n = next % std::size(arenas);
+   acceptor.async_accept( arenas[n]->get_socket()
+                        , [this](auto const& ec)
+                          { on_accept(ec); });
 }
 
 void listener::on_accept(boost::system::error_code ec)
@@ -61,9 +57,9 @@ void listener::on_accept(boost::system::error_code ec)
       return;
    }
 
-   auto const n = next % std::size(sockets);
+   auto const n = next % std::size(arenas);
    std::make_shared< server_session
-                   >( std::move(sockets[n])
+                   >( std::move(arenas[n]->get_socket())
                     , arenas[n]->get_mgr())->accept();
    ++next;
 

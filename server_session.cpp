@@ -18,7 +18,8 @@ void fail(boost::system::error_code ec, char const* what)
 namespace rt
 {
 
-server_session::server_session(tcp::socket socket, server_mgr& mgr_)
+server_session::server_session( net::ip::tcp::socket socket
+                              , server_mgr& mgr_)
 : ws(std::move(socket))
 , strand(ws.get_executor())
 , timer( ws.get_executor().context()
@@ -43,7 +44,7 @@ void server_session::accept()
       p->do_accept();
    };
 
-   boost::asio::post(boost::asio::bind_executor(strand, handler));
+   net::post(net::bind_executor(strand, handler));
 }
 
 void server_session::do_accept()
@@ -70,7 +71,7 @@ void server_session::do_accept()
    auto const handler1 = [p = shared_from_this()](auto ec)
    {
       if (ec) {
-         if (ec == boost::asio::error::operation_aborted)
+         if (ec == net::error::operation_aborted)
             return;
 
          fail(ec, "do_accept_timer");
@@ -79,24 +80,24 @@ void server_session::do_accept()
 
       assert(!p->ws.is_open());
 
-      p->ws.next_layer().shutdown(tcp::socket::shutdown_both, ec);
+      p->ws.next_layer().shutdown(net::ip::tcp::socket::shutdown_both, ec);
       p->ws.next_layer().close(ec);
    };
 
-   timer.async_wait(boost::asio::bind_executor(strand, handler1));
+   timer.async_wait(net::bind_executor(strand, handler1));
 
    auto handler2 = [p = shared_from_this()](auto ec)
    {
       p->on_accept(ec);
    };
 
-   ws.async_accept(boost::asio::bind_executor(strand, handler2));
+   ws.async_accept(net::bind_executor(strand, handler2));
 }
 
 void server_session::on_accept(boost::system::error_code ec)
 {
    if (ec) {
-      if (ec == boost::asio::error::operation_aborted) {
+      if (ec == net::error::operation_aborted) {
          // The handshake laste too long and the timer fired. giving
          // up.
          //std::cout << "Giving up on handshake." << std::endl;
@@ -115,7 +116,7 @@ void server_session::on_accept(boost::system::error_code ec)
    auto const handler = [p = shared_from_this()](auto ec)
    {
       if (ec) {
-         if (ec == boost::asio::error::operation_aborted)
+         if (ec == net::error::operation_aborted)
             return;
 
          fail(ec, "after_handshake_timer");
@@ -125,7 +126,7 @@ void server_session::on_accept(boost::system::error_code ec)
       p->do_close();
    };
 
-   timer.async_wait(boost::asio::bind_executor(strand, handler));
+   timer.async_wait(net::bind_executor(strand, handler));
 
    do_read();
 }
@@ -135,13 +136,13 @@ void server_session::do_read()
    auto handler = [p = shared_from_this()](auto ec, auto n)
    { p->on_read(ec, n); };
 
-   ws.async_read(buffer, boost::asio::bind_executor(strand, handler));
+   ws.async_read(buffer, net::bind_executor(strand, handler));
 }
 
 void server_session::on_close(boost::system::error_code ec)
 {
    if (ec) {
-      if (ec == boost::asio::error::operation_aborted) {
+      if (ec == net::error::operation_aborted) {
          // This can be caused for example if the client shuts down
          // the socket before receiving (and replying) the close frame
          //std::cout << "server_session::on_close: aborted." << std::endl;
@@ -172,7 +173,7 @@ void server_session::do_close()
    auto const handler0 = [p = shared_from_this()](auto ec)
    {
       if (ec) {
-         if (ec == boost::asio::error::operation_aborted)
+         if (ec == net::error::operation_aborted)
             return;
 
          fail(ec, "on_close"); // TODO: Check what to do here.
@@ -181,11 +182,11 @@ void server_session::do_close()
 
       //std::cout << "Giving up waiting for close frame. Shutting down socket."
       //          << std::endl;
-      p->ws.next_layer().shutdown(tcp::socket::shutdown_both, ec);
+      p->ws.next_layer().shutdown(net::ip::tcp::socket::shutdown_both, ec);
       p->ws.next_layer().close(ec);
    };
 
-   timer.async_wait(boost::asio::bind_executor(strand, handler0));
+   timer.async_wait(net::bind_executor(strand, handler0));
 
    //std::cout << "server_session::do_close()" << std::endl;
    auto const handler = [p = shared_from_this()](auto ec)
@@ -194,7 +195,7 @@ void server_session::do_close()
    };
 
    beast::websocket::close_reason reason {};
-   ws.async_close(reason, boost::asio::bind_executor(strand, handler));
+   ws.async_close(reason, net::bind_executor(strand, handler));
 }
 
 void server_session::send(std::string msg)
@@ -204,7 +205,7 @@ void server_session::send(std::string msg)
       p->do_send(m);
    };
 
-   boost::asio::post(boost::asio::bind_executor(strand, handler));
+   net::post(net::bind_executor(strand, handler));
 }
 
 void server_session::shutdown()
@@ -214,7 +215,7 @@ void server_session::shutdown()
       p->do_close();
    };
 
-   boost::asio::post(boost::asio::bind_executor(strand, handler));
+   net::post(net::bind_executor(strand, handler));
 }
 
 void server_session::do_pong_wait()
@@ -224,7 +225,7 @@ void server_session::do_pong_wait()
    auto const handler = [p = shared_from_this()](auto ec)
    {
       if (ec) {
-         if (ec == boost::asio::error::operation_aborted) {
+         if (ec == net::error::operation_aborted) {
             // Either the deadline has moved or the timer has been
             // canceled.
             return;
@@ -240,7 +241,7 @@ void server_session::do_pong_wait()
          // socket.
          //std::cout << "Peer unresponsive. Shuting down connection."
          //          << std::endl;
-         p->ws.next_layer().shutdown(tcp::socket::shutdown_both, ec);
+         p->ws.next_layer().shutdown(net::ip::tcp::socket::shutdown_both, ec);
          p->ws.next_layer().close(ec);
          return;
       }
@@ -249,7 +250,7 @@ void server_session::do_pong_wait()
       p->do_ping();
    };
 
-   timer.async_wait(boost::asio::bind_executor(strand, handler));
+   timer.async_wait(net::bind_executor(strand, handler));
 }
 
 void server_session::do_ping()
@@ -257,7 +258,7 @@ void server_session::do_ping()
    auto const handler = [p = shared_from_this()](auto ec)
    {
       if (ec) {
-         if (ec == boost::asio::error::operation_aborted) {
+         if (ec == net::error::operation_aborted) {
             // A closed frame has been sent or received before
             // the ping was sent. We have nothing to do except
             // perhaps for seting ping_state to an irrelevant
@@ -277,7 +278,7 @@ void server_session::do_ping()
       p->do_pong_wait();
    };
 
-   ws.async_ping({}, boost::asio::bind_executor(strand, handler));
+   ws.async_ping({}, net::bind_executor(strand, handler));
 }
 
 void server_session::handle_ev(ev_res r)
@@ -293,7 +294,7 @@ void server_session::handle_ev(ev_res r)
          auto const handler = [p = shared_from_this()](auto ec)
          {
             if (ec) {
-               if (ec == boost::asio::error::operation_aborted)
+               if (ec == net::error::operation_aborted)
                   return;
 
                fail(ec, "Code timer"); // TODO: Check what to do here.
@@ -303,7 +304,7 @@ void server_session::handle_ev(ev_res r)
             p->do_close();
          };
 
-         timer.async_wait(boost::asio::bind_executor(strand, handler));
+         timer.async_wait(net::bind_executor(strand, handler));
 
          // If we get here, it means that there was no ongoing timer.
          // But I do not see any reason for accepting a register command
@@ -352,7 +353,7 @@ void server_session::on_read( boost::system::error_code ec
       return;
    }
 
-   if (ec == boost::asio::error::operation_aborted) {
+   if (ec == net::error::operation_aborted) {
       // Abortion can be caused by a socket shutting down and closing.
       // We have no cleanup to perform.
       return;
@@ -404,8 +405,8 @@ void server_session::do_write(std::string const& msg)
    auto handler = [p = shared_from_this()](auto ec, auto n)
    { p->on_write(ec, n); };
 
-   ws.async_write( boost::asio::buffer(msg)
-                 , boost::asio::bind_executor(strand, handler));
+   ws.async_write( net::buffer(msg)
+                 , net::bind_executor(strand, handler));
 }
 
 void server_session::do_send(std::string msg)

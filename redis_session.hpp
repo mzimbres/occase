@@ -35,8 +35,8 @@ public:
 
 private:
    redis_session_cf cf;
-   tcp::resolver resolver;
-   tcp::socket socket;
+   net::ip::tcp::resolver resolver;
+   net::ip::tcp::socket socket;
    std::string data;
    std::queue<redis_req> write_queue;
    redis_on_msg_handler_type on_msg_handler = [](auto, auto, auto) {};
@@ -44,16 +44,16 @@ private:
    void start_reading_resp();
 
    void on_resolve( boost::system::error_code ec
-                  , tcp::resolver::results_type results);
+                  , net::ip::tcp::resolver::results_type results);
    void on_connect( boost::system::error_code ec
-                  , asio::ip::tcp::endpoint const& endpoint);
+                  , net::ip::tcp::endpoint const& endpoint);
    void on_resp( boost::system::error_code const& ec
                , std::vector<std::string> const& res);
    void on_write( boost::system::error_code ec
                 , std::size_t n);
 
 public:
-   redis_session(redis_session_cf cf_, asio::io_context& ioc)
+   redis_session(redis_session_cf cf_, net::io_context& ioc)
    : cf(cf_)
    , resolver(ioc) 
    , socket(ioc)

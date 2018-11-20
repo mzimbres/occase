@@ -66,7 +66,7 @@ ev_res on_message( server_mgr& mgr
    return ev_res::unknown;
 }
 
-server_mgr::server_mgr(server_mgr_cf cf, asio::io_context& ioc_)
+server_mgr::server_mgr(server_mgr_cf cf, net::io_context& ioc_)
 : ioc(ioc_)
 , timeouts(cf.get_timeouts())
 , redis_gsub_session(cf.get_redis_session_cf(), ioc)

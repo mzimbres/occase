@@ -16,7 +16,7 @@ template <class ReadHandler>
 class read_resp_op {
 private:
    static std::string_view constexpr delim {"\r\n"};
-   boost::asio::ip::tcp::socket& stream;
+   net::ip::tcp::socket& stream;
    ReadHandler handler;
    std::string* data;
    std::vector<std::string> res;
@@ -24,7 +24,7 @@ private:
    bool bulky_str_read;
 
 public:
-   read_resp_op( boost::asio::ip::tcp::socket& stream_
+   read_resp_op( net::ip::tcp::socket& stream_
                , std::string* data_
                , ReadHandler handler_)
    : stream(stream_)
@@ -56,8 +56,8 @@ public:
       if (start) {
          counter = 1;
          bulky_str_read = false;
-         asio::async_read_until( stream, asio::dynamic_buffer(*data)
-                               , delim, std::move(*this));
+         net::async_read_until( stream, net::dynamic_buffer(*data)
+                              , delim, std::move(*this));
          return;
       }
 
@@ -113,22 +113,22 @@ public:
       }
 
       bulky_str_read = foo;
-      asio::async_read_until( stream, asio::dynamic_buffer(*data), delim
-                            , std::move(*this));
+      net::async_read_until( stream, net::dynamic_buffer(*data), delim
+                           , std::move(*this));
    }
 };
 
 template <class ReadHandler>
-void async_read_resp( boost::asio::ip::tcp::socket& s
+void async_read_resp( net::ip::tcp::socket& s
                     , std::string* data, ReadHandler handler)
 {
    // TODO: Write a similar macro to check the handler signature.
    //BOOST_ASIO_READ_HANDLER_CHECK(ReadHandler, handler) type_check;
 
    using foo_type = 
-   asio::async_completion< ReadHandler
-                         , void ( boost::system::error_code const&
-                                , std::vector<std::string> const&)
+   net::async_completion< ReadHandler
+                        , void ( boost::system::error_code const&
+                               , std::vector<std::string> const&)
                          >;
 
    foo_type init(handler);

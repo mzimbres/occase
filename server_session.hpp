@@ -27,9 +27,9 @@ private:
    , unset
    };
 
-   beast::websocket::stream<tcp::socket> ws;
-   asio::strand<asio::io_context::executor_type> strand;
-   asio::steady_timer timer;
+   beast::websocket::stream<net::ip::tcp::socket> ws;
+   net::strand<net::io_context::executor_type> strand;
+   net::steady_timer timer;
    beast::multi_buffer buffer;
 
    server_mgr& mgr;
@@ -61,7 +61,8 @@ private:
 
 public:
    explicit
-   server_session(tcp::socket socket, server_mgr& mgr);
+   server_session( net::ip::tcp::socket socket
+                 , server_mgr& mgr);
    ~server_session();
 
    void accept();

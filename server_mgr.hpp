@@ -82,7 +82,7 @@ struct sessions_stats {
 
 class server_mgr {
 private:
-   asio::io_context& ioc;
+   net::io_context& ioc;
    // Maps a user id (telephone, email, etc.) to a user obj.
    std::unordered_map< std::string
                      , std::weak_ptr<server_session>> sessions;
@@ -102,7 +102,7 @@ private:
    std::string const redis_notify_prefix;
    std::string menu;
 
-   boost::asio::steady_timer stats_timer;
+   net::steady_timer stats_timer;
 
    void redis_group_msg_handler( boost::system::error_code const& ec
                                , std::vector<std::string> const& resp
@@ -116,7 +116,7 @@ private:
    void do_stats_logger();
 
 public:
-   server_mgr(server_mgr_cf cf, asio::io_context& ioc);
+   server_mgr(server_mgr_cf cf, net::io_context& ioc);
    void shutdown();
    void release_auth_session(std::string const& id);
 

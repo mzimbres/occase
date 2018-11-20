@@ -28,7 +28,7 @@ namespace rt
 {
 
 void redis_session::on_resolve( boost::system::error_code ec
-                              , tcp::resolver::results_type results)
+                              , net::ip::tcp::resolver::results_type results)
 {
    if (ec)
       return fail_tmp(ec, "resolve");
@@ -38,7 +38,7 @@ void redis_session::on_resolve( boost::system::error_code ec
       on_connect(ec, Iterator);
    };
 
-   asio::async_connect(socket, results, handler);
+   net::async_connect(socket, results, handler);
 }
 
 void redis_session::run()
@@ -57,15 +57,15 @@ void redis_session::send(redis_req req)
    write_queue.push(std::move(req));
 
    if (is_empty && socket.is_open())
-      asio::async_write( socket, asio::buffer(write_queue.front().msg)
-                       , [this](auto ec, auto n)
-                         {on_write(ec, n);});
+      net::async_write( socket, net::buffer(write_queue.front().msg)
+                      , [this](auto ec, auto n)
+                        {on_write(ec, n);});
 }
 
 void redis_session::close()
 {
    boost::system::error_code ec;
-   socket.shutdown(tcp::socket::shutdown_send, ec);
+   socket.shutdown(net::ip::tcp::socket::shutdown_send, ec);
    //if (ec)
    //   fail_tmp(ec, "redis-close");
 
@@ -87,14 +87,14 @@ void redis_session::start_reading_resp()
 }
 
 void redis_session::on_connect( boost::system::error_code ec
-                              , asio::ip::tcp::endpoint const& endpoint)
+                              , net::ip::tcp::endpoint const& endpoint)
 {
    if (ec) {
       fail_tmp(ec, "on_connect");
       return;
    }
 
-   asio::ip::tcp::no_delay option(true);
+   net::ip::tcp::no_delay option(true);
    socket.set_option(option);
 
    start_reading_resp();
@@ -102,9 +102,9 @@ void redis_session::on_connect( boost::system::error_code ec
    // Consumes any messages that have been eventually posted while the
    // connection was not established.
    if (!std::empty(write_queue))
-      asio::async_write( socket, asio::buffer(write_queue.front().msg)
-                       , [this](auto ec, auto n)
-                         { on_write(ec, n); });
+      net::async_write( socket, net::buffer(write_queue.front().msg)
+                      , [this](auto ec, auto n)
+                        { on_write(ec, n); });
 }
 
 void redis_session::on_resp( boost::system::error_code const& ec
@@ -120,9 +120,9 @@ void redis_session::on_resp( boost::system::error_code const& ec
       if (!std::empty(write_queue))
          write_queue.pop();
       if (!std::empty(write_queue))
-         asio::async_write( socket, asio::buffer(write_queue.front().msg)
-                          , [this](auto ec, auto n)
-                            { on_write(ec, n); });
+         net::async_write( socket, net::buffer(write_queue.front().msg)
+                         , [this](auto ec, auto n)
+                           { on_write(ec, n); });
    }
 }
 

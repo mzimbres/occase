@@ -13,12 +13,12 @@ namespace rt
 {
 
 template < class AsyncStream
-         , class CompletionToken>
+         , class Handler>
 class read_resp_op {
 private:
    static std::string_view constexpr delim {"\r\n"};
    AsyncStream& stream;
-   CompletionToken handler;
+   Handler handler;
    std::string* data;
    std::vector<std::string> res;
    int counter;
@@ -27,7 +27,7 @@ private:
 public:
    read_resp_op( AsyncStream& stream_
                , std::string* data_
-               , CompletionToken handler_)
+               , Handler handler_)
    : stream(stream_)
    , handler(std::move(handler_))
    , data(data_)

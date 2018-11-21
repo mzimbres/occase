@@ -17,54 +17,82 @@ using namespace rt;
 
 namespace po = boost::program_options;
 
-void pub(redis_session_cf const& cf, int count)
+auto const pub_handler = []( auto const& ec
+                       , auto const& data
+                       , auto const& cmd)
 {
-   auto const pub_handler = []( auto const& ec
-                          , auto const& data
-                          , auto const& cmd)
-   {
-        if (ec)
-           throw std::runtime_error(ec.message());
+     if (ec)
+        throw std::runtime_error(ec.message());
 
-        //for (auto const& o : data)
-        //   std::cout << o << " ";
-        //
-        //std::cout << std::endl;
-   };
+     for (auto const& o : data)
+        std::cout << "Receivers: " << o << " ";
+     
+     std::cout << std::endl;
+};
 
+auto const sub_handler = [i = 0]( auto const& ec
+                                , auto const& data
+                                , auto const& cmd) mutable
+{
+     if (ec) 
+        throw std::runtime_error(ec.message());
+
+     auto const n = std::stoi(data.back());
+     if (n != i + 1)
+        std::cout << "===============> Error." << std::endl;
+     std::cout << "Counter: " << n << std::endl;
+
+     i = n;
+
+     //for (auto const& o : data)
+     //   std::cout << o << " ";
+     
+     //std::cout << std::endl;
+};
+
+void pub(redis_session_cf const& cf, int count, char const* channel)
+{
    boost::asio::io_context ioc;
    redis_session pub_session(cf, ioc);
    pub_session.set_on_msg_handler(pub_handler);
    for (auto i = 0; i < count; ++i) {
       auto const msg = std::to_string(i);
       pub_session.send(gen_resp_cmd( redis_cmd::publish
-                                   , {"foo", msg}));
-      std::cout << "Sent: " << msg << std::endl;
+                                   , {channel, msg}));
+      //std::cout << "Sent: " << msg << std::endl;
    }
    pub_session.run();
 
    ioc.run();
 }
 
-void sub(redis_session_cf const& cf)
+void sub(redis_session_cf const& cf, char const* channel)
 {
-   auto const sub_handler = []( auto const& ec
-                              , auto const& data
-                              , auto const& cmd)
-   {
-        if (ec) 
-           throw std::runtime_error(ec.message());
-
-        for (auto const& o : data)
-           std::cout << o << " ";
-        
-        std::cout << std::endl;
-   };
-
    boost::asio::io_context ioc;
    redis_session sub_session(cf, ioc);
    sub_session.set_on_msg_handler(sub_handler);
-   sub_session.send(gen_resp_cmd(redis_cmd::subscribe, {"foo"}));
+   sub_session.send(gen_resp_cmd(redis_cmd::subscribe, {channel}));
+   sub_session.run();
+   ioc.run();
+}
+
+void pubsub(redis_session_cf const& cf, int count, char const* channel)
+{
+   boost::asio::io_context ioc;
+
+   redis_session pub_session(cf, ioc);
+   pub_session.set_on_msg_handler(pub_handler);
+   for (auto i = 0; i < count; ++i) {
+      auto const msg = std::to_string(i);
+      pub_session.send(gen_resp_cmd( redis_cmd::publish, {channel, msg}));
+      //std::cout << "Sent: " << msg << std::endl;
+   }
+
+   pub_session.run();
+
+   redis_session sub_session(cf, ioc);
+   sub_session.set_on_msg_handler(sub_handler);
+   sub_session.send(gen_resp_cmd(redis_cmd::subscribe, {channel}));
    sub_session.run();
    ioc.run();
 }
@@ -88,7 +116,9 @@ int main(int argc, char* argv[])
       )
       ("Run mode,t"
       , po::value<int>(&test)->default_value(-1)
-      , "1 for pub, 2 for sub."
+      , " 1 pub.\n"
+        " 2 sub.\n"
+        " 3 pubsub."
       )
       ("count,c"
       , po::value<int>(&count)->default_value(20)
@@ -105,33 +135,23 @@ int main(int argc, char* argv[])
          return 0;
       }
 
+      char const* channel = "foo";
+
       if (test == 1) {
-         pub(cf, count);
+         pub(cf, count, channel);
          return 0;
       }
 
       if (test == 2) {
-         sub(cf);
+         sub(cf, channel);
          return 0;
       }
 
-      //pub_session.send(gen_resp_cmd(redis_cmd::incrby, {"foo", "3"}));
-      //pub_session.send(gen_resp_cmd(redis_cmd::get, {"foo"}));
-      //pub_session.send(gen_resp_cmd( redis_cmd::ping
-      //                             , {"Arbitrary message."}));
-      //pub_session.send(gen_resp_cmd( redis_cmd::publish
-      //                             , {"foo", "Message."}));
+      if (test == 3) {
+         pubsub(cf, count, channel);
+         return 0;
+      }
 
-      //pub_session.send(gen_resp_cmd( redis_cmd::ping
-      //                             , {"Arbitrary message2."}));
-      //pub_session.send(gen_resp_cmd( redis_cmd::lpop
-      //                             , {"nonsense"}));
-      //pub_session.send(gen_resp_cmd( redis_cmd::ping
-      //                             , {"Arbitrary message3."}));
-      //pub_session.send(gen_resp_cmd( redis_cmd::rpush
-      //                             , {"nonsense", "one", "two", "three"}));
-      //pub_session.send(gen_resp_cmd( redis_cmd::lrange
-      //                             , {"nonsense", "0", "-1"}));
    } catch (std::exception& e) {
       std::cerr << "Exception: " << e.what() << "\n";
    }

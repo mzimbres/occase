@@ -12,12 +12,12 @@
 namespace rt
 {
 
-template <class ReadHandler>
+template <class CompletionToken>
 class read_resp_op {
 private:
    static std::string_view constexpr delim {"\r\n"};
    net::ip::tcp::socket& stream;
-   ReadHandler handler;
+   CompletionToken handler;
    std::string* data;
    std::vector<std::string> res;
    int counter;
@@ -26,7 +26,7 @@ private:
 public:
    read_resp_op( net::ip::tcp::socket& stream_
                , std::string* data_
-               , ReadHandler handler_)
+               , CompletionToken handler_)
    : stream(stream_)
    , handler(std::move(handler_))
    , data(data_)
@@ -118,23 +118,29 @@ public:
    }
 };
 
-template <class ReadHandler>
-void async_read_resp( net::ip::tcp::socket& s
-                    , std::string* data, ReadHandler handler)
+template < class AsyncStream
+         , class CompletionToken>
+BOOST_ASIO_INITFN_RESULT_TYPE( CompletionToken
+                             , void(boost::beast::error_code))
+async_read_resp( AsyncStream& s
+               , std::string* data
+               , CompletionToken&& handler)
 {
    // TODO: Write a similar macro to check the handler signature.
-   //BOOST_ASIO_READ_HANDLER_CHECK(ReadHandler, handler) type_check;
+   //BOOST_ASIO_READ_HANDLER_CHECK(CompletionToken, handler) type_check;
 
-   using foo_type = 
-   net::async_completion< ReadHandler
+   net::async_completion< CompletionToken
                         , void ( boost::system::error_code const&
                                , std::vector<std::string> const&)
-                         >;
+                         > init {handler};
 
-   foo_type init(handler);
-
-   read_resp_op< typename foo_type::completion_handler_type
+   
+   read_resp_op< BOOST_ASIO_HANDLER_TYPE( CompletionToken
+                                        , void ( boost::system::error_code const&
+                                               , std::vector<std::string> const&))
                >(s, data, init.completion_handler)({}, 0, true);
+
+   return init.result.get();
 }
 
 }

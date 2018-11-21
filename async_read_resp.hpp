@@ -12,11 +12,12 @@
 namespace rt
 {
 
-template <class CompletionToken>
+template < class AsyncStream
+         , class CompletionToken>
 class read_resp_op {
 private:
    static std::string_view constexpr delim {"\r\n"};
-   net::ip::tcp::socket& stream;
+   AsyncStream& stream;
    CompletionToken handler;
    std::string* data;
    std::vector<std::string> res;
@@ -24,30 +25,12 @@ private:
    bool bulky_str_read;
 
 public:
-   read_resp_op( net::ip::tcp::socket& stream_
+   read_resp_op( AsyncStream& stream_
                , std::string* data_
                , CompletionToken handler_)
    : stream(stream_)
    , handler(std::move(handler_))
    , data(data_)
-   { }
-
-   read_resp_op(read_resp_op const& other)
-   : stream(other.stream)
-   , handler(other.handler)
-   , data(other.data)
-   , res(other.res)
-   , counter(other.counter)
-   , bulky_str_read(other.bulky_str_read)
-   { }
-
-   read_resp_op(read_resp_op&& other)
-   : stream(other.stream)
-   , handler(std::move(other.handler))
-   , data(other.data)
-   , res(std::move(other.res))
-   , counter(other.counter)
-   , bulky_str_read(other.bulky_str_read)
    { }
 
    void operator()( boost::system::error_code ec, std::size_t n
@@ -135,7 +118,8 @@ async_read_resp( AsyncStream& s
                          > init {handler};
 
    
-   read_resp_op< BOOST_ASIO_HANDLER_TYPE( CompletionToken
+   read_resp_op< AsyncStream
+               , BOOST_ASIO_HANDLER_TYPE( CompletionToken
                                         , void ( boost::system::error_code const&
                                                , std::vector<std::string> const&))
                >(s, data, init.completion_handler)({}, 0, true);

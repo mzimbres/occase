@@ -25,6 +25,13 @@ private:
    bool bulky_str_read;
 
 public:
+   using allocator_type =
+      net::associated_allocator_t<Handler>;
+
+   using executor_type =
+      net::associated_executor_t<
+         Handler, decltype(std::declval<AsyncStream&>().get_executor())>;
+
    read_resp_op( AsyncStream& stream_
                , std::string* data_
                , Handler handler_)
@@ -32,6 +39,16 @@ public:
    , handler(std::move(handler_))
    , data(data_)
    { }
+
+    allocator_type get_allocator() const noexcept
+    { return net::get_associated_allocator(handler); }
+
+
+    executor_type get_executor() const noexcept
+    {
+        return net::get_associated_executor( handler
+                                           , stream.get_executor());
+    }
 
    void operator()( boost::system::error_code ec, std::size_t n
                   , bool start = false)

@@ -110,15 +110,15 @@ void redis_session::on_connect( boost::system::error_code ec
 void redis_session::on_resp( boost::system::error_code const& ec
                            , std::vector<std::string> const& res)
 {
-   if (std::empty(write_queue))
+   if (std::empty(write_queue)) {
       on_msg_handler(ec, res, {});
-   else
+   } else {
       on_msg_handler(ec, res, write_queue.front());
+      write_queue.pop();
+   }
 
    if (!ec && socket.is_open()) {
       start_reading_resp();
-      if (!std::empty(write_queue))
-         write_queue.pop();
       if (!std::empty(write_queue))
          net::async_write( socket, net::buffer(write_queue.front().msg)
                          , [this](auto ec, auto n)

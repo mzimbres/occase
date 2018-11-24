@@ -29,9 +29,8 @@ struct redis_req {
    std::string user_id;
 };
 
-redis_req
-gen_resp_cmd( redis_cmd cmd, std::initializer_list<std::string> param
-            , std::string const& user_id = {});
+std::string
+gen_resp_cmd(redis_cmd cmd, std::initializer_list<std::string> param);
 
 }
 

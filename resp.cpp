@@ -42,10 +42,8 @@ void add_bulky_str(std::string& payload, std::string const& param)
    payload += "\r\n";
 }
 
-redis_req
-gen_resp_cmd( redis_cmd cmd
-            , std::initializer_list<std::string> param
-            , std::string const& user_id)
+std::string
+gen_resp_cmd(redis_cmd cmd, std::initializer_list<std::string> param)
 {
    std::string payload = "*";
    payload += std::to_string(std::size(param) + 1);
@@ -56,7 +54,7 @@ gen_resp_cmd( redis_cmd cmd
    for (auto const& o : param)
       add_bulky_str(payload, o);
 
-   return {cmd, std::move(payload), user_id};
+   return payload;
 }
 
 }

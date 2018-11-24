@@ -57,8 +57,12 @@ void pub(redis_session_cf const& cf, int count, char const* channel)
    pub_session.set_on_msg_handler(pub_handler);
    for (auto i = 0; i < count; ++i) {
       auto const msg = std::to_string(i);
-      pub_session.send(gen_resp_cmd( redis_cmd::publish
-                                   , {channel, msg}));
+      redis_req r
+      { redis_cmd::publish
+      , gen_resp_cmd( redis_cmd::publish , {channel, msg})
+      , "" 
+      };
+      pub_session.send(std::move(r));
       //std::cout << "Sent: " << msg << std::endl;
    }
    pub_session.run();
@@ -71,7 +75,12 @@ void sub(redis_session_cf const& cf, char const* channel)
    boost::asio::io_context ioc;
    redis_session sub_session(cf, ioc);
    sub_session.set_on_msg_handler(sub_handler);
-   sub_session.send(gen_resp_cmd(redis_cmd::subscribe, {channel}));
+   redis_req r
+   { redis_cmd::subscribe
+   , gen_resp_cmd(redis_cmd::subscribe, {channel})
+   , ""
+   };
+   sub_session.send(std::move(r));
    sub_session.run();
    ioc.run();
 }
@@ -84,7 +93,12 @@ void pubsub(redis_session_cf const& cf, int count, char const* channel)
    pub_session.set_on_msg_handler(pub_handler);
    for (auto i = 0; i < count; ++i) {
       auto const msg = std::to_string(i);
-      pub_session.send(gen_resp_cmd( redis_cmd::publish, {channel, msg}));
+      redis_req r
+      { redis_cmd::publish
+      , gen_resp_cmd(redis_cmd::publish, {channel, msg})
+      , ""
+      };
+      pub_session.send(std::move(r));
       //std::cout << "Sent: " << msg << std::endl;
    }
 
@@ -92,7 +106,12 @@ void pubsub(redis_session_cf const& cf, int count, char const* channel)
 
    redis_session sub_session(cf, ioc);
    sub_session.set_on_msg_handler(sub_handler);
-   sub_session.send(gen_resp_cmd(redis_cmd::subscribe, {channel}));
+   redis_req r
+   { redis_cmd::subscribe
+   , gen_resp_cmd(redis_cmd::subscribe, {channel})
+   , ""
+   };
+   sub_session.send(std::move(r));
    sub_session.run();
    ioc.run();
 }

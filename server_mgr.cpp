@@ -86,9 +86,12 @@ server_mgr::server_mgr(server_mgr_cf cf, net::io_context& ioc_)
    redis_pub_session.run();
 
    // Asynchronously retrieves the menu.
-   redis_pub_session.send(gen_resp_cmd( redis_cmd::get
-                                      , {redis_menu_key}
-                                      , redis_menu_key));
+   redis_req r
+   { redis_cmd::get
+   , gen_resp_cmd(redis_cmd::get, {redis_menu_key})
+   , redis_menu_key
+   };
+   redis_pub_session.send(std::move(r));
    do_stats_logger();
 }
 
@@ -144,10 +147,12 @@ server_mgr::redis_key_msg_handler( boost::system::error_code const& ec
          // We have to retrieve the user message.
          auto const user_id = data[1].substr(n + 1);
          auto const key = redis_msg_prefix + user_id;
-         auto const rcmd = gen_resp_cmd(redis_cmd::lpop, {key}, user_id);
-
-         //std::cout << "sending to " << user_id << std::endl;
-         redis_pub_session.send(std::move(rcmd));
+         redis_req r
+         { redis_cmd::lpop
+         , gen_resp_cmd(redis_cmd::lpop, {key})
+         , user_id
+         };
+         redis_pub_session.send(r);
 
          //auto const s = sessions.find(user_id);
          //if (s == std::end(sessions)) {
@@ -216,9 +221,13 @@ server_mgr::redis_pub_msg_handler( boost::system::error_code const& ec
 
       redis_gsub_session.set_on_msg_handler(handler1);
       redis_gsub_session.run();
-      redis_gsub_session.send(gen_resp_cmd( redis_cmd::subscribe
-                                          , {redis_group_channel}));
 
+      redis_req r
+      { redis_cmd::subscribe
+      , gen_resp_cmd(redis_cmd::subscribe, {redis_group_channel})
+      , ""
+      };
+      redis_gsub_session.send(std::move(r));
       auto const handler3 = [this]( auto const& ec , auto const& data
                                   , auto const& req)
       { redis_key_msg_handler(ec, data, req); };
@@ -284,10 +293,14 @@ ev_res server_mgr::on_login(json j, std::shared_ptr<server_session> s)
    s->promote();
    assert(s->is_auth());
 
-   auto const scmd = gen_resp_cmd( redis_cmd::subscribe
-                                 , { redis_notify_prefix + s->get_id() });
+   redis_req r
+   { redis_cmd::subscribe
+   , gen_resp_cmd( redis_cmd::subscribe
+                 , { redis_notify_prefix + s->get_id() })
+   , ""
+   };
 
-   redis_ksub_session.send(std::move(scmd));
+   redis_ksub_session.send(std::move(r));
 
    json resp;
    resp["cmd"] = "auth_ack";
@@ -327,10 +340,14 @@ server_mgr::on_code_confirmation(json j, std::shared_ptr<server_session> s)
    // which means we did something wrong in the register command.
    assert(new_user.second);
 
-   auto const scmd = gen_resp_cmd( redis_cmd::subscribe
-                                 , { redis_notify_prefix + s->get_id() });
+   redis_req r
+   { redis_cmd::subscribe
+   , gen_resp_cmd( redis_cmd::subscribe
+                 , {redis_notify_prefix + s->get_id()})
+   , ""
+   };
 
-   redis_ksub_session.send(std::move(scmd));
+   redis_ksub_session.send(std::move(r));
 
    json resp;
    resp["cmd"] = "code_confirmation_ack";
@@ -425,9 +442,13 @@ server_mgr::on_publish( std::string msg, json j
       return ev_res::publish_fail;
    }
 
-   auto rcmd = gen_resp_cmd(redis_cmd::publish, { redis_group_channel, msg});
+   redis_req r
+   { redis_cmd::publish
+   , gen_resp_cmd(redis_cmd::publish, { redis_group_channel, msg})
+   , ""
+   };
 
-   redis_pub_session.send(std::move(rcmd));
+   redis_pub_session.send(std::move(r));
 
    json ack;
    ack["cmd"] = "publish_ack";
@@ -449,10 +470,14 @@ void server_mgr::release_auth_session(std::string const& id)
 
    sessions.erase(match); // We do not need the return value.
 
-   auto const scmd = gen_resp_cmd( redis_cmd::unsubscribe
-                                 , { redis_notify_prefix + id});
+   redis_req r
+   { redis_cmd::unsubscribe
+   , gen_resp_cmd( redis_cmd::unsubscribe
+                 , { redis_notify_prefix + id})
+   , ""
+   };
 
-   redis_ksub_session.send(std::move(scmd));
+   redis_ksub_session.send(std::move(r));
 }
 
 ev_res
@@ -463,10 +488,15 @@ server_mgr::on_user_msg( std::string msg, json j
    // node and send him his message directly to avoid overloading the
    // redis server. This would be a big optimization in the case of
    // small number of nodes.
-   auto const scmd = gen_resp_cmd( redis_cmd::rpush
-                                 , { redis_msg_prefix + s->get_id(), msg});
 
-   redis_pub_session.send(std::move(scmd));
+   redis_req r
+   { redis_cmd::rpush
+   , gen_resp_cmd( redis_cmd::rpush
+                 , {redis_msg_prefix + s->get_id(), msg})
+   , ""
+   };
+
+   redis_pub_session.send(std::move(r));
 
    json ack;
    ack["cmd"] = "user_msg_server_ack";

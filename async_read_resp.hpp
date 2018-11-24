@@ -9,7 +9,7 @@
 // boost_1_67_0/boost/asio/impl/read.hpp : 654 and 502
 //
 
-namespace rt
+namespace rt::redis
 {
 
 template < class AsyncStream

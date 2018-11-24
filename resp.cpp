@@ -3,7 +3,7 @@
 #include <iostream>
 #include <iterator>
 
-namespace rt
+namespace rt::redis
 {
 
 std::size_t get_length(char const* p)
@@ -16,19 +16,19 @@ std::size_t get_length(char const* p)
    return len;
 }
 
-char const* get_redis_cmd_as_str(redis_cmd cmd)
+char const* get_redis_cmd_as_str(command c)
 {
-   switch (cmd) {
-      case redis_cmd::get:         return "GET";
-      case redis_cmd::incrby:      return "INCRBY";
-      case redis_cmd::lpop:        return "LPOP";
-      case redis_cmd::lrange:      return "LRANGE";
-      case redis_cmd::ping:        return "PING";
-      case redis_cmd::rpush:       return "RPUSH";
-      case redis_cmd::publish:     return "PUBLISH";
-      case redis_cmd::set:         return "SET";
-      case redis_cmd::subscribe:   return "SUBSCRIBE";
-      case redis_cmd::unsubscribe: return "UNSUBSCRIBE";
+   switch (c) {
+      case command::get:         return "GET";
+      case command::incrby:      return "INCRBY";
+      case command::lpop:        return "LPOP";
+      case command::lrange:      return "LRANGE";
+      case command::ping:        return "PING";
+      case command::rpush:       return "RPUSH";
+      case command::publish:     return "PUBLISH";
+      case command::set:         return "SET";
+      case command::subscribe:   return "SUBSCRIBE";
+      case command::unsubscribe: return "UNSUBSCRIBE";
       default: return "";
    }
 }
@@ -43,13 +43,13 @@ void add_bulky_str(std::string& payload, std::string const& param)
 }
 
 std::string
-gen_resp_cmd(redis_cmd cmd, std::initializer_list<std::string> param)
+gen_resp_cmd(command c, std::initializer_list<std::string> param)
 {
    std::string payload = "*";
    payload += std::to_string(std::size(param) + 1);
    payload += "\r\n";
 
-   add_bulky_str(payload, get_redis_cmd_as_str(cmd));
+   add_bulky_str(payload, get_redis_cmd_as_str(c));
 
    for (auto const& o : param)
       add_bulky_str(payload, o);

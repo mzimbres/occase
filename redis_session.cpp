@@ -24,11 +24,11 @@ void fail_tmp(boost::system::error_code ec, char const* what)
 
 }
 
-namespace rt
+namespace rt::redis
 {
 
-void redis_session::on_resolve( boost::system::error_code ec
-                              , net::ip::tcp::resolver::results_type results)
+void session::on_resolve( boost::system::error_code ec
+                        , net::ip::tcp::resolver::results_type results)
 {
    if (ec)
       return fail_tmp(ec, "resolve");
@@ -41,7 +41,7 @@ void redis_session::on_resolve( boost::system::error_code ec
    net::async_connect(socket, results, handler);
 }
 
-void redis_session::run()
+void session::run()
 {
    auto handler = [this](auto ec, auto res)
    {
@@ -51,7 +51,7 @@ void redis_session::run()
    resolver.async_resolve(cf.host, cf.port, handler);
 }
 
-void redis_session::send(req_data req)
+void session::send(req_data req)
 {
    auto const is_empty = std::empty(write_queue);
    write_queue.push(std::move(req));
@@ -62,7 +62,7 @@ void redis_session::send(req_data req)
                         {on_write(ec, n);});
 }
 
-void redis_session::close()
+void session::close()
 {
    boost::system::error_code ec;
    socket.shutdown(net::ip::tcp::socket::shutdown_send, ec);
@@ -74,7 +74,7 @@ void redis_session::close()
    //   fail_tmp(ec, "redis-close");
 }
 
-void redis_session::start_reading_resp()
+void session::start_reading_resp()
 {
    auto const handler = [this]( boost::system::error_code const& ec
                               , std::vector<std::string> const& res)
@@ -86,8 +86,8 @@ void redis_session::start_reading_resp()
    async_read_resp(socket, &data, handler);
 }
 
-void redis_session::on_connect( boost::system::error_code ec
-                              , net::ip::tcp::endpoint const& endpoint)
+void session::on_connect( boost::system::error_code ec
+                        , net::ip::tcp::endpoint const& endpoint)
 {
    if (ec) {
       fail_tmp(ec, "on_connect");
@@ -107,8 +107,8 @@ void redis_session::on_connect( boost::system::error_code ec
                         { on_write(ec, n); });
 }
 
-void redis_session::on_resp( boost::system::error_code const& ec
-                           , std::vector<std::string> const& res)
+void session::on_resp( boost::system::error_code const& ec
+                     , std::vector<std::string> const& res)
 {
    if (std::empty(write_queue)) {
       on_msg_handler(ec, res, {});
@@ -126,8 +126,7 @@ void redis_session::on_resp( boost::system::error_code const& ec
    }
 }
 
-void redis_session::on_write( boost::system::error_code ec
-                            , std::size_t n)
+void session::on_write(boost::system::error_code ec, std::size_t n)
 {
    if (ec) {
       fail_tmp(ec, "on_write");

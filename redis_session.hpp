@@ -18,7 +18,7 @@
 #include "resp.hpp"
 #include "config.hpp"
 
-namespace rt
+namespace rt::redis
 {
 
 enum class request
@@ -40,12 +40,12 @@ struct req_data {
    std::string user_id;
 };
 
-struct redis_session_cf {
+struct session_cf {
    std::string host;
    std::string port;
 };
 
-class redis_session {
+class session {
 public:
    using redis_on_msg_handler_type =
       std::function<void ( boost::system::error_code const&
@@ -53,7 +53,7 @@ public:
                          , req_data const&)>;
 
 private:
-   redis_session_cf cf;
+   session_cf cf;
    net::ip::tcp::resolver resolver;
    net::ip::tcp::socket socket;
    std::string data;
@@ -72,7 +72,7 @@ private:
                 , std::size_t n);
 
 public:
-   redis_session(redis_session_cf cf_, net::io_context& ioc)
+   session(session_cf cf_, net::io_context& ioc)
    : cf(cf_)
    , resolver(ioc) 
    , socket(ioc)

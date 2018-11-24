@@ -13,7 +13,7 @@
 #include "redis_session.hpp"
 #include "resp.hpp"
 
-using namespace rt;
+using namespace rt::redis;
 
 namespace po = boost::program_options;
 
@@ -50,16 +50,16 @@ auto const sub_handler = [i = 0]( auto const& ec
      //std::cout << std::endl;
 };
 
-void pub(redis_session_cf const& cf, int count, char const* channel)
+void pub(session_cf const& cf, int count, char const* channel)
 {
    boost::asio::io_context ioc;
-   redis_session pub_session(cf, ioc);
+   session pub_session(cf, ioc);
    pub_session.set_on_msg_handler(pub_handler);
    for (auto i = 0; i < count; ++i) {
       auto const msg = std::to_string(i);
       req_data r
       { request::publish
-      , gen_resp_cmd( redis_cmd::publish , {channel, msg})
+      , gen_resp_cmd(command::publish, {channel, msg})
       , "" 
       };
       pub_session.send(std::move(r));
@@ -70,14 +70,14 @@ void pub(redis_session_cf const& cf, int count, char const* channel)
    ioc.run();
 }
 
-void sub(redis_session_cf const& cf, char const* channel)
+void sub(session_cf const& cf, char const* channel)
 {
    boost::asio::io_context ioc;
-   redis_session sub_session(cf, ioc);
+   session sub_session(cf, ioc);
    sub_session.set_on_msg_handler(sub_handler);
    req_data r
    { request::subscribe
-   , gen_resp_cmd(redis_cmd::subscribe, {channel})
+   , gen_resp_cmd(command::subscribe, {channel})
    , ""
    };
    sub_session.send(std::move(r));
@@ -85,17 +85,17 @@ void sub(redis_session_cf const& cf, char const* channel)
    ioc.run();
 }
 
-void pubsub(redis_session_cf const& cf, int count, char const* channel)
+void pubsub(session_cf const& cf, int count, char const* channel)
 {
    boost::asio::io_context ioc;
 
-   redis_session pub_session(cf, ioc);
+   session pub_session(cf, ioc);
    pub_session.set_on_msg_handler(pub_handler);
    for (auto i = 0; i < count; ++i) {
       auto const msg = std::to_string(i);
       req_data r
       { request::publish
-      , gen_resp_cmd(redis_cmd::publish, {channel, msg})
+      , gen_resp_cmd(command::publish, {channel, msg})
       , ""
       };
       pub_session.send(std::move(r));
@@ -104,11 +104,11 @@ void pubsub(redis_session_cf const& cf, int count, char const* channel)
 
    pub_session.run();
 
-   redis_session sub_session(cf, ioc);
+   session sub_session(cf, ioc);
    sub_session.set_on_msg_handler(sub_handler);
    req_data r
    { request::subscribe
-   , gen_resp_cmd(redis_cmd::subscribe, {channel})
+   , gen_resp_cmd(command::subscribe, {channel})
    , ""
    };
    sub_session.send(std::move(r));
@@ -121,7 +121,7 @@ int main(int argc, char* argv[])
    try {
       auto test = 0;
       auto count = 0;
-      redis_session_cf cf;
+      session_cf cf;
       po::options_description desc("Options");
       desc.add_options()
       ("help,h", "Produces help message")

@@ -4,12 +4,12 @@
 #include <string>
 #include <initializer_list>
 
-namespace rt
+namespace rt::redis
 {
 
 std::size_t get_length(char const* p);
 
-enum class redis_cmd
+enum class command
 { get
 , incrby
 , lpop
@@ -23,7 +23,7 @@ enum class redis_cmd
 };
 
 std::string
-gen_resp_cmd(redis_cmd cmd, std::initializer_list<std::string> param);
+gen_resp_cmd(command cmd, std::initializer_list<std::string> param);
 
 }
 

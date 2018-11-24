@@ -50,16 +50,16 @@ namespace redis
 
 struct sessions {
    // The session used to subscribe to menu messages.
-   redis_session menu_sub;
+   session menu_sub;
 
    // The session used for keyspace notifications e.g. when the user
    // receives a message.
-   redis_session key_sub;
+   session key_sub;
 
    // Redis session to send general commands.
-   redis_session pub;
+   session pub;
 
-   sessions(redis_session_cf const& cf, net::io_context& ioc)
+   sessions(session_cf const& cf, net::io_context& ioc)
    : menu_sub(cf, ioc)
    , key_sub(cf, ioc)
    , pub(cf, ioc)
@@ -103,7 +103,7 @@ struct server_mgr_cf {
 
    auto get_redis_session_cf()
    {
-      return redis_session_cf {redis_address, redis_port};
+      return redis::session_cf {redis_address, redis_port};
    }
 };
 
@@ -134,13 +134,13 @@ private:
 
    void redis_menu_msg_handler( boost::system::error_code const& ec
                               , std::vector<std::string> const& resp
-                              , req_data const& cmd);
+                              , redis::req_data const& cmd);
    void redis_key_not_handler( boost::system::error_code const& ec
                              , std::vector<std::string> const& resp
-                             , req_data const& cmd);
+                             , redis::req_data const& cmd);
    void redis_pub_msg_handler( boost::system::error_code const& ec
                              , std::vector<std::string> const& resp
-                             , req_data const& cmd);
+                             , redis::req_data const& cmd);
    void do_stats_logger();
 
 public:

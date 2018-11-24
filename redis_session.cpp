@@ -82,7 +82,7 @@ void redis_session::start_reading_resp()
       on_resp(ec, res);
    };
 
-   data.clear();
+   //data.clear();
    async_read_resp(socket, &data, handler);
 }
 

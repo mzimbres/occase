@@ -131,6 +131,7 @@ void client_mgr_pub::send_group_msg( std::shared_ptr<client_type> s
    j_msg["msg"] = "Group message";
    j_msg["id"] = c;
    s->send_msg(j_msg.dump());
+   //std::cout << "from " << op.user << ", id " << c << " ---" <<std::endl;
    //std::cout << "Sending   publish      " << op.user << " "
    //          << c << " " << hashes.at(c).hash
    //          << std::endl;

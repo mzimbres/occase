@@ -48,10 +48,11 @@ int client_mgr_gmsg_check::on_read( std::string msg
       //auto const body = j.at("msg").get<std::string>();
       //std::cout << "Group msg check: " << body << std::endl;
       //std::cout << j << std::endl;
-      //auto const from = j.at("from").get<std::string>();
-      //std::cout << from << " != " << op.user << std::endl;
-
+      auto const from = j.at("from").get<std::string>();
       auto const to = j.at("to").get<std::string>();
+      auto const id = j.at("id").get<int>();
+
+      //std::cout << "from " << from << ", id " << id << std::endl;
       auto const match = counters.find(to);
       if (match == std::end(counters))
          throw std::runtime_error("client_mgr_gmsg_check::on_read5");
@@ -60,12 +61,13 @@ int client_mgr_gmsg_check::on_read( std::string msg
          throw std::runtime_error("client_mgr_gmsg_check::on_read6");
 
       ++match->second.counter;
-      if (match->second.counter > op.msgs_per_channel) {
+      auto const per_ch_msgs = op.msgs_per_channel * op.n_publishers;
+      if (match->second.counter > per_ch_msgs) {
          // Unsubscribe sent but unprocessed by the server.
          if (!match->second.sent)
             throw std::runtime_error("client_mgr_gmsg_check::on_read10");
 
-      } else if (match->second.counter < op.msgs_per_channel) {
+      } else if (match->second.counter < per_ch_msgs) {
          --tot_msgs;
       } else {
          json j_unsub;

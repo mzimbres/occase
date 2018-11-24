@@ -86,8 +86,8 @@ server_mgr::server_mgr(server_mgr_cf cf, net::io_context& ioc_)
    redis_pub.run();
 
    // Asynchronously retrieves the menu.
-   redis_req r
-   { redis_cmd::get
+   req_data r
+   { request::get
    , gen_resp_cmd(redis_cmd::get, {redis_menu_key})
    , redis_menu_key
    };
@@ -98,14 +98,14 @@ server_mgr::server_mgr(server_mgr_cf cf, net::io_context& ioc_)
 void
 server_mgr::redis_group_msg_handler( boost::system::error_code const& ec
                                    , std::vector<std::string> const& data
-                                   , redis_req const& req)
+                                   , req_data const& req)
 {
    if (ec) {
       std::cout << "sub_handler: " << ec.message() << std::endl;
       return;
    }
 
-   if (req.cmd == redis_cmd::unsolicited) {
+   if (req.cmd == request::unsolicited) {
       assert(data.front() == "message");
       assert(std::size(data) == 3);
       assert(data[1] == redis_mchannel);
@@ -130,14 +130,14 @@ server_mgr::redis_group_msg_handler( boost::system::error_code const& ec
 void 
 server_mgr::redis_key_msg_handler( boost::system::error_code const& ec
                                  , std::vector<std::string> const& data
-                                 , redis_req const& req)
+                                 , req_data const& req)
 {
    if (ec) {
       std::cout << "sub_handler: " << ec.message() << std::endl;
       return;
    }
 
-   if (req.cmd == redis_cmd::unsolicited) {
+   if (req.cmd == request::unsolicited) {
       if (data.back() == "rpush") {
          assert(data.front() == "message");
          assert(std::size(data) == 3);
@@ -147,8 +147,8 @@ server_mgr::redis_key_msg_handler( boost::system::error_code const& ec
          // We have to retrieve the user message.
          auto const user_id = data[1].substr(n + 1);
          auto const key = redis_msg_prefix + user_id;
-         redis_req r
-         { redis_cmd::lpop
+         req_data r
+         { request::lpop
          , gen_resp_cmd(redis_cmd::lpop, {key})
          , user_id
          };
@@ -168,14 +168,14 @@ server_mgr::redis_key_msg_handler( boost::system::error_code const& ec
 void
 server_mgr::redis_pub_msg_handler( boost::system::error_code const& ec
                                  , std::vector<std::string> const& data
-                                 , redis_req const& req)
+                                 , req_data const& req)
 {
    if (ec) {
       std::cout << "pub_handler: " << ec.message() << std::endl;
       return;
    }
 
-   if (req.cmd == redis_cmd::lpop) {
+   if (req.cmd == request::lpop) {
       assert(std::size(data) == 1);
       //std::cout << req.user_id << " ===> " << data.back() << std::endl;
       auto const match = sessions.find(req.user_id);
@@ -195,7 +195,7 @@ server_mgr::redis_pub_msg_handler( boost::system::error_code const& ec
       }
    }
 
-   if (req.cmd == redis_cmd::get) {
+   if (req.cmd == request::get) {
       assert(std::size(data) == 1);
       menu = data.back();
       auto const j_menu = json::parse(data.back());
@@ -222,8 +222,8 @@ server_mgr::redis_pub_msg_handler( boost::system::error_code const& ec
       redis_msub.set_on_msg_handler(handler1);
       redis_msub.run();
 
-      redis_req r
-      { redis_cmd::subscribe
+      req_data r
+      { request::subscribe
       , gen_resp_cmd(redis_cmd::subscribe, {redis_mchannel})
       , ""
       };
@@ -293,8 +293,8 @@ ev_res server_mgr::on_login(json const& j, std::shared_ptr<server_session> s)
    s->promote();
    assert(s->is_auth());
 
-   redis_req r
-   { redis_cmd::subscribe
+   req_data r
+   { request::subscribe
    , gen_resp_cmd( redis_cmd::subscribe
                  , { redis_notify_prefix + s->get_id() })
    , ""
@@ -340,8 +340,8 @@ server_mgr::on_code_confirmation(json const& j, std::shared_ptr<server_session> 
    // which means we did something wrong in the register command.
    assert(new_user.second);
 
-   redis_req r
-   { redis_cmd::subscribe
+   req_data r
+   { request::subscribe
    , gen_resp_cmd( redis_cmd::subscribe
                  , {redis_notify_prefix + s->get_id()})
    , ""
@@ -442,8 +442,8 @@ server_mgr::on_publish( std::string msg, json const& j
       return ev_res::publish_fail;
    }
 
-   redis_req r
-   { redis_cmd::publish
+   req_data r
+   { request::publish
    , gen_resp_cmd(redis_cmd::publish, {redis_mchannel, msg})
    , ""
    };
@@ -470,8 +470,8 @@ void server_mgr::release_auth_session(std::string const& id)
 
    sessions.erase(match); // We do not need the return value.
 
-   redis_req r
-   { redis_cmd::unsubscribe
+   req_data r
+   { request::unsubscribe
    , gen_resp_cmd( redis_cmd::unsubscribe
                  , { redis_notify_prefix + id})
    , ""
@@ -489,8 +489,8 @@ server_mgr::on_user_msg( std::string msg, json const& j
    // redis server. This would be a big optimization in the case of
    // small number of nodes.
 
-   redis_req r
-   { redis_cmd::rpush
+   req_data r
+   { request::rpush
    , gen_resp_cmd( redis_cmd::rpush
                  , {redis_msg_prefix + s->get_id(), msg})
    , ""

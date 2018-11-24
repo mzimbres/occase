@@ -57,8 +57,8 @@ void pub(redis_session_cf const& cf, int count, char const* channel)
    pub_session.set_on_msg_handler(pub_handler);
    for (auto i = 0; i < count; ++i) {
       auto const msg = std::to_string(i);
-      redis_req r
-      { redis_cmd::publish
+      req_data r
+      { request::publish
       , gen_resp_cmd( redis_cmd::publish , {channel, msg})
       , "" 
       };
@@ -75,8 +75,8 @@ void sub(redis_session_cf const& cf, char const* channel)
    boost::asio::io_context ioc;
    redis_session sub_session(cf, ioc);
    sub_session.set_on_msg_handler(sub_handler);
-   redis_req r
-   { redis_cmd::subscribe
+   req_data r
+   { request::subscribe
    , gen_resp_cmd(redis_cmd::subscribe, {channel})
    , ""
    };
@@ -93,8 +93,8 @@ void pubsub(redis_session_cf const& cf, int count, char const* channel)
    pub_session.set_on_msg_handler(pub_handler);
    for (auto i = 0; i < count; ++i) {
       auto const msg = std::to_string(i);
-      redis_req r
-      { redis_cmd::publish
+      req_data r
+      { request::publish
       , gen_resp_cmd(redis_cmd::publish, {channel, msg})
       , ""
       };
@@ -106,8 +106,8 @@ void pubsub(redis_session_cf const& cf, int count, char const* channel)
 
    redis_session sub_session(cf, ioc);
    sub_session.set_on_msg_handler(sub_handler);
-   redis_req r
-   { redis_cmd::subscribe
+   req_data r
+   { request::subscribe
    , gen_resp_cmd(redis_cmd::subscribe, {channel})
    , ""
    };

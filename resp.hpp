@@ -20,13 +20,6 @@ enum class redis_cmd
 , set
 , subscribe
 , unsubscribe
-, unsolicited // No a redis cmd. Received in subscribe mode.
-};
-
-struct redis_req {
-   redis_cmd cmd = redis_cmd::unsolicited;
-   std::string msg;
-   std::string user_id;
 };
 
 std::string

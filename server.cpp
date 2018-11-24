@@ -21,6 +21,24 @@ struct config {
    server_mgr_cf mgr;
    int workers;
    unsigned short port;
+
+   int auth_timeout;
+   int code_timeout;
+   int handshake_timeout;
+   int pong_timeout;
+   int close_frame_timeout;
+
+   auto get_timeouts() const noexcept
+   {
+      return session_timeouts
+      { std::chrono::seconds {auth_timeout}
+      , std::chrono::seconds {code_timeout}
+      , std::chrono::seconds {handshake_timeout}
+      , std::chrono::seconds {pong_timeout}
+      , std::chrono::seconds {close_frame_timeout}
+      };
+   }
+
 };
 
 auto get_server_op(int argc, char* argv[])
@@ -42,28 +60,28 @@ auto get_server_op(int argc, char* argv[])
      " around 5."
    )
    ("code-timeout,s"
-   , po::value<int>(&cf.mgr.code_timeout)->default_value(2)
+   , po::value<int>(&cf.code_timeout)->default_value(2)
    , "Code confirmation timeout in seconds."
    )
    ("auth-timeout,a"
-   , po::value<int>(&cf.mgr.auth_timeout)->default_value(2)
+   , po::value<int>(&cf.auth_timeout)->default_value(2)
    , "Authetication timeout in seconds. Fired after the websocket "
      "handshake completes. Used also by the login "
      "command for clients registering for the first time."
    )
    ("handshake-timeout,k"
-   , po::value<int>(&cf.mgr.handshake_timeout)->default_value(2)
+   , po::value<int>(&cf.handshake_timeout)->default_value(2)
    , "Handshake timeout in seconds. If the websocket handshake lasts "
      "more than that the socket is shutdown and closed."
    )
    ("pong-timeout,r"
-   , po::value<int>(&cf.mgr.pong_timeout)->default_value(2)
+   , po::value<int>(&cf.pong_timeout)->default_value(2)
    , "Pong timeout in seconds. This is the time the client has to "
      "reply a ping frame sent by the server. If a pong is received "
      "on time a new ping is sent on timer expiration."
    )
    ("close-frame-timeout,e"
-   , po::value<int>(&cf.mgr.close_frame_timeout)->default_value(2)
+   , po::value<int>(&cf.close_frame_timeout)->default_value(2)
    , "The time we are willing to wait for a reply of a sent close frame."
    )
 
@@ -102,6 +120,7 @@ auto get_server_op(int argc, char* argv[])
 
    cf.mgr.redis_nms.msg_prefix += ":";
    cf.mgr.redis_nms.notify_prefix += cf.mgr.redis_nms.msg_prefix;
+   cf.mgr.timeouts = cf.get_timeouts();
    return cf;
 }
 

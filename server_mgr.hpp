@@ -48,24 +48,6 @@ struct session_timeouts {
 namespace redis
 {
 
-struct sessions {
-   // The session used to subscribe to menu messages.
-   session menu_sub;
-
-   // The session used for keyspace notifications e.g. when the user
-   // receives a message.
-   session key_sub;
-
-   // Redis session to send general commands.
-   session pub;
-
-   sessions(session_cf const& cf, net::io_context& ioc)
-   : menu_sub(cf, ioc)
-   , key_sub(cf, ioc)
-   , pub(cf, ioc)
-   { }
-};
-
 struct namespaces {
    std::string menu_channel;
    std::string menu_key;
@@ -77,29 +59,34 @@ struct namespaces {
    std::string notify_prefix {"__keyspace@0__:"};
 };
 
+struct facade {
+   namespaces nms;
+
+   // The session used to subscribe to menu messages.
+   session menu_sub;
+
+   // The session used for keyspace notifications e.g. when the user
+   // receives a message.
+   session key_sub;
+
+   // Redis session to send general commands.
+   session pub;
+
+   facade(session_cf const& cf, net::io_context& ioc)
+   : menu_sub(cf, ioc)
+   , key_sub(cf, ioc)
+   , pub(cf, ioc)
+   {
+   }
+};
+
 }
 
 struct server_mgr_cf {
    std::string redis_address;
    std::string redis_port;
    redis::namespaces redis_nms;
-
-   int auth_timeout;
-   int code_timeout;
-   int handshake_timeout;
-   int pong_timeout;
-   int close_frame_timeout;
-
-   auto get_timeouts() const noexcept
-   {
-      return session_timeouts
-      { std::chrono::seconds {auth_timeout}
-      , std::chrono::seconds {code_timeout}
-      , std::chrono::seconds {handshake_timeout}
-      , std::chrono::seconds {pong_timeout}
-      , std::chrono::seconds {close_frame_timeout}
-      };
-   }
+   session_timeouts timeouts;
 
    auto get_redis_session_cf()
    {
@@ -125,9 +112,7 @@ private:
    session_timeouts const timeouts;
    sessions_stats stats;
 
-   redis::sessions redis_sessions;
-   redis::namespaces const redis_nms;
-
+   redis::facade db;
    std::string menu;
 
    net::steady_timer stats_timer;

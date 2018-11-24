@@ -36,7 +36,7 @@ struct client_op {
    int launch_interval = 100;
    int auth_timeout = 3;
    int sim_runs = 2;
-   int msgs_per_group;
+   int msgs_per_channel;
 
    auto make_session_cf() const
    {
@@ -48,75 +48,90 @@ struct client_op {
       };
    }
 
-   auto make_sim_cf() const
+   auto make_pub_cf() const
    {
-      return launcher_op
+      return launcher_cf
       { 0, publish_users
       , std::chrono::milliseconds {launch_interval}
-      , {"Launch of sim clients:         "}
+      , {""}
       };
    }
 
    auto make_gmsg_check_cf() const
    {
-      return launcher_op
+      return launcher_cf
       { publish_users, publish_users + listen_users
       , std::chrono::milliseconds {launch_interval}
-      , {"Launch of sim clients:         "}
+      , {""}
       };
    }
 };
 
 class timer {
 private:
-  std::chrono::time_point<std::chrono::system_clock> m_start;
+  std::chrono::time_point<std::chrono::system_clock> start_;
 public:
-  timer() : m_start(std::chrono::system_clock::now()) {}
-  auto get_count() const
+  timer() { }
+  void start()
+  {
+     start_ = std::chrono::system_clock::now();
+  }
+  auto get_count_now() const
   { 
     auto const end = std::chrono::system_clock::now();
-    auto diff = end - m_start;
+    auto diff = end - start_;
     auto diff2 = std::chrono::duration_cast<std::chrono::seconds>(diff);
     return diff2.count();
   }
-  ~timer()
-  {
-    std::cout << "Time elapsed: " << get_count() << "s" << std::endl;
-  }
+  ~timer() { }
 };
 
-void test_simulation(client_op const& op)
+void test_pubsub(client_op const& op)
 {
-   timer t;
    boost::asio::io_context ioc;
+   timer t;
 
-   auto const sim_op =  op.make_sim_cf();
-
-   // Sends one more message to test the unsubscribe command.
-   auto const next = [&ioc, &op, &sim_op]()
+   auto const ts = [&t]()
    {
+      std::cout << "Starting the timer." << std::endl;
+      t.start();
+   };
+
+   auto const next = [&ioc, &op, ts]()
+   {
+      // Sends one more message per channel to test if the unsubscribe
+      // command is working.
+      std::cout << "Starting launching pub." << std::endl;
       auto const s2 = std::make_shared< session_launcher<client_mgr_pub>
                       >( ioc
                        , cmgr_sim_op
-                         { "", "ok", op.msgs_per_group + 1}
+                         { "", "ok", op.msgs_per_channel + 1}
                        , op.make_session_cf()
-                       , sim_op
+                       , op.make_pub_cf()
                        );
+
+      s2->set_on_end(ts);
       s2->run({});
    };
 
+   std::cout << "Starting launching checkers." << std::endl;
+   auto const pub_cf = op.make_pub_cf();
    auto const s = std::make_shared< session_launcher<client_mgr_gmsg_check>
                    >( ioc
                     , cmgr_gmsg_check_op
-                      {"", sim_op.end - sim_op.begin
-                      , op.msgs_per_group}
+                      {"", pub_cf.end - pub_cf.begin
+                      , op.msgs_per_channel}
                     , op.make_session_cf()
                     , op.make_gmsg_check_cf()
                     );
-   s->set_call(next);
+   
+   // When finished launching the listeners we begin to launch the
+   // publishers.
+   s->set_on_end(next);
    s->run({});
 
    ioc.run();
+   std::cout << "Time elapsed: " << t.get_count_now() << "s" << std::endl;
 }
 
 int main(int argc, char* argv[])
@@ -125,7 +140,7 @@ int main(int argc, char* argv[])
       client_op op;
       po::options_description desc("Options");
       desc.add_options()
-         ("help,h", "produce help message")
+         ("help,h", "Program used to test publish and subscribe.")
          ( "port,p"
          , po::value<std::string>(&op.port)->default_value("8080")
          , "Server port."
@@ -169,8 +184,8 @@ int main(int argc, char* argv[])
          , "Number of simulation runs."
          )
 
-         ("msgs-per-group,b"
-         , po::value<int>(&op.msgs_per_group)->default_value(3)
+         ("msgs-per-channel,b"
+         , po::value<int>(&op.msgs_per_channel)->default_value(3)
          , "Number of messages per group used in the simulation."
          )
       ;
@@ -184,12 +199,9 @@ int main(int argc, char* argv[])
          return 0;
       }
 
-      while (op.sim_runs != 0) {
-         test_simulation(op);
-         std::cout
-            << "===========================================================> "
-            << op.sim_runs << std::endl;
-         --op.sim_runs;
+      for (auto i = 0; i < op.sim_runs; ++i) {
+         test_pubsub(op);
+         std::cout << "=======================> " << i << std::endl;
       }
 
       return 0;

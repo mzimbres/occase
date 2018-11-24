@@ -47,7 +47,7 @@ struct client_op {
 
    auto make_correct_code_cf1() const
    {
-      return launcher_op
+      return launcher_cf
       { initial_user
       , initial_user + users_size
       , std::chrono::milliseconds {launch_interval}
@@ -57,7 +57,7 @@ struct client_op {
 
    auto make_correct_code_cf2() const
    {
-      return launcher_op
+      return launcher_cf
       { initial_user + users_size
       , initial_user + 2 * users_size
       , std::chrono::milliseconds {launch_interval}
@@ -67,7 +67,7 @@ struct client_op {
 
    auto make_correct_code_cf3() const
    {
-      return launcher_op
+      return launcher_cf
       { initial_user + 2 * users_size
       , initial_user + 3 * users_size
       , std::chrono::milliseconds {launch_interval}

@@ -24,7 +24,7 @@ class client_session;
 struct cmgr_gmsg_check_op {
    std::string user;
    int n_publishers;
-   int msgs_per_channel;
+   int msgs_per_channel_per_user;
 };
 
 class client_mgr_gmsg_check {

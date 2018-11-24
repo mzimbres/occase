@@ -20,7 +20,7 @@ class client_session;
 struct cmgr_sim_op {
    std::string user;
    std::string expected;
-   int msgs_per_group;
+   int msgs_per_channel;
 };
 
 class client_mgr_pub {

@@ -48,7 +48,7 @@ struct options {
 
    auto make_handshake_laucher_op() const
    {
-      return launcher_op
+      return launcher_cf
       { 0, handshake_tm_test_size
       , std::chrono::milliseconds {launch_interval}
       , {"Handshake test launch:         "}
@@ -57,7 +57,7 @@ struct options {
 
    auto make_after_handshake_laucher_op() const
    {
-      return launcher_op
+      return launcher_cf
       { 0, handshake_tm_test_size
       , std::chrono::milliseconds {launch_interval}
       , {"After handshake test launch:   "}
@@ -66,7 +66,7 @@ struct options {
 
    auto make_code_tm_laucher_op1() const
    {
-      return launcher_op
+      return launcher_cf
       { initial_user
       , initial_user + users_size
       , std::chrono::milliseconds {launch_interval}
@@ -75,7 +75,7 @@ struct options {
 
    auto make_code_tm_laucher_op2() const
    {
-      return launcher_op
+      return launcher_cf
       { initial_user
       , initial_user + users_size
       , std::chrono::milliseconds {launch_interval}
@@ -84,7 +84,7 @@ struct options {
 
    auto make_code_tm_laucher_op3() const
    {
-      return launcher_op
+      return launcher_cf
       { initial_user
       , initial_user + users_size
       , std::chrono::milliseconds {launch_interval}
@@ -93,7 +93,7 @@ struct options {
 
    auto make_wrong_code_cf1() const
    {
-      return launcher_op
+      return launcher_cf
       { initial_user + 3 * users_size
       , initial_user + 4 * users_size
       , std::chrono::milliseconds {launch_interval}
@@ -103,7 +103,7 @@ struct options {
 
    auto make_wrong_code_cf2() const
    {
-      return launcher_op
+      return launcher_cf
       { initial_user + 4 * users_size
       , initial_user + 5 * users_size
       , std::chrono::milliseconds {launch_interval}
@@ -113,7 +113,7 @@ struct options {
 
    auto make_wrong_code_cf3() const
    {
-      return launcher_op
+      return launcher_cf
       { initial_user + 5 * users_size
       , initial_user + 6 * users_size
       , std::chrono::milliseconds {launch_interval}

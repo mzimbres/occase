@@ -19,7 +19,7 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
          auto const jmenu = json::parse(menu_str);
          auto const channels = get_hashes(jmenu);
          for (auto const& o : channels)
-            for (auto i = 0; i < op.msgs_per_group; ++i)
+            for (auto i = 0; i < op.msgs_per_channel; ++i)
                hashes.push_back({false, false, o});
          json j_sub;
          j_sub["cmd"] = "subscribe";
@@ -37,7 +37,7 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
       auto const res = j.at("result").get<std::string>();
       if (res == op.expected) {
          auto const count = j.at("count").get<int>();
-         std::cout << "subscribe ok: " << count << std::endl;
+         //std::cout << "subscribe ok: " << count << std::endl;
          send_group_msg(s, 0);
          return 1;
       }

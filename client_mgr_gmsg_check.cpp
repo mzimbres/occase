@@ -20,7 +20,7 @@ int client_mgr_gmsg_check::on_read( std::string msg
          auto const jmenu = json::parse(menu_str);
          auto const channels = get_hashes(jmenu);
          tot_msgs = op.n_publishers * std::size(channels)
-                  * op.msgs_per_channel;
+                  * op.msgs_per_channel_per_user;
          std::cout << op.user << " expects: " << tot_msgs << std::endl;
          json j_sub;
          j_sub["cmd"] = "subscribe";
@@ -61,7 +61,7 @@ int client_mgr_gmsg_check::on_read( std::string msg
          throw std::runtime_error("client_mgr_gmsg_check::on_read6");
 
       ++match->second.counter;
-      auto const per_ch_msgs = op.msgs_per_channel * op.n_publishers;
+      auto const per_ch_msgs = op.msgs_per_channel_per_user * op.n_publishers;
       if (match->second.counter > per_ch_msgs) {
          // Unsubscribe sent but unprocessed by the server.
          if (!match->second.sent)

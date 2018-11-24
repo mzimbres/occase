@@ -76,15 +76,16 @@ auto get_server_op(int argc, char* argv[])
    , "Port where redis server is listening."
    )
    ("redis-menu-channel"
-   , po::value<std::string>(&cf.mgr.redis_mchannel)->default_value("channels")
+   , po::value<std::string>(&cf.mgr.redis_nms.menu_channel)->
+        default_value("menu_channel")
    , "The name of the redis channel where group messages will be broadcasted."
    )
    ("redis-menu-key"
-   , po::value<std::string>(&cf.mgr.redis_menu_key)->default_value("menu")
+   , po::value<std::string>(&cf.mgr.redis_nms.menu_key)->default_value("menu")
    , "Redis key holding the menu."
    )
    ("redis-msg-prefix"
-   , po::value<std::string>(&cf.mgr.redis_msg_prefix)->default_value("msg")
+   , po::value<std::string>(&cf.mgr.redis_nms.msg_prefix)->default_value("msg")
    , "That prefix that will be incorporated in the keys that hold"
      " user messages."
    )
@@ -99,6 +100,8 @@ auto get_server_op(int argc, char* argv[])
       return config {true};
    }
 
+   cf.mgr.redis_nms.msg_prefix += ":";
+   cf.mgr.redis_nms.notify_prefix += cf.mgr.redis_nms.msg_prefix;
    return cf;
 }
 

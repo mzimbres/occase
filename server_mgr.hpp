@@ -45,19 +45,28 @@ struct session_timeouts {
    std::chrono::seconds close {2};
 };
 
+struct redis_namespaces {
+   std::string menu_channel;
+   std::string menu_key;
+
+   // The prefix added to all keys that store user messages. The final
+   // key will be a composition of this prefix and the user id
+   // separate by a ":".
+   std::string msg_prefix;
+
+   std::string notify_prefix {"__keyspace@0__:"};
+};
+
 struct server_mgr_cf {
    std::string redis_address;
    std::string redis_port;
-   std::string redis_mchannel;
+   redis_namespaces redis_nms;
 
    int auth_timeout;
    int code_timeout;
    int handshake_timeout;
    int pong_timeout;
    int close_frame_timeout;
-
-   std::string redis_menu_key;
-   std::string redis_msg_prefix;
 
    auto get_timeouts() const noexcept
    {
@@ -107,18 +116,8 @@ private:
    // Redis session to send general commands.
    redis_session redis_pub;
 
-   // The name of the channel on which menu messages will be published.
-   std::string const redis_mchannel;
+   redis_namespaces const redis_nms;
 
-   // The name of the redis key that contains the menu.
-   std::string const redis_menu_key;
-   std::string const redis_keyspace_prefix {"__keyspace@0__:"};
-
-   // The prefix added to all keys that store user messages. The final
-   // key will be a composition of this prefix and the user id
-   // separate by a ":".
-   std::string const redis_msg_prefix;
-   std::string const redis_notify_prefix;
    std::string menu;
 
    net::steady_timer stats_timer;

@@ -72,14 +72,11 @@ server_mgr::server_mgr(server_mgr_cf cf, net::io_context& ioc_)
 , redis_msub(cf.get_redis_session_cf(), ioc)
 , redis_ksub(cf.get_redis_session_cf(), ioc)
 , redis_pub(cf.get_redis_session_cf(), ioc)
-, redis_mchannel(cf.redis_mchannel)
-, redis_menu_key(cf.redis_menu_key)
-, redis_msg_prefix(cf.redis_msg_prefix + ":")
-, redis_notify_prefix(redis_keyspace_prefix + redis_msg_prefix)
+, redis_nms(cf.redis_nms)
 , stats_timer(ioc)
 {
-   auto const handler = [this]( auto const& ec , auto const& data
-                               , auto const& req)
+   auto handler = [this]( auto const& ec, auto const& data
+                        , auto const& req)
    { redis_pub_msg_handler(ec, data, req); };
 
    redis_pub.set_on_msg_handler(handler);
@@ -88,8 +85,8 @@ server_mgr::server_mgr(server_mgr_cf cf, net::io_context& ioc_)
    // Asynchronously retrieves the menu.
    req_data r
    { request::get_menu
-   , gen_resp_cmd(redis_cmd::get, {redis_menu_key})
-   , ""//redis_menu_key
+   , gen_resp_cmd(redis_cmd::get, {redis_nms.menu_key})
+   , ""//redis_nms.menu_key
    };
    redis_pub.send(std::move(r));
    do_stats_logger();
@@ -108,7 +105,7 @@ server_mgr::redis_group_msg_handler( boost::system::error_code const& ec
    if (req.cmd == request::unsolicited) {
       assert(data.front() == "message");
       assert(std::size(data) == 3);
-      assert(data[1] == redis_mchannel);
+      assert(data[1] == redis_nms.menu_channel);
 
       auto const j = json::parse(data.back());
       auto const to = j.at("to").get<std::string>();
@@ -146,7 +143,7 @@ server_mgr::redis_key_msg_handler( boost::system::error_code const& ec
 
          // We have to retrieve the user message.
          auto const user_id = data[1].substr(n + 1);
-         auto const key = redis_msg_prefix + user_id;
+         auto const key = redis_nms.msg_prefix + user_id;
          req_data r
          { request::lpop
          , gen_resp_cmd(redis_cmd::lpop, {key})
@@ -224,7 +221,7 @@ server_mgr::redis_pub_msg_handler( boost::system::error_code const& ec
 
       req_data r
       { request::subscribe
-      , gen_resp_cmd(redis_cmd::subscribe, {redis_mchannel})
+      , gen_resp_cmd(redis_cmd::subscribe, {redis_nms.menu_channel})
       , ""
       };
       redis_msub.send(std::move(r));
@@ -296,7 +293,7 @@ ev_res server_mgr::on_login(json const& j, std::shared_ptr<server_session> s)
    req_data r
    { request::subscribe
    , gen_resp_cmd( redis_cmd::subscribe
-                 , { redis_notify_prefix + s->get_id() })
+                 , { redis_nms.notify_prefix + s->get_id() })
    , ""
    };
 
@@ -343,7 +340,7 @@ server_mgr::on_code_confirmation(json const& j, std::shared_ptr<server_session> 
    req_data r
    { request::subscribe
    , gen_resp_cmd( redis_cmd::subscribe
-                 , {redis_notify_prefix + s->get_id()})
+                 , {redis_nms.notify_prefix + s->get_id()})
    , ""
    };
 
@@ -444,7 +441,7 @@ server_mgr::on_publish( std::string msg, json const& j
 
    req_data r
    { request::publish
-   , gen_resp_cmd(redis_cmd::publish, {redis_mchannel, msg})
+   , gen_resp_cmd(redis_cmd::publish, {redis_nms.menu_channel, msg})
    , ""
    };
 
@@ -473,7 +470,7 @@ void server_mgr::release_auth_session(std::string const& id)
    req_data r
    { request::unsubscribe
    , gen_resp_cmd( redis_cmd::unsubscribe
-                 , { redis_notify_prefix + id})
+                 , { redis_nms.notify_prefix + id})
    , ""
    };
 
@@ -492,7 +489,7 @@ server_mgr::on_user_msg( std::string msg, json const& j
    req_data r
    { request::rpush
    , gen_resp_cmd( redis_cmd::rpush
-                 , {redis_msg_prefix + s->get_id(), msg})
+                 , {redis_nms.msg_prefix + s->get_id(), msg})
    , ""
    };
 

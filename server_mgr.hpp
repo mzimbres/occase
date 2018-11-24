@@ -45,7 +45,28 @@ struct session_timeouts {
    std::chrono::seconds close {2};
 };
 
-struct redis_namespaces {
+namespace redis
+{
+
+struct sessions {
+   // The session used to subscribe to menu messages.
+   redis_session menu_sub;
+
+   // The session used for keyspace notifications e.g. when the user
+   // receives a message.
+   redis_session key_sub;
+
+   // Redis session to send general commands.
+   redis_session pub;
+
+   sessions(redis_session_cf const& cf, net::io_context& ioc)
+   : menu_sub(cf, ioc)
+   , key_sub(cf, ioc)
+   , pub(cf, ioc)
+   { }
+};
+
+struct namespaces {
    std::string menu_channel;
    std::string menu_key;
 
@@ -53,14 +74,15 @@ struct redis_namespaces {
    // key will be a composition of this prefix and the user id
    // separate by a ":".
    std::string msg_prefix;
-
    std::string notify_prefix {"__keyspace@0__:"};
 };
+
+}
 
 struct server_mgr_cf {
    std::string redis_address;
    std::string redis_port;
-   redis_namespaces redis_nms;
+   redis::namespaces redis_nms;
 
    int auth_timeout;
    int code_timeout;
@@ -94,9 +116,6 @@ private:
    net::io_context& ioc;
    // Maps a user id (telephone, email, etc.) to the user session.
    // We keep only a weak reference to the session to avoid.
-   // TODO: Should expired sessions be removed from the map to release
-   // memory? We may set a timer to run every couple of hours to
-   // release the entries.
    std::unordered_map< std::string
                      , std::weak_ptr<server_session>> sessions;
 
@@ -106,26 +125,17 @@ private:
    session_timeouts const timeouts;
    sessions_stats stats;
 
-   // The session used to subscribe to menu messages.
-   redis_session redis_msub;
-
-   // The session used for keyspace notifications e.g. when the user
-   // receives a message.
-   redis_session redis_ksub;
-
-   // Redis session to send general commands.
-   redis_session redis_pub;
-
-   redis_namespaces const redis_nms;
+   redis::sessions redis_sessions;
+   redis::namespaces const redis_nms;
 
    std::string menu;
 
    net::steady_timer stats_timer;
 
-   void redis_group_msg_handler( boost::system::error_code const& ec
-                               , std::vector<std::string> const& resp
-                               , req_data const& cmd);
-   void redis_key_msg_handler( boost::system::error_code const& ec
+   void redis_menu_msg_handler( boost::system::error_code const& ec
+                              , std::vector<std::string> const& resp
+                              , req_data const& cmd);
+   void redis_key_not_handler( boost::system::error_code const& ec
                              , std::vector<std::string> const& resp
                              , req_data const& cmd);
    void redis_pub_msg_handler( boost::system::error_code const& ec

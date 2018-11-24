@@ -22,8 +22,7 @@ namespace rt
 {
 
 enum class request
-{ get
-, incrby
+{ get_menu
 , lpop
 , lrange
 , ping

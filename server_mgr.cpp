@@ -87,9 +87,9 @@ server_mgr::server_mgr(server_mgr_cf cf, net::io_context& ioc_)
 
    // Asynchronously retrieves the menu.
    req_data r
-   { request::get
+   { request::get_menu
    , gen_resp_cmd(redis_cmd::get, {redis_menu_key})
-   , redis_menu_key
+   , ""//redis_menu_key
    };
    redis_pub.send(std::move(r));
    do_stats_logger();
@@ -195,7 +195,7 @@ server_mgr::redis_pub_msg_handler( boost::system::error_code const& ec
       }
    }
 
-   if (req.cmd == request::get) {
+   if (req.cmd == request::get_menu) {
       assert(std::size(data) == 1);
       menu = data.back();
       auto const j_menu = json::parse(data.back());

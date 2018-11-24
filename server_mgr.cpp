@@ -20,11 +20,9 @@ namespace rt
 server_mgr::server_mgr(server_mgr_cf cf, net::io_context& ioc_)
 : ioc(ioc_)
 , timeouts(cf.timeouts)
-, db(cf.get_redis_session_cf(), ioc)
+, db(cf.redis_cf, ioc)
 , stats_timer(ioc)
 {
-   db.nms = cf.redis_nms;
-
    auto handler = [this]( auto const& ec, auto const& data
                         , auto const& req)
    { redis_pub_msg_handler(ec, data, req); };

@@ -86,24 +86,26 @@ auto get_server_op(int argc, char* argv[])
    )
 
    ("redis-address"
-   , po::value<std::string>(&cf.mgr.redis_address)->default_value("127.0.0.1")
+   , po::value<std::string>(&cf.mgr.redis_cf.sessions.host)->
+       default_value("127.0.0.1")
    , "Address of redis server."
    )
    ("redis-port"
-   , po::value<std::string>(&cf.mgr.redis_port)->default_value("6379")
+   , po::value<std::string>(&cf.mgr.redis_cf.sessions.port)->
+       default_value("6379")
    , "Port where redis server is listening."
    )
    ("redis-menu-channel"
-   , po::value<std::string>(&cf.mgr.redis_nms.menu_channel)->
+   , po::value<std::string>(&cf.mgr.redis_cf.nms.menu_channel)->
         default_value("menu_channel")
    , "The name of the redis channel where group messages will be broadcasted."
    )
    ("redis-menu-key"
-   , po::value<std::string>(&cf.mgr.redis_nms.menu_key)->default_value("menu")
+   , po::value<std::string>(&cf.mgr.redis_cf.nms.menu_key)->default_value("menu")
    , "Redis key holding the menu."
    )
    ("redis-msg-prefix"
-   , po::value<std::string>(&cf.mgr.redis_nms.msg_prefix)->default_value("msg")
+   , po::value<std::string>(&cf.mgr.redis_cf.nms.msg_prefix)->default_value("msg")
    , "That prefix that will be incorporated in the keys that hold"
      " user messages."
    )
@@ -118,8 +120,8 @@ auto get_server_op(int argc, char* argv[])
       return config {true};
    }
 
-   cf.mgr.redis_nms.msg_prefix += ":";
-   cf.mgr.redis_nms.notify_prefix += cf.mgr.redis_nms.msg_prefix;
+   cf.mgr.redis_cf.nms.msg_prefix += ":";
+   cf.mgr.redis_cf.nms.notify_prefix += cf.mgr.redis_cf.nms.msg_prefix;
    cf.mgr.timeouts = cf.get_timeouts();
    return cf;
 }

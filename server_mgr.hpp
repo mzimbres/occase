@@ -9,10 +9,10 @@
 #include <boost/asio.hpp>
 #include <boost/asio/steady_timer.hpp>
 
+#include "redis.hpp"
 #include "config.hpp"
 #include "channel.hpp"
 #include "json_utils.hpp"
-#include "redis_session.hpp"
 
 namespace rt
 {
@@ -45,53 +45,9 @@ struct session_timeouts {
    std::chrono::seconds close {2};
 };
 
-namespace redis
-{
-
-struct namespaces {
-   std::string menu_channel;
-   std::string menu_key;
-
-   // The prefix added to all keys that store user messages. The final
-   // key will be a composition of this prefix and the user id
-   // separate by a ":".
-   std::string msg_prefix;
-   std::string notify_prefix {"__keyspace@0__:"};
-};
-
-struct facade {
-   namespaces nms;
-
-   // The session used to subscribe to menu messages.
-   session menu_sub;
-
-   // The session used for keyspace notifications e.g. when the user
-   // receives a message.
-   session key_sub;
-
-   // Redis session to send general commands.
-   session pub;
-
-   facade(session_cf const& cf, net::io_context& ioc)
-   : menu_sub(cf, ioc)
-   , key_sub(cf, ioc)
-   , pub(cf, ioc)
-   {
-   }
-};
-
-}
-
 struct server_mgr_cf {
-   std::string redis_address;
-   std::string redis_port;
-   redis::namespaces redis_nms;
+   redis::config redis_cf;
    session_timeouts timeouts;
-
-   auto get_redis_session_cf()
-   {
-      return redis::session_cf {redis_address, redis_port};
-   }
 };
 
 struct sessions_stats {

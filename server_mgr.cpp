@@ -17,12 +17,24 @@ std::mutex m;
 namespace rt
 {
 
-server_mgr::server_mgr(server_mgr_cf cf, net::io_context& ioc_)
-: ioc(ioc_)
+server_mgr::server_mgr(server_mgr_cf cf)
+: signals(ioc, SIGINT, SIGTERM)
+, socket {ioc}
 , timeouts(cf.timeouts)
 , db(cf.redis_cf, ioc)
 , stats_timer(ioc)
 {
+   auto const sig_handler = [this](auto ec, auto n)
+   {
+      // TODO: Verify ec here.
+      std::cout << "\nBeginning the shutdown operations ..."
+                << std::endl;
+
+      shutdown();
+   };
+
+   signals.async_wait(sig_handler);
+
    auto handler = [this]( auto const& ec, auto const& data
                         , auto const& req)
    { redis_pub_msg_handler(ec, data, req); };
@@ -498,6 +510,15 @@ void server_mgr::do_stats_logger()
    };
 
    stats_timer.async_wait(handler);
+}
+
+void server_mgr::run() noexcept
+{
+   try {
+      ioc.run();
+   } catch (std::exception const& e) {
+     std::cout << e.what() << std::endl;
+   }
 }
 
 ev_res on_message( server_mgr& mgr

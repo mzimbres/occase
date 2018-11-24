@@ -40,7 +40,7 @@ void listener::run()
 void listener::do_accept()
 {
    auto const n = next % std::size(arenas);
-   acceptor.async_accept( arenas[n]->get_socket()
+   acceptor.async_accept( arenas[n]->get_mgr().get_socket()
                         , [this](auto const& ec)
                           { on_accept(ec); });
 }
@@ -59,7 +59,7 @@ void listener::on_accept(boost::system::error_code ec)
 
    auto const n = next % std::size(arenas);
    std::make_shared< server_session
-                   >( std::move(arenas[n]->get_socket())
+                   >( std::move(arenas[n]->get_mgr().get_socket())
                     , arenas[n]->get_mgr())->accept();
    ++next;
 

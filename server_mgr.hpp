@@ -56,7 +56,10 @@ struct sessions_stats {
 
 class server_mgr {
 private:
-   net::io_context& ioc;
+   net::io_context ioc {1};
+   net::signal_set signals;
+   net::ip::tcp::socket socket;
+
    // Maps a user id (telephone, email, etc.) to the user session.
    // We keep only a weak reference to the session to avoid.
    std::unordered_map< std::string
@@ -85,7 +88,7 @@ private:
    void do_stats_logger();
 
 public:
-   server_mgr(server_mgr_cf cf, net::io_context& ioc);
+   server_mgr(server_mgr_cf cf);
    void shutdown();
    void release_auth_session(std::string const& id);
 
@@ -103,6 +106,8 @@ public:
    auto const& get_timeouts() const noexcept {return timeouts;}
    auto& get_stats() noexcept {return stats;}
    auto& get_io_context() {return ioc;}
+   auto& get_socket() {return socket;}
+   void run() noexcept;
 };
 
 ev_res on_message( server_mgr& mgr

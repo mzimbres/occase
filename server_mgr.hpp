@@ -48,7 +48,7 @@ struct session_timeouts {
 struct server_mgr_cf {
    std::string redis_address;
    std::string redis_port;
-   std::string redis_group_channel;
+   std::string redis_mchannel;
 
    int auth_timeout;
    int code_timeout;
@@ -83,7 +83,11 @@ struct sessions_stats {
 class server_mgr {
 private:
    net::io_context& ioc;
-   // Maps a user id (telephone, email, etc.) to a user obj.
+   // Maps a user id (telephone, email, etc.) to the user session.
+   // We keep only a weak reference to the session to avoid.
+   // TODO: Should expired sessions be removed from the map to release
+   // memory? We may set a timer to run every couple of hours to
+   // release the entries.
    std::unordered_map< std::string
                      , std::weak_ptr<server_session>> sessions;
 
@@ -92,12 +96,27 @@ private:
 
    session_timeouts const timeouts;
    sessions_stats stats;
-   redis_session redis_gsub_session;
-   redis_session redis_ksub_session;
-   redis_session redis_pub_session;
-   std::string const redis_group_channel;
+
+   // The session used to subscribe to menu messages.
+   redis_session redis_msub;
+
+   // The session used for keyspace notifications e.g. when the user
+   // receives a message.
+   redis_session redis_ksub;
+
+   // Redis session to send general commands.
+   redis_session redis_pub;
+
+   // The name of the channel on which menu messages will be published.
+   std::string const redis_mchannel;
+
+   // The name of the redis key that contains the menu.
    std::string const redis_menu_key;
    std::string const redis_keyspace_prefix {"__keyspace@0__:"};
+
+   // The prefix added to all keys that store user messages. The final
+   // key will be a composition of this prefix and the user id
+   // separate by a ":".
    std::string const redis_msg_prefix;
    std::string const redis_notify_prefix;
    std::string menu;

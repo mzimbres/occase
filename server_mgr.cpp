@@ -69,10 +69,10 @@ ev_res on_message( server_mgr& mgr
 server_mgr::server_mgr(server_mgr_cf cf, net::io_context& ioc_)
 : ioc(ioc_)
 , timeouts(cf.get_timeouts())
-, redis_gsub_session(cf.get_redis_session_cf(), ioc)
-, redis_ksub_session(cf.get_redis_session_cf(), ioc)
-, redis_pub_session(cf.get_redis_session_cf(), ioc)
-, redis_group_channel(cf.redis_group_channel)
+, redis_msub(cf.get_redis_session_cf(), ioc)
+, redis_ksub(cf.get_redis_session_cf(), ioc)
+, redis_pub(cf.get_redis_session_cf(), ioc)
+, redis_mchannel(cf.redis_mchannel)
 , redis_menu_key(cf.redis_menu_key)
 , redis_msg_prefix(cf.redis_msg_prefix + ":")
 , redis_notify_prefix(redis_keyspace_prefix + redis_msg_prefix)
@@ -82,8 +82,8 @@ server_mgr::server_mgr(server_mgr_cf cf, net::io_context& ioc_)
                                , auto const& req)
    { redis_pub_msg_handler(ec, data, req); };
 
-   redis_pub_session.set_on_msg_handler(handler);
-   redis_pub_session.run();
+   redis_pub.set_on_msg_handler(handler);
+   redis_pub.run();
 
    // Asynchronously retrieves the menu.
    redis_req r
@@ -91,7 +91,7 @@ server_mgr::server_mgr(server_mgr_cf cf, net::io_context& ioc_)
    , gen_resp_cmd(redis_cmd::get, {redis_menu_key})
    , redis_menu_key
    };
-   redis_pub_session.send(std::move(r));
+   redis_pub.send(std::move(r));
    do_stats_logger();
 }
 
@@ -108,7 +108,7 @@ server_mgr::redis_group_msg_handler( boost::system::error_code const& ec
    if (req.cmd == redis_cmd::unsolicited) {
       assert(data.front() == "message");
       assert(std::size(data) == 3);
-      assert(data[1] == redis_group_channel);
+      assert(data[1] == redis_mchannel);
 
       auto const j = json::parse(data.back());
       auto const to = j.at("to").get<std::string>();
@@ -152,7 +152,7 @@ server_mgr::redis_key_msg_handler( boost::system::error_code const& ec
          , gen_resp_cmd(redis_cmd::lpop, {key})
          , user_id
          };
-         redis_pub_session.send(r);
+         redis_pub.send(r);
 
          //auto const s = sessions.find(user_id);
          //if (s == std::end(sessions)) {
@@ -219,21 +219,21 @@ server_mgr::redis_pub_msg_handler( boost::system::error_code const& ec
                                   , auto const& req)
       { redis_group_msg_handler(ec, data, req); };
 
-      redis_gsub_session.set_on_msg_handler(handler1);
-      redis_gsub_session.run();
+      redis_msub.set_on_msg_handler(handler1);
+      redis_msub.run();
 
       redis_req r
       { redis_cmd::subscribe
-      , gen_resp_cmd(redis_cmd::subscribe, {redis_group_channel})
+      , gen_resp_cmd(redis_cmd::subscribe, {redis_mchannel})
       , ""
       };
-      redis_gsub_session.send(std::move(r));
+      redis_msub.send(std::move(r));
       auto const handler3 = [this]( auto const& ec , auto const& data
                                   , auto const& req)
       { redis_key_msg_handler(ec, data, req); };
 
-      redis_ksub_session.set_on_msg_handler(handler3);
-      redis_ksub_session.run();
+      redis_ksub.set_on_msg_handler(handler3);
+      redis_ksub.run();
    }
 }
 
@@ -300,7 +300,7 @@ ev_res server_mgr::on_login(json j, std::shared_ptr<server_session> s)
    , ""
    };
 
-   redis_ksub_session.send(std::move(r));
+   redis_ksub.send(std::move(r));
 
    json resp;
    resp["cmd"] = "auth_ack";
@@ -347,7 +347,7 @@ server_mgr::on_code_confirmation(json j, std::shared_ptr<server_session> s)
    , ""
    };
 
-   redis_ksub_session.send(std::move(r));
+   redis_ksub.send(std::move(r));
 
    json resp;
    resp["cmd"] = "code_confirmation_ack";
@@ -444,11 +444,11 @@ server_mgr::on_publish( std::string msg, json j
 
    redis_req r
    { redis_cmd::publish
-   , gen_resp_cmd(redis_cmd::publish, { redis_group_channel, msg})
+   , gen_resp_cmd(redis_cmd::publish, { redis_mchannel, msg})
    , ""
    };
 
-   redis_pub_session.send(std::move(r));
+   redis_pub.send(std::move(r));
 
    json ack;
    ack["cmd"] = "publish_ack";
@@ -477,7 +477,7 @@ void server_mgr::release_auth_session(std::string const& id)
    , ""
    };
 
-   redis_ksub_session.send(std::move(r));
+   redis_ksub.send(std::move(r));
 }
 
 ev_res
@@ -496,7 +496,7 @@ server_mgr::on_user_msg( std::string msg, json j
    , ""
    };
 
-   redis_pub_session.send(std::move(r));
+   redis_pub.send(std::move(r));
 
    json ack;
    ack["cmd"] = "user_msg_server_ack";
@@ -519,17 +519,17 @@ void server_mgr::shutdown()
    std::cout << "Shuting down redis group subscribe session ..."
              << std::endl;
 
-   redis_gsub_session.close();
+   redis_msub.close();
 
    std::cout << "Shuting down redis publish session ..."
              << std::endl;
 
-   redis_pub_session.close();
+   redis_pub.close();
 
    std::cout << "Shuting down redis user msg subscribe session ..."
              << std::endl;
 
-   redis_ksub_session.close();
+   redis_ksub.close();
 
    stats_timer.cancel();
 }

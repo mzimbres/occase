@@ -139,15 +139,16 @@ public:
    void shutdown();
    void release_auth_session(std::string const& id);
 
-   ev_res on_register(json j, std::shared_ptr<server_session> s);
-   ev_res on_login(json j, std::shared_ptr<server_session> s);
-   ev_res on_code_confirmation(json j, std::shared_ptr<server_session> s);
-   ev_res on_subscribe(json j, std::shared_ptr<server_session> session);
-   ev_res on_unsubscribe(json j, std::shared_ptr<server_session> session);
-   ev_res on_user_msg( std::string msg, json j
-                     , std::shared_ptr<server_session> session);
-   ev_res on_publish( std::string msg, json j
-                    , std::shared_ptr<server_session> session);
+   ev_res on_register(json const& j, std::shared_ptr<server_session> s);
+   ev_res on_login(json const& j, std::shared_ptr<server_session> s);
+   ev_res on_code_confirmation( json const& j
+                              , std::shared_ptr<server_session> s);
+   ev_res on_subscribe(json const& j, std::shared_ptr<server_session> s);
+   ev_res on_unsubscribe(json const& j, std::shared_ptr<server_session> s);
+   ev_res on_user_msg( std::string msg, json const& j
+                     , std::shared_ptr<server_session> s);
+   ev_res on_publish( std::string msg, json const& j
+                    , std::shared_ptr<server_session> s);
 
    auto const& get_timeouts() const noexcept {return timeouts;}
    auto& get_stats() noexcept {return stats;}

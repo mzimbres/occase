@@ -28,10 +28,10 @@ ev_res on_message( server_mgr& mgr
 
    if (s->is_waiting_auth()) {
       if (cmd == "register")
-         return mgr.on_register(std::move(j), s);
+         return mgr.on_register(j, s);
 
       if (cmd == "auth")
-         return mgr.on_login(std::move(j), s);
+         return mgr.on_login(j, s);
 
       std::cerr << "Server: Unknown command " << cmd << std::endl;
       return ev_res::unknown;
@@ -39,7 +39,7 @@ ev_res on_message( server_mgr& mgr
 
    if (s->is_waiting_code()) {
       if (cmd == "code_confirmation")
-         return mgr.on_code_confirmation(std::move(j), s);
+         return mgr.on_code_confirmation(j, s);
 
       std::cerr << "Server: Unknown command " << cmd << std::endl;
       return ev_res::unknown;
@@ -47,16 +47,16 @@ ev_res on_message( server_mgr& mgr
 
    if (s->is_auth()) {
       if (cmd == "subscribe")
-         return mgr.on_subscribe(std::move(j), s);
+         return mgr.on_subscribe(j, s);
 
       if (cmd == "publish")
-         return mgr.on_publish(std::move(msg), std::move(j), s);
+         return mgr.on_publish(std::move(msg), j, s);
 
       if (cmd == "user_msg")
-         return mgr.on_user_msg(std::move(msg), std::move(j), s);
+         return mgr.on_user_msg(std::move(msg), j, s);
 
       if (cmd == "unsubscribe")
-         return mgr.on_unsubscribe(std::move(j), s);
+         return mgr.on_unsubscribe(j, s);
 
       std::cerr << "Server: Unknown command " << cmd << std::endl;
       return ev_res::unknown;
@@ -237,7 +237,7 @@ server_mgr::redis_pub_msg_handler( boost::system::error_code const& ec
    }
 }
 
-ev_res server_mgr::on_register(json j, std::shared_ptr<server_session> s)
+ev_res server_mgr::on_register(json const& j, std::shared_ptr<server_session> s)
 {
    auto const from = j.at("from").get<std::string>();
 
@@ -264,7 +264,7 @@ ev_res server_mgr::on_register(json j, std::shared_ptr<server_session> s)
    return ev_res::register_ok;
 }
 
-ev_res server_mgr::on_login(json j, std::shared_ptr<server_session> s)
+ev_res server_mgr::on_login(json const& j, std::shared_ptr<server_session> s)
 {
    auto const from = j.at("from").get<std::string>();
 
@@ -316,7 +316,7 @@ ev_res server_mgr::on_login(json j, std::shared_ptr<server_session> s)
 }
 
 ev_res
-server_mgr::on_code_confirmation(json j, std::shared_ptr<server_session> s)
+server_mgr::on_code_confirmation(json const& j, std::shared_ptr<server_session> s)
 {
    auto const from = j.at("from").get<std::string>();
    auto const code = j.at("code").get<std::string>();
@@ -357,7 +357,7 @@ server_mgr::on_code_confirmation(json j, std::shared_ptr<server_session> s)
 }
 
 ev_res
-server_mgr::on_subscribe(json j, std::shared_ptr<server_session> s)
+server_mgr::on_subscribe(json const& j, std::shared_ptr<server_session> s)
 {
    auto const codes = j.at("channels").get<std::vector<std::string>>();
    auto const from = s->get_id();
@@ -389,7 +389,7 @@ server_mgr::on_subscribe(json j, std::shared_ptr<server_session> s)
 }
 
 ev_res
-server_mgr::on_unsubscribe(json j, std::shared_ptr<server_session> s)
+server_mgr::on_unsubscribe(json const& j, std::shared_ptr<server_session> s)
 {
    auto const codes = j.at("channels").get<std::vector<std::string>>();
    auto const from = s->get_id();
@@ -423,7 +423,7 @@ server_mgr::on_unsubscribe(json j, std::shared_ptr<server_session> s)
 
 
 ev_res
-server_mgr::on_publish( std::string msg, json j
+server_mgr::on_publish( std::string msg, json const& j
                       , std::shared_ptr<server_session> s)
 {
    auto const to = j.at("to").get<std::string>();
@@ -444,7 +444,7 @@ server_mgr::on_publish( std::string msg, json j
 
    redis_req r
    { redis_cmd::publish
-   , gen_resp_cmd(redis_cmd::publish, { redis_mchannel, msg})
+   , gen_resp_cmd(redis_cmd::publish, {redis_mchannel, msg})
    , ""
    };
 
@@ -481,7 +481,7 @@ void server_mgr::release_auth_session(std::string const& id)
 }
 
 ev_res
-server_mgr::on_user_msg( std::string msg, json j
+server_mgr::on_user_msg( std::string msg, json const& j
                        , std::shared_ptr<server_session> s)
 {
    // TODO: Search the sessions map if the user is online and in this

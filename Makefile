@@ -82,12 +82,15 @@ aedis: % : %.o $(aedis_objs)
 clean:
 	rm -f $(exes) $(exe_objs) $(lib_objs) $(DIST_NAME).tar.gz Makefile.dep
 
+#$(DIST_NAME).tar.gz: $(srcs) $(aux)
+#	rm -f $@
+#	mkdir $(DIST_NAME)
+#	ln $^ $(DIST_NAME)
+#	tar chzf $@ $(DIST_NAME)
+#	rm -rf $(DIST_NAME)
+
 $(DIST_NAME).tar.gz: $(srcs) $(aux)
-	rm -f $@
-	mkdir $(DIST_NAME)
-	ln $^ $(DIST_NAME)
-	tar chzf $@ $(DIST_NAME)
-	rm -rf $(DIST_NAME)
+	git archive --format=tar.gz --prefix=sellit/ HEAD > sellit.tar.gz
 
 .PHONY: dist
 dist: $(DIST_NAME).tar.gz

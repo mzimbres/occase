@@ -94,7 +94,9 @@ $(DIST_NAME).tar.gz: $(srcs) $(aux)
 .PHONY: dist
 dist: $(DIST_NAME).tar.gz
 
+backup_emails = laetitiapozwolski@yahoo.fr mzimbres@gmail.com bobkahnn@gmail.com coolcatlookingforakitty@gmail.com
+
 .PHONY: backup
 backup: $(DIST_NAME).tar.gz
-	echo "Backup" | mutt -s "Backup" -a $< -- mzimbres@gmail.com bobkahnn@gmail.com coolcatlookingforakitty@gmail.com
+	echo "Backup" | mutt -s "Backup" -a $< -- $(backup_emails)
 

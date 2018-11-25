@@ -10,7 +10,7 @@
 #include <boost/program_options/variables_map.hpp>
 
 #include "acceptor_arena.hpp"
-#include "mgr_arena.hpp"
+#include "server_mgr.hpp"
 
 using namespace rt;
 
@@ -133,17 +133,22 @@ int main(int argc, char* argv[])
       if (cf.help)
          return 0;
 
-      auto const generator = [mgr = cf.mgr]()
-      { return std::make_unique<mgr_arena>(mgr); };
+      std::vector<std::shared_ptr<server_mgr>> workers;
 
-      std::vector<std::unique_ptr<mgr_arena>> arenas;
-      std::generate_n(std::back_inserter(arenas), cf.workers, generator);
+      std::generate_n( std::back_inserter(workers)
+                     , cf.workers
+                     , [&cf]()
+                       { return std::make_shared<server_mgr>(cf.mgr); });
 
-      acceptor_arena acc_pool {cf.port, arenas};
-      acc_pool.run();
+      std::vector<std::thread> threads;
+      for (auto o : workers)
+         threads.emplace_back(std::thread {[o](){ o->run();}});
 
-      for (auto& o : arenas)
-         o->join();
+      acceptor_arena acc {cf.port, workers};
+      acc.run();
+
+      for (auto& o : threads)
+         o.join();
 
       return 0;
    } catch (std::exception const& e) {

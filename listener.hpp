@@ -11,21 +11,21 @@
 namespace rt
 {
 
-class mgr_arena;
+class server_mgr;
 
 class listener {
 private:
-   boost::asio::ip::tcp::acceptor acceptor;
-   std::vector<std::unique_ptr<mgr_arena>> const& arenas;
+   net::ip::tcp::acceptor acceptor;
+   std::vector<std::shared_ptr<server_mgr>> const& workers;
    long long next = 0;
 
    void do_accept();
    void on_accept(boost::system::error_code ec);
 
 public:
-   listener( boost::asio::ip::tcp::endpoint const& endpoint
-           , std::vector<std::unique_ptr<mgr_arena>> const& arenas_
-           , boost::asio::io_context& ioc);
+   listener( net::ip::tcp::endpoint const& endpoint
+           , std::vector<std::shared_ptr<server_mgr>> const& arenas_
+           , net::io_context& ioc);
    void run();
    void shutdown() {acceptor.cancel();}
 };

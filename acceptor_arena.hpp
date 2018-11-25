@@ -6,7 +6,7 @@
 #include <boost/asio.hpp>
 #include <boost/asio/signal_set.hpp>
 
-#include "mgr_arena.hpp"
+#include "server_mgr.hpp"
 #include "listener.hpp"
 
 namespace rt
@@ -20,9 +20,9 @@ struct acceptor_arena {
    listener lst;
 
    acceptor_arena( unsigned short port
-                 , std::vector<std::unique_ptr<mgr_arena>> const& arenas)
+                 , std::vector<std::shared_ptr<server_mgr>> const& workers)
    : signals(ioc, SIGINT, SIGTERM)
-   , lst { {boost::asio::ip::tcp::v4(), port}, arenas, ioc}
+   , lst { {boost::asio::ip::tcp::v4(), port}, workers, ioc}
    {
       run();
    }

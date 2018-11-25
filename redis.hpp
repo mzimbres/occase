@@ -26,24 +26,42 @@ struct config {
 class facade {
 private:
    namespaces nms;
-public:
 
    // The session used to subscribe to menu messages.
    session menu_sub;
 
    // The session used for keyspace notifications e.g. when the user
    // receives a message.
-   session key_sub;
+   session msg_not;
 
    // Redis session to send general commands.
    session pub;
 
+public:
+   using msg_handler_type = session::msg_handler_type;
+
    facade(config const& cf, net::io_context& ioc)
    : menu_sub(cf.sessions, ioc)
-   , key_sub(cf.sessions, ioc)
+   , msg_not(cf.sessions, ioc)
    , pub(cf.sessions, ioc)
    , nms(cf.nms)
    { }
+
+   void set_menu_msg_handler(msg_handler_type h)
+   { menu_sub.set_msg_handler(h); }
+
+   void set_msg_not_handler(msg_handler_type h)
+   { msg_not.set_msg_handler(h); }
+
+   void set_cmd_handler(msg_handler_type h)
+   { pub.set_msg_handler(h); }
+
+   void run()
+   {
+      menu_sub.run();
+      msg_not.run();
+      pub.run();
+   }
 
    void async_retrieve_menu();
    void async_retrieve_msgs(std::string const& user_id);

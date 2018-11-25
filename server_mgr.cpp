@@ -39,22 +39,33 @@ void server_mgr::init()
 
    signals.async_wait(sig_handler);
 
-   auto handler = [this]( auto const& ec, auto const& data
-                        , auto const& req)
+   do_stats_logger();
+
+   auto handler1 = [this]( auto const& ec , auto const& data
+                         , auto const& req)
+   { redis_menu_msg_handler(ec, data, req); };
+
+   auto handler2 = [this]( auto const& ec, auto const& data
+                         , auto const& req)
    { redis_pub_msg_handler(ec, data, req); };
 
-   db.pub.set_msg_handler(handler);
-   db.pub.run();
+   auto handler3 = [this]( auto const& ec , auto const& data
+                         , auto const& req)
+   { redis_key_not_handler(ec, data, req); };
+
+   db.set_menu_msg_handler(handler1);
+   db.set_cmd_handler(handler2);
+   db.set_msg_not_handler(handler3);
 
    db.async_retrieve_menu();
-
-   do_stats_logger();
+   db.subscribe_to_menu_msgs();
+   db.run();
 }
 
 void
 server_mgr::redis_menu_msg_handler( boost::system::error_code const& ec
-                                   , std::vector<std::string> const& data
-                                   , redis::req_data const& req)
+                                  , std::vector<std::string> const& data
+                                  , redis::req_data const& req)
 {
    if (ec) {
       std::cout << "sub_handler: " << ec.message() << std::endl;
@@ -64,7 +75,7 @@ server_mgr::redis_menu_msg_handler( boost::system::error_code const& ec
    if (req.cmd == redis::request::unsolicited) {
       assert(data.front() == "message");
       assert(std::size(data) == 3);
-      //assert(data[1] == db.nms.menu_channel);
+      //assert(data[1] == nms.menu_channel);
 
       auto const j = json::parse(data.back());
       auto const to = j.at("to").get<std::string>();
@@ -150,9 +161,8 @@ server_mgr::redis_pub_msg_handler( boost::system::error_code const& ec
       menu = data.back();
       auto const j_menu = json::parse(data.back());
       auto const codes = get_hashes(std::move(j_menu));
-      if (std::empty(codes)) { // TODO: Report error here.
-         std::cerr << "Group codes array empty." << std::endl;
-      }
+      if (std::empty(codes))
+         throw std::runtime_error("Group codes array empty.");
 
       for (auto const& gc : codes) {
          auto const new_group = channels.insert({gc, {}});
@@ -162,22 +172,6 @@ server_mgr::redis_pub_msg_handler( boost::system::error_code const& ec
             std::cout << "Channel " << gc << " already exists." << std::endl;
          }
       }
-
-      // After creating the groups we can establish other redis
-      // connections.
-      auto const handler1 = [this]( auto const& ec , auto const& data
-                                  , auto const& req)
-      { redis_menu_msg_handler(ec, data, req); };
-
-      db.menu_sub.set_msg_handler(handler1);
-      db.menu_sub.run();
-      db.subscribe_to_menu_msgs();
-      auto const handler3 = [this]( auto const& ec , auto const& data
-                                  , auto const& req)
-      { redis_key_not_handler(ec, data, req); };
-
-      db.key_sub.set_msg_handler(handler3);
-      db.key_sub.run();
    }
 }
 

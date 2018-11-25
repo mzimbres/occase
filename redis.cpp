@@ -46,7 +46,7 @@ void facade::subscribe_to_chat_msgs(std::string const& id)
    , ""
    };
 
-   key_sub.send(std::move(r));
+   msg_not.send(std::move(r));
 }
 
 void facade::unsubscribe_to_chat_msgs(std::string const& id)
@@ -57,7 +57,7 @@ void facade::unsubscribe_to_chat_msgs(std::string const& id)
    , ""
    };
 
-   key_sub.send(std::move(r));
+   msg_not.send(std::move(r));
 }
 
 void facade::async_store_chat_msg(std::string id, std::string msg)
@@ -97,7 +97,7 @@ void facade::disconnect()
    std::cout << "Shuting down redis user msg subscribe session ..."
              << std::endl;
 
-   key_sub.close();
+   msg_not.close();
 }
 
 }

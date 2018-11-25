@@ -58,7 +58,6 @@ class server_mgr {
 private:
    net::io_context ioc {1};
    net::signal_set signals;
-   net::ip::tcp::socket socket;
 
    // Maps a user id (telephone, email, etc.) to the user session.  We
    // keep only a weak reference to the session to avoid.
@@ -109,7 +108,6 @@ public:
    auto const& get_timeouts() const noexcept {return timeouts;}
    auto& get_stats() noexcept {return stats;}
    auto& get_io_context() {return ioc;}
-   auto& get_socket() {return socket;}
    void run() noexcept;
 };
 

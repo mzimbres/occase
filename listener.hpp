@@ -20,7 +20,8 @@ private:
    long long next = 0;
 
    void do_accept();
-   void on_accept(boost::system::error_code ec);
+   void on_accept( boost::system::error_code ec
+                 , net::ip::tcp::socket peer);
 
 public:
    listener( net::ip::tcp::endpoint const& endpoint

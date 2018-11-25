@@ -41,15 +41,16 @@ void listener::run()
 void listener::do_accept()
 {
    auto const n = next % std::size(workers);
-   acceptor.async_accept( workers[n]->get_socket()
-                        , [this](auto const& ec)
-                          { on_accept(ec); });
+   acceptor.async_accept( workers[n]->get_io_context()
+                        , [this](auto const& ec, auto socket)
+                          { on_accept(ec, std::move(socket)); });
 }
 
-void listener::on_accept(boost::system::error_code ec)
+void listener::on_accept( boost::system::error_code ec
+                        , net::ip::tcp::socket peer)
 {
    if (ec) {
-      if (ec == boost::asio::error::operation_aborted) {
+      if (ec == net::error::operation_aborted) {
          std::cout << "Stopping accepting connections ..." << std::endl;
          return;
       }
@@ -60,8 +61,7 @@ void listener::on_accept(boost::system::error_code ec)
 
    auto const n = next % std::size(workers);
    std::make_shared< server_session
-                   >( std::move(workers[n]->get_socket())
-                    , *workers[n])->accept();
+                   >( std::move(peer), *workers[n])->accept();
    ++next;
 
    do_accept();

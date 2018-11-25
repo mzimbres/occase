@@ -19,7 +19,6 @@ namespace rt
 
 server_mgr::server_mgr(server_mgr_cf cf)
 : signals(ioc, SIGINT, SIGTERM)
-, socket {ioc}
 , timeouts(cf.timeouts)
 , db(cf.redis_cf, ioc)
 , stats_timer(ioc)

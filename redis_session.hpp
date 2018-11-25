@@ -31,7 +31,7 @@ enum class request
 , set
 , subscribe
 , unsubscribe
-, unsolicited // No a redis cmd. Received in subscribe mode.
+, unsolicited
 };
 
 struct req_data {
@@ -47,7 +47,7 @@ struct session_cf {
 
 class session {
 public:
-   using redis_on_msg_handler_type =
+   using msg_handler_type =
       std::function<void ( boost::system::error_code const&
                          , std::vector<std::string> const&
                          , req_data const&)>;
@@ -58,7 +58,7 @@ private:
    net::ip::tcp::socket socket;
    std::string data;
    std::queue<req_data> write_queue;
-   redis_on_msg_handler_type on_msg_handler = [](auto, auto, auto) {};
+   msg_handler_type msg_handler = [](auto, auto, auto) {};
 
    void start_reading_resp();
 
@@ -81,8 +81,8 @@ public:
    void run();
    void send(req_data req);
    void close();
-   void set_on_msg_handler(redis_on_msg_handler_type handler)
-   { on_msg_handler = std::move(handler);};
+   void set_msg_handler(msg_handler_type handler)
+   { msg_handler = std::move(handler);};
 };
 
 }

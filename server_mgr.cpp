@@ -43,7 +43,7 @@ void server_mgr::init()
                         , auto const& req)
    { redis_pub_msg_handler(ec, data, req); };
 
-   db.pub.set_on_msg_handler(handler);
+   db.pub.set_msg_handler(handler);
    db.pub.run();
 
    // Asynchronously retrieves the menu.
@@ -179,7 +179,7 @@ server_mgr::redis_pub_msg_handler( boost::system::error_code const& ec
                                   , auto const& req)
       { redis_menu_msg_handler(ec, data, req); };
 
-      db.menu_sub.set_on_msg_handler(handler1);
+      db.menu_sub.set_msg_handler(handler1);
       db.menu_sub.run();
 
       redis::req_data r
@@ -192,7 +192,7 @@ server_mgr::redis_pub_msg_handler( boost::system::error_code const& ec
                                   , auto const& req)
       { redis_key_not_handler(ec, data, req); };
 
-      db.key_sub.set_on_msg_handler(handler3);
+      db.key_sub.set_msg_handler(handler3);
       db.key_sub.run();
    }
 }

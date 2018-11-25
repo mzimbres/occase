@@ -54,7 +54,7 @@ void pub(session_cf const& cf, int count, char const* channel)
 {
    boost::asio::io_context ioc;
    session pub_session(cf, ioc);
-   pub_session.set_on_msg_handler(pub_handler);
+   pub_session.set_msg_handler(pub_handler);
    for (auto i = 0; i < count; ++i) {
       auto const msg = std::to_string(i);
       req_data r
@@ -74,7 +74,7 @@ void sub(session_cf const& cf, char const* channel)
 {
    boost::asio::io_context ioc;
    session sub_session(cf, ioc);
-   sub_session.set_on_msg_handler(sub_handler);
+   sub_session.set_msg_handler(sub_handler);
    req_data r
    { request::subscribe
    , gen_resp_cmd(command::subscribe, {channel})
@@ -90,7 +90,7 @@ void pubsub(session_cf const& cf, int count, char const* channel)
    boost::asio::io_context ioc;
 
    session pub_session(cf, ioc);
-   pub_session.set_on_msg_handler(pub_handler);
+   pub_session.set_msg_handler(pub_handler);
    for (auto i = 0; i < count; ++i) {
       auto const msg = std::to_string(i);
       req_data r
@@ -105,7 +105,7 @@ void pubsub(session_cf const& cf, int count, char const* channel)
    pub_session.run();
 
    session sub_session(cf, ioc);
-   sub_session.set_on_msg_handler(sub_handler);
+   sub_session.set_msg_handler(sub_handler);
    req_data r
    { request::subscribe
    , gen_resp_cmd(command::subscribe, {channel})

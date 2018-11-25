@@ -111,9 +111,9 @@ void session::on_resp( boost::system::error_code const& ec
                      , std::vector<std::string> const& res)
 {
    if (std::empty(write_queue)) {
-      on_msg_handler(ec, res, {});
+      msg_handler(ec, res, {});
    } else {
-      on_msg_handler(ec, res, write_queue.front());
+      msg_handler(ec, res, write_queue.front());
       write_queue.pop();
    }
 

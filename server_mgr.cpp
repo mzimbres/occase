@@ -46,12 +46,7 @@ void server_mgr::init()
    db.pub.set_msg_handler(handler);
    db.pub.run();
 
-   // Asynchronously retrieves the menu.
-   redis::req_data r
-   { redis::request::get_menu
-   , gen_resp_cmd(redis::command::get, {db.nms.menu_key})
-   , ""};
-   db.pub.send(std::move(r));
+   db.async_retrieve_menu();
 
    do_stats_logger();
 }
@@ -69,7 +64,7 @@ server_mgr::redis_menu_msg_handler( boost::system::error_code const& ec
    if (req.cmd == redis::request::unsolicited) {
       assert(data.front() == "message");
       assert(std::size(data) == 3);
-      assert(data[1] == db.nms.menu_channel);
+      //assert(data[1] == db.nms.menu_channel);
 
       auto const j = json::parse(data.back());
       auto const to = j.at("to").get<std::string>();
@@ -101,18 +96,13 @@ server_mgr::redis_key_not_handler( boost::system::error_code const& ec
       if (data.back() == "rpush") {
          assert(data.front() == "message");
          assert(std::size(data) == 3);
+
+         // TODO: Read the user id form the req struct. First
+         // implement tests.
          auto const n = data[1].rfind(":");
          assert(n != std::string::npos);
 
-         // We have to retrieve the user message.
-         auto const user_id = data[1].substr(n + 1);
-         auto const key = db.nms.msg_prefix + user_id;
-         redis::req_data r
-         { redis::request::retrieve_msgs
-         , gen_resp_cmd(redis::command::lpop, {key})
-         , user_id
-         };
-         db.pub.send(r);
+         db.async_retrieve_msgs(data[1].substr(n + 1));
 
          //auto const s = sessions.find(user_id);
          //if (s == std::end(sessions)) {
@@ -181,13 +171,7 @@ server_mgr::redis_pub_msg_handler( boost::system::error_code const& ec
 
       db.menu_sub.set_msg_handler(handler1);
       db.menu_sub.run();
-
-      redis::req_data r
-      { redis::request::subscribe
-      , gen_resp_cmd(redis::command::subscribe, {db.nms.menu_channel})
-      , ""
-      };
-      db.menu_sub.send(std::move(r));
+      db.subscribe_to_menu_msgs();
       auto const handler3 = [this]( auto const& ec , auto const& data
                                   , auto const& req)
       { redis_key_not_handler(ec, data, req); };
@@ -253,14 +237,7 @@ ev_res server_mgr::on_login(json const& j, std::shared_ptr<server_session> s)
    s->promote();
    assert(s->is_auth());
 
-   redis::req_data r
-   { redis::request::subscribe
-   , gen_resp_cmd( redis::command::subscribe
-                 , { db.nms.notify_prefix + s->get_id() })
-   , ""
-   };
-
-   db.key_sub.send(std::move(r));
+   db.subscribe_to_chat_msgs(s->get_id());
 
    json resp;
    resp["cmd"] = "auth_ack";
@@ -300,14 +277,7 @@ server_mgr::on_code_confirmation(json const& j, std::shared_ptr<server_session> 
    // which means we did something wrong in the register command.
    assert(new_user.second);
 
-   redis::req_data r
-   { redis::request::subscribe
-   , gen_resp_cmd( redis::command::subscribe
-                 , {db.nms.notify_prefix + s->get_id()})
-   , ""
-   };
-
-   db.key_sub.send(std::move(r));
+   db.subscribe_to_chat_msgs(s->get_id());
 
    json resp;
    resp["cmd"] = "code_confirmation_ack";
@@ -402,13 +372,7 @@ server_mgr::on_publish( std::string msg, json const& j
       return ev_res::publish_fail;
    }
 
-   redis::req_data r
-   { redis::request::publish
-   , gen_resp_cmd(redis::command::publish, {db.nms.menu_channel, msg})
-   , ""
-   };
-
-   db.pub.send(std::move(r));
+   db.publish_menu_msg(std::move(msg));
 
    json ack;
    ack["cmd"] = "publish_ack";
@@ -432,15 +396,7 @@ void server_mgr::release_auth_session(std::string const& id)
    }
 
    sessions.erase(match); // We do not need the return value.
-
-   redis::req_data r
-   { redis::request::unsubscribe
-   , gen_resp_cmd( redis::command::unsubscribe
-                 , { db.nms.notify_prefix + id})
-   , ""
-   };
-
-   db.key_sub.send(std::move(r));
+   db.unsubscribe_to_chat_msgs(id);
 }
 
 ev_res
@@ -452,14 +408,7 @@ server_mgr::on_user_msg( std::string msg, json const& j
    // redis server. This would be a big optimization in the case of
    // small number of nodes.
 
-   redis::req_data r
-   { redis::request::store_msg
-   , gen_resp_cmd( redis::command::rpush
-                 , {db.nms.msg_prefix + s->get_id(), msg})
-   , ""
-   };
-
-   db.pub.send(std::move(r));
+   db.async_store_chat_msg(s->get_id(), std::move(msg));
 
    json ack;
    ack["cmd"] = "user_msg_server_ack";
@@ -479,20 +428,7 @@ void server_mgr::shutdown()
       if (auto s = o.second.lock())
          s->shutdown();
 
-   std::cout << "Shuting down redis group subscribe session ..."
-             << std::endl;
-
-   db.menu_sub.close();
-
-   std::cout << "Shuting down redis publish session ..."
-             << std::endl;
-
-   db.pub.close();
-
-   std::cout << "Shuting down redis user msg subscribe session ..."
-             << std::endl;
-
-   db.key_sub.close();
+   db.disconnect();
 
    stats_timer.cancel();
 }

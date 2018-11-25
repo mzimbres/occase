@@ -89,10 +89,7 @@ private:
 
    void init();
 
-public:
-   server_mgr(server_mgr_cf cf);
    void shutdown();
-   void release_auth_session(std::string const& id);
 
    ev_res on_register(json const& j, std::shared_ptr<server_session> s);
    ev_res on_login(json const& j, std::shared_ptr<server_session> s);
@@ -105,15 +102,17 @@ public:
    ev_res on_publish( std::string msg, json const& j
                     , std::shared_ptr<server_session> s);
 
+
+public:
+   server_mgr(server_mgr_cf cf);
+   void release_auth_session(std::string const& id);
+   ev_res on_message(std::shared_ptr<server_session> s, std::string msg);
+
    auto const& get_timeouts() const noexcept {return timeouts;}
    auto& get_stats() noexcept {return stats;}
-   auto& get_io_context() {return ioc;}
+   auto& get_io_context() noexcept {return ioc;}
    void run() noexcept;
 };
-
-ev_res on_message( server_mgr& mgr
-                 , std::shared_ptr<server_session> s
-                 , std::string msg);
 
 }
 

@@ -420,6 +420,9 @@ server_mgr::on_publish( std::string msg, json const& j
 
 void server_mgr::release_auth_session(std::string const& id)
 {
+   // TODO: This function is called on the destructor on the server
+   // session. Think where should we catch exceptions.
+
    auto const match = sessions.find(id);
    if (match == std::end(sessions)) {
       // This is a bug, all autheticated sessions should be in the
@@ -525,21 +528,18 @@ void server_mgr::run() noexcept
    }
 }
 
-ev_res on_message( server_mgr& mgr
-                 , std::shared_ptr<server_session> s
-                 , std::string msg)
+ev_res
+server_mgr::on_message( std::shared_ptr<server_session> s, std::string msg)
 {
    auto const j = json::parse(msg);
-   //std::cout << j << std::endl;
-
    auto const cmd = j.at("cmd").get<std::string>();
 
    if (s->is_waiting_auth()) {
       if (cmd == "register")
-         return mgr.on_register(j, s);
+         return on_register(j, s);
 
       if (cmd == "auth")
-         return mgr.on_login(j, s);
+         return on_login(j, s);
 
       std::cerr << "Server: Unknown command " << cmd << std::endl;
       return ev_res::unknown;
@@ -547,7 +547,7 @@ ev_res on_message( server_mgr& mgr
 
    if (s->is_waiting_code()) {
       if (cmd == "code_confirmation")
-         return mgr.on_code_confirmation(j, s);
+         return on_code_confirmation(j, s);
 
       std::cerr << "Server: Unknown command " << cmd << std::endl;
       return ev_res::unknown;
@@ -555,16 +555,16 @@ ev_res on_message( server_mgr& mgr
 
    if (s->is_auth()) {
       if (cmd == "subscribe")
-         return mgr.on_subscribe(j, s);
+         return on_subscribe(j, s);
 
       if (cmd == "publish")
-         return mgr.on_publish(std::move(msg), j, s);
+         return on_publish(std::move(msg), j, s);
 
       if (cmd == "user_msg")
-         return mgr.on_user_msg(std::move(msg), j, s);
+         return on_user_msg(std::move(msg), j, s);
 
       if (cmd == "unsubscribe")
-         return mgr.on_unsubscribe(j, s);
+         return on_unsubscribe(j, s);
 
       std::cerr << "Server: Unknown command " << cmd << std::endl;
       return ev_res::unknown;

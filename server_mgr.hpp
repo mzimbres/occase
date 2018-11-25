@@ -60,10 +60,11 @@ private:
    net::signal_set signals;
    net::ip::tcp::socket socket;
 
-   // Maps a user id (telephone, email, etc.) to the user session.
-   // We keep only a weak reference to the session to avoid.
+   // Maps a user id (telephone, email, etc.) to the user session.  We
+   // keep only a weak reference to the session to avoid.
    std::unordered_map< std::string
-                     , std::weak_ptr<server_session>> sessions;
+                     , std::weak_ptr<server_session>
+                     > sessions;
 
    // Maps a channel id to the corresponding channel object.
    std::unordered_map<std::string, channel> channels;
@@ -86,6 +87,8 @@ private:
                              , std::vector<std::string> const& resp
                              , redis::req_data const& cmd);
    void do_stats_logger();
+
+   void init();
 
 public:
    server_mgr(server_mgr_cf cf);

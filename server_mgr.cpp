@@ -24,6 +24,11 @@ server_mgr::server_mgr(server_mgr_cf cf)
 , db(cf.redis_cf, ioc)
 , stats_timer(ioc)
 {
+   net::post(ioc, [this]() {init();});
+}
+
+void server_mgr::init()
+{
    auto const sig_handler = [this](auto ec, auto n)
    {
       // TODO: Verify ec here.

@@ -32,7 +32,7 @@ private:
    net::steady_timer timer;
    beast::multi_buffer buffer;
 
-   server_mgr& mgr;
+   std::shared_ptr<server_mgr> mgr;
    std::queue<std::string> msg_queue;
    ping_pong pp_state = ping_pong::unset;
    bool closing = false;
@@ -62,7 +62,7 @@ private:
 public:
    explicit
    server_session( net::ip::tcp::socket socket
-                 , server_mgr& mgr);
+                 , std::shared_ptr<server_mgr> mgr);
    ~server_session();
 
    void accept();

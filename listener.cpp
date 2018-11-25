@@ -61,7 +61,7 @@ void listener::on_accept( boost::system::error_code ec
 
    auto const n = next % std::size(workers);
    std::make_shared< server_session
-                   >( std::move(peer), *workers[n])->accept();
+                   >( std::move(peer), workers[n])->accept();
    ++next;
 
    do_accept();

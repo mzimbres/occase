@@ -108,7 +108,7 @@ server_mgr::redis_key_not_handler( boost::system::error_code const& ec
          auto const user_id = data[1].substr(n + 1);
          auto const key = db.nms.msg_prefix + user_id;
          redis::req_data r
-         { redis::request::lpop
+         { redis::request::retrieve_msgs
          , gen_resp_cmd(redis::command::lpop, {key})
          , user_id
          };
@@ -135,7 +135,7 @@ server_mgr::redis_pub_msg_handler( boost::system::error_code const& ec
       return;
    }
 
-   if (req.cmd == redis::request::lpop) {
+   if (req.cmd == redis::request::retrieve_msgs) {
       assert(std::size(data) == 1);
       //std::cout << req.user_id << " ===> " << data.back() << std::endl;
       auto const match = sessions.find(req.user_id);
@@ -453,7 +453,7 @@ server_mgr::on_user_msg( std::string msg, json const& j
    // small number of nodes.
 
    redis::req_data r
-   { redis::request::rpush
+   { redis::request::store_msg
    , gen_resp_cmd( redis::command::rpush
                  , {db.nms.msg_prefix + s->get_id(), msg})
    , ""

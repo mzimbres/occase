@@ -23,12 +23,9 @@ namespace rt::redis
 
 enum class request
 { get_menu
-, lpop
-, lrange
-, ping
-, rpush
+, retrieve_msgs
+, store_msg
 , publish
-, set
 , subscribe
 , unsubscribe
 , unsolicited

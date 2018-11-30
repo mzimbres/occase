@@ -50,69 +50,69 @@ public:
                                            , stream.get_executor());
     }
 
-   void operator()( boost::system::error_code ec, std::size_t n
-                  , bool start = false)
+   void operator()( boost::system::error_code const& ec, std::size_t n
+                  , int start = 0)
    {
-      for (;;) {
-         if (start) {
+      switch (start) {
+         for (;;) {
+            case 1:
             net::async_read_until( stream, net::dynamic_buffer(*data)
                                  , delim, std::move(*this));
-            return;
-         }
+            return; default:
 
-         if (ec || n < 3) {
-            handler(ec, {});
-            return;
-         }
+            if (ec || n < 3) {
+               handler(ec, {});
+               return;
+            }
 
-         auto foo = false;
-         if (bulky_str_read) {
-            res.push_back(data->substr(0, n - 2));
-            --counter;
-         } else {
-            if (counter != 0) {
-               switch (data->front()) {
-                  case '$':
-                  {
-                     // TODO: Do not push in the vector but find a way to
-                     // report nil.
-                     if (data->compare(1, 2, "-1") == 0) {
-                        res.push_back({});
-                        --counter;
-                     } else {
-                        foo = true;
+            auto str_flag = false;
+            if (bulky_str_read) {
+               res.push_back(data->substr(0, n - 2));
+               --counter;
+            } else {
+               if (counter != 0) {
+                  switch (data->front()) {
+                     case '$':
+                     {
+                        // TODO: Do not push in the vector but find a way to
+                        // report nil.
+                        if (data->compare(1, 2, "-1") == 0) {
+                           res.push_back({});
+                           --counter;
+                        } else {
+                           str_flag = true;
+                        }
                      }
+                     break;
+                     case '+':
+                     case '-':
+                     case ':':
+                     {
+                        res.push_back(data->substr(1, n - 3));
+                        --counter;
+                     }
+                     break;
+                     case '*':
+                     {
+                        assert(counter == 1);
+                        counter = get_length(data->data() + 1);
+                     }
+                     break;
+                     default:
+                        assert(false);
                   }
-                  break;
-                  case '+':
-                  case '-':
-                  case ':':
-                  {
-                     res.push_back(data->substr(1, n - 3));
-                     --counter;
-                  }
-                  break;
-                  case '*':
-                  {
-                     assert(counter == 1);
-                     counter = get_length(data->data() + 1);
-                  }
-                  break;
-                  default:
-                     assert(false);
                }
             }
+
+            data->erase(0, n);
+
+            if (counter == 0) {
+               handler({}, res);
+               return;
+            }
+
+            bulky_str_read = str_flag;
          }
-
-         data->erase(0, n);
-
-         if (counter == 0) {
-            handler({}, res);
-            return;
-         }
-
-         bulky_str_read = foo;
-         start = true;
       }
    }
 };
@@ -142,7 +142,7 @@ async_read_resp( AsyncStream& s
                                            , read_handler_signature)
                   >;
 
-   handler_type {s, data, init.completion_handler}({}, 0, true);
+   handler_type {s, data, init.completion_handler}({}, 0, 1);
 
    return init.result.get();
 }

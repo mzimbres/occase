@@ -15,7 +15,6 @@ namespace rt::redis
 template < class AsyncStream
          , class Handler>
 struct read_resp_op {
-   static std::string_view constexpr delim {"\r\n"};
    AsyncStream& stream;
    Handler handler;
    std::string* data = nullptr;
@@ -56,7 +55,7 @@ struct read_resp_op {
          for (;;) {
             case 1:
             net::async_read_until( stream, net::dynamic_buffer(*data)
-                                 , delim, std::move(*this));
+                                 , "\r\n", std::move(*this));
             return; default:
 
             if (ec || n < 3) {

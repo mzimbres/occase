@@ -129,17 +129,21 @@ async_read_resp( AsyncStream& s
    // TODO: Write a similar macro to check the handler signature.
    //BOOST_ASIO_READ_HANDLER_CHECK(CompletionToken, handler) type_check;
 
-   net::async_completion< CompletionToken
-                        , void ( boost::system::error_code const&
-                               , std::vector<std::string> const&)
-                         > init {handler};
+   using read_handler_signature =
+      void ( boost::system::error_code const&
+           , std::vector<std::string> const&);
 
-   
-   read_resp_op< AsyncStream
-               , BOOST_ASIO_HANDLER_TYPE( CompletionToken
-                                        , void ( boost::system::error_code const&
-                                               , std::vector<std::string> const&))
-               >(s, data, init.completion_handler)({}, 0, true);
+   net::async_completion< CompletionToken
+                        , read_handler_signature
+                        > init {handler};
+
+   using handler_type = 
+      read_resp_op< AsyncStream
+                  , BOOST_ASIO_HANDLER_TYPE( CompletionToken
+                                           , read_handler_signature)
+                  >;
+
+   handler_type {s, data, init.completion_handler}({}, 0, true);
 
    return init.result.get();
 }

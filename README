@@ -22,3 +22,7 @@ ulimit -Hn # shows hard limit
 To set a value.
 ulimit -Sn value
 
+Ephemeral ports file
+
+/proc/sys/net/ipv4/ip_local_port_range
+

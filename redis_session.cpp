@@ -11,7 +11,6 @@
 
 #include "config.hpp"
 #include "redis_session.hpp"
-#include "async_read_resp.hpp"
 
 namespace rt::redis
 {
@@ -65,14 +64,11 @@ void session::close()
 
 void session::start_reading_resp()
 {
-   auto const handler = [this]( boost::system::error_code const& ec
-                              , std::vector<std::string> const& res)
-   {
-      on_resp(ec, res);
-   };
+   auto const handler = [this](boost::system::error_code const& ec)
+   { on_resp(ec); };
 
-   //data.clear();
-   async_read_resp(socket, &data, handler);
+   buffer.res.clear();
+   async_read_resp(socket, &buffer, handler);
 }
 
 void session::on_connect( boost::system::error_code ec
@@ -96,13 +92,12 @@ void session::on_connect( boost::system::error_code ec
                         { on_write(ec, n); });
 }
 
-void session::on_resp( boost::system::error_code const& ec
-                     , std::vector<std::string> const& res)
+void session::on_resp(boost::system::error_code const& ec)
 {
    if (std::empty(write_queue)) {
-      msg_handler(ec, res, {});
+      msg_handler(ec, buffer.res, {});
    } else {
-      msg_handler(ec, res, write_queue.front());
+      msg_handler(ec, buffer.res, write_queue.front());
       write_queue.pop();
    }
 

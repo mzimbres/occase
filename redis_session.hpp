@@ -17,6 +17,7 @@
 
 #include "resp.hpp"
 #include "config.hpp"
+#include "async_read_resp.hpp"
 
 namespace rt::redis
 {
@@ -53,7 +54,7 @@ private:
    session_cf cf;
    net::ip::tcp::resolver resolver;
    net::ip::tcp::socket socket;
-   std::string data;
+   resp_buffer buffer;
    std::queue<req_data> write_queue;
    msg_handler_type msg_handler = [](auto, auto, auto) {};
 
@@ -63,8 +64,7 @@ private:
                   , net::ip::tcp::resolver::results_type results);
    void on_connect( boost::system::error_code ec
                   , net::ip::tcp::endpoint const& endpoint);
-   void on_resp( boost::system::error_code const& ec
-               , std::vector<std::string> const& res);
+   void on_resp(boost::system::error_code const& ec);
    void on_write( boost::system::error_code ec
                 , std::size_t n);
 

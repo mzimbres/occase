@@ -1,5 +1,8 @@
 #pragma once
 
+#include <string>
+#include <vector>
+
 #include <boost/asio.hpp>
 #include <boost/asio/async_result.hpp>
 
@@ -12,16 +15,20 @@
 namespace rt::redis
 {
 
+struct resp_buffer {
+   std::string data;
+   std::vector<std::string> res;
+};
+
 template < class AsyncStream
          , class Handler>
 struct read_resp_op {
    AsyncStream& stream;
    Handler handler;
-   std::string* data = nullptr;
+   resp_buffer* buffer = nullptr;
    int start = 0;
    int counter = 1;
    bool bulky_str_read = false;
-   std::vector<std::string> res;
 
    using allocator_type =
       net::associated_allocator_t<Handler>;
@@ -31,11 +38,11 @@ struct read_resp_op {
          Handler, decltype(std::declval<AsyncStream&>().get_executor())>;
 
    read_resp_op( AsyncStream& stream_
-               , std::string* data_
+               , resp_buffer* buffer_
                , Handler handler_)
    : stream(stream_)
    , handler(std::move(handler_))
-   , data(data_)
+   , buffer(buffer_)
    { }
 
     allocator_type get_allocator() const noexcept
@@ -54,28 +61,28 @@ struct read_resp_op {
       switch (start = start_) {
          for (;;) {
             case 1:
-            net::async_read_until( stream, net::dynamic_buffer(*data)
+            net::async_read_until( stream, net::dynamic_buffer(buffer->data)
                                  , "\r\n", std::move(*this));
             return; default:
 
             if (ec || n < 3) {
-               handler(ec, {});
+               handler(ec);
                return;
             }
 
             auto str_flag = false;
             if (bulky_str_read) {
-               res.push_back(data->substr(0, n - 2));
+               buffer->res.push_back(buffer->data.substr(0, n - 2));
                --counter;
             } else {
                if (counter != 0) {
-                  switch (data->front()) {
+                  switch (buffer->data.front()) {
                      case '$':
                      {
                         // TODO: Do not push in the vector but find a way to
                         // report nil.
-                        if (data->compare(1, 2, "-1") == 0) {
-                           res.push_back({});
+                        if (buffer->data.compare(1, 2, "-1") == 0) {
+                           buffer->res.push_back({});
                            --counter;
                         } else {
                            str_flag = true;
@@ -86,14 +93,14 @@ struct read_resp_op {
                      case '-':
                      case ':':
                      {
-                        res.push_back(data->substr(1, n - 3));
+                        buffer->res.push_back(buffer->data.substr(1, n - 3));
                         --counter;
                      }
                      break;
                      case '*':
                      {
                         assert(counter == 1);
-                        counter = get_length(data->data() + 1);
+                        counter = get_length(buffer->data.data() + 1);
                      }
                      break;
                      default:
@@ -102,10 +109,10 @@ struct read_resp_op {
                }
             }
 
-            data->erase(0, n);
+            buffer->data.erase(0, n);
 
             if (counter == 0) {
-               handler({}, res);
+               handler({});
                return;
             }
 
@@ -185,18 +192,15 @@ asio_handler_invoke( Function const& function
 
 template < class AsyncStream
          , class CompletionToken>
-BOOST_ASIO_INITFN_RESULT_TYPE( CompletionToken
-                             , void(boost::beast::error_code))
+BOOST_ASIO_INITFN_RESULT_TYPE(CompletionToken, void(boost::beast::error_code))
 async_read_resp( AsyncStream& s
-               , std::string* data
+               , resp_buffer* buffer
                , CompletionToken&& handler)
 {
    // TODO: Write a similar macro to check the handler signature.
    //BOOST_ASIO_READ_HANDLER_CHECK(CompletionToken, handler) type_check;
 
-   using read_handler_signature =
-      void ( boost::system::error_code const&
-           , std::vector<std::string> const&);
+   using read_handler_signature = void (boost::system::error_code const&);
 
    net::async_completion< CompletionToken
                         , read_handler_signature
@@ -208,7 +212,7 @@ async_read_resp( AsyncStream& s
                                            , read_handler_signature)
                   >;
 
-   handler_type {s, data, init.completion_handler}({}, 0, 1);
+   handler_type {s, buffer, init.completion_handler}({}, 0, 1);
 
    return init.result.get();
 }

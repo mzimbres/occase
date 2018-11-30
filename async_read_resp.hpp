@@ -19,10 +19,10 @@ private:
    static std::string_view constexpr delim {"\r\n"};
    AsyncStream& stream;
    Handler handler;
-   std::string* data;
+   std::string* data = nullptr;
+   int counter = 1;
+   bool bulky_str_read = false;
    std::vector<std::string> res;
-   int counter;
-   bool bulky_str_read;
 
 public:
    using allocator_type =
@@ -54,8 +54,6 @@ public:
                   , bool start = false)
    {
       if (start) {
-         counter = 1;
-         bulky_str_read = false;
          net::async_read_until( stream, net::dynamic_buffer(*data)
                               , delim, std::move(*this));
          return;

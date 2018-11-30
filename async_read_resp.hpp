@@ -19,6 +19,7 @@ struct read_resp_op {
    AsyncStream& stream;
    Handler handler;
    std::string* data = nullptr;
+   int start = 0;
    int counter = 1;
    bool bulky_str_read = false;
    std::vector<std::string> res;
@@ -49,9 +50,9 @@ struct read_resp_op {
     }
 
    void operator()( boost::system::error_code const& ec, std::size_t n
-                  , int start = 0)
+                  , int start_ = 0)
    {
-      switch (start) {
+      switch (start = start_) {
          for (;;) {
             case 1:
             net::async_read_until( stream, net::dynamic_buffer(*data)
@@ -142,16 +143,18 @@ asio_handler_deallocate( void* pointer
          pointer, size, this_handler->handler);
 }
 
-//template <typename AsyncReadStream, typename DynamicBuffer,
-//   typename CompletionCondition, typename ReadHandler>
-//inline bool asio_handler_is_continuation(
-//   read_dynbuf_op<AsyncReadStream, DynamicBuffer,
-//     CompletionCondition, ReadHandler>* this_handler)
-//{
-// return this_handler->start_ == 0 ? true
-//   : boost_asio_handler_cont_helpers::is_continuation(
-//       this_handler->handler_);
-//}
+template < class AsyncReadStream
+         , class ReadHandler
+         >
+inline bool
+asio_handler_is_continuation( read_resp_op< AsyncReadStream
+                                          , ReadHandler
+                                          >* this_handler)
+{
+   return this_handler->start == 0 ? true
+      : boost_asio_handler_cont_helpers::is_continuation(
+            this_handler->handler);
+}
 
 template < class Function
          , class AsyncReadStream

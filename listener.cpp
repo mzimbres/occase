@@ -6,16 +6,6 @@
 #include "server_mgr.hpp"
 #include "server_mgr.hpp"
 
-namespace
-{
-
-void fail(boost::system::error_code ec, char const* what)
-{
-   std::cerr << what << ": " << ec.message() << "\n";
-}
-
-}
-
 namespace rt
 {
 

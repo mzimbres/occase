@@ -87,12 +87,6 @@ client_session<Mgr>::client_session( net::io_context& ioc
 , mgr(m)
 { }
 
-inline
-void fail_tmp(boost::system::error_code ec, char const* what)
-{
-   std::cerr << what << ": " << ec.message() << "\n";
-}
-
 template <class Mgr>
 void client_session<Mgr>::on_read( boost::system::error_code ec
                                  , std::size_t bytes_transferred)
@@ -199,7 +193,7 @@ template <class Mgr>
 void client_session<Mgr>::on_close(boost::system::error_code ec)
 {
    if (ec)
-      fail_tmp(ec, "close");
+      fail(ec, "close");
 
    //std::cout << "Connection closed gracefully" << std::endl;
 }
@@ -210,7 +204,7 @@ client_session<Mgr>::on_connect( boost::system::error_code ec
                                , net::ip::tcp::endpoint const&)
 {
    if (ec)
-      return fail_tmp(ec, "resolve");
+      return fail(ec, "resolve");
 
    if (mgr.on_connect() == -1) {
       // The -1 means we are are testing if the server will timeout
@@ -326,7 +320,7 @@ void client_session<Mgr>::on_write( boost::system::error_code ec
    do_write();
 
    if (ec)
-      fail_tmp(ec, "write");
+      fail(ec, "write");
 }
 
 template <class Mgr>
@@ -334,7 +328,7 @@ void client_session<Mgr>::on_resolve( boost::system::error_code ec
                                     , net::ip::tcp::resolver::results_type results)
 {
    if (ec)
-      return fail_tmp(ec, "resolve");
+      return fail(ec, "resolve");
 
    auto const handler = [p = this->shared_from_this()](auto ec, auto Iterator)
    {

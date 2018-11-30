@@ -13,17 +13,6 @@
 #include "redis_session.hpp"
 #include "async_read_resp.hpp"
 
-namespace
-{
-
-inline
-void fail_tmp(boost::system::error_code ec, char const* what)
-{
-   std::cerr << what << ": " << ec.message() << "\n";
-}
-
-}
-
 namespace rt::redis
 {
 
@@ -31,7 +20,7 @@ void session::on_resolve( boost::system::error_code ec
                         , net::ip::tcp::resolver::results_type results)
 {
    if (ec)
-      return fail_tmp(ec, "resolve");
+      return fail(ec, "resolve");
 
    auto const handler = [this](auto ec, auto Iterator)
    {
@@ -67,11 +56,11 @@ void session::close()
    boost::system::error_code ec;
    socket.shutdown(net::ip::tcp::socket::shutdown_send, ec);
    //if (ec)
-   //   fail_tmp(ec, "redis-close");
+   //   fail(ec, "redis-close");
 
    socket.close(ec);
    //if (ec)
-   //   fail_tmp(ec, "redis-close");
+   //   fail(ec, "redis-close");
 }
 
 void session::start_reading_resp()
@@ -90,7 +79,7 @@ void session::on_connect( boost::system::error_code ec
                         , net::ip::tcp::endpoint const& endpoint)
 {
    if (ec) {
-      fail_tmp(ec, "on_connect");
+      fail(ec, "on_connect");
       return;
    }
 
@@ -129,7 +118,7 @@ void session::on_resp( boost::system::error_code const& ec
 void session::on_write(boost::system::error_code ec, std::size_t n)
 {
    if (ec) {
-      fail_tmp(ec, "on_write");
+      fail(ec, "on_write");
       return;
    }
 }

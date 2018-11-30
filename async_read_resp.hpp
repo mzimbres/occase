@@ -53,66 +53,67 @@ public:
    void operator()( boost::system::error_code ec, std::size_t n
                   , bool start = false)
    {
-      if (start) {
-         net::async_read_until( stream, net::dynamic_buffer(*data)
-                              , delim, std::move(*this));
-         return;
-      }
+      for (;;) {
+         if (start) {
+            net::async_read_until( stream, net::dynamic_buffer(*data)
+                                 , delim, std::move(*this));
+            return;
+         }
 
-      if (ec || n < 3) {
-         handler(ec, {});
-         return;
-      }
+         if (ec || n < 3) {
+            handler(ec, {});
+            return;
+         }
 
-      auto foo = false;
-      if (bulky_str_read) {
-         res.push_back(data->substr(0, n - 2));
-         --counter;
-      } else {
-         if (counter != 0) {
-            switch (data->front()) {
-               case '$':
-               {
-                  // TODO: Do not push in the vector but find a way to
-                  // report nil.
-                  if (data->compare(1, 2, "-1") == 0) {
-                     res.push_back({});
-                     --counter;
-                  } else {
-                     foo = true;
+         auto foo = false;
+         if (bulky_str_read) {
+            res.push_back(data->substr(0, n - 2));
+            --counter;
+         } else {
+            if (counter != 0) {
+               switch (data->front()) {
+                  case '$':
+                  {
+                     // TODO: Do not push in the vector but find a way to
+                     // report nil.
+                     if (data->compare(1, 2, "-1") == 0) {
+                        res.push_back({});
+                        --counter;
+                     } else {
+                        foo = true;
+                     }
                   }
+                  break;
+                  case '+':
+                  case '-':
+                  case ':':
+                  {
+                     res.push_back(data->substr(1, n - 3));
+                     --counter;
+                  }
+                  break;
+                  case '*':
+                  {
+                     assert(counter == 1);
+                     counter = get_length(data->data() + 1);
+                  }
+                  break;
+                  default:
+                     assert(false);
                }
-               break;
-               case '+':
-               case '-':
-               case ':':
-               {
-                  res.push_back(data->substr(1, n - 3));
-                  --counter;
-               }
-               break;
-               case '*':
-               {
-                  assert(counter == 1);
-                  counter = get_length(data->data() + 1);
-               }
-               break;
-               default:
-                  assert(false);
             }
          }
+
+         data->erase(0, n);
+
+         if (counter == 0) {
+            handler({}, res);
+            return;
+         }
+
+         bulky_str_read = foo;
+         start = true;
       }
-
-      data->erase(0, n);
-
-      if (counter == 0) {
-         handler({}, res);
-         return;
-      }
-
-      bulky_str_read = foo;
-      net::async_read_until( stream, net::dynamic_buffer(*data), delim
-                           , std::move(*this));
    }
 };
 

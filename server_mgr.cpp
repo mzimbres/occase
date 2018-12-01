@@ -103,15 +103,8 @@ server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
    }
 
    if (req.cmd == redis::request::unsolicited_publish) {
-      // It looks like when subscribing to a redis channel, the
-      // confimation is returned twice!?
-      if (data.front() != "message")
-         return;
-
-      assert(std::size(data) == 3);
-      //assert(data[1] == nms.menu_channel);
-
-      auto const j = json::parse(data.back());
+      assert(std::size(data) == 1);
+      auto const j = json::parse(data.front());
       auto const to = j.at("to").get<std::string>();
       auto const g = channels.find(to);
       if (g == std::end(channels)) {
@@ -122,7 +115,7 @@ server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
          return;
       }
 
-      g->second.broadcast(data.back());
+      g->second.broadcast(data.front());
       return;
    }
 

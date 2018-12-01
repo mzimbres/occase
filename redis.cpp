@@ -33,7 +33,28 @@ void facade::async_retrieve_menu()
 
 void facade::set_on_msg_handler(msg_handler_type h)
 {
-   menu_sub.set_msg_handler(h);
+   auto const sub_handler = [h]( auto const& ec
+                               , auto const& data
+                               , auto const& req)
+   {
+      if (ec) {
+         // TODO: Should we handle this here or pass to the mgr?
+         fail(ec,"sub_handler");
+         return;
+      }
+
+      assert(std::size(data) == 3);
+
+      // It looks like when subscribing to a redis channel, the
+      // confimation is returned twice!?
+      if (data.front() != "message")
+         return;
+
+      //assert(data[1] == nms.menu_channel);
+      h(ec, {std::move(data.back())}, req);
+   };
+
+   menu_sub.set_msg_handler(sub_handler);
    msg_not.set_msg_handler(h);
    pub.set_msg_handler(h);
 }

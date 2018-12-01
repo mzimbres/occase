@@ -45,6 +45,7 @@ auto get_server_op(int argc, char* argv[])
 {
    std::vector<std::string> ips;
    config cf;
+   int conn_retry_interval = 500;
    po::options_description desc("Options");
    desc.add_options()
    ("help,h", "Produces help message")
@@ -109,6 +110,11 @@ auto get_server_op(int argc, char* argv[])
    , "That prefix that will be incorporated in the keys that hold"
      " user messages."
    )
+   ("redis-conn-retry-interval"
+   , po::value<int>(&conn_retry_interval)->default_value(500)
+   , "Time in milliseconds the redis session should wait before trying "
+     "to reconnect to redis."
+   )
    ;
 
    po::variables_map vm;        
@@ -122,6 +128,8 @@ auto get_server_op(int argc, char* argv[])
 
    cf.mgr.redis_cf.nms.msg_prefix += ":";
    cf.mgr.redis_cf.nms.notify_prefix += cf.mgr.redis_cf.nms.msg_prefix;
+   cf.mgr.redis_cf.sessions.conn_retry_interval =
+      std::chrono::milliseconds{conn_retry_interval};
    cf.mgr.timeouts = cf.get_timeouts();
    return cf;
 }

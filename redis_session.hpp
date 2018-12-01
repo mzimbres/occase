@@ -42,6 +42,7 @@ struct req_data {
 struct session_cf {
    std::string host;
    std::string port;
+   std::chrono::milliseconds conn_retry_interval {500};
 };
 
 class session {

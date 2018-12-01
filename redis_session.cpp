@@ -96,7 +96,7 @@ void session::on_resp(boost::system::error_code const& ec)
 {
    if (ec == net::error::eof) {
       // Redis has cleanly closed the connection. We try a reconnect.
-      timer.expires_after(std::chrono::milliseconds {500});
+      timer.expires_after(cf.conn_retry_interval);
 
       auto const handler = [this](auto ec)
       {

@@ -14,6 +14,7 @@
 #include <boost/asio.hpp>
 #include <boost/asio/bind_executor.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/steady_timer.hpp>
 
 #include "resp.hpp"
 #include "config.hpp"
@@ -54,6 +55,7 @@ private:
    session_cf cf;
    net::ip::tcp::resolver resolver;
    net::ip::tcp::socket socket;
+   net::steady_timer timer;
    resp_buffer buffer;
    std::queue<req_data> write_queue;
    msg_handler_type msg_handler = [](auto, auto, auto) {};
@@ -73,6 +75,7 @@ public:
    : cf(cf_)
    , resolver(ioc) 
    , socket(ioc)
+   , timer(ioc, std::chrono::steady_clock::time_point::max())
    { }
 
    void run();

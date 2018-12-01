@@ -41,28 +41,14 @@ public:
    using msg_handler_type = session::msg_handler_type;
 
    facade(config const& cf, net::io_context& ioc)
-   : menu_sub(cf.sessions, ioc)
-   , msg_not(cf.sessions, ioc)
-   , pub(cf.sessions, ioc)
+   : menu_sub(cf.sessions, ioc, request::unsolicited_publish)
+   , msg_not(cf.sessions, ioc, request::unsolicited_key_not)
+   , pub(cf.sessions, ioc, request::unknown)
    , nms(cf.nms)
    { }
 
-   void set_menu_msg_handler(msg_handler_type h)
-   { menu_sub.set_msg_handler(h); }
-
-   void set_msg_not_handler(msg_handler_type h)
-   { msg_not.set_msg_handler(h); }
-
-   void set_cmd_handler(msg_handler_type h)
-   { pub.set_msg_handler(h); }
-
-   void run()
-   {
-      menu_sub.run();
-      msg_not.run();
-      pub.run();
-   }
-
+   void set_on_msg_handler(msg_handler_type h);
+   void run();
    void async_retrieve_menu();
    void async_retrieve_msgs(std::string const& user_id);
    void subscribe_to_menu_msgs();

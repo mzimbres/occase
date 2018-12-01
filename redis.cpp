@@ -14,6 +14,20 @@ void facade::async_retrieve_menu()
    pub.send(std::move(r));
 }
 
+void facade::set_on_msg_handler(msg_handler_type h)
+{
+   menu_sub.set_msg_handler(h);
+   msg_not.set_msg_handler(h);
+   pub.set_msg_handler(h);
+}
+
+void facade::run()
+{
+   menu_sub.run();
+   msg_not.run();
+   pub.run();
+}
+
 void facade::async_retrieve_msgs(std::string const& user_id)
 {
    auto const key = nms.msg_prefix + user_id;
@@ -75,7 +89,8 @@ void facade::publish_menu_msg(std::string msg)
 {
    req_data r
    { request::publish
-   , gen_resp_cmd(command::publish, {nms.menu_channel, msg})
+   , gen_resp_cmd( command::publish
+                 , {nms.menu_channel, msg})
    , ""
    };
 

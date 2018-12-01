@@ -28,9 +28,9 @@ server_mgr::server_mgr(server_mgr_cf cf)
 
 void server_mgr::init()
 {
-   auto const sig_handler = [this](auto ec, auto n)
+   auto const sig_handler = [this](auto const& ec, auto n)
    {
-      // TODO: Verify ec here.
+      // TODO: Verify ec here?
       std::cout << "\nBeginning the shutdown operations ..."
                 << std::endl;
 
@@ -41,21 +41,14 @@ void server_mgr::init()
 
    do_stats_logger();
 
-   auto handler1 = [this]( auto const& ec , auto const& data
-                         , auto const& req)
-   { redis_menu_msg_handler(ec, data, req); };
+   auto const handler = [this]( auto const& ec
+                              , auto const& data
+                              , auto const& req)
+   {
+      redis_on_msg_handler(ec, data, req);
+   };
 
-   auto handler2 = [this]( auto const& ec, auto const& data
-                         , auto const& req)
-   { redis_pub_msg_handler(ec, data, req); };
-
-   auto handler3 = [this]( auto const& ec , auto const& data
-                         , auto const& req)
-   { redis_key_not_handler(ec, data, req); };
-
-   db.set_menu_msg_handler(handler1);
-   db.set_cmd_handler(handler2);
-   db.set_msg_not_handler(handler3);
+   db.set_on_msg_handler(handler);
 
    db.async_retrieve_menu();
    db.subscribe_to_menu_msgs();
@@ -63,73 +56,9 @@ void server_mgr::init()
 }
 
 void
-server_mgr::redis_menu_msg_handler( boost::system::error_code const& ec
-                                  , std::vector<std::string> const& data
-                                  , redis::req_data const& req)
-{
-   if (ec) {
-      std::cout << "sub_handler: " << ec.message() << std::endl;
-      return;
-   }
-
-   if (req.cmd == redis::request::unsolicited) {
-      assert(data.front() == "message");
-      assert(std::size(data) == 3);
-      //assert(data[1] == nms.menu_channel);
-
-      auto const j = json::parse(data.back());
-      auto const to = j.at("to").get<std::string>();
-      auto const g = channels.find(to);
-      if (g == std::end(channels)) {
-         // Should not happen as the group is checked on
-         // on_user_group:msg before being sent to redis for broadcast.
-         // TODO: Handle this error.
-         assert(false);
-         return;
-      }
-
-      g->second.broadcast(data.back());
-      return;
-   }
-}
-
-void 
-server_mgr::redis_key_not_handler( boost::system::error_code const& ec
-                                 , std::vector<std::string> const& data
-                                 , redis::req_data const& req)
-{
-   if (ec) {
-      std::cout << "sub_handler: " << ec.message() << std::endl;
-      return;
-   }
-
-   if (req.cmd == redis::request::unsolicited) {
-      if (data.back() == "rpush") {
-         assert(data.front() == "message");
-         assert(std::size(data) == 3);
-
-         // TODO: Read the user id form the req struct. First
-         // implement tests.
-         auto const n = data[1].rfind(":");
-         assert(n != std::string::npos);
-
-         db.async_retrieve_msgs(data[1].substr(n + 1));
-
-         //auto const s = sessions.find(user_id);
-         //if (s == std::end(sessions)) {
-         //   // Should not happen as we unsubscribe from the user message
-         //   // channel we the user goes offline.
-         //   assert(false);
-         //   return;
-         //}
-      }
-   }
-}
-
-void
-server_mgr::redis_pub_msg_handler( boost::system::error_code const& ec
-                                 , std::vector<std::string> const& data
-                                 , redis::req_data const& req)
+server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
+                                , std::vector<std::string> const& data
+                                , redis::req_data const& req)
 {
    if (ec) {
       std::cout << "pub_handler: " << ec.message() << std::endl;
@@ -171,6 +100,48 @@ server_mgr::redis_pub_msg_handler( boost::system::error_code const& ec
          } else {
             std::cout << "Channel " << gc << " already exists." << std::endl;
          }
+      }
+   }
+
+   if (req.cmd == redis::request::unsolicited_publish) {
+      assert(data.front() == "message");
+      assert(std::size(data) == 3);
+      //assert(data[1] == nms.menu_channel);
+
+      auto const j = json::parse(data.back());
+      auto const to = j.at("to").get<std::string>();
+      auto const g = channels.find(to);
+      if (g == std::end(channels)) {
+         // Should not happen as the group is checked on
+         // on_user_group:msg before being sent to redis for broadcast.
+         // TODO: Handle this error.
+         assert(false);
+         return;
+      }
+
+      g->second.broadcast(data.back());
+      return;
+   }
+
+   if (req.cmd == redis::request::unsolicited_key_not) {
+      if (data.back() == "rpush") {
+         assert(data.front() == "message");
+         assert(std::size(data) == 3);
+
+         // TODO: Read the user id form the req struct. First
+         // implement tests.
+         auto const n = data[1].rfind(":");
+         assert(n != std::string::npos);
+
+         db.async_retrieve_msgs(data[1].substr(n + 1));
+
+         //auto const s = sessions.find(user_id);
+         //if (s == std::end(sessions)) {
+         //   // Should not happen as we unsubscribe from the user message
+         //   // channel we the user goes offline.
+         //   assert(false);
+         //   return;
+         //}
       }
    }
 }

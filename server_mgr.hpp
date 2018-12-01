@@ -76,15 +76,9 @@ private:
 
    net::steady_timer stats_timer;
 
-   void redis_menu_msg_handler( boost::system::error_code const& ec
-                              , std::vector<std::string> const& data
-                              , redis::req_data const& cmd);
-   void redis_key_not_handler( boost::system::error_code const& ec
-                             , std::vector<std::string> const& resp
-                             , redis::req_data const& cmd);
-   void redis_pub_msg_handler( boost::system::error_code const& ec
-                             , std::vector<std::string> const& resp
-                             , redis::req_data const& cmd);
+   void redis_on_msg_handler( boost::system::error_code const& ec
+                            , std::vector<std::string> const& resp
+                            , redis::req_data const& cmd);
    void do_stats_logger();
 
    void init();

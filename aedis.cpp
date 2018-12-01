@@ -36,7 +36,7 @@ auto const pub_handler = []( auto const& ec
 void pub(session_cf const& cf, int count, char const* channel)
 {
    boost::asio::io_context ioc;
-   session pub_session(cf, ioc);
+   session pub_session(cf, ioc, request::unknown);
    pub_session.set_msg_handler(pub_handler);
    for (auto i = 0; i < count; ++i) {
       auto const msg = std::to_string(i);
@@ -79,7 +79,7 @@ struct sub_arena {
    sub_arena( net::io_context& ioc
             , session_cf const& cf
             , std::string channel)
-   : s(cf, ioc)
+   : s(cf, ioc, request::unsolicited_publish)
    {
       s.set_msg_handler(sub_on_msg_handler);
 
@@ -110,7 +110,7 @@ void pubsub(session_cf const& cf, int count, char const* channel)
 {
    boost::asio::io_context ioc;
 
-   session pub_session(cf, ioc);
+   session pub_session(cf, ioc, request::unknown);
    pub_session.set_msg_handler(pub_handler);
    for (auto i = 0; i < count; ++i) {
       auto const msg = std::to_string(i);
@@ -125,7 +125,7 @@ void pubsub(session_cf const& cf, int count, char const* channel)
 
    pub_session.run();
 
-   session sub_session(cf, ioc);
+   session sub_session(cf, ioc, request::unsolicited_publish);
    sub_session.set_msg_handler(sub_on_msg_handler);
    req_data r
    { request::subscribe

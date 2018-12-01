@@ -136,7 +136,7 @@ void session::on_resp(boost::system::error_code const& ec)
    }
 
    if (std::empty(write_queue)) {
-      msg_handler(ec, buffer.res, {});
+      msg_handler(ec, buffer.res, {cmd, {}, {}});
    } else {
       msg_handler(ec, buffer.res, write_queue.front());
       write_queue.pop();

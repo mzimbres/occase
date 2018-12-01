@@ -27,14 +27,17 @@ enum class request
 { get_menu
 , retrieve_msgs
 , store_msg
+, publish_menu_msg
 , publish
 , subscribe
 , unsubscribe
-, unsolicited
+, unsolicited_publish
+, unsolicited_key_not
+, unknown
 };
 
 struct req_data {
-   request cmd = request::unsolicited;
+   request cmd = request::unknown;
    std::string msg;
    std::string user_id;
 };
@@ -62,6 +65,7 @@ private:
    std::queue<req_data> write_queue;
    msg_handler_type msg_handler =
       []( auto const&, auto const&, auto const&) {};
+   request cmd = request::unknown;
 
    on_conn_handler_type on_conn_handler = []() {};
 
@@ -76,11 +80,14 @@ private:
                 , std::size_t n);
 
 public:
-   session(session_cf cf_, net::io_context& ioc)
-   : cf(cf_)
-   , resolver(ioc) 
-   , socket(ioc)
-   , timer(ioc, std::chrono::steady_clock::time_point::max())
+   session( session_cf cf_
+          , net::io_context& ioc
+          , request cmd_)
+   : cf {cf_}
+   , resolver {ioc} 
+   , socket {ioc}
+   , timer {ioc, std::chrono::steady_clock::time_point::max()}
+   , cmd {cmd_}
    { }
 
    void run();

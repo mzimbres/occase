@@ -30,9 +30,9 @@ auto const pub_handler = []( auto const& ec
      std::cout << std::endl;
 };
 
-auto const sub_handler = [i = 0]( auto const& ec
-                                , auto const& data
-                                , auto const& cmd) mutable
+auto const sub_on_msg_handler = [i = 0]( auto const& ec
+                                       , auto const& data
+                                       , auto const& cmd) mutable
 {
      if (ec) 
         throw std::runtime_error(ec.message());
@@ -70,17 +70,22 @@ void pub(session_cf const& cf, int count, char const* channel)
    ioc.run();
 }
 
+auto const sub_on_conn_handler = [](session& s)
+{
+   req_data r
+   { request::subscribe
+   , gen_resp_cmd(command::subscribe, {"foo"})
+   , ""
+   };
+   s.send(std::move(r));
+};
+
 void sub(session_cf const& cf, char const* channel)
 {
    boost::asio::io_context ioc;
    session sub_session(cf, ioc);
-   sub_session.set_msg_handler(sub_handler);
-   req_data r
-   { request::subscribe
-   , gen_resp_cmd(command::subscribe, {channel})
-   , ""
-   };
-   sub_session.send(std::move(r));
+   sub_session.set_msg_handler(sub_on_msg_handler);
+   sub_session.set_on_conn_handler(sub_on_conn_handler);
    sub_session.run();
    ioc.run();
 }
@@ -105,7 +110,7 @@ void pubsub(session_cf const& cf, int count, char const* channel)
    pub_session.run();
 
    session sub_session(cf, ioc);
-   sub_session.set_msg_handler(sub_handler);
+   sub_session.set_msg_handler(sub_on_msg_handler);
    req_data r
    { request::subscribe
    , gen_resp_cmd(command::subscribe, {channel})

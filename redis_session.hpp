@@ -46,11 +46,12 @@ struct session_cf {
 
 class session {
 public:
+   using on_conn_handler_type = std::function<void(session&)>;
+
    using msg_handler_type =
       std::function<void ( boost::system::error_code const&
                          , std::vector<std::string> const&
                          , req_data const&)>;
-
 private:
    session_cf cf;
    net::ip::tcp::resolver resolver;
@@ -58,13 +59,16 @@ private:
    net::steady_timer timer;
    resp_buffer buffer;
    std::queue<req_data> write_queue;
-   msg_handler_type msg_handler = [](auto, auto, auto) {};
+   msg_handler_type msg_handler =
+      []( auto const&, auto const&, auto const&) {};
+
+   on_conn_handler_type on_conn_handler = [](auto&) {};
 
    void start_reading_resp();
 
-   void on_resolve( boost::system::error_code ec
+   void on_resolve( boost::system::error_code const& ec
                   , net::ip::tcp::resolver::results_type results);
-   void on_connect( boost::system::error_code ec
+   void on_connect( boost::system::error_code const& ec
                   , net::ip::tcp::endpoint const& endpoint);
    void on_resp(boost::system::error_code const& ec);
    void on_write( boost::system::error_code ec
@@ -81,8 +85,12 @@ public:
    void run();
    void send(req_data req);
    void close();
+
    void set_msg_handler(msg_handler_type handler)
    { msg_handler = std::move(handler);};
+
+   void set_on_conn_handler(on_conn_handler_type handler)
+   { on_conn_handler = std::move(handler);};
 };
 
 }

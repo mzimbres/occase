@@ -17,7 +17,7 @@
 namespace rt::redis
 {
 
-void session::on_resolve( boost::system::error_code ec
+void session::on_resolve( boost::system::error_code const& ec
                         , net::ip::tcp::resolver::results_type results)
 {
    if (ec)
@@ -68,23 +68,21 @@ void session::start_reading_resp()
                     { on_resp(ec); });
 }
 
-void session::on_connect( boost::system::error_code ec
+void session::on_connect( boost::system::error_code const& ec
                         , net::ip::tcp::endpoint const& endpoint)
 {
    if (ec) {
       // TODO: Traverse all endpoints if this one is not available. If
       // none is available should we continue? What to do with
       // messages that have no been sent to redis.
-      fail(ec, "on_connect");
       return;
    }
 
-   std::cout << "Connection stablished." << std::endl;
-
-   //net::ip::tcp::no_delay option(true);
-   //socket.set_option(option);
-
    start_reading_resp();
+
+   // Calls user callback to inform a successfull connect to redis.
+   // He may wish to start sending some command.
+   on_conn_handler(*this);
 
    // Consumes any messages that have been eventually posted while the
    // connection was not established.

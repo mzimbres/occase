@@ -17,6 +17,9 @@ using namespace rt::redis;
 
 namespace po = boost::program_options;
 
+// TODO: Implement all tests with arena to be able to test
+// reconnection to redis properly.
+
 auto const pub_handler = []( auto const& ec
                        , auto const& data
                        , auto const& cmd)
@@ -28,26 +31,6 @@ auto const pub_handler = []( auto const& ec
         std::cout << "Receivers: " << o << " ";
      
      std::cout << std::endl;
-};
-
-auto const sub_on_msg_handler = [i = 0]( auto const& ec
-                                       , auto const& data
-                                       , auto const& cmd) mutable
-{
-     if (ec) 
-        throw std::runtime_error(ec.message());
-
-     auto const n = std::stoi(data.back());
-     if (n != i + 1)
-        std::cout << "===============> Error." << std::endl;
-     std::cout << "Counter: " << n << std::endl;
-
-     i = n;
-
-     //for (auto const& o : data)
-     //   std::cout << o << " ";
-     
-     //std::cout << std::endl;
 };
 
 void pub(session_cf const& cf, int count, char const* channel)
@@ -69,6 +52,26 @@ void pub(session_cf const& cf, int count, char const* channel)
 
    ioc.run();
 }
+
+auto const sub_on_msg_handler = [i = 0]( auto const& ec
+                                       , auto const& data
+                                       , auto const& cmd) mutable
+{
+     if (ec) 
+        throw std::runtime_error(ec.message());
+
+     auto const n = std::stoi(data.back());
+     if (n != i + 1)
+        std::cout << "===============> Error." << std::endl;
+     std::cout << "Counter: " << n << std::endl;
+
+     i = n;
+
+     //for (auto const& o : data)
+     //   std::cout << o << " ";
+     
+     //std::cout << std::endl;
+};
 
 struct sub_arena {
    session s;

@@ -70,23 +70,36 @@ void pub(session_cf const& cf, int count, char const* channel)
    ioc.run();
 }
 
-auto const sub_on_conn_handler = [](session& s)
-{
-   req_data r
-   { request::subscribe
-   , gen_resp_cmd(command::subscribe, {"foo"})
-   , ""
-   };
-   s.send(std::move(r));
+struct sub_arena {
+   session s;
+
+   sub_arena( net::io_context& ioc
+            , session_cf const& cf
+            , std::string channel)
+   : s(cf, ioc)
+   {
+      s.set_msg_handler(sub_on_msg_handler);
+
+      auto const on_conn_handler = [this, channel]()
+      {
+         req_data r
+         { request::subscribe
+         , gen_resp_cmd(command::subscribe, {channel})
+         , ""
+         };
+
+         s.send(std::move(r));
+      };
+
+      s.set_on_conn_handler(on_conn_handler);
+      s.run();
+   }
 };
 
 void sub(session_cf const& cf, char const* channel)
 {
-   boost::asio::io_context ioc;
-   session sub_session(cf, ioc);
-   sub_session.set_msg_handler(sub_on_msg_handler);
-   sub_session.set_on_conn_handler(sub_on_conn_handler);
-   sub_session.run();
+   net::io_context ioc;
+   sub_arena arena(ioc, cf, channel);
    ioc.run();
 }
 

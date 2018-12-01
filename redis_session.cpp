@@ -82,7 +82,7 @@ void session::on_connect( boost::system::error_code const& ec
 
    // Calls user callback to inform a successfull connect to redis.
    // He may wish to start sending some command.
-   on_conn_handler(*this);
+   on_conn_handler();
 
    // Consumes any messages that have been eventually posted while the
    // connection was not established.

@@ -46,7 +46,7 @@ struct session_cf {
 
 class session {
 public:
-   using on_conn_handler_type = std::function<void(session&)>;
+   using on_conn_handler_type = std::function<void()>;
 
    using msg_handler_type =
       std::function<void ( boost::system::error_code const&
@@ -62,7 +62,7 @@ private:
    msg_handler_type msg_handler =
       []( auto const&, auto const&, auto const&) {};
 
-   on_conn_handler_type on_conn_handler = [](auto&) {};
+   on_conn_handler_type on_conn_handler = []() {};
 
    void start_reading_resp();
 

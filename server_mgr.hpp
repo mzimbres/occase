@@ -60,7 +60,7 @@ private:
    net::signal_set signals;
 
    // Maps a user id (telephone, email, etc.) to the user session.  We
-   // keep only a weak reference to the session to avoid.
+   // keep only a weak reference to the session.
    std::unordered_map< std::string
                      , std::weak_ptr<server_session>
                      > sessions;

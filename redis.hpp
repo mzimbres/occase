@@ -25,8 +25,6 @@ struct config {
 
 class facade {
 private:
-   namespaces nms;
-
    // The session used to subscribe to menu messages.
    session menu_sub;
 
@@ -36,6 +34,8 @@ private:
 
    // Redis session to send general commands.
    session pub;
+
+   namespaces nms;
 
 public:
    using msg_handler_type = session::msg_handler_type;

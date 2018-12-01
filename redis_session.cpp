@@ -12,6 +12,8 @@
 #include "config.hpp"
 #include "redis_session.hpp"
 
+// TODO: Try to reconnect if the connection to redis is lost.
+
 namespace rt::redis
 {
 

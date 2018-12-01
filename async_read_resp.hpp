@@ -112,7 +112,7 @@ struct read_resp_op {
             buffer->data.erase(0, n);
 
             if (counter == 0) {
-               handler({});
+               handler(boost::system::error_code{});
                return;
             }
 

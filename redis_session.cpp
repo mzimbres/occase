@@ -64,11 +64,10 @@ void session::close()
 
 void session::start_reading_resp()
 {
-   auto const handler = [this](boost::system::error_code const& ec)
-   { on_resp(ec); };
-
    buffer.res.clear();
-   async_read_resp(socket, &buffer, handler);
+   async_read_resp( socket, &buffer
+                  , [this](auto const& ec)
+                    { on_resp(ec); });
 }
 
 void session::on_connect( boost::system::error_code ec

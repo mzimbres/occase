@@ -3,6 +3,23 @@
 namespace rt::redis
 {
 
+facade::facade(config const& cf, net::io_context& ioc)
+: menu_sub(cf.sessions, ioc, request::unsolicited_publish)
+, msg_not(cf.sessions, ioc, request::unsolicited_key_not)
+, pub(cf.sessions, ioc, request::unknown)
+, nms(cf.nms)
+{
+   auto const handler = [this]()
+   {
+      menu_sub.send({ request::subscribe
+                    , gen_resp_cmd(command::subscribe, {nms.menu_channel})
+                    , ""
+                    });
+   };
+
+   menu_sub.set_on_conn_handler(handler);
+}
+
 void facade::async_retrieve_menu()
 {
    req_data r
@@ -38,17 +55,6 @@ void facade::async_retrieve_msgs(std::string const& user_id)
    };
 
    pub.send(r);
-}
-
-void facade::subscribe_to_menu_msgs()
-{
-   req_data r
-   { request::subscribe
-   , gen_resp_cmd(command::subscribe, {nms.menu_channel})
-   , ""
-   };
-
-   menu_sub.send(std::move(r));
 }
 
 void facade::subscribe_to_chat_msgs(std::string const& id)

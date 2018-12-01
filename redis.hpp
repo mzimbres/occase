@@ -40,18 +40,12 @@ private:
 public:
    using msg_handler_type = session::msg_handler_type;
 
-   facade(config const& cf, net::io_context& ioc)
-   : menu_sub(cf.sessions, ioc, request::unsolicited_publish)
-   , msg_not(cf.sessions, ioc, request::unsolicited_key_not)
-   , pub(cf.sessions, ioc, request::unknown)
-   , nms(cf.nms)
-   { }
+   facade(config const& cf, net::io_context& ioc);
 
    void set_on_msg_handler(msg_handler_type h);
    void run();
    void async_retrieve_menu();
    void async_retrieve_msgs(std::string const& user_id);
-   void subscribe_to_menu_msgs();
    void subscribe_to_chat_msgs(std::string const& id);
    void unsubscribe_to_chat_msgs(std::string const& id);
    void async_store_chat_msg(std::string id, std::string msg);

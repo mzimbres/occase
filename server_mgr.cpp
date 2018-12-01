@@ -51,7 +51,6 @@ void server_mgr::init()
    db.set_on_msg_handler(handler);
 
    db.async_retrieve_menu();
-   db.subscribe_to_menu_msgs();
    db.run();
 }
 
@@ -104,7 +103,11 @@ server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
    }
 
    if (req.cmd == redis::request::unsolicited_publish) {
-      assert(data.front() == "message");
+      // It looks like when subscribing to a redis channel, the
+      // confimation is returned twice!?
+      if (data.front() != "message")
+         return;
+
       assert(std::size(data) == 3);
       //assert(data[1] == nms.menu_channel);
 

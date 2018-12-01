@@ -57,20 +57,20 @@ auto const sub_on_msg_handler = [i = 0]( auto const& ec
                                        , auto const& data
                                        , auto const& cmd) mutable
 {
-     if (ec) 
-        throw std::runtime_error(ec.message());
+   if (ec) 
+      throw std::runtime_error(ec.message());
 
-     auto const n = std::stoi(data.back());
-     if (n != i + 1)
-        std::cout << "===============> Error." << std::endl;
-     std::cout << "Counter: " << n << std::endl;
+   auto const n = std::stoi(data.back());
+   if (n != i + 1)
+      std::cout << "===============> Error." << std::endl;
+   std::cout << "Counter: " << n << std::endl;
 
-     i = n;
+   i = n;
 
-     //for (auto const& o : data)
-     //   std::cout << o << " ";
-     
-     //std::cout << std::endl;
+   //for (auto const& o : data)
+   //   std::cout << o << " ";
+
+   //std::cout << std::endl;
 };
 
 struct sub_arena {

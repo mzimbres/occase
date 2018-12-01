@@ -21,22 +21,16 @@ void session::on_resolve( boost::system::error_code ec
    if (ec)
       return fail(ec, "resolve");
 
-   auto const handler = [this](auto ec, auto Iterator)
-   {
-      on_connect(ec, Iterator);
-   };
-
-   net::async_connect(socket, results, handler);
+   net::async_connect( socket, results
+                     , [this](auto ec, auto Iterator)
+                       { on_connect(ec, Iterator); });
 }
 
 void session::run()
 {
-   auto handler = [this](auto ec, auto res)
-   {
-      on_resolve(ec, res);
-   };
-
-   resolver.async_resolve(cf.host, cf.port, handler);
+   resolver.async_resolve( cf.host, cf.port
+                         , [this](auto ec, auto res)
+                           { on_resolve(ec, res); });
 }
 
 void session::send(req_data req)
@@ -78,8 +72,8 @@ void session::on_connect( boost::system::error_code ec
       return;
    }
 
-   net::ip::tcp::no_delay option(true);
-   socket.set_option(option);
+   //net::ip::tcp::no_delay option(true);
+   //socket.set_option(option);
 
    start_reading_resp();
 

@@ -16,7 +16,7 @@ DIST_NAME   = sellit
 exes = publish_tests server menu_dump aedis read_only_tests reg_users_tests
 
 common_objs = json_utils.o
-common_objs += menu_parser.o
+common_objs += menu.o
 
 server_objs =
 server_objs += server_mgr.o

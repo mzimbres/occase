@@ -1,6 +1,6 @@
 #include "client_mgr_pub.hpp"
 
-#include "menu_parser.hpp"
+#include "menu.hpp"
 #include "client_session.hpp"
 
 namespace rt
@@ -36,7 +36,7 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
    if (cmd == "subscribe_ack") {
       auto const res = j.at("result").get<std::string>();
       if (res == op.expected) {
-         auto const count = j.at("count").get<int>();
+         //auto const count = j.at("count").get<int>();
          //std::cout << "subscribe ok: " << count << std::endl;
          send_group_msg(s, 0);
          return 1;

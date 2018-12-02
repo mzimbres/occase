@@ -7,7 +7,7 @@
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
 
-#include "menu_parser.hpp"
+#include "menu.hpp"
 
 using namespace rt;
 

@@ -15,7 +15,7 @@
 #include <boost/program_options/variables_map.hpp>
 
 #include "config.hpp"
-#include "menu_parser.hpp"
+#include "menu.hpp"
 #include "client_mgr_confirm_code.hpp"
 #include "client_session.hpp"
 #include "client_mgr_register.hpp"

@@ -1,6 +1,6 @@
 #include "client_mgr_user_msg.hpp"
 
-#include "menu_parser.hpp"
+#include "menu.hpp"
 #include "client_session.hpp"
 
 namespace rt

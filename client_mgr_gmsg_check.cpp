@@ -1,6 +1,6 @@
 #include "client_mgr_gmsg_check.hpp"
 
-#include "menu_parser.hpp"
+#include "menu.hpp"
 #include "client_session.hpp"
 
 namespace rt
@@ -50,7 +50,7 @@ int client_mgr_gmsg_check::on_read( std::string msg
       //std::cout << j << std::endl;
       auto const from = j.at("from").get<std::string>();
       auto const to = j.at("to").get<std::string>();
-      auto const id = j.at("id").get<int>();
+      //auto const id = j.at("id").get<int>();
 
       //std::cout << "from " << from << ", id " << id << std::endl;
       auto const match = counters.find(to);
@@ -91,7 +91,7 @@ int client_mgr_gmsg_check::on_read( std::string msg
       if (match == std::end(counters))
          throw std::runtime_error("client_mgr_gmsg_check::on_read8");
 
-      match->second.acked == true;
+      match->second.acked = true;
       if (tot_msgs == 0) {
          // Check that all counters are correct.
          for (auto const& o : counters)

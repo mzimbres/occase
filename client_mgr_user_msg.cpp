@@ -30,22 +30,6 @@ client_mgr_user_msg::on_read( std::string msg
       return -1;
    }
 
-   if (cmd == "publish_ack") {
-      auto const res = j.at("result").get<std::string>();
-      if (res == op.expected) {
-         auto const id = j.at("id").get<int>();
-         if (hashes.at(id).ack)
-            throw std::runtime_error("client_mgr_user_msg::on_read4");
-         hashes.at(id).ack = true;
-         //std::cout << "Receiving publish_ack: " << op.user << " " << id << " " << hashes.at(id).hash << std::endl;
-         return 1;
-      }
-
-      std::cout << "Test sim: send_group_msg_ack: fail." << std::endl;
-      throw std::runtime_error("client_mgr_user_msg::on_read3");
-      return -1;
-   }
-
    if (cmd == "user_msg_server_ack") {
       //auto const id = j.at("id").get<int>();
       //std::cout << "Server ack received from " << id << std::endl;

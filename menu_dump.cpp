@@ -46,19 +46,59 @@ void bar(menu_op)
    "   Bahia\r\n"
    ;
 
-   std::cout << menu_str << std::endl;
+   std::cout << menu_str;
 
-   //std::string sep = "   ";
-   //std::stringstream ss(menu_str);
-   //std::string line;
-   //menu_node root;
-   //std::stack<menu_node*> stack;
-   //std::string next_sep = "";
-   //while (std::getline(ss, line)) {
-   //   if (line.compare(0, std::size(next_sep), next_set) == 0)
-   //      next_set += sep;
-   //   std::cout << line << std::endl;
-   //}
+   constexpr auto sep = 3;
+   std::stringstream ss(menu_str);
+   std::string line;
+   menu_node root;
+   std::stack<menu_node*> stack;
+   unsigned last_depth = 0;
+   bool root_found = false;
+   while (std::getline(ss, line)) {
+      if (line.front() != ' ') {
+         // This is the root node since it is the only one with zero
+         // indentation.
+         if (root_found) {
+            std::cerr << "Invalid input data." << std::endl;
+            return;
+         }
+
+         // From now on no other node will be allowed to have zero
+         // indentation.
+         root_found = true;
+         root.name = line;
+         std::cout << root.name << std::flush;
+         continue;
+      }
+
+      auto const pos = line.find_first_not_of(" ");
+      if (pos == std::string::npos) {
+         std::cout << "Invalid line." << std::endl;
+         return;
+      }
+
+      if (pos % sep != 0) {
+         std::cout << "Invalid indentation." << std::endl;
+         return;
+      }
+
+      auto const dist = pos;
+      auto const last_dist = sep * last_depth;
+      if (dist > last_dist) {
+         if (last_dist + sep != dist) {
+            // For increasing depths we allow only one step at time.
+            std::cerr << "Jump(1) in indentation not allowed."
+                      << std::endl;
+            std::cerr << dist << " " << last_dist << std::endl;
+            return;
+         }
+         ++last_depth;
+      } else if (dist < last_dist) {
+         --last_depth;
+      } else {
+      }
+   }
 }
 
 void foo(json menu, menu_op op)

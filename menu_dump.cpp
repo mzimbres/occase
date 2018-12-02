@@ -26,24 +26,24 @@ struct menu_node {
 void bar(menu_op)
 {
    std::string menu_str =
-   "Brasil\r\n"
-   "   Sao Paulo\r\n"
-   "      Atibaia\r\n"
-   "         Vila Santista\r\n"
-   "         Jardim Siriema\r\n"
-   "      Braganca\r\n"
-   "      Piracaia\r\n"
-   "      Sao Paulo\r\n"
-   "         Mooca\r\n"
-   "         Bixiga\r\n"
-   "         Vila Leopoldina\r\n"
-   "   Rio de Janeiro\r\n"
-   "      Teresópolis\r\n"
-   "      Niteroi\r\n"
-   "   Amazonas\r\n"
-   "      Manaus\r\n"
-   "   Paraiba\r\n"
-   "   Bahia\r\n"
+   "Brasil\n"
+   "   Sao Paulo\n"
+   "      Atibaia\n"
+   "         Vila Santista\n"
+   "         Jardim Siriema\n"
+   "      Braganca\n"
+   "      Piracaia\n"
+   "      Sao Paulo\n"
+   "         Mooca\n"
+   "         Bixiga\n"
+   "         Vila Leopoldina\n"
+   "   Rio de Janeiro\n"
+   "      Teresópolis\n"
+   "      Niteroi\n"
+   "   Amazonas\n"
+   "      Manaus\n"
+   "   Paraiba\n"
+   "   Bahia\n"
    ;
 
    std::cout << menu_str;
@@ -68,6 +68,7 @@ void bar(menu_op)
          // indentation.
          root_found = true;
          root.name = line;
+         stack.push(&root);
          std::cout << root.name << std::flush;
          continue;
       }
@@ -93,10 +94,36 @@ void bar(menu_op)
             std::cerr << dist << " " << last_dist << std::endl;
             return;
          }
+
+         // We found the child of the last node pushed on the stack.
+         auto* p = new menu_node {line, {}};
+         stack.top()->children.push_back(p);
+         stack.push(p);
          ++last_depth;
       } else if (dist < last_dist) {
-         --last_depth;
+         // We do not know how may indentations back we jumped. Let us
+         // calculate this.
+         auto const new_depth = dist / sep;
+         // Now we have to pop that number of nodes from the stack
+         // until we get to the node that is should be the parent of
+         // the current line.
+         stack.pop();
+         auto const delta_depth = last_depth - new_depth;
+         for (unsigned i = 0; i < delta_depth; ++i)
+            stack.pop();
+
+         // Now we can add the new node.
+         auto* p = new menu_node {line, {}};
+         stack.top()->children.push_back(p);
+         stack.push(p);
+
+         last_depth = new_depth;
       } else {
+         stack.pop();
+         auto* p = new menu_node {line, {}};
+         stack.top()->children.push_back(p);
+         stack.push(p);
+         // Last depth stays equal.
       }
    }
 }

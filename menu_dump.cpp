@@ -23,35 +23,11 @@ struct menu_node {
    std::vector<menu_node*> children;
 };
 
-void bar(menu_op)
+void build_menu_tree(menu_node& root, std::string const& menu_str)
 {
-   std::string menu_str =
-   "Brasil\n"
-   "   Sao Paulo\n"
-   "      Atibaia\n"
-   "         Vila Santista\n"
-   "         Jardim Siriema\n"
-   "      Braganca\n"
-   "      Piracaia\n"
-   "      Sao Paulo\n"
-   "         Mooca\n"
-   "         Bixiga\n"
-   "         Vila Leopoldina\n"
-   "   Rio de Janeiro\n"
-   "      Teresópolis\n"
-   "      Niteroi\n"
-   "   Amazonas\n"
-   "      Manaus\n"
-   "   Paraiba\n"
-   "   Bahia\n"
-   ;
-
-   std::cout << menu_str;
-
    constexpr auto sep = 3;
    std::stringstream ss(menu_str);
    std::string line;
-   menu_node root;
    std::stack<menu_node*> stack;
    unsigned last_depth = 0;
    bool root_found = false;
@@ -126,6 +102,34 @@ void bar(menu_op)
          // Last depth stays equal.
       }
    }
+}
+
+void bar(menu_op)
+{
+   std::string menu_str =
+   "Brasil\n"
+   "   Sao Paulo\n"
+   "      Atibaia\n"
+   "         Vila Santista\n"
+   "         Jardim Siriema\n"
+   "      Braganca\n"
+   "      Piracaia\n"
+   "      Sao Paulo\n"
+   "         Mooca\n"
+   "         Bixiga\n"
+   "         Vila Leopoldina\n"
+   "   Rio de Janeiro\n"
+   "      Teresópolis\n"
+   "      Niteroi\n"
+   "   Amazonas\n"
+   "      Manaus\n"
+   "   Paraiba\n"
+   "   Bahia\n"
+   ;
+
+   std::cout << menu_str;
+   menu_node root;
+   build_menu_tree(root, menu_str);
 }
 
 void foo(json menu, menu_op op)

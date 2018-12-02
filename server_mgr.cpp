@@ -124,7 +124,7 @@ server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
          assert(data.front() == "message");
          assert(std::size(data) == 3);
 
-         // TODO: Read the user id form the req struct. First
+         // TODO: Read the user id from the req struct. First
          // implement tests.
          auto const n = data[1].rfind(":");
          assert(n != std::string::npos);
@@ -214,7 +214,8 @@ ev_res server_mgr::on_login(json const& j, std::shared_ptr<server_session> s)
 }
 
 ev_res
-server_mgr::on_code_confirmation(json const& j, std::shared_ptr<server_session> s)
+server_mgr::on_code_confirmation( json const& j
+                                , std::shared_ptr<server_session> s)
 {
    auto const from = j.at("from").get<std::string>();
    auto const code = j.at("code").get<std::string>();

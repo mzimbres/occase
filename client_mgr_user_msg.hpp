@@ -20,27 +20,25 @@ class client_session;
 struct cmgr_sim_op {
    std::string user;
    std::string expected;
-   int msgs_per_group;
 };
 
 class client_mgr_user_msg {
 public:
    using options_type = cmgr_sim_op;
 private:
+   using client_type = client_session<client_mgr_user_msg>;
+
    struct ch_msg_helper {
       bool ack = false;
       bool msg = false;
       std::string hash;
    };
-   using client_type = client_session<client_mgr_user_msg>;
    options_type op;
    std::stack<std::string> cmds;
    std::vector<ch_msg_helper> hashes;
-   std::size_t group_counter = 0;
    std::size_t user_counter = 0;
    std::set<std::string> users;
 
-   void send_group_msg(std::shared_ptr<client_type> s);
    void send_user_msg(std::shared_ptr<client_type> s, std::string to);
 
 public:

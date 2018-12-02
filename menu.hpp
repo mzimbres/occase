@@ -16,5 +16,12 @@ std::vector<std::string> get_hashes(json menu);
 
 std::string to_str(int i);
 
+struct menu_node {
+   std::string name;
+   std::vector<menu_node*> children;
+};
+
+void build_menu_tree(menu_node& root, std::string const& menu_str);
+
 }
 

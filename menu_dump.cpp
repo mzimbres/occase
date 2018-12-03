@@ -41,7 +41,7 @@ void bar(menu_op)
    "   Bahia\n"
    ;
 
-   std::cout << menu_str;
+   std::cout << menu_str << std::endl;
    menu_node root;
    build_menu_tree(root, menu_str);
 

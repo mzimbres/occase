@@ -233,7 +233,7 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
          root_found = true;
          root.name = line;
          stack.push(&root);
-         std::cout << root.name << std::flush;
+         //std::cout << root.name << std::flush;
          continue;
       }
 
@@ -248,6 +248,7 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
          return;
       }
 
+      line.erase(0, pos);
       auto const dist = pos;
       auto const last_dist = sep * last_depth;
       if (dist > last_dist) {

@@ -44,6 +44,12 @@ void bar(menu_op)
    std::cout << menu_str;
    menu_node root;
    build_menu_tree(root, menu_str);
+
+   menu_leaf_iterator iter(root);
+   while (!iter.end()) {
+      std::cout << iter.current->name << std::endl;
+      iter.next();
+   };
 }
 
 void foo(json menu, menu_op op)

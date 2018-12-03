@@ -23,5 +23,14 @@ struct menu_node {
 
 void build_menu_tree(menu_node& root, std::string const& menu_str);
 
+struct menu_leaf_iterator {
+   std::stack<std::vector<menu_node*>> st;
+   menu_node* current;
+   menu_leaf_iterator(menu_node& root);
+   void next();
+   void advance();
+   bool end() const noexcept { return std::empty(st); }
+};
+
 }
 

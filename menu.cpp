@@ -292,5 +292,43 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
    }
 }
 
+menu_leaf_iterator::menu_leaf_iterator(menu_node& root)
+: current {&root}
+{
+   st.push({&root});
+   advance();
+}
+
+void menu_leaf_iterator::next()
+{
+   if (!std::empty(st.top())) {
+      advance();
+      return;
+   }
+
+   do {
+      st.pop();
+      if (std::empty(st))
+         return;
+      st.top().pop_back();
+   } while (std::empty(st.top()));
+
+   advance();
+}
+
+void menu_leaf_iterator::advance()
+{
+   while (!std::empty(st.top().back()->children)) {
+      std::vector<menu_node*> tmp;
+      for (auto o : st.top().back()->children)
+         tmp.push_back(o);
+
+      st.push(std::move(tmp));
+   }
+
+   current = st.top().back();
+   st.top().pop_back();
+}
+
 }
 

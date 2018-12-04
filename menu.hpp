@@ -18,6 +18,7 @@ std::string to_str(int i);
 
 struct menu_node {
    std::string name;
+   std::string code;
    std::vector<menu_node*> children;
 };
 

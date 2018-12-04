@@ -3,6 +3,7 @@
 #include <stack>
 #include <vector>
 #include <iostream>
+#include <exception>
 
 #include "json_utils.hpp"
 
@@ -211,59 +212,54 @@ json gen_location_menu()
    return j.patch(std::move(hash_patches));
 }
 
+struct helper {
+   menu_node* node = nullptr;;
+   int counter = 0;
+};
+
 void build_menu_tree(menu_node& root, std::string const& menu_str)
 {
+   // TODO: Make it exception safe.
    constexpr auto sep = 3;
    std::stringstream ss(menu_str);
    std::string line;
-   std::stack<menu_node*> stack;
+   std::stack<helper> stack;
    unsigned last_depth = 0;
    bool root_found = false;
    while (std::getline(ss, line)) {
       if (line.front() != ' ') {
          // This is the root node since it is the only one with zero
          // indentation.
-         if (root_found) {
-            std::cerr << "Invalid input data." << std::endl;
-            return;
-         }
+         if (root_found)
+            throw std::runtime_error("Invalid input data.");
 
          // From now on no other node will be allowed to have zero
          // indentation.
          root_found = true;
          root.name = line;
-         stack.push(&root);
-         //std::cout << root.name << std::flush;
+         stack.push({&root, 0});
          continue;
       }
 
       auto const pos = line.find_first_not_of(" ");
-      if (pos == std::string::npos) {
-         std::cout << "Invalid line." << std::endl;
-         return;
-      }
+      if (pos == std::string::npos)
+         throw std::runtime_error("Invalid line.");
 
-      if (pos % sep != 0) {
-         std::cout << "Invalid indentation." << std::endl;
-         return;
-      }
+      if (pos % sep != 0)
+         throw std::runtime_error("Invalid indentation.");
 
       line.erase(0, pos);
       auto const dist = pos;
       auto const last_dist = sep * last_depth;
       if (dist > last_dist) {
-         if (last_dist + sep != dist) {
-            // For increasing depths we allow only one step at time.
-            std::cerr << "Jump(1) in indentation not allowed."
-                      << std::endl;
-            std::cerr << dist << " " << last_dist << std::endl;
-            return;
-         }
+         if (last_dist + sep != dist)
+            throw std::runtime_error("Forward Jump not allowed.");
 
          // We found the child of the last node pushed on the stack.
-         auto* p = new menu_node {line, {}};
-         stack.top()->children.push_back(p);
-         stack.push(p);
+         auto const code = stack.top().node->code + ".000";
+         auto* p = new menu_node {line, code, {}};
+         stack.top().node->children.push_back(p);
+         stack.push({p, 0});
          ++last_depth;
       } else if (dist < last_dist) {
          // We do not know how may indentations back we jumped. Let us
@@ -272,22 +268,31 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
          // Now we have to pop that number of nodes from the stack
          // until we get to the node that is should be the parent of
          // the current line.
-         stack.pop();
          auto const delta_depth = last_depth - new_depth;
          for (unsigned i = 0; i < delta_depth; ++i)
             stack.pop();
 
+         auto const new_counter = stack.top().counter + 1;
+         stack.pop();
+
          // Now we can add the new node.
-         auto* p = new menu_node {line, {}};
-         stack.top()->children.push_back(p);
-         stack.push(p);
+         auto const code = stack.top().node->code 
+                         + "."
+                         + to_str_raw(new_counter, 3, '0');
+         auto* p = new menu_node {line, code, {}};
+         stack.top().node->children.push_back(p);
+         stack.push({p, new_counter});
 
          last_depth = new_depth;
       } else {
+         auto const new_counter = stack.top().counter + 1;
          stack.pop();
-         auto* p = new menu_node {line, {}};
-         stack.top()->children.push_back(p);
-         stack.push(p);
+         auto const code = stack.top().node->code 
+                         + "."
+                         + to_str_raw(new_counter, 3, '0');
+         auto* p = new menu_node {line, code, {}};
+         stack.top().node->children.push_back(p);
+         stack.push({p, new_counter});
          // Last depth stays equal.
       }
    }

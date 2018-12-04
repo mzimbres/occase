@@ -42,12 +42,14 @@ void bar(menu_op)
    ;
 
    std::cout << menu_str << std::endl;
-   menu_node root;
+   menu_node root {{}, {"000"}, {}};
    build_menu_tree(root, menu_str);
 
    menu_leaf_iterator iter(root);
    while (!iter.end()) {
-      std::cout << iter.current->name << std::endl;
+      std::cout << std::setw(20) << std::left
+                << iter.current->name << " "
+                << iter.current->code << std::endl;
       iter.next();
    };
 }

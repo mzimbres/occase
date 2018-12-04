@@ -2,6 +2,8 @@
 #include <string>
 #include <sstream>
 #include <iostream>
+#include <fstream>
+#include <iterator>
 
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/parsers.hpp>
@@ -16,6 +18,7 @@ struct menu_op {
    int indentation;
    int sim_length;
    bool hash = false;
+   std::string file {"menus/cidades"};
 };
 
 void bar(menu_op)
@@ -48,6 +51,26 @@ void bar(menu_op)
    menu_leaf_iterator iter(root);
    while (!iter.end()) {
       std::cout << std::setw(20) << std::left
+                << iter.current->name << " "
+                << iter.current->code << std::endl;
+      iter.next();
+   };
+}
+
+void from_file(menu_op op)
+{
+   std::ifstream ifs(op.file);
+
+   using iter_type = std::istreambuf_iterator<char>;
+   std::string menu_str {iter_type {ifs}, {}};
+
+   std::cout << menu_str << std::endl;
+   menu_node root {{}, {"000"}, {}};
+   build_menu_tree(root, menu_str);
+
+   menu_leaf_iterator iter(root);
+   while (!iter.end()) {
+      std::cout << std::setw(30) << std::left
                 << iter.current->name << " "
                 << iter.current->code << std::endl;
       iter.next();
@@ -140,6 +163,7 @@ int main(int argc, char* argv[])
         " 0: Atibaia - Sao Paulo.\n"
         " 1: Simulated.\n"
         " 2: New menu.\n"
+        " 3: From file.\n"
       )
       ("indentation,i"
       , po::value<int>(&op.indentation)->default_value(-1)
@@ -165,6 +189,7 @@ int main(int argc, char* argv[])
    switch (op.menu) {
       case 1: op1(op); break;
       case 2: bar(op); break;
+      case 3: from_file(op); break;
       default:
          op0(op);
    }

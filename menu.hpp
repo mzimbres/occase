@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stack>
+#include <deque>
 #include <string>
 
 #include "json_utils.hpp"
@@ -19,7 +20,7 @@ std::string to_str(int i);
 struct menu_node {
    std::string name;
    std::string code;
-   std::vector<menu_node*> children;
+   std::deque<menu_node*> children;
 };
 
 void build_menu_tree(menu_node& root, std::string const& menu_str);

@@ -4,6 +4,7 @@
 #include <vector>
 #include <iostream>
 #include <exception>
+#include <ios>
 
 #include "json_utils.hpp"
 
@@ -15,7 +16,7 @@ std::string to_str_raw(int i, int width, char fill)
    std::ostringstream oss;
    oss.fill(fill);
    oss.width(width);
-   oss << i;
+   oss << std::hex << i;
    return oss.str();
 }
 
@@ -258,7 +259,7 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
          // We found the child of the last node pushed on the stack.
          auto const code = stack.top().node->code + ".000";
          auto* p = new menu_node {line, code, {}};
-         stack.top().node->children.push_back(p);
+         stack.top().node->children.push_front(p);
          stack.push({p, 0});
          ++last_depth;
       } else if (dist < last_dist) {
@@ -280,7 +281,7 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
                          + "."
                          + to_str_raw(new_counter, 3, '0');
          auto* p = new menu_node {line, code, {}};
-         stack.top().node->children.push_back(p);
+         stack.top().node->children.push_front(p);
          stack.push({p, new_counter});
 
          last_depth = new_depth;
@@ -291,7 +292,7 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
                          + "."
                          + to_str_raw(new_counter, 3, '0');
          auto* p = new menu_node {line, code, {}};
-         stack.top().node->children.push_back(p);
+         stack.top().node->children.push_front(p);
          stack.push({p, new_counter});
          // Last depth stays equal.
       }

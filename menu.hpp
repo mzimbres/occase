@@ -29,7 +29,7 @@ struct menu_leaf_iterator {
    std::stack<std::vector<menu_node*>> st;
    menu_node* current;
    menu_leaf_iterator(menu_node& root);
-   void next();
+   void next_leaf();
    void advance();
    bool end() const noexcept { return std::empty(st); }
 };

@@ -53,7 +53,7 @@ void bar(menu_op)
       std::cout << std::setw(20) << std::left
                 << iter.current->name << " "
                 << iter.current->code << std::endl;
-      iter.next();
+      iter.next_leaf();
    };
 }
 
@@ -73,7 +73,7 @@ void from_file(menu_op op)
       std::cout << std::setw(30) << std::left
                 << iter.current->name << " "
                 << iter.current->code << std::endl;
-      iter.next();
+      iter.next_leaf();
    };
 }
 

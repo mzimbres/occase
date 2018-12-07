@@ -308,13 +308,11 @@ menu_leaf_iterator::menu_leaf_iterator(menu_node& root)
 
 void menu_leaf_iterator::next_leaf()
 {
-   if (std::empty(st.top())) {
-      do {
-         st.pop();
-         if (std::empty(st))
-            return;
-         st.top().pop_back();
-      } while (std::empty(st.top()));
+   while (std::empty(st.top())) {
+      st.pop();
+      if (std::empty(st))
+         return;
+      st.top().pop_back();
    }
 
    advance();

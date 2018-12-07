@@ -55,6 +55,16 @@ void bar(menu_op)
                 << iter.current->code << std::endl;
       iter.next_leaf();
    };
+
+   std::cout << std::endl;
+
+   menu_leaf_iterator iter2(root);
+   while (!iter2.end()) {
+      std::cout << std::setw(20) << std::left
+                << iter2.current->name << " "
+                << iter2.current->code << std::endl;
+      iter2.next();
+   };
 }
 
 void from_file(menu_op op)

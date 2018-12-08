@@ -36,6 +36,7 @@ public:
    void print_leaf();
    void print_all();
    std::vector<std::string> get_codes() const;
+   json to_json() const;
 };
 
 }

@@ -284,9 +284,12 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
 
 class menu_iterator {
 private:
-   // Since it is no possible to iterate over a stack I will use a
+   // Since it is not possible to iterate over a stack I will use a
    // vector.
    std::vector<std::vector<menu_node*>> st;
+   std::vector<std::vector<json>> j_st;
+   json j_final;
+
    void advance()
    {
       while (!std::empty(st.back().back()->children)) {
@@ -295,10 +298,17 @@ private:
             tmp.push_back(o);
 
          st.push_back(std::move(tmp));
+         j_st.push_back({});
       }
 
       current = st.back().back();
       st.back().pop_back();
+
+      json j;
+      j["name"] = current->name;
+      j["sub"] = {};
+      j["hash"] = get_code();
+      j_st.back().push_back(j);
    }
 
 public:
@@ -306,18 +316,29 @@ public:
    menu_iterator(menu_node* root)
    : current {root}
    {
-      if (root)
+      if (root) {
          st.push_back({root});
+         j_st.push_back({});
+      }
       advance();
    }
+
+   json get_json() const {return j_final;};
 
    void next_leaf()
    {
       while (std::empty(st.back())) {
          st.pop_back();
-         if (std::empty(st))
+         auto j_vec = j_st.back();
+         j_st.pop_back();
+         if (std::empty(st)) {
+            j_final["menu"] = j_vec;
             return;
+         }
+         j_st.back().push_back({{"name", st.back().back()->name}});
+         j_st.back().back()["sub"] = j_vec;
          st.back().pop_back();
+         j_st.back().back()["hash"] = get_code();
       }
 
       advance();
@@ -383,6 +404,10 @@ std::vector<std::string> menu::get_codes() const
       iter.next_leaf();
    }
 
+   auto const j = iter.get_json();
+
+   std::cout << j.dump(4) << std::endl;
+
    return ret;
 }
 
@@ -405,6 +430,13 @@ menu::~menu()
       delete iter2.current;
       iter2.next();
    }
+}
+
+json menu::to_json() const
+{
+   if (std::empty(root.children))
+      return {};
+   return {};
 }
 
 }

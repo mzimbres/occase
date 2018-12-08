@@ -301,52 +301,61 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
    }
 }
 
-menu_leaf_iterator::menu_leaf_iterator(menu_node* root)
-: current {root}
-{
-   st.push({root});
-   advance();
-}
+class menu_leaf_iterator {
+private:
+   std::stack<std::vector<menu_node*>> st;
+   void advance()
+   {
+      while (!std::empty(st.top().back()->children)) {
+         std::vector<menu_node*> tmp;
+         for (auto o : st.top().back()->children)
+            tmp.push_back(o);
 
-void menu_leaf_iterator::next()
-{
-   if (std::empty(st.top())) {
-      st.pop();
-      if (std::empty(st))
-         return;
+         st.push(std::move(tmp));
+      }
+
       current = st.top().back();
       st.top().pop_back();
-      return;
    }
 
-   advance();
-}
+public:
+   menu_node* current;
+   menu_leaf_iterator(menu_node* root)
+   : current {root}
+   {
+      if (root)
+         st.push({root});
+      advance();
+   }
 
-void menu_leaf_iterator::next_leaf()
-{
-   while (std::empty(st.top())) {
-      st.pop();
-      if (std::empty(st))
+   void next_leaf()
+   {
+      while (std::empty(st.top())) {
+         st.pop();
+         if (std::empty(st))
+            return;
+         st.top().pop_back();
+      }
+
+      advance();
+   }
+
+   void next()
+   {
+      if (std::empty(st.top())) {
+         st.pop();
+         if (std::empty(st))
+            return;
+         current = st.top().back();
+         st.top().pop_back();
          return;
-      st.top().pop_back();
+      }
+
+      advance();
    }
 
-   advance();
-}
-
-void menu_leaf_iterator::advance()
-{
-   while (!std::empty(st.top().back()->children)) {
-      std::vector<menu_node*> tmp;
-      for (auto o : st.top().back()->children)
-         tmp.push_back(o);
-
-      st.push(std::move(tmp));
-   }
-
-   current = st.top().back();
-   st.top().pop_back();
-}
+   bool end() const noexcept { return std::empty(st); }
+};
 
 menu::menu(std::string const& str)
 {

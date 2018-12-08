@@ -23,20 +23,6 @@ struct menu_node {
    std::deque<menu_node*> children;
 };
 
-void build_menu_tree(menu_node& root, std::string const& menu_str);
-
-class menu_leaf_iterator {
-private:
-   std::stack<std::vector<menu_node*>> st;
-   void advance();
-public:
-   menu_node* current;
-   menu_leaf_iterator(menu_node* root);
-   void next_leaf();
-   void next();
-   bool end() const noexcept { return std::empty(st); }
-};
-
 class menu {
 private:
    menu_node root;

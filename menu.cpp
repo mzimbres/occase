@@ -356,6 +356,22 @@ public:
       advance();
    }
 
+   std::string get_code() const
+   {
+      if (std::empty(st))
+         return {};
+
+      if (std::size(st) == 1)
+         return to_str_raw(std::size(st.back()) - 1, 3, '0');
+
+      std::string code;
+      for (unsigned i = 1; i < std::size(st) - 1; ++i)
+         code += to_str_raw(std::size(st.at(i)) - 1, 3, '0') + ".";
+
+      code += to_str_raw(std::size(st.back()), 3, '0');
+      return code;
+   }
+
    bool end() const noexcept { return std::empty(st); }
 };
 
@@ -370,7 +386,10 @@ void menu::print_leaf()
    while (!iter.end()) {
       std::cout << std::setw(20) << std::left
                 << iter.current->name << " "
-                << iter.current->code << std::endl;
+                << std::setw(20) << std::left
+                << iter.current->code
+                << iter.get_code() << "      "
+                << std::endl;
       iter.next_leaf();
    }
 }
@@ -381,7 +400,10 @@ void menu::print_all()
    while (!iter2.end()) {
       std::cout << std::setw(20) << std::left
                 << iter2.current->name << " "
-                << iter2.current->code << std::endl;
+                << std::setw(20) << std::left
+                << iter2.current->code << "      "
+                << iter2.get_code()
+                << std::endl;
       iter2.next();
    }
 }

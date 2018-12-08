@@ -44,17 +44,12 @@ struct hash_gen_iter {
 
    void next()
    {
-      if (!std::empty(st.top())) {
-         advance();
-         return;
-      }
-
-      do {
+      while (std::empty(st.top())) {
          st.pop();
          if (std::empty(st))
             return;
          st.top().pop_back();
-      } while (std::empty(st.top()));
+      }
 
       advance();
    }
@@ -363,6 +358,7 @@ public:
 
 menu::menu(std::string const& str)
 {
+   // TODO: Catch exceptions a release already acquired memory.
    build_menu_tree(root, str);
 }
 

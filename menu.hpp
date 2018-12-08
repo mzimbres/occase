@@ -35,5 +35,14 @@ struct menu_leaf_iterator {
    bool end() const noexcept { return std::empty(st); }
 };
 
+class menu {
+private:
+   menu_node root {{}, {"000"}, {}};
+public:
+   menu(std::string const& str);
+   void print_leaf();
+   void print_all();
+};
+
 }
 

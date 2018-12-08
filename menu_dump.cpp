@@ -45,26 +45,10 @@ void bar(menu_op)
    ;
 
    std::cout << menu_str << std::endl;
-   menu_node root {{}, {"000"}, {}};
-   build_menu_tree(root, menu_str);
-
-   menu_leaf_iterator iter(root);
-   while (!iter.end()) {
-      std::cout << std::setw(20) << std::left
-                << iter.current->name << " "
-                << iter.current->code << std::endl;
-      iter.next_leaf();
-   };
-
+   menu m {menu_str};
+   m.print_leaf();
    std::cout << std::endl;
-
-   menu_leaf_iterator iter2(root);
-   while (!iter2.end()) {
-      std::cout << std::setw(20) << std::left
-                << iter2.current->name << " "
-                << iter2.current->code << std::endl;
-      iter2.next();
-   };
+   m.print_all();
 }
 
 void from_file(menu_op op)
@@ -74,17 +58,10 @@ void from_file(menu_op op)
    using iter_type = std::istreambuf_iterator<char>;
    std::string menu_str {iter_type {ifs}, {}};
 
-   std::cout << menu_str << std::endl;
-   menu_node root {{}, {"000"}, {}};
-   build_menu_tree(root, menu_str);
-
-   menu_leaf_iterator iter(root);
-   while (!iter.end()) {
-      std::cout << std::setw(30) << std::left
-                << iter.current->name << " "
-                << iter.current->code << std::endl;
-      iter.next_leaf();
-   };
+   menu m {menu_str};
+   m.print_leaf();
+   std::cout << std::endl;
+   m.print_all();
 }
 
 void foo(json menu, menu_op op)

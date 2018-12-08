@@ -346,5 +346,32 @@ void menu_leaf_iterator::advance()
    st.top().pop_back();
 }
 
+menu::menu(std::string const& str)
+{
+   build_menu_tree(root, str);
+}
+
+void menu::print_leaf()
+{
+   menu_leaf_iterator iter(root);
+   while (!iter.end()) {
+      std::cout << std::setw(20) << std::left
+                << iter.current->name << " "
+                << iter.current->code << std::endl;
+      iter.next_leaf();
+   }
+}
+
+void menu::print_all()
+{
+   menu_leaf_iterator iter2(root);
+   while (!iter2.end()) {
+      std::cout << std::setw(20) << std::left
+                << iter2.current->name << " "
+                << iter2.current->code << std::endl;
+      iter2.next();
+   }
+}
+
 }
 

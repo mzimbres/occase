@@ -213,18 +213,13 @@ json gen_location_menu()
    return j.patch(std::move(hash_patches));
 }
 
-struct helper {
-   menu_node* node = nullptr;;
-   int counter = 0;
-};
-
 void build_menu_tree(menu_node& root, std::string const& menu_str)
 {
    // TODO: Make it exception safe.
    constexpr auto sep = 3;
    std::stringstream ss(menu_str);
    std::string line;
-   std::stack<helper> stack;
+   std::stack<menu_node*> stack;
    unsigned last_depth = 0;
    bool root_found = false;
    while (std::getline(ss, line)) {
@@ -238,9 +233,9 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
          // indentation.
          root_found = true;
          root.name = line;
-         auto* p = new menu_node {line, "000", {}};
+         auto* p = new menu_node {line, {}};
          root.children.push_front(p);
-         stack.push({p, 0});
+         stack.push(p);
          continue;
       }
 
@@ -259,10 +254,9 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
             throw std::runtime_error("Forward Jump not allowed.");
 
          // We found the child of the last node pushed on the stack.
-         auto const code = stack.top().node->code + ".000";
-         auto* p = new menu_node {line, code, {}};
-         stack.top().node->children.push_front(p);
-         stack.push({p, 0});
+         auto* p = new menu_node {line, {}};
+         stack.top()->children.push_front(p);
+         stack.push(p);
          ++last_depth;
       } else if (dist < last_dist) {
          // We do not know how may indentations back we jumped. Let us
@@ -275,27 +269,19 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
          for (unsigned i = 0; i < delta_depth; ++i)
             stack.pop();
 
-         auto const new_counter = stack.top().counter + 1;
          stack.pop();
 
          // Now we can add the new node.
-         auto const code = stack.top().node->code 
-                         + "."
-                         + to_str_raw(new_counter, 3, '0');
-         auto* p = new menu_node {line, code, {}};
-         stack.top().node->children.push_front(p);
-         stack.push({p, new_counter});
+         auto* p = new menu_node {line, {}};
+         stack.top()->children.push_front(p);
+         stack.push(p);
 
          last_depth = new_depth;
       } else {
-         auto const new_counter = stack.top().counter + 1;
          stack.pop();
-         auto const code = stack.top().node->code 
-                         + "."
-                         + to_str_raw(new_counter, 3, '0');
-         auto* p = new menu_node {line, code, {}};
-         stack.top().node->children.push_front(p);
-         stack.push({p, new_counter});
+         auto* p = new menu_node {line, {}};
+         stack.top()->children.push_front(p);
+         stack.push(p);
          // Last depth stays equal.
       }
    }
@@ -386,8 +372,6 @@ void menu::print_leaf()
    while (!iter.end()) {
       std::cout << std::setw(20) << std::left
                 << iter.current->name << " "
-                << std::setw(20) << std::left
-                << iter.current->code
                 << iter.get_code() << "      "
                 << std::endl;
       iter.next_leaf();
@@ -400,8 +384,6 @@ void menu::print_all()
    while (!iter2.end()) {
       std::cout << std::setw(20) << std::left
                 << iter2.current->name << " "
-                << std::setw(20) << std::left
-                << iter2.current->code << "      "
                 << iter2.get_code()
                 << std::endl;
       iter2.next();

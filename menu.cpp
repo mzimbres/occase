@@ -303,19 +303,21 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
 
 class menu_leaf_iterator {
 private:
-   std::stack<std::vector<menu_node*>> st;
+   // Since it is no possible to iterate over a stack I will use a
+   // vector.
+   std::vector<std::vector<menu_node*>> st;
    void advance()
    {
-      while (!std::empty(st.top().back()->children)) {
+      while (!std::empty(st.back().back()->children)) {
          std::vector<menu_node*> tmp;
-         for (auto o : st.top().back()->children)
+         for (auto o : st.back().back()->children)
             tmp.push_back(o);
 
-         st.push(std::move(tmp));
+         st.push_back(std::move(tmp));
       }
 
-      current = st.top().back();
-      st.top().pop_back();
+      current = st.back().back();
+      st.back().pop_back();
    }
 
 public:
@@ -324,17 +326,17 @@ public:
    : current {root}
    {
       if (root)
-         st.push({root});
+         st.push_back({root});
       advance();
    }
 
    void next_leaf()
    {
-      while (std::empty(st.top())) {
-         st.pop();
+      while (std::empty(st.back())) {
+         st.pop_back();
          if (std::empty(st))
             return;
-         st.top().pop_back();
+         st.back().pop_back();
       }
 
       advance();
@@ -342,12 +344,12 @@ public:
 
    void next()
    {
-      if (std::empty(st.top())) {
-         st.pop();
+      if (std::empty(st.back())) {
+         st.pop_back();
          if (std::empty(st))
             return;
-         current = st.top().back();
-         st.top().pop_back();
+         current = st.back().back();
+         st.back().pop_back();
          return;
       }
 

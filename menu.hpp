@@ -25,21 +25,24 @@ struct menu_node {
 
 void build_menu_tree(menu_node& root, std::string const& menu_str);
 
-struct menu_leaf_iterator {
+class menu_leaf_iterator {
+private:
    std::stack<std::vector<menu_node*>> st;
+   void advance();
+public:
    menu_node* current;
-   menu_leaf_iterator(menu_node& root);
+   menu_leaf_iterator(menu_node* root);
    void next_leaf();
    void next();
-   void advance();
    bool end() const noexcept { return std::empty(st); }
 };
 
 class menu {
 private:
-   menu_node root {{}, {"000"}, {}};
+   menu_node root;
 public:
    menu(std::string const& str);
+   ~menu();
    void print_leaf();
    void print_all();
 };

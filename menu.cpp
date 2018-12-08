@@ -238,7 +238,9 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
          // indentation.
          root_found = true;
          root.name = line;
-         stack.push({&root, 0});
+         auto* p = new menu_node {line, "000", {}};
+         root.children.push_front(p);
+         stack.push({p, 0});
          continue;
       }
 
@@ -299,10 +301,10 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
    }
 }
 
-menu_leaf_iterator::menu_leaf_iterator(menu_node& root)
-: current {&root}
+menu_leaf_iterator::menu_leaf_iterator(menu_node* root)
+: current {root}
 {
-   st.push({&root});
+   st.push({root});
    advance();
 }
 
@@ -353,7 +355,7 @@ menu::menu(std::string const& str)
 
 void menu::print_leaf()
 {
-   menu_leaf_iterator iter(root);
+   menu_leaf_iterator iter(root.children.front());
    while (!iter.end()) {
       std::cout << std::setw(20) << std::left
                 << iter.current->name << " "
@@ -364,11 +366,20 @@ void menu::print_leaf()
 
 void menu::print_all()
 {
-   menu_leaf_iterator iter2(root);
+   menu_leaf_iterator iter2(root.children.front());
    while (!iter2.end()) {
       std::cout << std::setw(20) << std::left
                 << iter2.current->name << " "
                 << iter2.current->code << std::endl;
+      iter2.next();
+   }
+}
+
+menu::~menu()
+{
+   menu_leaf_iterator iter2(root.children.front());
+   while (!iter2.end()) {
+      delete iter2.current;
       iter2.next();
    }
 }

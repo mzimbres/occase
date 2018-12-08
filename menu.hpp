@@ -26,10 +26,16 @@ class menu {
 private:
    menu_node root;
 public:
+   menu() = delete;
+   menu(menu const&) = delete;
+   menu& operator=(menu const&) = delete;
+   menu(menu&&) = delete;
+   menu& operator=(menu&&) = delete;
    menu(std::string const& str);
    ~menu();
    void print_leaf();
    void print_all();
+   std::vector<std::string> get_codes() const;
 };
 
 }

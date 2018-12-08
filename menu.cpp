@@ -282,7 +282,7 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
    }
 }
 
-class menu_leaf_iterator {
+class menu_iterator {
 private:
    // Since it is no possible to iterate over a stack I will use a
    // vector.
@@ -303,7 +303,7 @@ private:
 
 public:
    menu_node* current;
-   menu_leaf_iterator(menu_node* root)
+   menu_iterator(menu_node* root)
    : current {root}
    {
       if (root)
@@ -364,7 +364,7 @@ menu::menu(std::string const& str)
 
 void menu::print_leaf()
 {
-   menu_leaf_iterator iter(root.children.front());
+   menu_iterator iter(root.children.front());
    while (!iter.end()) {
       std::cout << std::setw(20) << std::left
                 << iter.current->name << " "
@@ -374,9 +374,21 @@ void menu::print_leaf()
    }
 }
 
+std::vector<std::string> menu::get_codes() const
+{
+   std::vector<std::string> ret;
+   menu_iterator iter(root.children.front());
+   while (!iter.end()) {
+      ret.push_back(iter.get_code());
+      iter.next_leaf();
+   }
+
+   return ret;
+}
+
 void menu::print_all()
 {
-   menu_leaf_iterator iter2(root.children.front());
+   menu_iterator iter2(root.children.front());
    while (!iter2.end()) {
       std::cout << std::setw(20) << std::left
                 << iter2.current->name << " "
@@ -388,7 +400,7 @@ void menu::print_all()
 
 menu::~menu()
 {
-   menu_leaf_iterator iter2(root.children.front());
+   menu_iterator iter2(root.children.front());
    while (!iter2.end()) {
       delete iter2.current;
       iter2.next();

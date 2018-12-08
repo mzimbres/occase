@@ -49,6 +49,11 @@ void bar(menu_op)
    m.print_leaf();
    std::cout << std::endl;
    m.print_all();
+   std::cout << std::endl;
+   for (auto const& o: m.get_codes())
+      std::cout << o << "\n";
+   std::cout << std::endl;
+
 }
 
 void from_file(menu_op op)
@@ -62,6 +67,10 @@ void from_file(menu_op op)
    m.print_leaf();
    std::cout << std::endl;
    m.print_all();
+   std::cout << std::endl;
+   for (auto const& o: m.get_codes())
+      std::cout << o << "\n";
+   std::cout << std::endl;
 }
 
 void foo(json menu, menu_op op)

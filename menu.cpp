@@ -325,33 +325,39 @@ public:
 
    json get_json() const {return j_final;};
 
-   void next_leaf()
+   void next_internal()
+   {
+      st.pop_back();
+      auto j_vec = j_st.back();
+      j_st.pop_back();
+      if (std::empty(st)) {
+         j_final["menu"] = j_vec;
+         return;
+      }
+      json j;
+      j["name"] = st.back().back()->name;
+      j["sub"] = j_vec;
+      j_st.back().push_back({j});
+      current = st.back().back();
+      st.back().pop_back();
+      j_st.back().back()["hash"] = get_code();
+   }
+
+   void next_leaf_node()
    {
       while (std::empty(st.back())) {
-         st.pop_back();
-         auto j_vec = j_st.back();
-         j_st.pop_back();
-         if (std::empty(st)) {
-            j_final["menu"] = j_vec;
+         next_internal();
+         if (std::empty(st))
             return;
-         }
-         j_st.back().push_back({{"name", st.back().back()->name}});
-         j_st.back().back()["sub"] = j_vec;
-         st.back().pop_back();
-         j_st.back().back()["hash"] = get_code();
       }
 
       advance();
    }
 
-   void next()
+   void next_node()
    {
       if (std::empty(st.back())) {
-         st.pop_back();
-         if (std::empty(st))
-            return;
-         current = st.back().back();
-         st.back().pop_back();
+         next_internal();
          return;
       }
 
@@ -379,7 +385,7 @@ public:
 
 menu::menu(std::string const& str)
 {
-   // TODO: Catch exceptions a release already acquired memory.
+   // TODO: Catch exceptions and release already acquired memory.
    build_menu_tree(root, str);
 }
 
@@ -391,7 +397,7 @@ void menu::print_leaf()
                 << iter.current->name << " "
                 << iter.get_code() << "      "
                 << std::endl;
-      iter.next_leaf();
+      iter.next_leaf_node();
    }
 }
 
@@ -401,12 +407,8 @@ std::vector<std::string> menu::get_codes() const
    menu_iterator iter(root.children.front());
    while (!iter.end()) {
       ret.push_back(iter.get_code());
-      iter.next_leaf();
+      iter.next_leaf_node();
    }
-
-   auto const j = iter.get_json();
-
-   std::cout << j.dump(4) << std::endl;
 
    return ret;
 }
@@ -419,7 +421,7 @@ void menu::print_all()
                 << iter2.current->name << " "
                 << iter2.get_code()
                 << std::endl;
-      iter2.next();
+      iter2.next_node();
    }
 }
 
@@ -428,15 +430,17 @@ menu::~menu()
    menu_iterator iter2(root.children.front());
    while (!iter2.end()) {
       delete iter2.current;
-      iter2.next();
+      iter2.next_node();
    }
 }
 
 json menu::to_json() const
 {
-   if (std::empty(root.children))
-      return {};
-   return {};
+   menu_iterator iter(root.children.front());
+   while (!iter.end())
+      iter.next_leaf_node();
+
+   return iter.get_json();
 }
 
 }

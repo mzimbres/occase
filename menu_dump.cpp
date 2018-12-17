@@ -21,7 +21,7 @@ struct menu_op {
    std::string file {"menus/cidades"};
 };
 
-void bar(menu_op)
+void bar(menu_op op)
 {
    std::string menu_str =
    "Brasil\n"
@@ -50,7 +50,7 @@ void bar(menu_op)
    std::cout << std::endl;
    m.print_all();
    std::cout << std::endl;
-   std::cout << m.to_json().dump(4) << std::endl;
+   std::cout << m.to_json().dump(op.indentation) << std::endl;
 
    for (auto const& o: m.get_codes())
       std::cout << o << "\n";

@@ -49,7 +49,9 @@ void bar(menu_op op)
    m.print_leaf();
    std::cout << std::endl;
    m.print_all();
-   std::cout << std::endl;
+   std::cout << "_________" << std::endl;
+   m.print_copy();
+   std::cout << "_________" << std::endl;
    std::cout << m.to_json().dump(op.indentation) << std::endl;
 
    for (auto const& o: m.get_codes())
@@ -73,6 +75,9 @@ void from_file(menu_op op)
    for (auto const& o: m.get_codes())
       std::cout << o << "\n";
    std::cout << std::endl;
+   std::cout << "_________" << std::endl;
+   m.print_copy();
+   std::cout << "_________" << std::endl;
 }
 
 void foo(json menu, menu_op op)

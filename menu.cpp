@@ -425,6 +425,22 @@ void menu::print_all()
    }
 }
 
+void menu::print_copy()
+{
+   std::deque<std::deque<menu_node*>> st;
+   st.push_back(root.children);
+   while (!std::empty(st)) {
+      auto* node = st.back().back();
+      std::cout << node->name << std::endl;
+      st.back().pop_back();
+      if (std::empty(st.back()))
+         st.pop_back();
+      if (std::empty(node->children))
+         continue;
+      st.push_back(node->children);
+   }
+}
+
 menu::~menu()
 {
    menu_iterator iter2(root.children.front());

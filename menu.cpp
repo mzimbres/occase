@@ -3,6 +3,7 @@
 #include <stack>
 #include <vector>
 #include <iostream>
+#include <algorithm>
 #include <exception>
 #include <ios>
 
@@ -286,14 +287,14 @@ class menu_iterator {
 private:
    // Since it is not possible to iterate over a stack I will use a
    // vector.
-   std::vector<std::vector<menu_node*>> st;
-   std::vector<std::vector<json>> j_st;
+   std::deque<std::deque<menu_node*>> st;
+   std::deque<std::deque<json>> j_st;
    json j_final;
 
    void advance()
    {
       while (!std::empty(st.back().back()->children)) {
-         std::vector<menu_node*> tmp;
+         std::deque<menu_node*> tmp;
          for (auto o : st.back().back()->children)
             tmp.push_back(o);
 
@@ -417,6 +418,7 @@ void menu::print_all()
 {
    menu_iterator iter2(root.children.front());
    while (!iter2.end()) {
+      iter2.current->code = iter2.get_code();
       std::cout << std::setw(20) << std::left
                 << iter2.current->name << " "
                 << iter2.get_code()
@@ -427,11 +429,21 @@ void menu::print_all()
 
 void menu::print_copy()
 {
+   auto const sep = 3;
    std::deque<std::deque<menu_node*>> st;
    st.push_back(root.children);
    while (!std::empty(st)) {
       auto* node = st.back().back();
-      std::cout << node->name << std::endl;
+      auto const c = std::count( std::begin(node->code)
+                               , std::end(node->code)
+                               , '.');
+
+      auto const n = (c + 1) * sep;
+      std::string const indent(n, ' ');
+      std::cout << indent << " "
+                << node->name << " "
+                << node->code
+                << std::endl;
       st.back().pop_back();
       if (std::empty(st.back()))
          st.pop_back();

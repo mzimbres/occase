@@ -368,10 +368,14 @@ public:
    std::string get_code() const
    {
       if (std::empty(st))
-         return {};
+         return {""};
 
-      if (std::size(st) == 1)
+      if (std::size(st) == 1) {
+         if (std::empty(st.back()))
+            return {};
+
          return to_str_raw(std::size(st.back()) - 1, 3, '0');
+      }
 
       std::string code;
       for (unsigned i = 1; i < std::size(st) - 1; ++i)
@@ -429,18 +433,13 @@ void menu::print_all()
 
 void menu::print_copy()
 {
-   auto const sep = 3;
    std::deque<std::deque<menu_node*>> st;
    st.push_back(root.children);
    while (!std::empty(st)) {
       auto* node = st.back().back();
-      auto const c = std::count( std::begin(node->code)
-                               , std::end(node->code)
-                               , '.');
-
-      auto const n = (c + 1) * sep;
+      auto const n = std::size(node->code);
       std::string const indent(n, ' ');
-      std::cout << indent << " "
+      std::cout << indent
                 << node->name << " "
                 << node->code
                 << std::endl;

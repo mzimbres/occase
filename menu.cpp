@@ -255,7 +255,7 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
          stack.push(p);
          ++last_depth;
       } else if (dist < last_dist) {
-         // We do not know how may indentations back we jumped. Let us
+         // We do not know how many indentations back we jumped. Let us
          // calculate this.
          auto const new_depth = dist / sep;
          // Now we have to pop that number of nodes from the stack
@@ -283,13 +283,12 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
    }
 }
 
+// Iterator used to traverse the menu depth first.
 class menu_iterator {
 private:
    // Since it is not possible to iterate over a stack I will use a
-   // vector.
+   // deque.
    std::deque<std::deque<menu_node*>> st;
-   std::deque<std::deque<json>> j_st;
-   json j_final;
 
    void advance()
    {
@@ -299,17 +298,19 @@ private:
             tmp.push_back(o);
 
          st.push_back(std::move(tmp));
-         j_st.push_back({});
       }
 
       current = st.back().back();
       st.back().pop_back();
+   }
 
-      json j;
-      j["name"] = current->name;
-      j["sub"] = {};
-      j["hash"] = get_code();
-      j_st.back().push_back(j);
+   void next_internal()
+   {
+      st.pop_back();
+      if (std::empty(st))
+         return;
+      current = st.back().back();
+      st.back().pop_back();
    }
 
 public:
@@ -317,31 +318,10 @@ public:
    menu_iterator(menu_node* root)
    : current {root}
    {
-      if (root) {
+      if (root)
          st.push_back({root});
-         j_st.push_back({});
-      }
+
       advance();
-   }
-
-   json get_json() const {return j_final;};
-
-   void next_internal()
-   {
-      st.pop_back();
-      auto j_vec = j_st.back();
-      j_st.pop_back();
-      if (std::empty(st)) {
-         j_final["menu"] = j_vec;
-         return;
-      }
-      json j;
-      j["name"] = st.back().back()->name;
-      j["sub"] = j_vec;
-      j_st.back().push_back({j});
-      current = st.back().back();
-      st.back().pop_back();
-      j_st.back().back()["hash"] = get_code();
    }
 
    void next_leaf_node()
@@ -392,6 +372,12 @@ menu::menu(std::string const& str)
 {
    // TODO: Catch exceptions and release already acquired memory.
    build_menu_tree(root, str);
+
+   menu_iterator iter2(root.children.front());
+   while (!iter2.end()) {
+      iter2.current->code = iter2.get_code();
+      iter2.next_node();
+   }
 }
 
 void menu::print_leaf()
@@ -418,19 +404,6 @@ std::vector<std::string> menu::get_codes() const
    return ret;
 }
 
-void menu::print_all()
-{
-   menu_iterator iter2(root.children.front());
-   while (!iter2.end()) {
-      iter2.current->code = iter2.get_code();
-      std::cout << std::setw(20) << std::left
-                << iter2.current->name << " "
-                << iter2.get_code()
-                << std::endl;
-      iter2.next_node();
-   }
-}
-
 void print_menu_line(menu_node const& node)
 {
    std::cout << std::left << std::setw(20) << node.name << " "
@@ -438,7 +411,7 @@ void print_menu_line(menu_node const& node)
              << std::endl;
 }
 
-void menu::print_copy()
+void menu::dump()
 {
    // Traverses the menu in the same order as it would apear in the
    // config file.
@@ -458,20 +431,11 @@ void menu::print_copy()
 
 menu::~menu()
 {
-   menu_iterator iter2(root.children.front());
-   while (!iter2.end()) {
-      delete iter2.current;
-      iter2.next_node();
-   }
-}
-
-json menu::to_json() const
-{
    menu_iterator iter(root.children.front());
-   while (!iter.end())
-      iter.next_leaf_node();
-
-   return iter.get_json();
+   while (!iter.end()) {
+      delete iter.current;
+      iter.next_node();
+   }
 }
 
 }

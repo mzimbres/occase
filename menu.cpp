@@ -431,18 +431,22 @@ void menu::print_all()
    }
 }
 
+void print_menu_line(menu_node const& node)
+{
+   std::cout << std::left << std::setw(20) << node.name << " "
+             << node.code
+             << std::endl;
+}
+
 void menu::print_copy()
 {
+   // Traverses the menu in the same order as it would apear in the
+   // config file.
    std::deque<std::deque<menu_node*>> st;
    st.push_back(root.children);
    while (!std::empty(st)) {
       auto* node = st.back().back();
-      auto const n = std::size(node->code);
-      std::string const indent(n, ' ');
-      std::cout << indent
-                << node->name << " "
-                << node->code
-                << std::endl;
+      print_menu_line(*node);
       st.back().pop_back();
       if (std::empty(st.back()))
          st.pop_back();

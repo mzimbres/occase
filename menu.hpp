@@ -10,7 +10,7 @@ namespace rt
 {
 
 json gen_location_menu();
-json gen_sim_menu(int l);
+std::string gen_sim_menu(int l);
 
 // Puts all group hashes into a vector.
 std::vector<std::string> get_hashes(json menu);

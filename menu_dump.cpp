@@ -98,7 +98,8 @@ void op0(menu_op op)
 void op1(menu_op op)
 {
    auto const menu = gen_sim_menu(op.sim_length);
-   foo(menu, op);
+   std::cout << menu << std::endl;
+   //foo(menu, op);
 }
 
 json gen_location_menu1()

@@ -124,47 +124,21 @@ std::vector<json> gen_hash_patches(json menu)
    return patches;
 }
 
-std::vector<json> gen_sim_leaf_node(int size, std::string name_prefix)
+std::string gen_sim_menu(int l)
 {
-   std::vector<json> jv;
-   for (auto i = 0; i < size; ++i) {
-      auto const name = name_prefix + std::to_string(i);
-      jv.push_back({{"hash", ""}, {"sub", {}}, {"name", name}});
-   }
-
-   return jv;
-}
-
-json gen_sim_menu(int l)
-{
-   json j;
-   j["name"] = "Root";
-   j["sub_desc"] = "Root children";
-   j["menu_version"] = 1;
-
-   std::vector<json> js;
+   std::string const sep = "   ";
+   std::string str;
+   str += "Root\n";
    for (auto i = 0; i < l; ++i) {
-      auto const name1 = std::to_string(i);
-      std::vector<json> js1;
+      str += sep + "foo\n";
       for (auto j = 0; j < l; ++j) {
-         auto const name2 = name1 + "." + std::to_string(j);
-         json j_tmp2;
-         j_tmp2["name"] = name2;
-         j_tmp2["sub_desc"] = "Children";
-         j_tmp2["sub"] = gen_sim_leaf_node(l, name2 + ".");
-         js1.push_back(j_tmp2);
+         str += sep + sep + "bar\n";
+         for (auto j = 0; j < l; ++j)
+            str += sep + sep + sep + "foobar\n";
       }
-      json j_tmp;
-      j_tmp["name"] = name1;
-      j_tmp["sub_desc"] = "Children";
-      j_tmp["sub"] = js1;
-      js.push_back(j_tmp);
    }
 
-   j["sub"] = js;
-
-   auto const hash_patches = gen_hash_patches(j);
-   return j.patch(std::move(hash_patches));
+   return str;
 }
 
 json gen_location_menu()

@@ -34,10 +34,10 @@ public:
    menu& operator=(menu&&) = delete;
    menu(std::string const& str);
    ~menu();
-   void print_leaf();
+
    void dump();
    std::vector<std::string> get_codes() const;
-   json to_json() const;
+   void print_leaf();
 };
 
 }

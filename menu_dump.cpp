@@ -46,8 +46,12 @@ void bar(menu_op op)
 
    std::cout << menu_str << std::endl;
    menu m {menu_str};
-   m.print_leaf();
+
+   auto const codes = m.get_codes();
+   for (auto const& c : codes)
+      std::cout << c << std::endl;
    std::cout << std::endl;
+
    m.dump();
 
    for (auto const& o: m.get_codes())
@@ -64,10 +68,11 @@ void from_file(menu_op op)
    std::string menu_str {iter_type {ifs}, {}};
 
    menu m {menu_str};
-   m.print_leaf();
+
    for (auto const& o: m.get_codes())
       std::cout << o << "\n";
    std::cout << std::endl;
+
    m.dump();
 }
 

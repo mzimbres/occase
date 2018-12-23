@@ -76,6 +76,57 @@ void from_file(menu_op op)
    m.dump();
 }
 
+enum fipe_fields
+{ id, tipo, id_modelo_ano, fipe_codigo, id_marca, marca, id_modelo, modelo, ano, name, combustivel, preco
+};
+
+void fipe_csv(menu_op op)
+{
+   std::ifstream ifs(op.file);
+
+   std::vector<std::vector<std::string>> table;
+   std::string line;
+   while (std::getline(ifs, line)) {
+      std::string item;
+      std::istringstream iss(line);
+      std::vector<std::string> fields;
+      while (std::getline(iss, item, ';')) {
+         item.erase( std::remove(std::begin(item), std::end(item), '"')
+                   , std::end(item));
+         fields.push_back(item);
+      }
+
+      assert(std::size(fields) == 12);
+
+      if (fields[fipe_fields::tipo] == "1")
+         table.push_back(std::move(fields));
+   }
+
+   std::cout << "Table size: " << std::size(table) << std::endl;
+
+   auto const comp_marca = [](auto const& m1, auto const& m2)
+   { return m1.at(fipe_fields::marca) < m2.at(fipe_fields::marca); };
+
+   std::sort(std::begin(table), std::end(table), comp_marca);
+
+   //for (auto const& o : table)
+   //   std::cout << o.at(fipe_fields::marca) << " ===> " << o.at(fipe_fields::modelo) << std::endl;
+
+   auto begin = std::begin(table);
+   auto n = 0;
+   while (begin != std::end(table)) {
+      auto const m1 = begin->at(fipe_fields::marca);
+      auto const comp1 = [&m1](auto const& m2)
+      { return m1 == m2.at(fipe_fields::marca); };
+      auto old_begin = begin;
+      begin = std::partition_point(begin, std::end(table), comp1);
+      std::cout << m1 << ": " <<std::distance(old_begin, begin) << std::endl;
+      ++n;
+   }
+
+   std::cout << "Number of partitions: " << n << std::endl;
+}
+
 void foo(json menu, menu_op op)
 {
    if (op.hash) {
@@ -164,6 +215,7 @@ int main(int argc, char* argv[])
         " 1: Simulated.\n"
         " 2: New menu.\n"
         " 3: From file.\n"
+        " 4: CSV Fipe file.\n"
       )
       ("indentation,i"
       , po::value<int>(&op.indentation)->default_value(-1)
@@ -172,6 +224,9 @@ int main(int argc, char* argv[])
       , po::value<int>(&op.sim_length)->default_value(2)
       , "Length of simulated children.")
       ("hash,a", "Output channel codes only.")
+      ("fipe-csv-file,r"
+      , po::value<std::string>(&op.file)
+      , "Fipe CSV file containing all vehicles.")
    ;
 
    po::variables_map vm;        
@@ -190,6 +245,7 @@ int main(int argc, char* argv[])
       case 1: op1(op); break;
       case 2: bar(op); break;
       case 3: from_file(op); break;
+      case 4: fipe_csv(op); break;
       default:
          op0(op);
    }

@@ -77,8 +77,62 @@ void from_file(menu_op op)
 }
 
 enum fipe_fields
-{ id, tipo, id_modelo_ano, fipe_codigo, id_marca, marca, id_modelo, modelo, ano, name, combustivel, preco
+{ id, tipo, id_modelo_ano, fipe_codigo, id_marca, marca
+, id_modelo, modelo, ano, name, combustivel, preco
 };
+
+struct comp_helper {
+   std::string s;
+   fipe_fields f;
+   auto operator()(std::vector<std::string> const& v) const
+   {
+      return s == v.at(f);
+   }
+};
+
+struct line_comp {
+   fipe_fields f;
+   auto operator()( std::vector<std::string> const& v1
+                  , std::vector<std::string> const& v2) const
+   { return v1.at(f) < v2.at(f); };
+};
+
+struct helper {
+   using iter_type = std::vector<std::vector<std::string>>::iterator;
+   iter_type begin;
+   iter_type end;
+   fipe_fields f;
+};
+
+template <class Iter>
+void print_partitions(Iter begin, Iter end, fipe_fields f)
+{
+   std::stack<helper> st;
+   st.push({begin, end, fipe_fields::marca});
+
+   while (!std::empty(st)) {
+      auto const h = st.top();
+      st.pop();
+      std::sort(h.begin, h.end, line_comp {h.f});
+
+      auto tot_partitions = 0;
+      auto tor_items = 0;
+      while (begin != end) {
+         auto old_begin = begin;
+         begin = std::partition_point( begin, end
+                                     , comp_helper {begin->at(h.f), h.f});
+
+         auto const k = std::distance(old_begin, begin);
+         tor_items += k;
+         ++tot_partitions;
+         std::cout << old_begin->at(f) << ": " << k << std::endl;
+      }
+
+      std::cout << std::endl;
+      std::cout << "Number of models: " << tor_items << std::endl;
+      std::cout << "Number of partitions: " << tot_partitions << std::endl;
+   }
+}
 
 void fipe_csv(menu_op op)
 {
@@ -104,27 +158,11 @@ void fipe_csv(menu_op op)
 
    std::cout << "Table size: " << std::size(table) << std::endl;
 
-   auto const comp_marca = [](auto const& m1, auto const& m2)
-   { return m1.at(fipe_fields::marca) < m2.at(fipe_fields::marca); };
-
-   std::sort(std::begin(table), std::end(table), comp_marca);
-
    //for (auto const& o : table)
    //   std::cout << o.at(fipe_fields::marca) << " ===> " << o.at(fipe_fields::modelo) << std::endl;
 
-   auto begin = std::begin(table);
-   auto n = 0;
-   while (begin != std::end(table)) {
-      auto const m1 = begin->at(fipe_fields::marca);
-      auto const comp1 = [&m1](auto const& m2)
-      { return m1 == m2.at(fipe_fields::marca); };
-      auto old_begin = begin;
-      begin = std::partition_point(begin, std::end(table), comp1);
-      std::cout << m1 << ": " <<std::distance(old_begin, begin) << std::endl;
-      ++n;
-   }
-
-   std::cout << "Number of partitions: " << n << std::endl;
+   print_partitions( std::begin(table), std::end(table)
+                   , fipe_fields::marca);
 }
 
 void foo(json menu, menu_op op)

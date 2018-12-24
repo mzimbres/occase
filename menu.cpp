@@ -183,6 +183,19 @@ json gen_location_menu()
    return j.patch(std::move(hash_patches));
 }
 
+auto find_depth(std::string& line, int sep)
+{
+   auto const depth = line.find_first_not_of(" ");
+   if (depth == std::string::npos)
+      throw std::runtime_error("Invalid line.");
+
+   if (depth % sep != 0)
+      throw std::runtime_error("Invalid indentation.");
+
+   line.erase(0, depth);
+   return depth;
+}
+
 void build_menu_tree(menu_node& root, std::string const& menu_str)
 {
    // TODO: Make it exception safe.
@@ -209,18 +222,10 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
          continue;
       }
 
-      auto const pos = line.find_first_not_of(" ");
-      if (pos == std::string::npos)
-         throw std::runtime_error("Invalid line.");
-
-      if (pos % sep != 0)
-         throw std::runtime_error("Invalid indentation.");
-
-      line.erase(0, pos);
-      auto const dist = pos;
+      auto const depth = find_depth(line, sep);
       auto const last_dist = sep * last_depth;
-      if (dist > last_dist) {
-         if (last_dist + sep != dist)
+      if (depth > last_dist) {
+         if (last_dist + sep != depth)
             throw std::runtime_error("Forward Jump not allowed.");
 
          // We found the child of the last node pushed on the stack.
@@ -228,10 +233,10 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
          stack.top()->children.push_front(p);
          stack.push(p);
          ++last_depth;
-      } else if (dist < last_dist) {
+      } else if (depth < last_dist) {
          // We do not know how many indentations back we jumped. Let us
          // calculate this.
-         auto const new_depth = dist / sep;
+         auto const new_depth = depth / sep;
          // Now we have to pop that number of nodes from the stack
          // until we get to the node that is should be the parent of
          // the current line.

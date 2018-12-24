@@ -45,15 +45,18 @@ void bar(menu_op op)
    "   Bahia\n"
    ;
 
-   std::cout << menu_str << std::endl;
+   std::cout << menu_str << "\n" << std::endl;
    menu m {menu_str};
 
    auto const codes = m.get_codes();
    for (auto const& c : codes)
       std::cout << c << std::endl;
-   std::cout << std::endl;
+
+   std::cout << "\n" << std::endl;
 
    m.dump();
+
+   std::cout << "\n" << std::endl;
 
    for (auto const& o: m.get_codes())
       std::cout << o << "\n";
@@ -95,58 +98,10 @@ void op0(menu_op op)
    foo(menu, op);
 }
 
-void op1(menu_op op)
+void gen_sim_menu(menu_op op)
 {
    auto const menu = gen_sim_menu(op.sim_length);
    std::cout << menu << std::endl;
-   //foo(menu, op);
-}
-
-json gen_location_menu1()
-{
-   std::vector<json> j3 =
-   { {{"hash", ""}, {"name", "Atibaia"},   {"sub", {}}}
-   , {{"hash", ""}, {"name", "Sao Paulo"}, {"sub", {}}}
-   };
-
-   json j;
-   j["name"] = "SP";
-   j["sub_desc"] = "Cidades";
-   j["sub"] = j3;
-
-   return j;
-}
-
-json gen_location_menu3()
-{
-   std::vector<json> j1 =
-   { {{"hash", ""}, {"sub", {}}, {"name", "Centro"}}};
-
-   std::vector<json> j2 =
-   { {{"hash", ""}, {"sub", {}}, {"name", "Vila Leopoldina"}, } };
-
-   std::vector<json> j3 =
-   { {{"name", "Atibaia"},  {"sub_desc", "Bairros"}, {"sub", j1}}
-   , {{"name", "Sao Paulo"},{"sub_desc", "Bairros"}, {"sub", j2}}
-   };
-
-   json j;
-   j["name"] = "SP";
-   j["sub_desc"] = "Cidades";
-   j["sub"] = j3;
-
-   return j;
-}
-
-json gen_location_menu0()
-{
-   json j;
-   j["name"] = "SP";
-   j["sub_desc"] = "Cidades";
-   j["sub"] = {};
-   j["hash"] = "";
-
-   return j;
 }
 
 namespace po = boost::program_options;
@@ -160,7 +115,6 @@ int main(int argc, char* argv[])
       ("menu,m"
       , po::value<int>(&op.menu)->default_value(0)
       , "Choose the menu. Available options:\n"
-        " 0: Atibaia - Sao Paulo.\n"
         " 1: Simulated.\n"
         " 2: New menu.\n"
         " 3: From file.\n"
@@ -193,7 +147,7 @@ int main(int argc, char* argv[])
       op.hash = true;
 
    switch (op.menu) {
-      case 1: op1(op); break;
+      case 1: gen_sim_menu(op); break;
       case 2: bar(op); break;
       case 3: from_file(op); break;
       case 4:

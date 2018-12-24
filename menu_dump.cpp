@@ -107,30 +107,36 @@ struct helper {
 template <class Iter>
 void print_partitions(Iter begin, Iter end, fipe_fields f)
 {
-   std::stack<helper> st;
-   st.push({begin, end, fipe_fields::marca});
+   std::deque<std::deque<helper>> st;
+   st.push_back({{begin, end, fipe_fields::marca}});
 
    while (!std::empty(st)) {
-      auto const h = st.top();
-      st.pop();
+      auto h = st.back().back();
+      st.back().pop_back();
+      if (std::empty(st.back()))
+         st.pop_back();
+
       std::sort(h.begin, h.end, line_comp {h.f});
 
-      auto tot_partitions = 0;
-      auto tor_items = 0;
-      while (begin != end) {
-         auto old_begin = begin;
-         begin = std::partition_point( begin, end
-                                     , comp_helper {begin->at(h.f), h.f});
+      std::cout << h.begin->at(fipe_fields::marca) << " ===> " << h.begin->at(h.f) << std::endl;
 
-         auto const k = std::distance(old_begin, begin);
-         tor_items += k;
-         ++tot_partitions;
-         std::cout << old_begin->at(f) << ": " << k << std::endl;
+      if (h.f == fipe_fields::modelo)
+         continue;
+
+      std::deque<helper> foo;
+      Iter iter = h.begin;
+      while (iter != h.end) {
+         auto point = std::partition_point( iter, h.end
+                                          , comp_helper
+                                            {iter->at(h.f), h.f});
+         auto const next = h.f == fipe_fields::marca
+                         ? fipe_fields::name : fipe_fields::modelo;
+         foo.push_front({iter, point, next});
+         //std::cout << "Partition size: " << std::distance() << std::endl;
+         iter = point;
       }
 
-      std::cout << std::endl;
-      std::cout << "Number of models: " << tor_items << std::endl;
-      std::cout << "Number of partitions: " << tot_partitions << std::endl;
+      st.push_back(foo);
    }
 }
 

@@ -76,7 +76,7 @@ void from_file(menu_op op)
       std::cout << o << "\n";
    std::cout << std::endl;
 
-   m.dump();
+   //m.dump();
 }
 
 void foo(json menu, menu_op op)
@@ -131,7 +131,7 @@ int main(int argc, char* argv[])
       ("hash,a", "Output channel codes only.")
       ("fipe-csv-file,r"
       , po::value<std::string>(&op.file)
-      , "Fipe CSV file containing all vehicles.")
+      , "The file containing the menu.")
    ;
 
    po::variables_map vm;        

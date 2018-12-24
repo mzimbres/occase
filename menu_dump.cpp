@@ -104,11 +104,32 @@ struct helper {
    fipe_fields f;
 };
 
+auto calc_indent(fipe_fields f)
+{
+   if (f == fipe_fields::tipo)   return 0;
+   if (f == fipe_fields::marca)  return 1;
+   if (f == fipe_fields::modelo) return 2;
+   if (f == fipe_fields::ano)    return 3;
+   if (f == fipe_fields::preco)  return 4;
+   return 0;
+}
+
+auto next_field(fipe_fields f)
+{
+   if (f == fipe_fields::tipo)   return fipe_fields::marca;
+   if (f == fipe_fields::marca)  return fipe_fields::modelo;
+   if (f == fipe_fields::modelo) return fipe_fields::ano;
+   if (f == fipe_fields::ano) return fipe_fields::preco;
+   return fipe_fields::preco;
+}
+
 template <class Iter>
 void print_partitions(Iter begin, Iter end, fipe_fields f)
 {
    std::deque<std::deque<helper>> st;
-   st.push_back({{begin, end, fipe_fields::marca}});
+   st.push_back({{begin, end, fipe_fields::tipo}});
+
+   std::cout << "Marcas" << std::endl;
 
    while (!std::empty(st)) {
       auto h = st.back().back();
@@ -116,11 +137,14 @@ void print_partitions(Iter begin, Iter end, fipe_fields f)
       if (std::empty(st.back()))
          st.pop_back();
 
-      std::sort(h.begin, h.end, line_comp {h.f});
+      auto const next = next_field(h.f);
+      std::sort(h.begin, h.end, line_comp {next});
 
-      std::cout << h.begin->at(fipe_fields::marca) << " ===> " << h.begin->at(h.f) << std::endl;
+      auto const n = calc_indent(next);
+      std::string indentation(n * 3, ' ');
+      std::cout << indentation << h.begin->at(next) << std::endl;
 
-      if (h.f == fipe_fields::modelo)
+      if (next == fipe_fields::preco)
          continue;
 
       std::deque<helper> foo;
@@ -128,11 +152,8 @@ void print_partitions(Iter begin, Iter end, fipe_fields f)
       while (iter != h.end) {
          auto point = std::partition_point( iter, h.end
                                           , comp_helper
-                                            {iter->at(h.f), h.f});
-         auto const next = h.f == fipe_fields::marca
-                         ? fipe_fields::name : fipe_fields::modelo;
+                                            {iter->at(next), next});
          foo.push_front({iter, point, next});
-         //std::cout << "Partition size: " << std::distance() << std::endl;
          iter = point;
       }
 

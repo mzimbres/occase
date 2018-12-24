@@ -58,7 +58,6 @@ void bar(menu_op op)
    for (auto const& o: m.get_codes())
       std::cout << o << "\n";
    std::cout << std::endl;
-
 }
 
 void from_file(menu_op op)
@@ -169,7 +168,9 @@ int main(int argc, char* argv[])
       )
       ("indentation,i"
       , po::value<int>(&op.indentation)->default_value(-1)
-      , "Indentation of the menu output.")
+      , "Indentation of the menu output. If -1 will output the"
+        " indentation size instead of spaces."
+      )
       ("sim-length,l"
       , po::value<int>(&op.sim_length)->default_value(2)
       , "Length of simulated children.")
@@ -197,7 +198,7 @@ int main(int argc, char* argv[])
       case 3: from_file(op); break;
       case 4:
       {
-         rt::fipe_dump({op.file, "1"});
+         rt::fipe_dump({op.file, "1", op.indentation});
       }
       break;
       default:

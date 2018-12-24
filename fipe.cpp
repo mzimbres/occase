@@ -57,6 +57,19 @@ auto next_field(table_field field)
    return table_field::fipe_codigo;
 }
 
+auto get_indent_str(table_field f, int i)
+{
+   auto const n = calc_indent(f);
+
+   if (i == -1) {
+      auto str = std::to_string(n);
+      str += " ";
+      return str;
+   }
+
+   return std::string(n * i, ' ');
+}
+
 template <class Iter>
 void print_partitions( Iter begin, Iter end, table_field field
                      , int indent_size)
@@ -70,9 +83,9 @@ void print_partitions( Iter begin, Iter end, table_field field
       if (std::empty(st.back()))
          st.pop_back();
 
-      auto const n = calc_indent(r.field);
-      std::string indentation(n * indent_size, ' ');
-      std::cout << indentation << r.begin->at(r.field) << std::endl;
+      std::cout << get_indent_str(r.field, indent_size)
+                << r.begin->at(r.field)
+                << std::endl;
 
       auto const next = next_field(r.field);
       std::sort(r.begin, r.end, line_comp {next});
@@ -117,10 +130,8 @@ void fipe_dump(fipe_op const& op)
          table.push_back(std::move(fields));
    }
 
-   std::cout << "Table size: " << std::size(table) << std::endl;
-
    print_partitions( std::begin(table), std::end(table)
-                   , table_field::marca, 3);
+                   , table_field::marca, op.indentation);
 }
 
 }

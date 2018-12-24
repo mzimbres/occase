@@ -183,7 +183,7 @@ json gen_location_menu()
    return j.patch(std::move(hash_patches));
 }
 
-auto find_depth(std::string& line, int sep)
+auto remove_indent(std::string& line, int sep)
 {
    auto const depth = line.find_first_not_of(" ");
    if (depth == std::string::npos)
@@ -193,13 +193,12 @@ auto find_depth(std::string& line, int sep)
       throw std::runtime_error("Invalid indentation.");
 
    line.erase(0, depth);
-   return depth;
+   return depth / sep;
 }
 
 void build_menu_tree(menu_node& root, std::string const& menu_str)
 {
    // TODO: Make it exception safe.
-   constexpr auto sep = 3;
    std::stringstream ss(menu_str);
    std::string line;
    std::stack<menu_node*> stack;
@@ -222,10 +221,9 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
          continue;
       }
 
-      auto const depth = find_depth(line, sep);
-      auto const last_dist = sep * last_depth;
-      if (depth > last_dist) {
-         if (last_dist + sep != depth)
+      auto const depth = remove_indent(line, 3);
+      if (depth > last_depth) {
+         if (last_depth + 1 != depth)
             throw std::runtime_error("Forward Jump not allowed.");
 
          // We found the child of the last node pushed on the stack.
@@ -233,14 +231,11 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
          stack.top()->children.push_front(p);
          stack.push(p);
          ++last_depth;
-      } else if (depth < last_dist) {
-         // We do not know how many indentations back we jumped. Let us
-         // calculate this.
-         auto const new_depth = depth / sep;
+      } else if (depth < last_depth) {
          // Now we have to pop that number of nodes from the stack
          // until we get to the node that is should be the parent of
          // the current line.
-         auto const delta_depth = last_depth - new_depth;
+         auto const delta_depth = last_depth - depth;
          for (unsigned i = 0; i < delta_depth; ++i)
             stack.pop();
 
@@ -251,7 +246,7 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
          stack.top()->children.push_front(p);
          stack.push(p);
 
-         last_depth = new_depth;
+         last_depth = depth;
       } else {
          stack.pop();
          auto* p = new menu_node {line, {}};

@@ -10,6 +10,7 @@
 #include <boost/program_options/variables_map.hpp>
 
 #include "menu.hpp"
+#include "fipe.hpp"
 
 using namespace rt;
 
@@ -74,124 +75,6 @@ void from_file(menu_op op)
    std::cout << std::endl;
 
    m.dump();
-}
-
-enum fipe_fields
-{ id, tipo, id_modelo_ano, fipe_codigo, id_marca, marca
-, id_modelo, modelo, ano, name, combustivel, preco
-};
-
-struct comp_helper {
-   std::string s;
-   fipe_fields f;
-   auto operator()(std::vector<std::string> const& v) const
-   {
-      return s == v.at(f);
-   }
-};
-
-struct line_comp {
-   fipe_fields f;
-   auto operator()( std::vector<std::string> const& v1
-                  , std::vector<std::string> const& v2) const
-   { return v1.at(f) < v2.at(f); };
-};
-
-struct helper {
-   using iter_type = std::vector<std::vector<std::string>>::iterator;
-   iter_type begin;
-   iter_type end;
-   fipe_fields f;
-};
-
-auto calc_indent(fipe_fields f)
-{
-   if (f == fipe_fields::tipo)        return 0;
-   if (f == fipe_fields::marca)       return 1;
-   if (f == fipe_fields::modelo)      return 2;
-   if (f == fipe_fields::ano)         return 3;
-   if (f == fipe_fields::combustivel) return 4;
-   if (f == fipe_fields::preco)       return 5;
-   return 0;
-}
-
-auto next_field(fipe_fields f)
-{
-   if (f == fipe_fields::tipo)        return fipe_fields::marca;
-   if (f == fipe_fields::marca)       return fipe_fields::modelo;
-   if (f == fipe_fields::modelo)      return fipe_fields::ano;
-   if (f == fipe_fields::ano)         return fipe_fields::combustivel;
-   if (f == fipe_fields::combustivel) return fipe_fields::preco;
-   return fipe_fields::fipe_codigo;
-}
-
-template <class Iter>
-void print_partitions(Iter begin, Iter end, fipe_fields f)
-{
-   std::deque<std::deque<helper>> st;
-   st.push_back({{begin, end, fipe_fields::tipo}});
-
-   std::cout << "Marcas" << std::endl;
-
-   while (!std::empty(st)) {
-      auto h = st.back().back();
-      st.back().pop_back();
-      if (std::empty(st.back()))
-         st.pop_back();
-
-      auto const n = calc_indent(h.f);
-      std::string indentation(n * 3, ' ');
-      std::cout << indentation << h.begin->at(h.f) << std::endl;
-
-      auto const next = next_field(h.f);
-      std::sort(h.begin, h.end, line_comp {next});
-
-      if (next == fipe_fields::fipe_codigo)
-         continue;
-
-      std::deque<helper> foo;
-      Iter iter = h.begin;
-      while (iter != h.end) {
-         auto point = std::partition_point( iter, h.end
-                                          , comp_helper
-                                            {iter->at(next), next});
-         foo.push_front({iter, point, next});
-         iter = point;
-      }
-
-      st.push_back(foo);
-   }
-}
-
-void fipe_csv(menu_op op)
-{
-   std::ifstream ifs(op.file);
-
-   std::vector<std::vector<std::string>> table;
-   std::string line;
-   while (std::getline(ifs, line)) {
-      std::string item;
-      std::istringstream iss(line);
-      std::vector<std::string> fields;
-      while (std::getline(iss, item, ';')) {
-         item.erase( std::remove(std::begin(item), std::end(item), '"')
-                   , std::end(item));
-         fields.push_back(item);
-      }
-
-      assert(std::size(fields) == 12);
-
-      if (fields[fipe_fields::tipo] == "1")
-         table.push_back(std::move(fields));
-   }
-
-   std::cout << "Table size: " << std::size(table) << std::endl;
-
-   //for (auto const& o : table)
-   //   std::cout << o.at(fipe_fields::marca) << " ===> " << o.at(fipe_fields::modelo) << std::endl;
-
-   print_partitions( std::begin(table), std::end(table)
-                   , fipe_fields::marca);
 }
 
 void foo(json menu, menu_op op)
@@ -312,7 +195,11 @@ int main(int argc, char* argv[])
       case 1: op1(op); break;
       case 2: bar(op); break;
       case 3: from_file(op); break;
-      case 4: fipe_csv(op); break;
+      case 4:
+      {
+         rt::fipe_dump({op.file, "1"});
+      }
+      break;
       default:
          op0(op);
    }

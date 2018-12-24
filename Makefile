@@ -36,9 +36,12 @@ aedis_objs =
 aedis_objs += redis_session.o
 aedis_objs += resp.o
 
+menu_dump_objs =
+menu_dump_objs += fipe.o
+
 exe_objs = $(addsuffix .o, $(exes))
 
-lib_objs = $(server_objs) $(client_objs) $(aedis_objs) $(common_objs)
+lib_objs = $(server_objs) $(client_objs) $(aedis_objs) $(menu_dump_objs) $(common_objs)
 
 srcs =
 srcs += $(lib_objs:.o=.cpp)
@@ -72,7 +75,7 @@ reg_users_tests: % : %.o $(client_objs) $(common_objs)
 server: % : %.o $(server_objs) $(common_objs) $(aedis_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(boost_libs)
 
-menu_dump: % : %.o $(common_objs)
+menu_dump: % : %.o $(menu_dump_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(boost_libs)
 
 aedis: % : %.o $(aedis_objs)
@@ -81,13 +84,6 @@ aedis: % : %.o $(aedis_objs)
 .PHONY: clean
 clean:
 	rm -f $(exes) $(exe_objs) $(lib_objs) $(DIST_NAME).tar.gz Makefile.dep
-
-#$(DIST_NAME).tar.gz: $(srcs) $(aux)
-#	rm -f $@
-#	mkdir $(DIST_NAME)
-#	ln $^ $(DIST_NAME)
-#	tar chzf $@ $(DIST_NAME)
-#	rm -rf $(DIST_NAME)
 
 $(DIST_NAME).tar.gz: $(srcs) $(aux)
 	git archive --format=tar.gz --prefix=sellit/ HEAD > sellit.tar.gz

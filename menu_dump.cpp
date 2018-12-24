@@ -106,21 +106,23 @@ struct helper {
 
 auto calc_indent(fipe_fields f)
 {
-   if (f == fipe_fields::tipo)   return 0;
-   if (f == fipe_fields::marca)  return 1;
-   if (f == fipe_fields::modelo) return 2;
-   if (f == fipe_fields::ano)    return 3;
-   if (f == fipe_fields::preco)  return 4;
+   if (f == fipe_fields::tipo)        return 0;
+   if (f == fipe_fields::marca)       return 1;
+   if (f == fipe_fields::modelo)      return 2;
+   if (f == fipe_fields::ano)         return 3;
+   if (f == fipe_fields::combustivel) return 4;
+   if (f == fipe_fields::preco)       return 5;
    return 0;
 }
 
 auto next_field(fipe_fields f)
 {
-   if (f == fipe_fields::tipo)   return fipe_fields::marca;
-   if (f == fipe_fields::marca)  return fipe_fields::modelo;
-   if (f == fipe_fields::modelo) return fipe_fields::ano;
-   if (f == fipe_fields::ano) return fipe_fields::preco;
-   return fipe_fields::preco;
+   if (f == fipe_fields::tipo)        return fipe_fields::marca;
+   if (f == fipe_fields::marca)       return fipe_fields::modelo;
+   if (f == fipe_fields::modelo)      return fipe_fields::ano;
+   if (f == fipe_fields::ano)         return fipe_fields::combustivel;
+   if (f == fipe_fields::combustivel) return fipe_fields::preco;
+   return fipe_fields::fipe_codigo;
 }
 
 template <class Iter>
@@ -137,14 +139,14 @@ void print_partitions(Iter begin, Iter end, fipe_fields f)
       if (std::empty(st.back()))
          st.pop_back();
 
+      auto const n = calc_indent(h.f);
+      std::string indentation(n * 3, ' ');
+      std::cout << indentation << h.begin->at(h.f) << std::endl;
+
       auto const next = next_field(h.f);
       std::sort(h.begin, h.end, line_comp {next});
 
-      auto const n = calc_indent(next);
-      std::string indentation(n * 3, ' ');
-      std::cout << indentation << h.begin->at(next) << std::endl;
-
-      if (next == fipe_fields::preco)
+      if (next == fipe_fields::fipe_codigo)
          continue;
 
       std::deque<helper> foo;

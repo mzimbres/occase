@@ -48,12 +48,6 @@ void foo(json menu, menu_op op)
    std::cout << menu.dump(op.indentation) << std::endl;
 }
 
-void gen_sim_menu(menu_op op)
-{
-   auto const menu = gen_sim_menu(op.sim_length);
-   std::cout << menu << std::endl;
-}
-
 namespace po = boost::program_options;
 
 int main(int argc, char* argv[])
@@ -65,9 +59,8 @@ int main(int argc, char* argv[])
       ("menu,m"
       , po::value<int>(&op.menu)->default_value(0)
       , "Choose the menu. Available options:\n"
-        " 1: Simulated.\n"
-        " 2: From file.\n"
-        " 3: CSV Fipe file.\n"
+        " 1: From file.\n"
+        " 2: CSV Fipe file.\n"
       )
       ("indentation,i"
       , po::value<int>(&op.indentation)->default_value(-1)
@@ -89,7 +82,7 @@ int main(int argc, char* argv[])
       )
       ("file,f"
       , po::value<std::string>(&op.file)
-      , "The file containing the menu.")
+      , "The file containing the menu. If empty, menu will be simulated.")
       ("separator,s"
       , po::value<std::string>(&op.separator)->default_value("\n")
       , "Separator used in the output file. works with option -i -1 only.")
@@ -108,14 +101,14 @@ int main(int argc, char* argv[])
       op.hash = true;
 
    switch (op.menu) {
-      case 1: gen_sim_menu(op); break;
-      case 2:
+      case 1:
       {
          using iter_type = std::istreambuf_iterator<char>;
 
          if (std::empty(op.file)) {
-            std::cerr << "Empty file. Leaving." << std::endl;
-            return EXIT_FAILURE;
+            auto const menu_str = gen_sim_menu(op.sim_length);
+            from_file(menu_str);
+            return 0;
          }
 
          std::ifstream ifs(op.file);
@@ -123,13 +116,13 @@ int main(int argc, char* argv[])
          from_file(menu_str);
       }
       break;
-      case 3:
+      case 2:
       {
          rt::fipe_dump({op.file, "1", op.indentation});
       }
       break;
       default:
-      std::cerr << "Invalid option." << std::endl;
+         std::cerr << "Invalid option." << std::endl;
    }
 
    return 0;

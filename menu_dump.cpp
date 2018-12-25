@@ -19,17 +19,13 @@ struct menu_op {
    int indentation;
    int sim_length;
    bool hash = false;
-   std::string file {"menus/cidades"};
+   std::string file;
    std::string format;
+   std::string separator;
 };
 
-void from_file(menu_op op)
+void from_file(std::string const& menu_str)
 {
-   std::ifstream ifs(op.file);
-
-   using iter_type = std::istreambuf_iterator<char>;
-   std::string menu_str {iter_type {ifs}, {}};
-
    menu m {menu_str};
 
    for (auto const& o: m.get_codes())
@@ -50,12 +46,6 @@ void foo(json menu, menu_op op)
    }
 
    std::cout << menu.dump(op.indentation) << std::endl;
-}
-
-void op0(menu_op op)
-{
-   auto const menu = gen_location_menu();
-   foo(menu, op);
 }
 
 void gen_sim_menu(menu_op op)
@@ -100,6 +90,9 @@ int main(int argc, char* argv[])
       ("file,f"
       , po::value<std::string>(&op.file)
       , "The file containing the menu.")
+      ("separator,s"
+      , po::value<std::string>(&op.separator)->default_value("\n")
+      , "Separator used in the output file. works with option -i -1 only.")
    ;
 
    po::variables_map vm;        
@@ -116,14 +109,27 @@ int main(int argc, char* argv[])
 
    switch (op.menu) {
       case 1: gen_sim_menu(op); break;
-      case 2: from_file(op); break;
+      case 2:
+      {
+         using iter_type = std::istreambuf_iterator<char>;
+
+         if (std::empty(op.file)) {
+            std::cerr << "Empty file. Leaving." << std::endl;
+            return EXIT_FAILURE;
+         }
+
+         std::ifstream ifs(op.file);
+         std::string menu_str {iter_type {ifs}, {}};
+         from_file(menu_str);
+      }
+      break;
       case 3:
       {
          rt::fipe_dump({op.file, "1", op.indentation});
       }
       break;
       default:
-         op0(op);
+      std::cerr << "Invalid option." << std::endl;
    }
 
    return 0;

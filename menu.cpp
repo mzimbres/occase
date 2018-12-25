@@ -141,48 +141,6 @@ std::string gen_sim_menu(int l)
    return str;
 }
 
-json gen_location_menu()
-{
-   std::vector<json> j1 =
-   { {{"hash", ""}, {"sub", {}}, {"name", "Centro"}               }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Alvinópolis"}          }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Jardim Siriema"}       }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Vila Santista"}        }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Parque dos Coqueiros"} }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Terceiro Centenário"}  }
-   };
-
-   std::vector<json> j2 =
-   { {{"hash", ""}, {"sub", {}}, {"name", "Vila Leopoldina"}, }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Lapa"},            }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Pinheiros"},       }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Moema"},           }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Jardim Paulista"}, }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Mooca"},           }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Tatuapé"},         }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Penha"},           }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Ipiranga"},        }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Vila Madalena"},   }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Vila Mariana"},    }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Vila Formosa"},    }
-   , {{"hash", ""}, {"sub", {}}, {"name", "Bixiga"},          }
-   };
-
-   std::vector<json> j3 =
-   { {{"name", "Atibaia"},  {"sub_desc", "Bairro"}, {"sub", j1}}
-   , {{"name", "Sao Paulo"},{"sub_desc", "Bairro"}, {"sub", j2}}
-   };
-
-   json j;
-   j["name"] = "SP";
-   j["sub_desc"] = "Cidade";
-   j["menu_version"] = 1;
-   j["sub"] = j3;
-
-   auto const hash_patches = gen_hash_patches(j);
-   return j.patch(std::move(hash_patches));
-}
-
 auto remove_indent(std::string& line, int sep)
 {
    auto const depth = line.find_first_not_of(" ");

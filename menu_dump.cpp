@@ -94,11 +94,18 @@ int main(int argc, char* argv[])
    if (vm.count("hash"))
       op.hash = true;
 
+   auto const menu_str = get_file_as_str(op);
+
    switch (op.input_format) {
       case 1:
+      {
+         menu m {menu_str};
+
+         m.dump();
+      }
+      break;
       case 2:
       {
-         auto const menu_str = get_file_as_str(op);
          from_file(menu_str);
       }
       break;

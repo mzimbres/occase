@@ -196,7 +196,7 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
    // TODO: Make it exception safe.
 
    auto const max_depth = get_max_depth(menu_str, 3);
-   std::cout << "Max depth: " << max_depth << std::endl;
+   //std::cout << "Max depth: " << max_depth << std::endl;
    if (max_depth == 0)
       return;
 
@@ -360,10 +360,18 @@ std::vector<std::string> menu::get_leaf_codes() const
    return ret;
 }
 
-void print_menu_line(menu_node const& node)
+void print_with_indent(menu_node const& node)
 {
-   std::cout << std::left << std::setw(20) << node.name << " "
-             << node.code
+   auto const n =
+      std::count( std::begin(node.code)
+                , std::end(node.code)
+                , '.');
+
+   std::string indent(std::size(node.code) - n, ' ');
+   std::cout << indent
+             << node.name
+             //<< " "
+             //<< node.code
              << std::endl;
 }
 
@@ -375,7 +383,7 @@ void menu::dump()
    st.push_back(root.children);
    while (!std::empty(st)) {
       auto* node = st.back().back();
-      print_menu_line(*node);
+      print_with_indent(*node);
       st.back().pop_back();
       if (std::empty(st.back()))
          st.pop_back();

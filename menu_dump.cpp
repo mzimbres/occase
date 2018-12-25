@@ -22,47 +22,6 @@ struct menu_op {
    std::string file {"menus/cidades"};
 };
 
-void bar(menu_op op)
-{
-   std::string menu_str =
-   "Brasil\n"
-   "   Sao Paulo\n"
-   "      Atibaia\n"
-   "         Vila Santista\n"
-   "         Jardim Siriema\n"
-   "      Braganca\n"
-   "      Piracaia\n"
-   "      Sao Paulo\n"
-   "         Mooca\n"
-   "         Bixiga\n"
-   "         Vila Leopoldina\n"
-   "   Rio de Janeiro\n"
-   "      Teresópolis\n"
-   "      Niteroi\n"
-   "   Amazonas\n"
-   "      Manaus\n"
-   "   Paraiba\n"
-   "   Bahia\n"
-   ;
-
-   std::cout << menu_str << "\n" << std::endl;
-   menu m {menu_str};
-
-   auto const codes = m.get_codes();
-   for (auto const& c : codes)
-      std::cout << c << std::endl;
-
-   std::cout << "\n" << std::endl;
-
-   m.dump();
-
-   std::cout << "\n" << std::endl;
-
-   for (auto const& o: m.get_codes())
-      std::cout << o << "\n";
-   std::cout << std::endl;
-}
-
 void from_file(menu_op op)
 {
    std::ifstream ifs(op.file);
@@ -116,9 +75,8 @@ int main(int argc, char* argv[])
       , po::value<int>(&op.menu)->default_value(0)
       , "Choose the menu. Available options:\n"
         " 1: Simulated.\n"
-        " 2: New menu.\n"
-        " 3: From file.\n"
-        " 4: CSV Fipe file.\n"
+        " 2: From file.\n"
+        " 3: CSV Fipe file.\n"
       )
       ("indentation,i"
       , po::value<int>(&op.indentation)->default_value(-1)
@@ -129,7 +87,7 @@ int main(int argc, char* argv[])
       , po::value<int>(&op.sim_length)->default_value(2)
       , "Length of simulated children.")
       ("hash,a", "Output channel codes only.")
-      ("fipe-csv-file,r"
+      ("file,f"
       , po::value<std::string>(&op.file)
       , "The file containing the menu.")
    ;
@@ -148,9 +106,8 @@ int main(int argc, char* argv[])
 
    switch (op.menu) {
       case 1: gen_sim_menu(op); break;
-      case 2: bar(op); break;
-      case 3: from_file(op); break;
-      case 4:
+      case 2: from_file(op); break;
+      case 3:
       {
          rt::fipe_dump({op.file, "1", op.indentation});
       }

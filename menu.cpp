@@ -360,13 +360,9 @@ std::vector<std::string> menu::get_leaf_codes() const
    return ret;
 }
 
-void print_node(menu_node const& node, int type, bool hash)
+std::string
+node_dump(menu_node const& node, int type, bool hash)
 {
-   if (type == 3) {
-      std::cout << node.code << std::endl;
-      return;
-   }
-
    auto const n =
       std::count( std::begin(node.code)
                 , std::end(node.code)
@@ -374,36 +370,43 @@ void print_node(menu_node const& node, int type, bool hash)
 
    auto const indent = std::size(node.code) - n;
    if (type == 1) {
+      std::ostringstream oss;
+
       std::string indent_str(indent, ' ');
-      std::cout << indent_str << node.name;
+      oss << indent_str << node.name;
 
       if (hash)
-         std::cout << " " << node.code;
+         oss << " " << node.code;
 
-      std::cout << std::endl;
-      return;
+      return oss.str();
    }
 
    if (type == 2) {
-      auto const k =  indent / menu::sep;
-      std::cout << k << " " << node.name;
-      if (hash)
-         std::cout << " " << node.code;
+      std::ostringstream oss;
 
-      std::cout << std::endl;
-      return;
+      auto const k =  indent / menu::sep;
+      oss << k << " " << node.name;
+      if (hash)
+         oss << " " << node.code;
+
+      return oss.str();
    }
+
+   //if (type == 3)
+      return node.code;
 }
 
-void menu::dump(int type, bool hash)
+std::string menu::dump(int type, bool hash)
 {
    // Traverses the menu in the same order as it would apear in the
    // config file.
+   std::string output;
    std::deque<std::deque<menu_node*>> st;
    st.push_back(root.children);
    while (!std::empty(st)) {
       auto* node = st.back().back();
-      print_node(*node, type, hash);
+      output += node_dump(*node, type, hash);
+      output += "\n";
       st.back().pop_back();
       if (std::empty(st.back()))
          st.pop_back();
@@ -411,6 +414,8 @@ void menu::dump(int type, bool hash)
          continue;
       st.push_back(node->children);
    }
+
+   return output;
 }
 
 menu::~menu()

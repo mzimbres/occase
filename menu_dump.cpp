@@ -99,7 +99,8 @@ int main(int argc, char* argv[])
    switch (op.input_format) {
       case 1:
       {
-         m.dump(op.output_format, op.hash);
+         auto const str = m.dump(op.output_format, op.hash);
+         std::cout << str << std::endl;
       }
       break;
       case 3:

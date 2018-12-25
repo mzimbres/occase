@@ -36,7 +36,7 @@ public:
    menu(std::string const& str);
    ~menu();
 
-   void dump(int type, bool hash);
+   std::string dump(int type, bool hash);
    std::vector<std::string> get_leaf_codes() const;
    void print_leaf();
 };

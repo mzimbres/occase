@@ -28,6 +28,7 @@ void from_file(std::string const& menu_str)
 {
    menu m {menu_str};
 
+   std::cout << std::endl;
    for (auto const& o: m.get_codes())
       std::cout << o << "\n";
    std::cout << std::endl;

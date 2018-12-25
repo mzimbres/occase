@@ -174,6 +174,22 @@ auto get_max_depth(std::string const& menu_str, int sep)
    return 1 + max_depth / sep;
 }
 
+std::string get_code(std::deque<int> const& v)
+{
+   if (std::empty(v))
+      return {};
+
+   if (std::size(v) == 1)
+      return to_str_raw(v.back(), 3, '0');
+
+   std::string code;
+   for (unsigned i = 0; i < std::size(v) - 1; ++i)
+      code += to_str_raw(v.at(i), 3, '0') + ".";
+
+   code += to_str_raw(v.back(), 3, '0');
+   return code;
+}
+
 void build_menu_tree(menu_node& root, std::string const& menu_str)
 {
    // TODO: Make it exception safe.
@@ -185,7 +201,7 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
 
    std::stringstream ss(menu_str);
    std::string line;
-   std::vector<int> codes(max_depth - 1, -1);
+   std::deque<int> codes(max_depth - 1, -1);
    std::stack<menu_node*> stack;
    unsigned last_depth = 0;
    bool root_found = false;
@@ -211,9 +227,8 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
       for (unsigned i = depth; i < std::size(codes); ++i)
          codes[i] = 0;
 
-      for (auto const& o: codes)
-         std::cout << o << ".";
-      std::cout << std::endl;
+      auto const c = get_code(codes);
+      std::cout << c << "\n";
 
       if (depth > last_depth) {
          if (last_depth + 1 != depth)

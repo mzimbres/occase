@@ -66,13 +66,12 @@ int main(int argc, char* argv[])
       , "Indentation used in the output file. Available options:\n"
         " 1: Node depth with indentation.\n"
         " 2: Node depth with number.\n"
-        " 3: Output with hash codes.\n"
-        " 4: Only hash codes are output.\n"
+        " 3: Only hash codes are output.\n"
       )
       ("sim-length,l"
       , po::value<int>(&op.sim_length)->default_value(2)
       , "Length of simulated children.")
-      ("hash,a", "Output channel codes only."
+      ("hash,a", "Adds hash code to the output."
       )
       ("file,f"
       , po::value<std::string>(&op.file)
@@ -100,13 +99,7 @@ int main(int argc, char* argv[])
    switch (op.input_format) {
       case 1:
       {
-         m.dump(1);
-      }
-      break;
-      case 2:
-      {
-         m.dump(2);
-         //from_file(menu_str);
+         m.dump(op.output_format, op.hash);
       }
       break;
       case 3:

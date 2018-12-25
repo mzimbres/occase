@@ -20,6 +20,7 @@ struct menu_op {
    int sim_length;
    bool hash = false;
    std::string file {"menus/cidades"};
+   std::string format;
 };
 
 void from_file(menu_op op)
@@ -80,13 +81,22 @@ int main(int argc, char* argv[])
       )
       ("indentation,i"
       , po::value<int>(&op.indentation)->default_value(-1)
-      , "Indentation of the menu output. If -1 will output the"
-        " indentation size instead of spaces."
+      , "Used in two situations:\n"
+        " - Indentation used in the input file.\n"
+        " - Indentation used to output the menu to a file."
+        " If -1 will output the number of spaces instead of spaces."
       )
       ("sim-length,l"
       , po::value<int>(&op.sim_length)->default_value(2)
       , "Length of simulated children.")
-      ("hash,a", "Output channel codes only.")
+      ("hash,a", "Output channel codes only."
+      )
+      ("format,t"
+      , po::value<std::string>(&op.format)->default_value("ident")
+      , "Input file format. Available options:\n"
+        " ident:  Node depth from indentation.\n"
+        " number: Node depth from number.\n"
+      )
       ("file,f"
       , po::value<std::string>(&op.file)
       , "The file containing the menu.")

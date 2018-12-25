@@ -15,12 +15,11 @@
 using namespace rt;
 
 struct menu_op {
-   int menu;
-   int indentation;
    int sim_length;
+   int input_format;
+   int output_format;
    bool hash = false;
    std::string file;
-   std::string format;
    std::string separator;
 };
 
@@ -36,6 +35,17 @@ void from_file(std::string const& menu_str)
    m.dump();
 }
 
+auto get_file_as_str(menu_op const& op)
+{
+   using iter_type = std::istreambuf_iterator<char>;
+
+   if (std::empty(op.file))
+      return gen_sim_menu(op.sim_length);
+
+   std::ifstream ifs(op.file);
+   return std::string {iter_type {ifs}, {}};
+}
+
 namespace po = boost::program_options;
 
 int main(int argc, char* argv[])
@@ -43,37 +53,33 @@ int main(int argc, char* argv[])
    menu_op op;
    po::options_description desc("Options");
    desc.add_options()
-      ("help,h", "produce help message")
-      ("menu,m"
-      , po::value<int>(&op.menu)->default_value(0)
-      , "Choose the menu. Available options:\n"
-        " 1: From file.\n"
-        " 2: CSV Fipe file.\n"
+      ("help,h", "This hep message.")
+      ("input-format,i"
+      , po::value<int>(&op.input_format)->default_value(1)
+      , "Input file format. Available options:\n"
+        " 1: Node depth from indentation.\n"
+        " 2: Node depth from number.\n"
+        " 3: Fipe raw format.\n"
       )
-      ("indentation,i"
-      , po::value<int>(&op.indentation)->default_value(-1)
-      , "Used in two situations:\n"
-        " - Indentation used in the input file.\n"
-        " - Indentation used to output the menu to a file."
-        " If -1 will output the number of spaces instead of spaces."
+      ("output-format,o"
+      , po::value<int>(&op.output_format)->default_value(1)
+      , "Indentation used in the output file. Available options:\n"
+        " 1: Node depth from indentation.\n"
+        " 2: Node depth from number.\n"
+        " 3: Output with hash codes.\n"
+        " 4: Only hash codes are output.\n"
       )
       ("sim-length,l"
       , po::value<int>(&op.sim_length)->default_value(2)
       , "Length of simulated children.")
       ("hash,a", "Output channel codes only."
       )
-      ("format,t"
-      , po::value<std::string>(&op.format)->default_value("ident")
-      , "Input file format. Available options:\n"
-        " ident:  Node depth from indentation.\n"
-        " number: Node depth from number.\n"
-      )
       ("file,f"
       , po::value<std::string>(&op.file)
       , "The file containing the menu. If empty, menu will be simulated.")
       ("separator,s"
       , po::value<std::string>(&op.separator)->default_value("\n")
-      , "Separator used in the output file. works with option -i -1 only.")
+      , "Separator used in the output file.")
    ;
 
    po::variables_map vm;        
@@ -88,25 +94,17 @@ int main(int argc, char* argv[])
    if (vm.count("hash"))
       op.hash = true;
 
-   switch (op.menu) {
+   switch (op.input_format) {
       case 1:
+      case 2:
       {
-         using iter_type = std::istreambuf_iterator<char>;
-
-         if (std::empty(op.file)) {
-            auto const menu_str = gen_sim_menu(op.sim_length);
-            from_file(menu_str);
-            return 0;
-         }
-
-         std::ifstream ifs(op.file);
-         std::string menu_str {iter_type {ifs}, {}};
+         auto const menu_str = get_file_as_str(op);
          from_file(menu_str);
       }
       break;
-      case 2:
+      case 3:
       {
-         rt::fipe_dump({op.file, "1", op.indentation});
+         rt::fipe_dump({op.file, "1", 3});
       }
       break;
       default:

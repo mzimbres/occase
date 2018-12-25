@@ -32,20 +32,7 @@ void from_file(std::string const& menu_str)
       std::cout << o << "\n";
    std::cout << std::endl;
 
-   //m.dump();
-}
-
-void foo(json menu, menu_op op)
-{
-   if (op.hash) {
-      // TODO: Output codes with indentation.
-      auto const hashes = get_hashes(menu);
-      for (auto const& o : hashes)
-         std::cout << o << "\n";
-      return;
-   }
-
-   std::cout << menu.dump(op.indentation) << std::endl;
+   m.dump();
 }
 
 namespace po = boost::program_options;

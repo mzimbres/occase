@@ -141,17 +141,17 @@ std::string gen_sim_menu(int l)
    return str;
 }
 
-auto remove_indent(std::string& line, int sep)
+auto get_depth(std::string& line, int sep)
 {
-   auto const depth = line.find_first_not_of(" ");
-   if (depth == std::string::npos)
+   auto const i = line.find_first_not_of(" ");
+   if (i == std::string::npos)
       throw std::runtime_error("Invalid line.");
 
-   if (depth % sep != 0)
+   if (i % sep != 0)
       throw std::runtime_error("Invalid indentation.");
 
-   line.erase(0, depth);
-   return depth / sep;
+   line.erase(0, i);
+   return i / sep;
 }
 
 void build_menu_tree(menu_node& root, std::string const& menu_str)
@@ -159,6 +159,7 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
    // TODO: Make it exception safe.
    std::stringstream ss(menu_str);
    std::string line;
+   std::vector<int> codes;
    std::stack<menu_node*> stack;
    unsigned last_depth = 0;
    bool root_found = false;
@@ -179,7 +180,19 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
          continue;
       }
 
-      auto const depth = remove_indent(line, 3);
+      auto const depth = get_depth(line, 3);
+      if (std::size(codes) < depth) {
+         codes.push_back(0);
+      } else {
+         ++codes.at(depth - 1);
+         for (unsigned i = depth; i < std::size(codes); ++i)
+            codes[i] = 0;
+      }
+
+      for (auto const& o: codes)
+         std::cout << o << ".";
+      std::cout << std::endl;
+
       if (depth > last_depth) {
          if (last_depth + 1 != depth)
             throw std::runtime_error("Forward Jump not allowed.");

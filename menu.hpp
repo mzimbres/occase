@@ -27,6 +27,7 @@ class menu {
 private:
    menu_node root;
 public:
+   static constexpr auto sep = 3;
    menu() = delete;
    menu(menu const&) = delete;
    menu& operator=(menu const&) = delete;
@@ -35,7 +36,7 @@ public:
    menu(std::string const& str);
    ~menu();
 
-   void dump();
+   void dump(int type);
    std::vector<std::string> get_leaf_codes() const;
    void print_leaf();
 };

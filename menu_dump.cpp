@@ -32,7 +32,7 @@ void from_file(std::string const& menu_str)
       std::cout << o << "\n";
    std::cout << std::endl;
 
-   m.dump();
+   //m.dump();
 }
 
 auto get_file_as_str(menu_op const& op)
@@ -64,8 +64,8 @@ int main(int argc, char* argv[])
       ("output-format,o"
       , po::value<int>(&op.output_format)->default_value(1)
       , "Indentation used in the output file. Available options:\n"
-        " 1: Node depth from indentation.\n"
-        " 2: Node depth from number.\n"
+        " 1: Node depth with indentation.\n"
+        " 2: Node depth with number.\n"
         " 3: Output with hash codes.\n"
         " 4: Only hash codes are output.\n"
       )
@@ -95,18 +95,18 @@ int main(int argc, char* argv[])
       op.hash = true;
 
    auto const menu_str = get_file_as_str(op);
+   menu m {menu_str};
 
    switch (op.input_format) {
       case 1:
       {
-         menu m {menu_str};
-
-         m.dump();
+         m.dump(1);
       }
       break;
       case 2:
       {
-         from_file(menu_str);
+         m.dump(2);
+         //from_file(menu_str);
       }
       break;
       case 3:

@@ -360,22 +360,28 @@ std::vector<std::string> menu::get_leaf_codes() const
    return ret;
 }
 
-void print_with_indent(menu_node const& node)
+void print_node(menu_node const& node, int type)
 {
    auto const n =
       std::count( std::begin(node.code)
                 , std::end(node.code)
                 , '.');
 
-   std::string indent(std::size(node.code) - n, ' ');
-   std::cout << indent
-             << node.name
-             //<< " "
-             //<< node.code
-             << std::endl;
+   auto const indent = std::size(node.code) - n;
+   if (type == 1) {
+      std::string indent_str(indent, ' ');
+      std::cout << indent_str << node.name << std::endl;
+      return;
+   }
+
+   if (type == 2) {
+      auto const k =  indent / menu::sep;
+      std::cout << k << " " << node.name << std::endl;
+      return;
+   }
 }
 
-void menu::dump()
+void menu::dump(int type)
 {
    // Traverses the menu in the same order as it would apear in the
    // config file.
@@ -383,7 +389,7 @@ void menu::dump()
    st.push_back(root.children);
    while (!std::empty(st)) {
       auto* node = st.back().back();
-      print_with_indent(*node);
+      print_node(*node, type);
       st.back().pop_back();
       if (std::empty(st.back()))
          st.pop_back();

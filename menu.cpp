@@ -229,14 +229,13 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
          codes[i] = -1;
 
       auto const c = get_code(std::begin(codes), std::begin(codes) + depth);
-      std::cout << c << "\n";
 
       if (depth > last_depth) {
          if (last_depth + 1 != depth)
             throw std::runtime_error("Forward Jump not allowed.");
 
          // We found the child of the last node pushed on the stack.
-         auto* p = new menu_node {line, {}};
+         auto* p = new menu_node {line, c};
          stack.top()->children.push_front(p);
          stack.push(p);
          ++last_depth;
@@ -251,14 +250,14 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
          stack.pop();
 
          // Now we can add the new node.
-         auto* p = new menu_node {line, {}};
+         auto* p = new menu_node {line, c};
          stack.top()->children.push_front(p);
          stack.push(p);
 
          last_depth = depth;
       } else {
          stack.pop();
-         auto* p = new menu_node {line, {}};
+         auto* p = new menu_node {line, c};
          stack.top()->children.push_front(p);
          stack.push(p);
          // Last depth stays equal.
@@ -328,26 +327,6 @@ public:
       advance();
    }
 
-   std::string get_code() const
-   {
-      if (std::empty(st))
-         return {""};
-
-      if (std::size(st) == 1) {
-         if (std::empty(st.back()))
-            return {};
-
-         return to_str_raw(std::size(st.back()) - 1, 3, '0');
-      }
-
-      std::string code;
-      for (unsigned i = 1; i < std::size(st) - 1; ++i)
-         code += to_str_raw(std::size(st.at(i)) - 1, 3, '0') + ".";
-
-      code += to_str_raw(std::size(st.back()), 3, '0');
-      return code;
-   }
-
    bool end() const noexcept { return std::empty(st); }
 };
 
@@ -355,12 +334,6 @@ menu::menu(std::string const& str)
 {
    // TODO: Catch exceptions and release already acquired memory.
    build_menu_tree(root, str);
-
-   menu_iterator iter2(root.children.front());
-   while (!iter2.end()) {
-      iter2.current->code = iter2.get_code();
-      iter2.next_node();
-   }
 }
 
 void menu::print_leaf()
@@ -369,18 +342,18 @@ void menu::print_leaf()
    while (!iter.end()) {
       std::cout << std::setw(20) << std::left
                 << iter.current->name << " "
-                << iter.get_code() << "      "
+                << iter.current->code << "      "
                 << std::endl;
       iter.next_leaf_node();
    }
 }
 
-std::vector<std::string> menu::get_codes() const
+std::vector<std::string> menu::get_leaf_codes() const
 {
    std::vector<std::string> ret;
    menu_iterator iter(root.children.front());
    while (!iter.end()) {
-      ret.push_back(iter.get_code());
+      ret.push_back(iter.current->code);
       iter.next_leaf_node();
    }
 

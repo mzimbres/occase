@@ -174,19 +174,20 @@ auto get_max_depth(std::string const& menu_str, int sep)
    return 1 + max_depth / sep;
 }
 
-std::string get_code(std::deque<int> const& v)
+template <class Iter>
+std::string get_code(Iter begin, Iter end)
 {
-   if (std::empty(v))
+   if (begin == end)
       return {};
 
-   if (std::size(v) == 1)
-      return to_str_raw(v.back(), 3, '0');
+   if (std::distance(begin, end) == 1)
+      return to_str_raw(*begin, 3, '0');
 
    std::string code;
-   for (unsigned i = 0; i < std::size(v) - 1; ++i)
-      code += to_str_raw(v.at(i), 3, '0') + ".";
+   for (; begin != std::prev(end); ++begin)
+      code += to_str_raw(*begin, 3, '0') + ".";
 
-   code += to_str_raw(v.back(), 3, '0');
+   code += to_str_raw(*begin, 3, '0');
    return code;
 }
 
@@ -225,9 +226,9 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
       auto const depth = get_depth(line, 3);
       ++codes.at(depth - 1);
       for (unsigned i = depth; i < std::size(codes); ++i)
-         codes[i] = 0;
+         codes[i] = -1;
 
-      auto const c = get_code(codes);
+      auto const c = get_code(std::begin(codes), std::begin(codes) + depth);
       std::cout << c << "\n";
 
       if (depth > last_depth) {

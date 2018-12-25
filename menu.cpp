@@ -154,12 +154,38 @@ auto get_depth(std::string& line, int sep)
    return i / sep;
 }
 
+// Finds the max depth in a menu.
+auto get_max_depth(std::string const& menu_str, int sep)
+{
+   std::stringstream ss(menu_str);
+   std::string line;
+   auto max_depth = 0;
+   while (std::getline(ss, line)) {
+      auto const i = line.find_first_not_of(" ");
+      if (i == std::string::npos)
+         throw std::runtime_error("Invalid line.");
+      if (max_depth < static_cast<int>(i))
+         max_depth = i;
+   }
+
+   if (max_depth % sep != 0)
+      throw std::runtime_error("Invalid indentation.");
+
+   return 1 + max_depth / sep;
+}
+
 void build_menu_tree(menu_node& root, std::string const& menu_str)
 {
    // TODO: Make it exception safe.
+
+   auto const max_depth = get_max_depth(menu_str, 3);
+   std::cout << "Max depth: " << max_depth << std::endl;
+   if (max_depth == 0)
+      return;
+
    std::stringstream ss(menu_str);
    std::string line;
-   std::vector<int> codes;
+   std::vector<int> codes(max_depth - 1, -1);
    std::stack<menu_node*> stack;
    unsigned last_depth = 0;
    bool root_found = false;
@@ -181,13 +207,9 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
       }
 
       auto const depth = get_depth(line, 3);
-      if (std::size(codes) < depth) {
-         codes.push_back(0);
-      } else {
-         ++codes.at(depth - 1);
-         for (unsigned i = depth; i < std::size(codes); ++i)
-            codes[i] = 0;
-      }
+      ++codes.at(depth - 1);
+      for (unsigned i = depth; i < std::size(codes); ++i)
+         codes[i] = 0;
 
       for (auto const& o: codes)
          std::cout << o << ".";

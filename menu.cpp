@@ -141,17 +141,35 @@ std::string gen_sim_menu(int l)
    return str;
 }
 
-auto get_depth(std::string& line, int sep)
+auto get_depth(std::string& line, menu::iformat f)
 {
-   auto const i = line.find_first_not_of(" ");
-   if (i == std::string::npos)
-      throw std::runtime_error("Invalid line.");
+   if (f == menu::iformat::spaces) {
+      auto const i = line.find_first_not_of(" ");
+      if (i == std::string::npos)
+         throw std::runtime_error("Invalid line.");
 
-   if (i % sep != 0)
-      throw std::runtime_error("Invalid indentation.");
+      if (i % menu::sep != 0)
+         throw std::runtime_error("Invalid indentation.");
 
-   line.erase(0, i);
-   return i / sep;
+      line.erase(0, i);
+      return i / menu::sep;
+   }
+
+   if (f == menu::iformat::counter) {
+      // WARNING: The parsing used here suports only up to a depth of
+      // 10 (or 16 if we change to hex) where the digit indicating the
+      // depth is only one character.
+
+      auto const i = line.find_first_of(" ");
+      if (i == std::string::npos)
+         throw std::runtime_error("Invalid line.");
+
+      auto const digit = line.substr(0, i);
+      line.erase(0, i + 1);
+      return std::stoul(digit);
+   }
+
+   return std::string::npos;
 }
 
 // Finds the max depth in a menu.
@@ -168,10 +186,10 @@ auto get_max_depth(std::string const& menu_str, int sep)
          max_depth = i;
    }
 
-   if (max_depth % sep != 0)
+   if (max_depth % menu::sep != 0)
       throw std::runtime_error("Invalid indentation.");
 
-   return 1 + max_depth / sep;
+   return 1 + max_depth / menu::sep;
 }
 
 template <class Iter>
@@ -191,7 +209,9 @@ std::string get_code(Iter begin, Iter end)
    return code;
 }
 
-auto build_menu_tree(menu_node& root, std::string const& menu_str)
+auto build_menu_tree( menu_node& root
+                    , std::string const& menu_str
+                    , menu::iformat f)
 {
    // TODO: Make it exception safe.
 
@@ -222,7 +242,7 @@ auto build_menu_tree(menu_node& root, std::string const& menu_str)
          continue;
       }
 
-      auto const depth = get_depth(line, 3);
+      auto const depth = get_depth(line, f);
       ++codes.at(depth - 1);
       for (unsigned i = depth; i < std::size(codes); ++i)
          codes[i] = -1;
@@ -331,10 +351,10 @@ public:
    bool end() const noexcept { return std::empty(st); }
 };
 
-menu::menu(std::string const& str, iformat)
+menu::menu(std::string const& str, iformat f)
 {
    // TODO: Catch exceptions and release already acquired memory.
-   max_depth = build_menu_tree(root, str);
+   max_depth = build_menu_tree(root, str, f);
 }
 
 void menu::print_leaf()

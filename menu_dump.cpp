@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
       , "The file containing the menu. If empty, menu will be simulated.")
       ("separator,s"
       , po::value<std::string>(&op.separator)->default_value("\n")
-      , "Separator used in the output file.")
+      , "Separator used for each node entry.")
       ("fipe-tipo,k"
       , po::value<std::string>(&op.fipe_tipo)->default_value("1")
       , "The fipe tipo field.\n"
@@ -105,7 +105,7 @@ int main(int argc, char* argv[])
 
    auto const oformat = convert_to_menu_oformat(op.output_format);
 
-   auto const str = m.dump(oformat);
+   auto const str = m.dump(oformat, op.separator);
    std::cout << str << std::endl;
 
    std::cout << std::endl;

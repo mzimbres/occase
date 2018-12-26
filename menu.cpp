@@ -392,7 +392,7 @@ node_dump( menu_node const& node
    oss << node.code;
 }
 
-std::string menu::dump(oformat of)
+std::string menu::dump(oformat of, std::string const& separator)
 {
    // Traverses the menu in the same order as it would apear in the
    // config file.
@@ -403,7 +403,7 @@ std::string menu::dump(oformat of)
    while (!std::empty(st)) {
       auto* node = st.back().back();
       node_dump(*node, of, oss, max_depth);
-      oss << "\n";
+      oss << separator;
       st.back().pop_back();
       if (std::empty(st.back()))
          st.pop_back();

@@ -39,7 +39,7 @@ public:
    menu(std::string const& str, iformat f);
    ~menu();
 
-   std::string dump(oformat of);
+   std::string dump(oformat of, std::string const& separator);
    std::vector<std::string> get_leaf_codes() const;
    void print_leaf();
    auto get_max_depth() const noexcept {return max_depth;}

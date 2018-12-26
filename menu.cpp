@@ -361,29 +361,32 @@ std::vector<std::string> menu::get_leaf_codes() const
    return ret;
 }
 
-std::string
-node_dump(menu_node const& node, menu::oformat of)
+void
+node_dump( menu_node const& node
+         , menu::oformat of
+         , std::ostringstream& oss
+         , int max_depth)
 {
    auto const indent = menu::sep * (std::size(node.code) / menu::sep);
    if (of == menu::oformat::spaces) {
-      std::ostringstream oss;
-
       std::string indent_str(indent, ' ');
       oss << indent_str << node.name;
-
-      return oss.str();
+      return;
    }
 
    if (of == menu::oformat::counter) {
-      std::ostringstream oss;
-
       auto const k =  indent / menu::sep;
       oss << k << " " << node.name;
-      return oss.str();
+      return;
    }
 
-   //if (type == 3)
-      return node.code;
+   if (of == menu::oformat::info) {
+      auto const n = (max_depth - 1) * (menu::sep + 1);
+      oss << std::setw(n) << std::left << node.code << "" << node.name;
+      return;
+   }
+
+   oss << node.code;
 }
 
 std::string menu::dump(oformat of)
@@ -393,10 +396,11 @@ std::string menu::dump(oformat of)
    std::string output;
    std::deque<std::deque<menu_node*>> st;
    st.push_back(root.children);
+   std::ostringstream oss;
    while (!std::empty(st)) {
       auto* node = st.back().back();
-      output += node_dump(*node, of);
-      output += "\n";
+      node_dump(*node, of, oss, max_depth);
+      oss << "\n";
       st.back().pop_back();
       if (std::empty(st.back()))
          st.pop_back();
@@ -405,7 +409,7 @@ std::string menu::dump(oformat of)
       st.push_back(node->children);
    }
 
-   return output;
+   return oss.str();
 }
 
 menu::~menu()

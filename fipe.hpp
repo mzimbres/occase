@@ -11,7 +11,7 @@ struct fipe_op {
    int indentation;
 };
 
-void fipe_dump(fipe_op const& op);
+std::string fipe_dump(fipe_op const& op);
 
 }
 

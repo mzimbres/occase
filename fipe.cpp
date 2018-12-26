@@ -71,21 +71,22 @@ auto get_indent_str(table_field f, int i)
 }
 
 template <class Iter>
-void print_partitions( Iter begin, Iter end, table_field field
-                     , int indent_size)
+std::string print_partitions( Iter begin, Iter end, table_field field
+                            , int indent_size)
 {
    std::deque<std::deque<range>> st;
    st.push_back({{begin, end, table_field::tipo}});
 
+   std::ostringstream oss;
    while (!std::empty(st)) {
       auto r = st.back().back();
       st.back().pop_back();
       if (std::empty(st.back()))
          st.pop_back();
 
-      std::cout << get_indent_str(r.field, indent_size)
-                << r.begin->at(r.field)
-                << std::endl;
+      oss << get_indent_str(r.field, indent_size)
+          << r.begin->at(r.field)
+          << "\n";
 
       auto const next = next_field(r.field);
       std::sort(r.begin, r.end, line_comp {next});
@@ -105,9 +106,11 @@ void print_partitions( Iter begin, Iter end, table_field field
 
       st.push_back(foo);
    }
+
+   return oss.str();
 }
 
-void fipe_dump(fipe_op const& op)
+std::string fipe_dump(fipe_op const& op)
 {
    std::ifstream ifs(op.file);
 
@@ -130,8 +133,8 @@ void fipe_dump(fipe_op const& op)
          table.push_back(std::move(fields));
    }
 
-   print_partitions( std::begin(table), std::end(table)
-                   , table_field::marca, op.indentation);
+   return print_partitions( std::begin(table), std::end(table)
+                          , table_field::marca, op.indentation);
 }
 
 }

@@ -93,19 +93,20 @@ int main(int argc, char* argv[])
    if (vm.count("hash"))
       op.hash = true;
 
-   auto const menu_str = get_file_as_str(op);
-   menu m {menu_str};
-
    switch (op.input_format) {
       case 1:
       {
+         auto const menu_str = get_file_as_str(op);
+         menu m {menu_str};
+
          auto const str = m.dump(op.output_format, op.hash);
          std::cout << str << std::endl;
       }
       break;
       case 3:
       {
-         rt::fipe_dump({op.file, "1", 3});
+         auto const str = rt::fipe_dump({op.file, "1", 3});
+         std::cout << str << std::endl;
       }
       break;
       default:

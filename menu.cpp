@@ -330,7 +330,7 @@ public:
    bool end() const noexcept { return std::empty(st); }
 };
 
-menu::menu(std::string const& str)
+menu::menu(std::string const& str, format)
 {
    // TODO: Catch exceptions and release already acquired memory.
    build_menu_tree(root, str);

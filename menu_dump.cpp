@@ -23,18 +23,6 @@ struct menu_op {
    std::string separator;
 };
 
-void from_file(std::string const& menu_str)
-{
-   menu m {menu_str};
-
-   std::cout << std::endl;
-   for (auto const& o: m.get_leaf_codes())
-      std::cout << o << "\n";
-   std::cout << std::endl;
-
-   //m.dump();
-}
-
 auto get_file_as_str(menu_op const& op)
 {
    using iter_type = std::istreambuf_iterator<char>;
@@ -94,29 +82,18 @@ int main(int argc, char* argv[])
       op.hash = true;
 
    auto const raw_menu = get_file_as_str(op);
+   auto menu_str = raw_menu;
+   if (op.input_format == 3)
+      menu_str = fipe_dump(raw_menu, {"1", 3});
 
-   switch (op.input_format) {
-      case 1:
-      {
-         menu m {raw_menu};
+   menu m {menu_str, menu::format::spaces};
 
-         auto const str = m.dump(op.output_format, op.hash);
-         std::cout << str << std::endl;
-      }
-      break;
-      case 3:
-      {
-         auto const menu_str = rt::fipe_dump(raw_menu, {"1", 3});
-         menu m {menu_str};
+   auto const str = m.dump(op.output_format, op.hash);
+   std::cout << str << std::endl;
 
-         auto const str = m.dump(op.output_format, op.hash);
-         std::cout << str << std::endl;
-      }
-      break;
-      default:
-         std::cerr << "Invalid option." << std::endl;
-   }
-
+   std::cout << std::endl;
+   std::cout << "Menu original size:  " << std::size(menu_str) << std::endl;
+   std::cout << "Menu converted size: " << std::size(str) << std::endl;
    return 0;
 }
 

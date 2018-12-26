@@ -28,12 +28,13 @@ private:
    menu_node root;
 public:
    static constexpr auto sep = 3;
+   enum class format {spaces, counter};
    menu() = delete;
    menu(menu const&) = delete;
    menu& operator=(menu const&) = delete;
    menu(menu&&) = delete;
    menu& operator=(menu&&) = delete;
-   menu(std::string const& str);
+   menu(std::string const& str, format f);
    ~menu();
 
    std::string dump(int type, bool hash);

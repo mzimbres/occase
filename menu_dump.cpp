@@ -92,7 +92,7 @@ int main(int argc, char* argv[])
    auto const raw_menu = get_file_as_str(op);
    auto menu_str = raw_menu;
    if (op.input_format == 3)
-      menu_str = fipe_dump(raw_menu, {"1", 3});
+      menu_str = fipe_dump(raw_menu, menu::sep, "1");
 
    menu m {menu_str, menu::iformat::spaces};
 

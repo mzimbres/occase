@@ -71,8 +71,8 @@ auto get_indent_str(table_field f, int i)
 }
 
 template <class Iter>
-std::string print_partitions( Iter begin, Iter end, table_field field
-                            , int indent_size)
+std::string
+print_partitions(Iter begin, Iter end, int indent_size)
 {
    std::deque<std::deque<range>> st;
    st.push_back({{begin, end, table_field::tipo}});
@@ -110,7 +110,9 @@ std::string print_partitions( Iter begin, Iter end, table_field field
    return oss.str();
 }
 
-std::string fipe_dump(std::string const& str, fipe_op const& op)
+std::string
+fipe_dump( std::string const& str, int indentation
+         , std::string const& tipo)
 {
    std::istringstream iss(str);
 
@@ -129,12 +131,12 @@ std::string fipe_dump(std::string const& str, fipe_op const& op)
       // TODO: Include the proper header for this.
       //assert(std::size(fields) == 12);
 
-      if (fields[table_field::tipo] == op.tipo)
+      if (fields[table_field::tipo] == tipo)
          table.push_back(std::move(fields));
    }
 
    return print_partitions( std::begin(table), std::end(table)
-                          , table_field::marca, op.indentation);
+                          , indentation);
 }
 
 }

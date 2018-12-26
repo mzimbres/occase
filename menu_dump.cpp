@@ -109,6 +109,7 @@ int main(int argc, char* argv[])
    std::cout << str << std::endl;
 
    std::cout << std::endl;
+   std::cout << "Menu max depth:      " << m.get_max_depth() << std::endl;
    std::cout << "Menu original size:  " << std::size(menu_str) << std::endl;
    std::cout << "Menu converted size: " << std::size(str) << std::endl;
    return 0;

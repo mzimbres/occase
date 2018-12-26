@@ -367,7 +367,10 @@ node_dump( menu_node const& node
          , std::ostringstream& oss
          , int max_depth)
 {
-   auto const indent = menu::sep * (std::size(node.code) / menu::sep);
+   auto const k =
+      std::count(std::begin(node.code), std::end(node.code), '.');
+
+   auto const indent = std::size(node.code) - k;
    if (of == menu::oformat::spaces) {
       std::string indent_str(indent, ' ');
       oss << indent_str << node.name;

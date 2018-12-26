@@ -42,6 +42,7 @@ public:
    std::string dump(oformat of);
    std::vector<std::string> get_leaf_codes() const;
    void print_leaf();
+   auto get_max_depth() const noexcept {return max_depth;}
 };
 
 }

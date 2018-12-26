@@ -36,6 +36,18 @@ auto get_file_as_str(menu_op const& op)
 
 namespace po = boost::program_options;
 
+menu::oformat convert_to_menu_oformat(int i)
+{
+   if (i == 1) return menu::oformat::spaces;
+   if (i == 2) return menu::oformat::counter;
+   if (i == 3) return menu::oformat::info;
+   if (i == 4) return menu::oformat::hashes;
+
+   throw std::runtime_error("convert_to_menu_oformat: Invalid input.");
+
+   return menu::oformat::hashes;
+}
+
 int main(int argc, char* argv[])
 {
    menu_op op;
@@ -54,13 +66,12 @@ int main(int argc, char* argv[])
       , "Indentation used in the output file. Available options:\n"
         " 1: Node depth with indentation.\n"
         " 2: Node depth with number.\n"
-        " 3: Only hash codes are output.\n"
+        " 3: Hash code plus name.\n"
+        " 4: Only hash codes are output.\n"
       )
       ("sim-length,l"
       , po::value<int>(&op.sim_length)->default_value(2)
       , "Length of simulated children.")
-      ("hash,a", "Adds hash code to the output."
-      )
       ("file,f"
       , po::value<std::string>(&op.file)
       , "The file containing the menu. If empty, menu will be simulated.")
@@ -78,17 +89,16 @@ int main(int argc, char* argv[])
       return 0;
    }
 
-   if (vm.count("hash"))
-      op.hash = true;
-
    auto const raw_menu = get_file_as_str(op);
    auto menu_str = raw_menu;
    if (op.input_format == 3)
       menu_str = fipe_dump(raw_menu, {"1", 3});
 
-   menu m {menu_str, menu::format::spaces};
+   menu m {menu_str, menu::iformat::spaces};
 
-   auto const str = m.dump(op.output_format, op.hash);
+   auto const oformat = convert_to_menu_oformat(op.output_format);
+
+   auto const str = m.dump(oformat);
    std::cout << str << std::endl;
 
    std::cout << std::endl;

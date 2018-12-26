@@ -191,14 +191,13 @@ std::string get_code(Iter begin, Iter end)
    return code;
 }
 
-void build_menu_tree(menu_node& root, std::string const& menu_str)
+auto build_menu_tree(menu_node& root, std::string const& menu_str)
 {
    // TODO: Make it exception safe.
 
-   auto const max_depth = get_max_depth(menu_str, 3);
-   //std::cout << "Max depth: " << max_depth << std::endl;
+   auto const max_depth = get_max_depth(menu_str, menu::sep);
    if (max_depth == 0)
-      return;
+      return 0;
 
    std::stringstream ss(menu_str);
    std::string line;
@@ -263,6 +262,8 @@ void build_menu_tree(menu_node& root, std::string const& menu_str)
          // Last depth stays equal.
       }
    }
+
+   return max_depth;
 }
 
 // Iterator used to traverse the menu depth first.
@@ -330,10 +331,10 @@ public:
    bool end() const noexcept { return std::empty(st); }
 };
 
-menu::menu(std::string const& str, format)
+menu::menu(std::string const& str, iformat)
 {
    // TODO: Catch exceptions and release already acquired memory.
-   build_menu_tree(root, str);
+   max_depth = build_menu_tree(root, str);
 }
 
 void menu::print_leaf()
@@ -361,7 +362,7 @@ std::vector<std::string> menu::get_leaf_codes() const
 }
 
 std::string
-node_dump(menu_node const& node, int type, bool hash)
+node_dump(menu_node const& node, menu::oformat of)
 {
    auto const n =
       std::count( std::begin(node.code)
@@ -369,26 +370,20 @@ node_dump(menu_node const& node, int type, bool hash)
                 , '.');
 
    auto const indent = std::size(node.code) - n;
-   if (type == 1) {
+   if (of == menu::oformat::spaces) {
       std::ostringstream oss;
 
       std::string indent_str(indent, ' ');
       oss << indent_str << node.name;
 
-      if (hash)
-         oss << " " << node.code;
-
       return oss.str();
    }
 
-   if (type == 2) {
+   if (of == menu::oformat::counter) {
       std::ostringstream oss;
 
       auto const k =  indent / menu::sep;
       oss << k << " " << node.name;
-      if (hash)
-         oss << " " << node.code;
-
       return oss.str();
    }
 
@@ -396,7 +391,7 @@ node_dump(menu_node const& node, int type, bool hash)
       return node.code;
 }
 
-std::string menu::dump(int type, bool hash)
+std::string menu::dump(oformat of)
 {
    // Traverses the menu in the same order as it would apear in the
    // config file.
@@ -405,7 +400,7 @@ std::string menu::dump(int type, bool hash)
    st.push_back(root.children);
    while (!std::empty(st)) {
       auto* node = st.back().back();
-      output += node_dump(*node, type, hash);
+      output += node_dump(*node, of);
       output += "\n";
       st.back().pop_back();
       if (std::empty(st.back()))

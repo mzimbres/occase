@@ -26,18 +26,20 @@ struct menu_node {
 class menu {
 private:
    menu_node root;
+   int max_depth = 0;
 public:
    static constexpr auto sep = 3;
-   enum class format {spaces, counter};
+   enum class iformat {spaces, counter};
+   enum class oformat {spaces, counter, info, hashes};
    menu() = delete;
    menu(menu const&) = delete;
    menu& operator=(menu const&) = delete;
    menu(menu&&) = delete;
    menu& operator=(menu&&) = delete;
-   menu(std::string const& str, format f);
+   menu(std::string const& str, iformat f);
    ~menu();
 
-   std::string dump(int type, bool hash);
+   std::string dump(oformat of);
    std::vector<std::string> get_leaf_codes() const;
    void print_leaf();
 };

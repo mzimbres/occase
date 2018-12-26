@@ -110,13 +110,13 @@ std::string print_partitions( Iter begin, Iter end, table_field field
    return oss.str();
 }
 
-std::string fipe_dump(fipe_op const& op)
+std::string fipe_dump(std::string const& str, fipe_op const& op)
 {
-   std::ifstream ifs(op.file);
+   std::istringstream iss(str);
 
    std::vector<std::vector<std::string>> table;
    std::string line;
-   while (std::getline(ifs, line)) {
+   while (std::getline(iss, line)) {
       std::string item;
       std::istringstream iss(line);
       std::vector<std::string> fields;

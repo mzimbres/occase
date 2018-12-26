@@ -364,12 +364,7 @@ std::vector<std::string> menu::get_leaf_codes() const
 std::string
 node_dump(menu_node const& node, menu::oformat of)
 {
-   auto const n =
-      std::count( std::begin(node.code)
-                , std::end(node.code)
-                , '.');
-
-   auto const indent = std::size(node.code) - n;
+   auto const indent = menu::sep * (std::size(node.code) / menu::sep);
    if (of == menu::oformat::spaces) {
       std::ostringstream oss;
 

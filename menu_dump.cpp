@@ -18,9 +18,9 @@ struct menu_op {
    int sim_length;
    int input_format;
    int output_format;
-   bool hash = false;
    std::string file;
    std::string separator;
+   std::string fipe_tipo;
 };
 
 auto get_file_as_str(menu_op const& op)
@@ -78,6 +78,13 @@ int main(int argc, char* argv[])
       ("separator,s"
       , po::value<std::string>(&op.separator)->default_value("\n")
       , "Separator used in the output file.")
+      ("fipe-tipo,k"
+      , po::value<std::string>(&op.fipe_tipo)->default_value("1")
+      , "The fipe tipo field.\n"
+        " 1: Cars.\n"
+        " 2: Motorcycles.\n"
+        " 3: Trucks.\n"
+      )
    ;
 
    po::variables_map vm;        
@@ -92,7 +99,7 @@ int main(int argc, char* argv[])
    auto const raw_menu = get_file_as_str(op);
    auto menu_str = raw_menu;
    if (op.input_format == 3)
-      menu_str = fipe_dump(raw_menu, menu::sep, "1");
+      menu_str = fipe_dump(raw_menu, menu::sep, op.fipe_tipo);
 
    menu m {menu_str, menu::iformat::spaces};
 

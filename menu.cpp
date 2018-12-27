@@ -320,14 +320,16 @@ private:
 public:
    menu_node const* current;
    menu_iterator(menu_node* root, unsigned depth_)
-   : current {root}
-   , depth(depth_)
+   : depth(depth_)
+   , current {root}
    {
       if (root)
          st.push_back({root});
 
       advance();
    }
+
+   auto get_depth() const noexcept { return std::size(st); }
 
    void next_leaf_node()
    {
@@ -411,7 +413,7 @@ std::string menu::dump(oformat of, std::string const& separator)
    return oss.str();
 }
 
-std::vector<std::string> menu::get_codes_at_depth(int depth) const
+std::vector<std::string> menu::get_codes_at_depth(unsigned depth) const
 {
    std::vector<std::string> ret;
    menu_iterator iter(root.children.front(), depth);
@@ -421,6 +423,23 @@ std::vector<std::string> menu::get_codes_at_depth(int depth) const
    }
 
    return ret;
+}
+
+bool menu::check_leaf_min_depths(unsigned min_depth) const
+{
+   // TODO: Change the function to return an iterator to the
+   // invalid node.
+
+   auto const max = std::numeric_limits<unsigned>::max();
+   menu_iterator iter(root.children.front(), max);
+   while (!iter.end()) {
+      auto const d = iter.get_depth();
+      if (d < min_depth + 1)
+         return false;
+      iter.next_leaf_node();
+   }
+
+   return true;
 }
 
 menu::~menu()

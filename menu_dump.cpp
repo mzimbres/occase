@@ -18,10 +18,11 @@ struct menu_op {
    int sim_length;
    int input_format;
    int output_format;
-   int depth;
+   unsigned depth;
    std::string file;
    std::string separator;
    std::string fipe_tipo;
+   bool validate = false;
 };
 
 auto get_file_as_str(menu_op const& op)
@@ -76,7 +77,7 @@ int main(int argc, char* argv[])
       , "Length of simulated children. Used only if -f is not provided."
       )
       ("depth,d"
-      , po::value<int>(&op.depth)->default_value(2)
+      , po::value<unsigned>(&op.depth)->default_value(2)
       , "Outputs all codes at a certain depth."
       )
       ("file,f"
@@ -92,6 +93,10 @@ int main(int argc, char* argv[])
         " 2: Motorcycles.\n"
         " 3: Trucks.\n"
       )
+      ("validate,v",
+       "Checks whether all leaf nodes have at least the depth "
+       " specified in --depth."
+      )
    ;
 
    po::variables_map vm;        
@@ -102,6 +107,9 @@ int main(int argc, char* argv[])
       std::cout << desc << "\n";
       return 0;
    }
+
+   if (vm.count("validate"))
+      op.validate = true;
 
    auto const raw_menu = get_file_as_str(op);
    auto menu_str = raw_menu;
@@ -114,18 +122,21 @@ int main(int argc, char* argv[])
       auto const codes = m.get_codes_at_depth(op.depth);
       for (auto const& o : codes)
          std::cout << o << "\n";
-      return 0;
+   } else {
+      auto const oformat = convert_to_menu_oformat(op.output_format);
+
+      auto const str = m.dump(oformat, op.separator);
+      std::cout << str << std::endl;
    }
 
-   auto const oformat = convert_to_menu_oformat(op.output_format);
+   if (op.validate)
+      std::cout << "Validate: " << m.check_leaf_min_depths(op.depth)
+                << std::endl;
 
-   auto const str = m.dump(oformat, op.separator);
-   std::cout << str << std::endl;
-
-   std::cout << std::endl;
-   std::cout << "Menu max depth:      " << m.get_max_depth() << std::endl;
-   std::cout << "Menu original size:  " << std::size(menu_str) << std::endl;
-   std::cout << "Menu converted size: " << std::size(str) << std::endl;
+   //std::cout << std::endl;
+   //std::cout << "Menu max depth:      " << m.get_max_depth() << std::endl;
+   //std::cout << "Menu original size:  " << std::size(menu_str) << std::endl;
+   //std::cout << "Menu converted size: " << std::size(str) << std::endl;
    return 0;
 }
 

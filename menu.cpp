@@ -162,8 +162,9 @@ auto get_depth(std::string& line, menu::iformat f)
       // depth is only one character.
 
       auto const i = line.find_first_of(" ");
+      // To account for files terminating with newline.
       if (i == std::string::npos)
-         throw std::runtime_error("Invalid line.");
+         return std::string::npos;
 
       auto const digit = line.substr(0, i);
       line.erase(0, i + 1);
@@ -174,24 +175,22 @@ auto get_depth(std::string& line, menu::iformat f)
 }
 
 // Finds the max depth in a menu.
-auto get_max_depth(std::string const& menu_str, int sep, char c)
+auto get_max_depth(std::string const& menu_str, menu::iformat f, char c)
 {
    std::stringstream ss(menu_str);
    std::string line;
-   auto max_depth = 0;
+   unsigned max_depth = 0;
    while (std::getline(ss, line, c)) {
-      auto const i = line.find_first_not_of(" ");
-      if (i == std::string::npos)
-         throw std::runtime_error("Invalid line.");
+      auto const i = get_depth(line, f);
 
-      if (max_depth < static_cast<int>(i))
+      if (i == std::string::npos)
+         continue;
+
+      if (max_depth < static_cast<unsigned>(i))
          max_depth = i;
    }
 
-   if (max_depth % menu::sep != 0)
-      throw std::runtime_error("Invalid indentation.");
-
-   return 1 + max_depth / menu::sep;
+   return 1 + max_depth;
 }
 
 template <class Iter>
@@ -216,9 +215,9 @@ auto build_menu_tree( menu_node& root, std::string const& menu_str
 {
    // TODO: Make it exception safe.
 
-   auto const max_depth = get_max_depth(menu_str, menu::sep, c);
+   auto const max_depth = get_max_depth(menu_str, f, c);
    if (max_depth == 0)
-      return 0;
+      return static_cast<unsigned>(0);
 
    std::stringstream ss(menu_str);
    std::string line;
@@ -230,6 +229,10 @@ auto build_menu_tree( menu_node& root, std::string const& menu_str
       if (std::empty(line))
          continue;
 
+      auto const depth = get_depth(line, f);
+      if (depth == std::string::npos)
+         continue;
+
       if (!root_found) {
          root_found = true;
          root.name = line;
@@ -239,7 +242,6 @@ auto build_menu_tree( menu_node& root, std::string const& menu_str
          continue;
       }
 
-      auto const depth = get_depth(line, f);
       ++codes.at(depth - 1);
       for (unsigned i = depth; i < std::size(codes); ++i)
          codes[i] = -1;

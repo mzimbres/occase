@@ -149,7 +149,7 @@ int main(int argc, char* argv[])
       auto const oformat = convert_to_menu_oformat(op.oformat);
 
       auto const str = m.dump(oformat, op.oseparator);
-      std::cout << str;
+      std::cout << str << std::flush;
    }
 
    if (op.validate)

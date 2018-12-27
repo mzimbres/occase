@@ -116,7 +116,7 @@ int main(int argc, char* argv[])
    if (op.input_format == 3)
       menu_str = fipe_dump(raw_menu, menu::sep, op.fipe_tipo);
 
-   menu m {menu_str, menu::iformat::spaces};
+   menu m {menu_str, menu::iformat::spaces, '\n'};
 
    if (op.output_format == 5) {
       auto const codes = m.get_codes_at_depth(op.depth);

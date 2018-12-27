@@ -210,9 +210,8 @@ std::string get_code(Iter begin, Iter end)
    return code;
 }
 
-auto build_menu_tree( menu_node& root
-                    , std::string const& menu_str
-                    , menu::iformat f)
+auto build_menu_tree( menu_node& root, std::string const& menu_str
+                    , menu::iformat f, char c)
 {
    // TODO: Make it exception safe.
 
@@ -226,7 +225,7 @@ auto build_menu_tree( menu_node& root
    std::stack<menu_node*> stack;
    unsigned last_depth = 0;
    bool root_found = false;
-   while (std::getline(ss, line)) {
+   while (std::getline(ss, line, c)) {
       if (line.front() != ' ') {
          // This is the root node since it is the only one with zero
          // indentation.
@@ -355,10 +354,10 @@ public:
    bool end() const noexcept { return std::empty(st); }
 };
 
-menu::menu(std::string const& str, iformat f)
+menu::menu(std::string const& str, iformat f, char c)
 {
    // TODO: Catch exceptions and release already acquired memory.
-   max_depth = build_menu_tree(root, str, f);
+   max_depth = build_menu_tree(root, str, f, c);
 }
 
 void

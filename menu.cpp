@@ -1,6 +1,7 @@
 #include "menu.hpp"
 
 #include <stack>
+#include <limits>
 #include <vector>
 #include <iostream>
 #include <algorithm>
@@ -290,10 +291,12 @@ auto build_menu_tree( menu_node& root
 class menu_iterator {
 private:
    std::deque<std::deque<menu_node const*>> st;
+   unsigned depth;
 
    void advance()
    {
-      while (!std::empty(st.back().back()->children)) {
+      while (!std::empty(st.back().back()->children) &&
+             std::size(st) <= depth) {
          std::deque<menu_node const*> tmp;
          for (auto o : st.back().back()->children)
             tmp.push_back(o);
@@ -316,8 +319,9 @@ private:
 
 public:
    menu_node const* current;
-   menu_iterator(menu_node* root)
+   menu_iterator(menu_node* root, unsigned depth_)
    : current {root}
+   , depth(depth_)
    {
       if (root)
          st.push_back({root});
@@ -410,7 +414,7 @@ std::string menu::dump(oformat of, std::string const& separator)
 std::vector<std::string> menu::get_codes_at_depth(int depth) const
 {
    std::vector<std::string> ret;
-   menu_iterator iter(root.children.front());
+   menu_iterator iter(root.children.front(), depth);
    while (!iter.end()) {
       ret.push_back(iter.current->code);
       iter.next_leaf_node();
@@ -421,7 +425,8 @@ std::vector<std::string> menu::get_codes_at_depth(int depth) const
 
 menu::~menu()
 {
-   menu_iterator iter(root.children.front());
+   auto const max = std::numeric_limits<unsigned>::max();
+   menu_iterator iter(root.children.front(), max);
    while (!iter.end()) {
       delete iter.current;
       iter.next_node();

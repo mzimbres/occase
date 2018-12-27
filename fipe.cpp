@@ -135,6 +135,9 @@ fipe_dump( std::string const& str, int indentation
          table.push_back(std::move(fields));
    }
 
+   if (std::empty(table))
+      return {};
+
    return print_partitions( std::begin(table), std::end(table)
                           , indentation);
 }

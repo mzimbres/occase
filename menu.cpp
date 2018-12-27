@@ -174,15 +174,16 @@ auto get_depth(std::string& line, menu::iformat f)
 }
 
 // Finds the max depth in a menu.
-auto get_max_depth(std::string const& menu_str, int sep)
+auto get_max_depth(std::string const& menu_str, int sep, char c)
 {
    std::stringstream ss(menu_str);
    std::string line;
    auto max_depth = 0;
-   while (std::getline(ss, line)) {
+   while (std::getline(ss, line, c)) {
       auto const i = line.find_first_not_of(" ");
       if (i == std::string::npos)
          throw std::runtime_error("Invalid line.");
+
       if (max_depth < static_cast<int>(i))
          max_depth = i;
    }
@@ -215,7 +216,7 @@ auto build_menu_tree( menu_node& root, std::string const& menu_str
 {
    // TODO: Make it exception safe.
 
-   auto const max_depth = get_max_depth(menu_str, menu::sep);
+   auto const max_depth = get_max_depth(menu_str, menu::sep, c);
    if (max_depth == 0)
       return 0;
 
@@ -226,14 +227,10 @@ auto build_menu_tree( menu_node& root, std::string const& menu_str
    unsigned last_depth = 0;
    bool root_found = false;
    while (std::getline(ss, line, c)) {
-      if (line.front() != ' ') {
-         // This is the root node since it is the only one with zero
-         // indentation.
-         if (root_found)
-            throw std::runtime_error("Invalid input data.");
+      if (std::empty(line))
+         continue;
 
-         // From now on no other node will be allowed to have zero
-         // indentation.
+      if (!root_found) {
          root_found = true;
          root.name = line;
          auto* p = new menu_node {line, {}};
@@ -247,14 +244,14 @@ auto build_menu_tree( menu_node& root, std::string const& menu_str
       for (unsigned i = depth; i < std::size(codes); ++i)
          codes[i] = -1;
 
-      auto const c = get_code(std::begin(codes), std::begin(codes) + depth);
+      auto const code = get_code(std::begin(codes), std::begin(codes) + depth);
 
       if (depth > last_depth) {
          if (last_depth + 1 != depth)
             throw std::runtime_error("Forward Jump not allowed.");
 
          // We found the child of the last node pushed on the stack.
-         auto* p = new menu_node {line, c};
+         auto* p = new menu_node {line, code};
          stack.top()->children.push_front(p);
          stack.push(p);
          ++last_depth;
@@ -269,14 +266,14 @@ auto build_menu_tree( menu_node& root, std::string const& menu_str
          stack.pop();
 
          // Now we can add the new node.
-         auto* p = new menu_node {line, c};
+         auto* p = new menu_node {line, code};
          stack.top()->children.push_front(p);
          stack.push(p);
 
          last_depth = depth;
       } else {
          stack.pop();
-         auto* p = new menu_node {line, c};
+         auto* p = new menu_node {line, code};
          stack.top()->children.push_front(p);
          stack.push(p);
          // Last depth stays equal.
@@ -389,7 +386,7 @@ node_dump( menu_node const& node, menu::oformat of
    oss << node.code;
 }
 
-std::string menu::dump(oformat of, std::string const& separator)
+std::string menu::dump(oformat of, char separator)
 {
    // Traverses the menu in the same order as it would apear in the
    // config file.

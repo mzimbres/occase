@@ -72,7 +72,7 @@ auto get_indent_str(table_field f, int i)
 
 template <class Iter>
 std::string
-print_partitions(Iter begin, Iter end, int indent_size)
+print_partitions(Iter begin, Iter end, int indent_size, char c)
 {
    std::deque<std::deque<range>> st;
    st.push_back({{begin, end, table_field::tipo}});
@@ -86,7 +86,7 @@ print_partitions(Iter begin, Iter end, int indent_size)
 
       oss << get_indent_str(r.field, indent_size)
           << r.begin->at(r.field)
-          << "\n";
+          << c;
 
       auto const next = next_field(r.field);
       std::sort(r.begin, r.end, line_comp {next});
@@ -112,7 +112,7 @@ print_partitions(Iter begin, Iter end, int indent_size)
 
 std::string
 fipe_dump( std::string const& str, int indentation
-         , std::string const& tipo)
+         , std::string const& tipo, char c)
 {
    std::istringstream iss(str);
 
@@ -139,7 +139,7 @@ fipe_dump( std::string const& str, int indentation
       return {};
 
    return print_partitions( std::begin(table), std::end(table)
-                          , indentation);
+                          , indentation, c);
 }
 
 }

@@ -38,7 +38,7 @@ public:
    menu(std::string const& str, iformat f, char c);
    ~menu();
 
-   std::string dump(oformat of, std::string const& separator);
+   std::string dump(oformat of, char separator);
    std::vector<std::string> get_codes_at_depth(unsigned depth) const;
    auto get_max_depth() const noexcept {return max_depth;}
    bool check_leaf_min_depths(unsigned min_depth) const;

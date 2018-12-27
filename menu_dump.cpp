@@ -16,13 +16,15 @@ using namespace rt;
 
 struct menu_op {
    int sim_length;
-   int input_format;
-   int output_format;
+   int iformat;
+   int oformat;
    unsigned depth;
+   char iseparator;
+   char oseparator;
    std::string file;
-   std::string separator;
    std::string fipe_tipo;
    bool validate = false;
+   bool fipe = false;
 };
 
 auto get_file_as_str(menu_op const& op)
@@ -50,6 +52,15 @@ menu::oformat convert_to_menu_oformat(int i)
    return menu::oformat::hashes;
 }
 
+menu::iformat convert_to_menu_iformat(int i)
+{
+   if (i == 1) return menu::iformat::spaces;
+   if (i == 2) return menu::iformat::counter;
+
+   throw std::runtime_error("convert_to_menu_iformat: Invalid input.");
+
+   return menu::iformat::spaces;
+}
 int main(int argc, char* argv[])
 {
    menu_op op;
@@ -57,14 +68,14 @@ int main(int argc, char* argv[])
    desc.add_options()
       ("help,h", "This help message.")
       ("input-format,i"
-      , po::value<int>(&op.input_format)->default_value(1)
+      , po::value<int>(&op.iformat)->default_value(1)
       , "Input file format. Available options:\n"
         " 1: Node depth from indentation.\n"
         " 2: Node depth from line first digit.\n"
         " 3: Fipe raw file.\n"
       )
       ("output-format,o"
-      , po::value<int>(&op.output_format)->default_value(1)
+      , po::value<int>(&op.oformat)->default_value(1)
       , "Format used in the output file. Available options:\n"
         " 1: Node depth with indentation.\n"
         " 2: Node depth from line first digit.\n"
@@ -83,9 +94,14 @@ int main(int argc, char* argv[])
       ("file,f"
       , po::value<std::string>(&op.file)
       , "The file containing the menu. If empty, the menu will be simulated.")
-      ("separator,s"
-      , po::value<std::string>(&op.separator)->default_value("\n")
-      , "Separator used for each node entry.")
+      ("input-separator,a"
+      , po::value<char>(&op.iseparator)->default_value(';')
+      , "Separator used for each node entry in the input file."
+      )
+      ("output-separator,s"
+      , po::value<char>(&op.oseparator)->default_value(';')
+      , "Separator used for each node entry in the output data."
+      )
       ("fipe-tipo,k"
       , po::value<std::string>(&op.fipe_tipo)->default_value("1")
       , "Controls which field of the fipe table is read:\n"
@@ -96,6 +112,9 @@ int main(int argc, char* argv[])
       ("validate,v",
        "Checks whether all leaf nodes have at least the depth "
        " specified in --depth."
+      )
+      ("fipe,g",
+       "The input file is in fipe format."
       )
    ;
 
@@ -111,21 +130,25 @@ int main(int argc, char* argv[])
    if (vm.count("validate"))
       op.validate = true;
 
+   if (vm.count("fipe"))
+      op.fipe = true;
+
    auto const raw_menu = get_file_as_str(op);
    auto menu_str = raw_menu;
-   if (op.input_format == 3)
-      menu_str = fipe_dump(raw_menu, menu::sep, op.fipe_tipo);
+   if (op.fipe)
+      menu_str = fipe_dump(raw_menu, menu::sep, op.fipe_tipo, op.iseparator);
 
-   menu m {menu_str, menu::iformat::spaces, '\n'};
+   auto const iformat = convert_to_menu_iformat(op.iformat);
+   menu m {menu_str, iformat, op.iseparator};
 
-   if (op.output_format == 5) {
+   if (op.oformat == 5) {
       auto const codes = m.get_codes_at_depth(op.depth);
       for (auto const& o : codes)
          std::cout << o << "\n";
    } else {
-      auto const oformat = convert_to_menu_oformat(op.output_format);
+      auto const oformat = convert_to_menu_oformat(op.oformat);
 
-      auto const str = m.dump(oformat, op.separator);
+      auto const str = m.dump(oformat, op.oseparator);
       std::cout << str;
    }
 

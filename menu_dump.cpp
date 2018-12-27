@@ -53,34 +53,35 @@ int main(int argc, char* argv[])
    menu_op op;
    po::options_description desc("Options");
    desc.add_options()
-      ("help,h", "This hep message.")
+      ("help,h", "This help message.")
       ("input-format,i"
       , po::value<int>(&op.input_format)->default_value(1)
       , "Input file format. Available options:\n"
         " 1: Node depth from indentation.\n"
-        " 2: Node depth from number.\n"
-        " 3: Fipe raw format.\n"
+        " 2: Node depth from line first digit.\n"
+        " 3: Fipe raw file.\n"
       )
       ("output-format,o"
       , po::value<int>(&op.output_format)->default_value(1)
-      , "Indentation used in the output file. Available options:\n"
+      , "Format used in the output file. Available options:\n"
         " 1: Node depth with indentation.\n"
-        " 2: Node depth with number.\n"
+        " 2: Node depth from line first digit.\n"
         " 3: Hash code plus name.\n"
         " 4: Only hash codes are output.\n"
       )
       ("sim-length,l"
       , po::value<int>(&op.sim_length)->default_value(2)
-      , "Length of simulated children.")
+      , "Length of simulated children. Used only if -f is not provided."
+      )
       ("file,f"
       , po::value<std::string>(&op.file)
-      , "The file containing the menu. If empty, menu will be simulated.")
+      , "The file containing the menu. If empty, the menu will be simulated.")
       ("separator,s"
       , po::value<std::string>(&op.separator)->default_value("\n")
       , "Separator used for each node entry.")
       ("fipe-tipo,k"
       , po::value<std::string>(&op.fipe_tipo)->default_value("1")
-      , "The fipe tipo field.\n"
+      , "Controls which field of the fipe table is read:\n"
         " 1: Cars.\n"
         " 2: Motorcycles.\n"
         " 3: Trucks.\n"

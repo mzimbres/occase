@@ -18,6 +18,7 @@ struct menu_op {
    int sim_length;
    int input_format;
    int output_format;
+   int depth;
    std::string file;
    std::string separator;
    std::string fipe_tipo;
@@ -67,11 +68,16 @@ int main(int argc, char* argv[])
         " 1: Node depth with indentation.\n"
         " 2: Node depth from line first digit.\n"
         " 3: Hash code plus name.\n"
-        " 4: Only hash codes are output.\n"
+        " 4: Output all hash codes.\n"
+        " 5: Output hash codes at certain depth (see -d option).\n"
       )
       ("sim-length,l"
       , po::value<int>(&op.sim_length)->default_value(2)
       , "Length of simulated children. Used only if -f is not provided."
+      )
+      ("depth,d"
+      , po::value<int>(&op.depth)->default_value(2)
+      , "Outputs all codes at a certain depth."
       )
       ("file,f"
       , po::value<std::string>(&op.file)
@@ -103,6 +109,13 @@ int main(int argc, char* argv[])
       menu_str = fipe_dump(raw_menu, menu::sep, op.fipe_tipo);
 
    menu m {menu_str, menu::iformat::spaces};
+
+   if (op.output_format == 5) {
+      auto const codes = m.get_codes_at_depth(op.depth);
+      for (auto const& o : codes)
+         std::cout << o << "\n";
+      return 0;
+   }
 
    auto const oformat = convert_to_menu_oformat(op.output_format);
 

@@ -289,14 +289,12 @@ auto build_menu_tree( menu_node& root
 // Iterator used to traverse the menu depth first.
 class menu_iterator {
 private:
-   // Since it is not possible to iterate over a stack I will use a
-   // deque.
-   std::deque<std::deque<menu_node*>> st;
+   std::deque<std::deque<menu_node const*>> st;
 
    void advance()
    {
       while (!std::empty(st.back().back()->children)) {
-         std::deque<menu_node*> tmp;
+         std::deque<menu_node const*> tmp;
          for (auto o : st.back().back()->children)
             tmp.push_back(o);
 
@@ -317,7 +315,7 @@ private:
    }
 
 public:
-   menu_node* current;
+   menu_node const* current;
    menu_iterator(menu_node* root)
    : current {root}
    {
@@ -357,35 +355,9 @@ menu::menu(std::string const& str, iformat f)
    max_depth = build_menu_tree(root, str, f);
 }
 
-void menu::print_leaf()
-{
-   menu_iterator iter(root.children.front());
-   while (!iter.end()) {
-      std::cout << std::setw(20) << std::left
-                << iter.current->name << " "
-                << iter.current->code << "      "
-                << std::endl;
-      iter.next_leaf_node();
-   }
-}
-
-std::vector<std::string> menu::get_leaf_codes() const
-{
-   std::vector<std::string> ret;
-   menu_iterator iter(root.children.front());
-   while (!iter.end()) {
-      ret.push_back(iter.current->code);
-      iter.next_leaf_node();
-   }
-
-   return ret;
-}
-
 void
-node_dump( menu_node const& node
-         , menu::oformat of
-         , std::ostringstream& oss
-         , int max_depth)
+node_dump( menu_node const& node, menu::oformat of
+         , std::ostringstream& oss, int max_depth)
 {
    auto const k =
       std::count(std::begin(node.code), std::end(node.code), '.');
@@ -433,6 +405,18 @@ std::string menu::dump(oformat of, std::string const& separator)
    }
 
    return oss.str();
+}
+
+std::vector<std::string> menu::get_codes_at_depth(int depth) const
+{
+   std::vector<std::string> ret;
+   menu_iterator iter(root.children.front());
+   while (!iter.end()) {
+      ret.push_back(iter.current->code);
+      iter.next_leaf_node();
+   }
+
+   return ret;
 }
 
 menu::~menu()

@@ -394,6 +394,9 @@ std::string menu::dump(oformat of, std::string const& separator)
 {
    // Traverses the menu in the same order as it would apear in the
    // config file.
+   if (std::empty(root.children))
+      return {};
+
    std::string output;
    std::deque<std::deque<menu_node*>> st;
    st.push_back(root.children);
@@ -415,6 +418,9 @@ std::string menu::dump(oformat of, std::string const& separator)
 
 std::vector<std::string> menu::get_codes_at_depth(unsigned depth) const
 {
+   if (std::empty(root.children))
+      return {};
+
    std::vector<std::string> ret;
    menu_iterator iter(root.children.front(), depth);
    while (!iter.end()) {
@@ -430,6 +436,9 @@ bool menu::check_leaf_min_depths(unsigned min_depth) const
    // TODO: Change the function to return an iterator to the
    // invalid node.
 
+   if (std::empty(root.children))
+      return {};
+
    auto const max = std::numeric_limits<unsigned>::max();
    menu_iterator iter(root.children.front(), max);
    while (!iter.end()) {
@@ -444,11 +453,13 @@ bool menu::check_leaf_min_depths(unsigned min_depth) const
 
 menu::~menu()
 {
-   auto const max = std::numeric_limits<unsigned>::max();
-   menu_iterator iter(root.children.front(), max);
-   while (!iter.end()) {
-      delete iter.current;
-      iter.next_node();
+   if (!std::empty(root.children)) {
+      auto const max = std::numeric_limits<unsigned>::max();
+      menu_iterator iter(root.children.front(), max);
+      while (!iter.end()) {
+         delete iter.current;
+         iter.next_node();
+      }
    }
 }
 

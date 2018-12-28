@@ -1,6 +1,5 @@
 boost_inc_dir = /opt/boost_1_67_0/include
 boost_lib_dir = /opt/boost_1_67_0/lib
-json_inc_dir  = /opt/nlohmann_3_1_2
 
 boost_libs    =
 boost_libs    += $(boost_lib_dir)/libboost_system.a
@@ -8,8 +7,7 @@ boost_libs    += $(boost_lib_dir)/libboost_program_options.a
 
 DEBUG         = -g -ggdb3
 LDFLAGS       = -lpthread
-CPPFLAGS      = -I. -I$(boost_inc_dir) -I$(json_inc_dir) \
-                -std=c++17 $(DEBUG) -Wall # -Werror
+CPPFLAGS      = -I. -I$(boost_inc_dir) -std=c++17 $(DEBUG) -Wall # -Werror
 
 DIST_NAME   = sellit
 

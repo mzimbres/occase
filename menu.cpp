@@ -162,11 +162,11 @@ menu::iformat detect_iformat(std::string const& menu_str, char c)
          ++none;
    }
 
-   if (spaces == 0 && digits == 0 && none >= 1)
+   if (spaces == 0 && digits < 2 && none >= 1)
       return menu::iformat::spaces;
 
    if (spaces > 0) {
-      assert(digits == 0);
+      assert(digits < 2);
       return menu::iformat::spaces;
    }
 

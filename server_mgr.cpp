@@ -86,10 +86,10 @@ server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
 
    if (req.cmd == redis::request::get_menu) {
       assert(std::size(data) == 1);
-      menu = data.back();
-      auto const j_menu = json::parse(menu);
-      auto const menu_str = j_menu.at("data").get<std::string>();
-      auto const codes = get_hashes(menu_str);
+      auto const j_menu = json::parse(data.back());
+      menu_data = j_menu.at("data").get<std::string>();
+      menu_version = j_menu.at("version").get<int>();
+      auto const codes = get_hashes(menu_data);
       if (std::empty(codes))
          throw std::runtime_error("Group codes array empty.");
 
@@ -165,7 +165,8 @@ ev_res server_mgr::on_register(json const& j, std::shared_ptr<server_session> s)
    json resp;
    resp["cmd"] = "register_ack";
    resp["result"] = "ok";
-   resp["menu"] = menu;
+   resp["menu"]["data"] = menu_data;
+   resp["menu"]["version"] = menu_version;
    s->send(resp.dump());
    return ev_res::register_ok;
 }
@@ -207,7 +208,8 @@ ev_res server_mgr::on_login(json const& j, std::shared_ptr<server_session> s)
 
    auto const menu_version = j.at("menu").at("version").get<int>();
    if (menu_version == -1) {
-      resp["menu"] = menu;
+      resp["menu"]["data"] = menu_data;
+      resp["menu"]["version"] = menu_version;
    }
 
    s->send(resp.dump());

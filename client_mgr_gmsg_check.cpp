@@ -16,9 +16,10 @@ int client_mgr_gmsg_check::on_read( std::string msg
    if (cmd == "auth_ack") {
       auto const res = j.at("result").get<std::string>();
       if (res == "ok") {
-         //auto const menu_str = j.at("menu").at("data").get<std::string>();
-         auto const menu_str = j["menu"]["data"].get<std::string>();
+         auto const menu_str = j.at("menu").at("data").get<std::string>();
          auto const channels = get_hashes(menu_str);
+         if (std::empty(channels))
+            throw std::runtime_error("client_mgr_gmsg_check::on_read0");
          tot_msgs = op.n_publishers * std::size(channels)
                   * op.msgs_per_channel_per_user;
          std::cout << op.user << " expects: " << tot_msgs << std::endl;

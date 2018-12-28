@@ -72,7 +72,8 @@ private:
    sessions_stats stats;
 
    redis::facade db;
-   std::string menu;
+   int menu_version = -1;
+   std::string menu_data;
 
    net::steady_timer stats_timer;
 

@@ -17,6 +17,8 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
       if (res == "ok") {
          auto const menu_str = j["menu"]["data"].get<std::string>();
          auto const channels = get_hashes(menu_str);
+         if (std::empty(channels))
+            throw std::runtime_error("client_mgr_pub::on_read0");
          for (auto const& o : channels)
             for (auto i = 0; i < op.msgs_per_channel; ++i)
                hashes.push_back({false, false, o});

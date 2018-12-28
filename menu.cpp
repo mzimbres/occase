@@ -360,9 +360,9 @@ menu::menu(std::string const& str, char c)
    max_depth = build_menu_tree(root, str, f, c);
 }
 
-void
-node_dump( menu_node const& node, menu::oformat of
-         , std::ostringstream& oss, int max_depth)
+void node_dump( menu_node const& node, menu::oformat of
+              , std::ostringstream& oss, int max_depth
+              , char separator)
 {
    auto const k =
       std::count(std::begin(node.code), std::end(node.code), '.');
@@ -376,7 +376,7 @@ node_dump( menu_node const& node, menu::oformat of
 
    if (of == menu::oformat::counter) {
       auto const k =  indent / menu::sep;
-      oss << k << " " << node.name;
+      oss << k << separator << node.name;
       return;
    }
 
@@ -402,8 +402,8 @@ std::string menu::dump(oformat of, char separator)
    std::ostringstream oss;
    while (!std::empty(st)) {
       auto* node = st.back().back();
-      node_dump(*node, of, oss, max_depth);
-      oss << separator;
+      node_dump(*node, of, oss, max_depth, separator);
+      oss << '\n';
       st.back().pop_back();
       if (std::empty(st.back()))
          st.pop_back();

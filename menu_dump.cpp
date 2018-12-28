@@ -22,6 +22,7 @@ struct menu_op {
    std::string fipe_tipo;
    bool validate = false;
    bool fipe = false;
+   char sep;
 };
 
 std::string gen_sim_menu(int l)
@@ -89,6 +90,10 @@ int main(int argc, char* argv[])
       , po::value<unsigned>(&op.depth)->default_value(2)
       , "Outputs all codes at a certain depth."
       )
+      ("field-separator,m"
+      , po::value<char>(&op.sep)->default_value(' ')
+      , "Separator used in the output file."
+      )
       ("file,f"
       , po::value<std::string>(&op.file)
       , "The file containing the menu. If empty, the menu will be simulated.")
@@ -137,7 +142,7 @@ int main(int argc, char* argv[])
    } else {
       auto const oformat = convert_to_menu_oformat(op.oformat);
 
-      auto const str = m.dump(oformat, '\n');
+      auto const str = m.dump(oformat, op.sep);
       std::cout << str << std::flush;
    }
 

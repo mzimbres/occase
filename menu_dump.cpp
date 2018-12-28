@@ -11,6 +11,7 @@
 
 #include "menu.hpp"
 #include "fipe.hpp"
+#include "json_utils.hpp"
 
 using namespace rt;
 
@@ -81,6 +82,8 @@ int main(int argc, char* argv[])
         " 3: Hash code plus name.\n"
         " 4: Output all hash codes.\n"
         " 5: Output hash codes at certain depth (see -d option).\n"
+        " 6: Packs the output in json format ready to be loaded on redis. "
+        "    Will automatically use field-separator ';' and --validate."
       )
       ("sim-length,l"
       , po::value<int>(&op.sim_length)->default_value(2)
@@ -134,6 +137,19 @@ int main(int argc, char* argv[])
       menu_str = fipe_dump(raw_menu, menu::sep, op.fipe_tipo, '\n');
 
    menu m {menu_str, '\n'};
+
+   if (op.oformat == 6) {
+      if (!m.check_leaf_min_depths(op.depth))
+         return EXIT_FAILURE;
+
+      auto const str = m.dump(menu::oformat::counter, ';');
+
+      json j;
+      j["version"] = 1;
+      j["menu"] = str;
+      std::cout << j.dump() << std::flush;
+      return 0;
+   }
 
    if (op.oformat == 5) {
       auto const codes = m.get_codes_at_depth(op.depth);

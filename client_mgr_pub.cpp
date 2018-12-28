@@ -15,9 +15,8 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
    if (cmd == "auth_ack") {
       auto const res = j.at("result").get<std::string>();
       if (res == "ok") {
-         auto const menu_str = j.at("menu").get<std::string>();
-         auto const jmenu = json::parse(menu_str);
-         auto const channels = get_hashes(jmenu);
+         auto const menu_str = j["menu"]["data"].get<std::string>();
+         auto const channels = get_hashes(menu_str);
          for (auto const& o : channels)
             for (auto i = 0; i < op.msgs_per_channel; ++i)
                hashes.push_back({false, false, o});
@@ -105,7 +104,7 @@ int client_mgr_pub::on_handshake(std::shared_ptr<client_type> s)
    json j;
    j["cmd"] = "auth";
    j["from"] = op.user;
-   j["menu_version"] = -1;
+   j["menu"]["version"] = -1;
    s->send_msg(j.dump());
    //std::cout << "Sending " << j.dump() << std::endl;
    return 1;

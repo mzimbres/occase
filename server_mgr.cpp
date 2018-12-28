@@ -87,8 +87,9 @@ server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
    if (req.cmd == redis::request::get_menu) {
       assert(std::size(data) == 1);
       menu = data.back();
-      auto const j_menu = json::parse(data.back());
-      auto const codes = get_hashes(std::move(j_menu));
+      auto const j_menu = json::parse(menu);
+      auto const menu_str = j_menu.at("data").get<std::string>();
+      auto const codes = get_hashes(menu_str);
       if (std::empty(codes))
          throw std::runtime_error("Group codes array empty.");
 
@@ -204,9 +205,10 @@ ev_res server_mgr::on_login(json const& j, std::shared_ptr<server_session> s)
    resp["cmd"] = "auth_ack";
    resp["result"] = "ok";
 
-   auto const menu_version = j.at("menu_version").get<int>();
-   if (menu_version == -1)
+   auto const menu_version = j.at("menu").at("version").get<int>();
+   if (menu_version == -1) {
       resp["menu"] = menu;
+   }
 
    s->send(resp.dump());
 

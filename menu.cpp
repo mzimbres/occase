@@ -92,24 +92,18 @@ struct hash_gen_iter {
    }
 };
 
-std::vector<std::string> get_hashes(json menu)
+std::vector<std::string> get_hashes(std::string const& str)
 {
-   if (std::empty(menu))
+   if (std::empty(str))
       return {};
 
-   std::vector<std::string> hashes;
-   hash_gen_iter iter(menu);
-   while (!iter.end()) {
-      hashes.push_back(iter.current.value_prefix);
-      iter.next();
-   };
-
-   return hashes;
+   menu m {str};
+   return m.get_codes_at_depth(2);
 }
 
 // TODO: Pass the field separator as argument to be able to read
 // fields separated with ';' and not only spaces.
-auto get_depth(std::string& line, menu::iformat f)
+auto get_depth(std::string& line, menu::iformat f, char c)
 {
    if (f == menu::iformat::spaces) {
       auto const i = line.find_first_not_of(" ");
@@ -128,7 +122,7 @@ auto get_depth(std::string& line, menu::iformat f)
       // 10 (or 16 if we change to hex) where the digit indicating the
       // depth is only one character.
 
-      auto const i = line.find_first_of(" ");
+      auto const i = line.find_first_of(c);
       // To account for files terminating with newline.
       if (i == std::string::npos)
          return std::string::npos;
@@ -142,7 +136,7 @@ auto get_depth(std::string& line, menu::iformat f)
 }
 
 // Detects the file input format.
-menu::iformat detect_iformat(std::string const& menu_str, char c)
+menu::iformat detect_iformat(std::string const& menu_str)
 {
    int spaces = 0;
    int digits = 0;
@@ -150,7 +144,7 @@ menu::iformat detect_iformat(std::string const& menu_str, char c)
 
    std::stringstream ss(menu_str);
    std::string line;
-   while (std::getline(ss, line, c)) {
+   while (std::getline(ss, line, '\n')) {
       if (std::empty(line))
          throw std::runtime_error("Invalid line.");
 
@@ -181,8 +175,8 @@ auto get_max_depth(std::string const& menu_str, menu::iformat f, char c)
    std::stringstream ss(menu_str);
    std::string line;
    unsigned max_depth = 0;
-   while (std::getline(ss, line, c)) {
-      auto const i = get_depth(line, f);
+   while (std::getline(ss, line, '\n')) {
+      auto const i = get_depth(line, f, c);
 
       if (i == std::string::npos)
          continue;
@@ -226,11 +220,11 @@ auto build_menu_tree( menu_node& root, std::string const& menu_str
    std::stack<menu_node*> stack;
    unsigned last_depth = 0;
    bool root_found = false;
-   while (std::getline(ss, line, c)) {
+   while (std::getline(ss, line, '\n')) {
       if (std::empty(line))
          continue;
 
-      auto const depth = get_depth(line, f);
+      auto const depth = get_depth(line, f, c);
       if (depth == std::string::npos)
          continue;
 
@@ -354,17 +348,21 @@ public:
    bool end() const noexcept { return std::empty(st); }
 };
 
-menu::menu(std::string const& str, char c)
+menu::menu(std::string const& str)
 {
    // TODO: Catch exceptions and release already acquired memory.
+   // TODO: Automatically detect the line separator.
 
-   auto const f = detect_iformat(str, c);
+   auto const f = detect_iformat(str);
+   char c = ' ';
+   if (f == iformat::counter)
+      c = ';';
+
    max_depth = build_menu_tree(root, str, f, c);
 }
 
 void node_dump( menu_node const& node, menu::oformat of
-              , std::ostringstream& oss, int max_depth
-              , char separator)
+              , std::ostringstream& oss, int max_depth)
 {
    auto const k =
       std::count(std::begin(node.code), std::end(node.code), '.');
@@ -378,7 +376,7 @@ void node_dump( menu_node const& node, menu::oformat of
 
    if (of == menu::oformat::counter) {
       auto const k =  indent / menu::sep;
-      oss << k << separator << node.name;
+      oss << k << ';' << node.name;
       return;
    }
 
@@ -391,7 +389,7 @@ void node_dump( menu_node const& node, menu::oformat of
    oss << node.code;
 }
 
-std::string menu::dump(oformat of, char separator)
+std::string menu::dump(oformat of)
 {
    // Traverses the menu in the same order as it would apear in the
    // config file.
@@ -404,7 +402,7 @@ std::string menu::dump(oformat of, char separator)
    std::ostringstream oss;
    while (!std::empty(st)) {
       auto* node = st.back().back();
-      node_dump(*node, of, oss, max_depth, separator);
+      node_dump(*node, of, oss, max_depth);
       oss << '\n';
       st.back().pop_back();
       if (std::empty(st.back()))

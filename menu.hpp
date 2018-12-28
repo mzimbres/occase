@@ -10,7 +10,7 @@ namespace rt
 {
 
 // Puts all group hashes into a vector.
-std::vector<std::string> get_hashes(json menu);
+std::vector<std::string> get_hashes(std::string const& str);
 
 std::string to_str(int i);
 
@@ -33,10 +33,10 @@ public:
    menu& operator=(menu const&) = delete;
    menu(menu&&) = delete;
    menu& operator=(menu&&) = delete;
-   menu(std::string const& str, char c);
+   menu(std::string const& str);
    ~menu();
 
-   std::string dump(oformat of, char separator);
+   std::string dump(oformat of);
    std::vector<std::string> get_codes_at_depth(unsigned depth) const;
    auto get_max_depth() const noexcept {return max_depth;}
    bool check_leaf_min_depths(unsigned min_depth) const;

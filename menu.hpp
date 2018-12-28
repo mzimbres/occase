@@ -9,8 +9,6 @@
 namespace rt
 {
 
-std::string gen_sim_menu(int l);
-
 // Puts all group hashes into a vector.
 std::vector<std::string> get_hashes(json menu);
 

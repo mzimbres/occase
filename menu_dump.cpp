@@ -27,14 +27,31 @@ struct menu_op {
    bool fipe = false;
 };
 
-auto get_file_as_str(menu_op const& op)
+std::string gen_sim_menu(int l)
+{
+   std::string const sep = "   ";
+   std::string str;
+   str += "Root\n";
+   for (auto i = 0; i < l; ++i) {
+      str += sep + "foo\n";
+      for (auto j = 0; j < l; ++j) {
+         str += sep + sep + "bar\n";
+         for (auto j = 0; j < l; ++j)
+            str += sep + sep + sep + "foobar\n";
+      }
+   }
+
+   return str;
+}
+
+auto get_file_as_str(std::string const& file, int length)
 {
    using iter_type = std::istreambuf_iterator<char>;
 
-   if (std::empty(op.file))
-      return gen_sim_menu(op.sim_length);
+   if (std::empty(file))
+      return gen_sim_menu(length);
 
-   std::ifstream ifs(op.file);
+   std::ifstream ifs(file);
    return std::string {iter_type {ifs}, {}};
 }
 
@@ -61,6 +78,7 @@ menu::iformat convert_to_menu_iformat(int i)
 
    return menu::iformat::spaces;
 }
+
 int main(int argc, char* argv[])
 {
    menu_op op;
@@ -133,7 +151,7 @@ int main(int argc, char* argv[])
    if (vm.count("fipe"))
       op.fipe = true;
 
-   auto const raw_menu = get_file_as_str(op);
+   auto const raw_menu = get_file_as_str(op.file, op.sim_length);
    auto menu_str = raw_menu;
    if (op.fipe)
       menu_str = fipe_dump(raw_menu, menu::sep, op.fipe_tipo, op.iseparator);

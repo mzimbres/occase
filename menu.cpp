@@ -106,42 +106,6 @@ std::vector<std::string> get_hashes(json menu)
    return hashes;
 }
 
-std::vector<json> gen_hash_patches(json menu)
-{
-   if (std::empty(menu))
-      return {};
-
-   std::vector<json> patches;
-   hash_gen_iter iter(menu);
-   while (!iter.end()) {
-      json patch;
-      patch["op"] = "replace";
-      patch["path"] = iter.current.path_prefix + "/hash";
-      patch["value"] = iter.current.value_prefix;
-      patches.push_back(patch);
-      iter.next();
-   };
-
-   return patches;
-}
-
-std::string gen_sim_menu(int l)
-{
-   std::string const sep = "   ";
-   std::string str;
-   str += "Root\n";
-   for (auto i = 0; i < l; ++i) {
-      str += sep + "foo\n";
-      for (auto j = 0; j < l; ++j) {
-         str += sep + sep + "bar\n";
-         for (auto j = 0; j < l; ++j)
-            str += sep + sep + sep + "foobar\n";
-      }
-   }
-
-   return str;
-}
-
 auto get_depth(std::string& line, menu::iformat f)
 {
    if (f == menu::iformat::spaces) {

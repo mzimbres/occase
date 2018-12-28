@@ -1,3 +1,7 @@
+Dependencies
+
+sudo apt-get install nlohmann-json3-dev
+
 To send the menu to redis.
 ./menu_dump -o 6 --sim-length 3 | redis-cli -x set menu
 

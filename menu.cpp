@@ -2,6 +2,7 @@
 
 #include <stack>
 #include <limits>
+#include <cctype>
 #include <vector>
 #include <iostream>
 #include <algorithm>
@@ -136,6 +137,40 @@ auto get_depth(std::string& line, menu::iformat f)
    }
 
    return std::string::npos;
+}
+
+// Detects the file input format.
+menu::iformat detect_iformat(std::string const& menu_str, char c)
+{
+   int spaces = 0;
+   int digits = 0;
+   int none = 0;
+
+   std::stringstream ss(menu_str);
+   std::string line;
+   while (std::getline(ss, line, c)) {
+      if (std::empty(line))
+         throw std::runtime_error("Invalid line.");
+
+      if (line.front() == ' ')
+         ++spaces;
+      else if (std::isdigit(line.front()))
+         ++digits;
+      else
+         ++none;
+   }
+
+   if (spaces == 0 && digits == 0 && none > 1)
+      return menu::iformat::spaces;
+
+   if (spaces > 0) {
+      assert(digits == 0);
+      return menu::iformat::spaces;
+   }
+
+   assert(digits > 0);
+   assert(spaces == 0);
+   return menu::iformat::counter;
 }
 
 // Finds the max depth in a menu.

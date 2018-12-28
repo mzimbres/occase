@@ -145,7 +145,7 @@ int main(int argc, char* argv[])
       auto const str = m.dump(menu::oformat::counter, ';');
 
       json j;
-      j["version"] = 1;
+      j["menu_version"] = 1;
       j["menu"] = str;
       std::cout << j.dump() << std::flush;
       return 0;

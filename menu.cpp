@@ -107,6 +107,8 @@ std::vector<std::string> get_hashes(json menu)
    return hashes;
 }
 
+// TODO: Pass the field separator as argument to be able to read
+// fields separated with ';' and not only spaces.
 auto get_depth(std::string& line, menu::iformat f)
 {
    if (f == menu::iformat::spaces) {

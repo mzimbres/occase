@@ -19,8 +19,6 @@ struct menu_op {
    int iformat;
    int oformat;
    unsigned depth;
-   char iseparator;
-   char oseparator;
    std::string file;
    std::string fipe_tipo;
    bool validate = false;
@@ -112,14 +110,6 @@ int main(int argc, char* argv[])
       ("file,f"
       , po::value<std::string>(&op.file)
       , "The file containing the menu. If empty, the menu will be simulated.")
-      ("input-separator,a"
-      , po::value<char>(&op.iseparator)->default_value(';')
-      , "Separator used for each node entry in the input file."
-      )
-      ("output-separator,s"
-      , po::value<char>(&op.oseparator)->default_value(';')
-      , "Separator used for each node entry in the output data."
-      )
       ("fipe-tipo,k"
       , po::value<std::string>(&op.fipe_tipo)->default_value("1")
       , "Controls which field of the fipe table is read:\n"
@@ -154,10 +144,10 @@ int main(int argc, char* argv[])
    auto const raw_menu = get_file_as_str(op.file, op.sim_length);
    auto menu_str = raw_menu;
    if (op.fipe)
-      menu_str = fipe_dump(raw_menu, menu::sep, op.fipe_tipo, op.iseparator);
+      menu_str = fipe_dump(raw_menu, menu::sep, op.fipe_tipo, '\n');
 
    auto const iformat = convert_to_menu_iformat(op.iformat);
-   menu m {menu_str, iformat, op.iseparator};
+   menu m {menu_str, iformat, '\n'};
 
    if (op.oformat == 5) {
       auto const codes = m.get_codes_at_depth(op.depth);
@@ -166,7 +156,7 @@ int main(int argc, char* argv[])
    } else {
       auto const oformat = convert_to_menu_oformat(op.oformat);
 
-      auto const str = m.dump(oformat, op.oseparator);
+      auto const str = m.dump(oformat, '\n');
       std::cout << str << std::flush;
    }
 

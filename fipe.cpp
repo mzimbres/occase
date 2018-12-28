@@ -2,6 +2,7 @@
 
 #include <deque>
 #include <vector>
+#include <cassert>
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -129,7 +130,7 @@ fipe_dump( std::string const& str, int indentation
       }
 
       // TODO: Include the proper header for this.
-      //assert(std::size(fields) == 12);
+      assert(std::size(fields) == 12);
 
       if (fields[table_field::tipo] == tipo)
          table.push_back(std::move(fields));

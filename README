@@ -1,6 +1,5 @@
 To send the menu to redis.
-./menu_dump -m 1 -l 30 | redis-cli -x set menu
-./menu_dump -f menus/veiculos.csv -i 3 -o 2 -s ";" | redis-cli -x set menu
+./menu_dump -o 6 --sim-length 3 | redis-cli -x set menu
 
 To increase the number of file descriptors a process can have.
 

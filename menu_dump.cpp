@@ -16,7 +16,6 @@ using namespace rt;
 
 struct menu_op {
    int sim_length;
-   int iformat;
    int oformat;
    unsigned depth;
    std::string file;
@@ -67,29 +66,12 @@ menu::oformat convert_to_menu_oformat(int i)
    return menu::oformat::hashes;
 }
 
-menu::iformat convert_to_menu_iformat(int i)
-{
-   if (i == 1) return menu::iformat::spaces;
-   if (i == 2) return menu::iformat::counter;
-
-   throw std::runtime_error("convert_to_menu_iformat: Invalid input.");
-
-   return menu::iformat::spaces;
-}
-
 int main(int argc, char* argv[])
 {
    menu_op op;
    po::options_description desc("Options");
    desc.add_options()
       ("help,h", "This help message.")
-      ("input-format,i"
-      , po::value<int>(&op.iformat)->default_value(1)
-      , "Input file format. Available options:\n"
-        " 1: Node depth from indentation.\n"
-        " 2: Node depth from line first digit.\n"
-        " 3: Fipe raw file.\n"
-      )
       ("output-format,o"
       , po::value<int>(&op.oformat)->default_value(1)
       , "Format used in the output file. Available options:\n"
@@ -146,8 +128,7 @@ int main(int argc, char* argv[])
    if (op.fipe)
       menu_str = fipe_dump(raw_menu, menu::sep, op.fipe_tipo, '\n');
 
-   auto const iformat = convert_to_menu_iformat(op.iformat);
-   menu m {menu_str, iformat, '\n'};
+   menu m {menu_str, '\n'};
 
    if (op.oformat == 5) {
       auto const codes = m.get_codes_at_depth(op.depth);

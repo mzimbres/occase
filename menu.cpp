@@ -160,7 +160,7 @@ menu::iformat detect_iformat(std::string const& menu_str, char c)
          ++none;
    }
 
-   if (spaces == 0 && digits == 0 && none > 1)
+   if (spaces == 0 && digits == 0 && none >= 1)
       return menu::iformat::spaces;
 
    if (spaces > 0) {
@@ -352,9 +352,11 @@ public:
    bool end() const noexcept { return std::empty(st); }
 };
 
-menu::menu(std::string const& str, iformat f, char c)
+menu::menu(std::string const& str, char c)
 {
    // TODO: Catch exceptions and release already acquired memory.
+
+   auto const f = detect_iformat(str, c);
    max_depth = build_menu_tree(root, str, f, c);
 }
 

@@ -33,7 +33,7 @@ public:
    menu& operator=(menu const&) = delete;
    menu(menu&&) = delete;
    menu& operator=(menu&&) = delete;
-   menu(std::string const& str, iformat f, char c);
+   menu(std::string const& str, char c);
    ~menu();
 
    std::string dump(oformat of, char separator);

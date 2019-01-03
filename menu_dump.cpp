@@ -90,7 +90,7 @@ int main(int argc, char* argv[])
       )
       ("depth,d"
       , po::value<unsigned>(&op.depth)->default_value(2)
-      , "Outputs all codes at a certain depth."
+      , "Influences the output."
       )
       ("file,f"
       , po::value<std::string>(&op.file)
@@ -137,7 +137,7 @@ int main(int argc, char* argv[])
       if (!m.check_leaf_min_depths(op.depth))
          return EXIT_FAILURE;
 
-      auto const str = m.dump(menu::oformat::counter);
+      auto const str = m.dump(menu::oformat::counter, op.depth);
 
       json j;
       j["version"] = 1;
@@ -153,7 +153,7 @@ int main(int argc, char* argv[])
    } else {
       auto const oformat = convert_to_menu_oformat(op.oformat);
 
-      auto const str = m.dump(oformat);
+      auto const str = m.dump(oformat, op.depth);
       std::cout << str << std::flush;
    }
 

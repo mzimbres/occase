@@ -325,7 +325,7 @@ void node_dump( menu_node const& node, menu::oformat of
    oss << node.code;
 }
 
-std::string menu::dump(oformat of)
+std::string menu::dump(oformat of, int const max_depth)
 {
    // Traverses the menu in the same order as it would apear in the
    // config file.
@@ -341,11 +341,13 @@ std::string menu::dump(oformat of)
       node_dump(*node, of, oss, max_depth);
       oss << '\n';
       st.back().pop_back();
+      auto const size = std::size(st);
       if (std::empty(st.back()))
          st.pop_back();
       if (std::empty(node->children))
          continue;
-      st.push_back(node->children);
+      if (size < max_depth)
+         st.push_back(node->children);
    }
 
    return oss.str();

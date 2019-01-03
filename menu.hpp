@@ -3,6 +3,7 @@
 #include <stack>
 #include <deque>
 #include <string>
+#include <limits>
 
 #include "json_utils.hpp"
 
@@ -36,7 +37,8 @@ public:
    menu(std::string const& str);
    ~menu();
 
-   std::string dump(oformat of);
+   std::string dump( oformat of
+                   , int max_depth = std::numeric_limits<int>::max());
    std::vector<std::string> get_codes_at_depth(unsigned depth) const;
    auto get_max_depth() const noexcept {return max_depth;}
    bool check_leaf_min_depths(unsigned min_depth) const;

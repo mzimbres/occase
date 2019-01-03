@@ -336,18 +336,18 @@ std::string menu::dump(oformat of, unsigned const max_depth)
    std::deque<std::deque<menu_node*>> st;
    st.push_back(root.children);
    std::ostringstream oss;
-   while (!std::empty(st)) {
+   for (;;) {
       auto* node = st.back().back();
+      st.back().pop_back();
+      if (!std::empty(node->children) && std::size(st) < max_depth)
+         st.push_back(node->children);
       node_dump(*node, of, oss, max_depth);
       oss << '\n';
-      st.back().pop_back();
-      auto const size = std::size(st);
-      if (std::empty(st.back()))
+      while (std::empty(st.back())) {
          st.pop_back();
-      if (std::empty(node->children))
-         continue;
-      if (size < max_depth)
-         st.push_back(node->children);
+         if (std::empty(st))
+            return oss.str();
+      }
    }
 
    return oss.str();

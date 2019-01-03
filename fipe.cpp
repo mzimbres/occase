@@ -120,12 +120,12 @@ fipe_dump( std::string const& str, int indentation
    std::vector<std::vector<std::string>> table;
    std::string line;
    while (std::getline(iss, line)) {
+      line.erase( std::remove(std::begin(line), std::end(line), '"')
+                , std::end(line));
       std::string item;
       std::istringstream iss(line);
       std::vector<std::string> fields;
       while (std::getline(iss, item, ';')) {
-         item.erase( std::remove(std::begin(item), std::end(item), '"')
-                   , std::end(item));
          fields.push_back(item);
       }
 

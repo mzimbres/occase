@@ -1,6 +1,6 @@
 #!/bin/bash
 
-./menu_dump -o 6 --sim-length 3 | redis-cli -x set menu
+#./menu_dump -o 6 --sim-length 20 | redis-cli -x set menu
 
 ./read_only_tests --users 100 \
                   --launch-interval 10 \

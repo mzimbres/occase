@@ -89,7 +89,7 @@ int main(int argc, char* argv[])
       , "Length of simulated children. Used only if -f is not provided."
       )
       ("depth,d"
-      , po::value<unsigned>(&op.depth)->default_value(2)
+      , po::value<unsigned>(&op.depth)->default_value(std::numeric_limits<unsigned>::max())
       , "Influences the output."
       )
       ("file,f"

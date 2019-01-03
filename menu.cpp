@@ -325,9 +325,9 @@ void node_dump( menu_node const& node, menu::oformat of
    oss << node.code;
 }
 
-std::string menu::dump(oformat of, int const max_depth)
+std::string menu::dump(oformat of, unsigned const max_depth)
 {
-   // Traverses the menu in the same order as it would apear in the
+   // Traverses the menu in the same order as it would appear in the
    // config file.
    if (std::empty(root.children))
       return {};

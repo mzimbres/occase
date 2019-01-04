@@ -349,8 +349,6 @@ std::string menu::dump(oformat of, unsigned const max_depth)
             return oss.str();
       }
    }
-
-   return oss.str();
 }
 
 std::vector<std::string> menu::get_codes_at_depth(unsigned depth) const

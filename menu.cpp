@@ -142,8 +142,10 @@ std::string get_code(Iter begin, Iter end)
    return code;
 }
 
-auto build_menu_tree( menu_node& root, std::string const& menu_str
-                    , menu::iformat f, char c)
+// Parses the three contained in menu_str and puts its root node in
+// root.children.
+auto parse_tree( menu_node& root, std::string const& menu_str
+               , menu::iformat f, char c)
 {
    // TODO: Make it exception safe.
 
@@ -156,17 +158,16 @@ auto build_menu_tree( menu_node& root, std::string const& menu_str
    std::deque<int> codes(max_depth - 1, -1);
    std::stack<menu_node*> stack;
    unsigned last_depth = 0;
-   bool root_found = false;
    while (std::getline(ss, line, '\n')) {
       if (std::empty(line))
          continue;
 
+      // TODO: Clarify if we need this.
       auto const depth = get_depth(line, f, c);
       if (depth == std::string::npos)
          continue;
 
-      if (!root_found) {
-         root_found = true;
+      if (std::empty(root.children)) {
          root.name = line;
          auto* p = new menu_node {line, {}};
          root.children.push_front(p);
@@ -295,7 +296,7 @@ menu::menu(std::string const& str)
    if (f == iformat::counter)
       c = ';';
 
-   max_depth = build_menu_tree(root, str, f, c);
+   max_depth = parse_tree(root, str, f, c);
 }
 
 void node_dump( menu_node const& node, menu::oformat of

@@ -11,7 +11,8 @@ namespace rt
 {
 
 // Puts all group hashes into a vector.
-std::vector<std::string> get_hashes(std::string const& str);
+std::vector<std::string>
+get_hashes(std::string const& str, unsigned depth = 2);
 
 std::string to_str(int i);
 

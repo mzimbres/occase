@@ -28,13 +28,14 @@ std::string to_str(int i)
    return to_str_raw(i, 10, '0');
 }
 
-std::vector<std::string> get_hashes(std::string const& str)
+std::vector<std::string>
+get_hashes(std::string const& str, unsigned depth)
 {
    if (std::empty(str))
       return {};
 
    menu m {str};
-   return m.get_codes_at_depth(2);
+   return m.get_codes_at_depth(depth);
 }
 
 // TODO: Pass the field separator as argument to be able to read
@@ -42,7 +43,7 @@ std::vector<std::string> get_hashes(std::string const& str)
 auto get_depth(std::string& line, menu::iformat f, char c)
 {
    if (f == menu::iformat::spaces) {
-      auto const i = line.find_first_not_of(" ");
+      auto const i = line.find_first_not_of(' ');
       if (i == std::string::npos)
          throw std::runtime_error("Invalid line.");
 

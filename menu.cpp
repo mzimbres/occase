@@ -162,7 +162,6 @@ auto parse_tree( menu_node& root, std::string const& menu_str
       if (std::empty(line))
          continue;
 
-      // TODO: Clarify if we need this.
       auto const depth = get_depth(line, f, c);
       if (depth == std::string::npos)
          continue;
@@ -227,13 +226,8 @@ private:
    void advance()
    {
       while (!std::empty(st.back().back()->children) &&
-             std::size(st) <= depth) {
-         std::deque<menu_node const*> tmp;
-         for (auto o : st.back().back()->children)
-            tmp.push_back(o);
-
-         st.push_back(std::move(tmp));
-      }
+             std::size(st) <= depth)
+         st.push_back(st.back().back()->children);
 
       current = st.back().back();
       st.back().pop_back();
@@ -250,7 +244,7 @@ private:
 
 public:
    menu_node const* current;
-   menu_iterator(menu_node* root, unsigned depth_)
+   menu_iterator(menu_node const* root, unsigned depth_)
    : depth(depth_)
    , current {root}
    {
@@ -335,7 +329,7 @@ std::string menu::dump(oformat of, unsigned const max_depth)
       return {};
 
    std::string output;
-   std::deque<std::deque<menu_node*>> st;
+   std::deque<std::deque<menu_node const*>> st;
    st.push_back(root.children);
    std::ostringstream oss;
    for (;;) {

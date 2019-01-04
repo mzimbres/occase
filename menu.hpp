@@ -19,7 +19,7 @@ std::string to_str(int i);
 struct menu_node {
    std::string name;
    std::string code;
-   std::deque<menu_node*> children;
+   std::deque<menu_node const*> children;
 };
 
 class menu {

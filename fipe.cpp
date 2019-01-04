@@ -13,7 +13,7 @@ namespace rt
 
 enum table_field
 { id, tipo, id_modelo_ano, fipe_codigo, id_marca, marca
-, id_modelo, modelo, ano, name, combustivel, preco
+, id_modelo, modelo1, ano, name, combustivel, preco, modelo2
 };
 
 struct line_comp {
@@ -41,20 +41,22 @@ auto calc_indent(table_field field)
 {
    if (field == table_field::tipo)        return 0;
    if (field == table_field::marca)       return 1;
-   if (field == table_field::modelo)      return 2;
-   if (field == table_field::ano)         return 3;
-   if (field == table_field::combustivel) return 4;
-   if (field == table_field::preco)       return 5;
+   if (field == table_field::modelo1)     return 2;
+   if (field == table_field::modelo2)     return 3;
+   if (field == table_field::ano)         return 4;
+   if (field == table_field::combustivel) return 5;
+   if (field == table_field::preco)       return 6;
    return 0;
 }
 
 auto next_field(table_field field)
 {
-   if (field == table_field::tipo)        return table_field::marca;
-   if (field == table_field::marca)       return table_field::modelo;
-   if (field == table_field::modelo)      return table_field::ano;
-   if (field == table_field::ano)         return table_field::combustivel;
-   if (field == table_field::combustivel) return table_field::preco;
+   if (field == table_field::tipo)         return table_field::marca;
+   if (field == table_field::marca)        return table_field::modelo1;
+   if (field == table_field::modelo1)      return table_field::modelo2;
+   if (field == table_field::modelo2)      return table_field::ano;
+   if (field == table_field::ano)          return table_field::combustivel;
+   if (field == table_field::combustivel)  return table_field::preco;
    return table_field::fipe_codigo;
 }
 
@@ -111,6 +113,11 @@ print_partitions(Iter begin, Iter end, int indent_size, char c)
    return oss.str();
 }
 
+std::string split_model(std::string& model)
+{
+   return {"ahahahaha"};
+}
+
 std::string
 fipe_dump( std::string const& str, int indentation
          , std::string const& tipo, char c)
@@ -131,6 +138,9 @@ fipe_dump( std::string const& str, int indentation
 
       // TODO: Include the proper header for this.
       assert(std::size(fields) == 12);
+
+      auto const modelo2 = split_model(fields[table_field::modelo1]);
+      fields.push_back(modelo2);
 
       if (fields[table_field::tipo] == tipo)
          table.push_back(std::move(fields));

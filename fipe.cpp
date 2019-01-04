@@ -4,6 +4,7 @@
 #include <vector>
 #include <cassert>
 #include <fstream>
+#include <iomanip>
 #include <sstream>
 #include <iostream>
 #include <algorithm>
@@ -87,6 +88,7 @@ print_partitions(Iter begin, Iter end, int indent_size, char c)
       if (std::empty(st.back()))
          st.pop_back();
 
+      assert(!std::empty(r.begin->at(r.field)));
       oss << get_indent_str(r.field, indent_size)
           << r.begin->at(r.field)
           << c;
@@ -115,7 +117,31 @@ print_partitions(Iter begin, Iter end, int indent_size, char c)
 
 std::string split_model(std::string& model)
 {
-   return {"ahahahaha"};
+   // The first naive strategy is to split on the first space found.
+   auto const i = model.find(' ');
+   if (i == std::string::npos) {
+      // The string is composed of only one field. Not much we can do.
+      return "Todos";
+   }
+
+   if (i == 0) {
+      throw std::runtime_error("Invalid field.");
+   }
+
+
+   auto const j = model.find_first_not_of(' ', i + 1);
+   auto const model2 = model.substr(j);
+   if (std::empty(model2)) {
+      // The space character was the last on the line. Not much we can
+      // do again.
+      return "Todos";
+   }
+
+   model.erase(i);
+   //std::cout << std::setw(20) << std::left << model << " ===> " << model2 << std::endl;
+
+   assert(!std::empty(model2));
+   return model2;
 }
 
 std::string

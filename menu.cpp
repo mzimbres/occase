@@ -302,19 +302,20 @@ void node_dump( menu_node const& node, menu::oformat of
    auto const indent = std::size(node.code) - k;
    if (of == menu::oformat::spaces) {
       std::string indent_str(indent, ' ');
-      oss << indent_str << node.name;
+      oss << indent_str << node.name << ' ' << node.leaf_counter;
       return;
    }
 
    if (of == menu::oformat::counter) {
       auto const k =  indent / menu::sep;
-      oss << k << ';' << node.name;
+      oss << k << ';' << node.name << ';' << node.leaf_counter;
       return;
    }
 
    if (of == menu::oformat::info) {
       auto const n = (max_depth - 1) * (menu::sep + 1);
-      oss << std::setw(n) << std::left << node.code << "" << node.name;
+      oss << std::setw(n) << std::left
+          << node.code << ' ' << node.name << ' ' << node.leaf_counter;
       return;
    }
 

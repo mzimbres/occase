@@ -19,7 +19,7 @@ std::string to_str(int i);
 struct menu_node {
    std::string name;
    std::string code;
-   int leaf_counter = 0;
+   mutable unsigned leaf_counter = 0;
    std::deque<menu_node const*> children;
 };
 

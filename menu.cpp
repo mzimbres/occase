@@ -244,7 +244,8 @@ private:
 
 public:
    menu_node const* current;
-   menu_iterator(menu_node const* root, unsigned depth_)
+   menu_iterator( menu_node const* root
+                , unsigned depth_ = std::numeric_limits<unsigned>::max())
    : depth(depth_)
    , current {root}
    {
@@ -291,6 +292,25 @@ menu::menu(std::string const& str)
       c = ';';
 
    max_depth = parse_tree(root, str, f, c);
+
+   auto acc = [](auto a, auto const* p)
+   {
+      if (std::empty(p->children))
+         return a + 1;
+      return a + p->leaf_counter;
+   };
+
+   menu_iterator iter(root.children.front());
+   while (!iter.end()) {
+      if (std::empty(iter.current->children))
+         iter.current->leaf_counter = 0;
+      else
+         iter.current->leaf_counter =
+            std::accumulate( std::begin(iter.current->children)
+                           , std::end(iter.current->children)
+                           , static_cast<unsigned>(0), acc);
+      iter.next_node();
+   }
 }
 
 void node_dump( menu_node const& node, menu::oformat of
@@ -385,8 +405,7 @@ bool menu::check_leaf_min_depths(unsigned min_depth) const
 
 menu::~menu()
 {
-   auto const max = std::numeric_limits<unsigned>::max();
-   menu_iterator iter(root.children.front(), max);
+   menu_iterator iter(root.children.front());
    while (!iter.end()) {
       delete iter.current;
       iter.next_node();

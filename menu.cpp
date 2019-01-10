@@ -248,10 +248,10 @@ public:
    : depth(depth_)
    , current {root}
    {
-      if (root)
+      if (root) {
          st.push_back({root});
-
-      advance();
+         advance();
+      }
    }
 
    auto get_depth() const noexcept { return std::size(st); }
@@ -385,13 +385,11 @@ bool menu::check_leaf_min_depths(unsigned min_depth) const
 
 menu::~menu()
 {
-   if (!std::empty(root.children)) {
-      auto const max = std::numeric_limits<unsigned>::max();
-      menu_iterator iter(root.children.front(), max);
-      while (!iter.end()) {
-         delete iter.current;
-         iter.next_node();
-      }
+   auto const max = std::numeric_limits<unsigned>::max();
+   menu_iterator iter(root.children.front(), max);
+   while (!iter.end()) {
+      delete iter.current;
+      iter.next_node();
    }
 }
 

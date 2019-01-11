@@ -19,8 +19,8 @@ std::string to_str(int i);
 struct menu_node {
    std::string name;
    std::string code;
-   mutable unsigned leaf_counter = 0;
-   std::deque<menu_node const*> children;
+   unsigned leaf_counter = 0;
+   std::deque<menu_node*> children;
 };
 
 class menu {

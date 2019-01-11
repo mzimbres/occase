@@ -220,7 +220,7 @@ auto parse_tree( menu_node& root, std::string const& menu_str
 // Iterator used to traverse the menu depth first.
 class menu_iterator {
 private:
-   std::deque<std::deque<menu_node const*>> st;
+   std::deque<std::deque<menu_node*>> st;
    unsigned depth;
 
    void advance()
@@ -243,8 +243,8 @@ private:
    }
 
 public:
-   menu_node const* current;
-   menu_iterator( menu_node const* root
+   menu_node* current;
+   menu_iterator( menu_node* root
                 , unsigned depth_ = std::numeric_limits<unsigned>::max())
    : depth(depth_)
    , current {root}
@@ -350,7 +350,7 @@ std::string menu::dump(oformat of, unsigned const max_depth)
       return {};
 
    std::string output;
-   std::deque<std::deque<menu_node const*>> st;
+   std::deque<std::deque<menu_node*>> st;
    st.push_back(root.children);
    std::ostringstream oss;
    for (;;) {

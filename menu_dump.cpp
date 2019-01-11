@@ -147,9 +147,9 @@ int main(int argc, char* argv[])
    }
 
    if (op.oformat == 5) {
-      auto const codes = m.get_codes_at_depth(op.depth);
-      for (auto const& o : codes)
-         std::cout << o << "\n";
+      leaf_view view {m, op.depth};
+      for (auto const& o : view)
+         std::cout << o.code << "\n";
    } else {
       auto const oformat = convert_to_menu_oformat(op.oformat);
 

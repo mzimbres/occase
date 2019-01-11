@@ -89,16 +89,18 @@ server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
       auto const j_menu = json::parse(data.back());
       menu_data = j_menu.at("data").get<std::string>();
       menu_version = j_menu.at("version").get<int>();
-      auto const codes = get_hashes(menu_data);
-      if (std::empty(codes))
-         throw std::runtime_error("Group codes array empty.");
 
-      for (auto const& gc : codes) {
-         auto const new_group = channels.insert({gc, {}});
+      menu m {menu_data};
+      if (std::empty(m))
+         throw std::runtime_error("Menu is empty.");
+
+      leaf_view view {m, 2}; // TODO: Implement arbitrary depth.
+      for (auto const& gc : view) {
+         auto const new_group = channels.insert({gc.code, {}});
          if (new_group.second) {
-            std::cout << "Successfully created channel: " << gc << std::endl;
+            std::cout << "Successfully created channel: " << gc.code << std::endl;
          } else {
-            std::cout << "Channel " << gc << " already exists." << std::endl;
+            std::cout << "Channel " << gc.code << " already exists." << std::endl;
          }
       }
    }

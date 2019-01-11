@@ -31,11 +31,15 @@ std::string to_str(int i)
 std::vector<std::string>
 get_hashes(std::string const& str, unsigned depth)
 {
-   if (std::empty(str))
+   menu m {str};
+   if (std::empty(m))
       return {};
 
-   menu m {str};
-   return m.get_codes_at_depth(depth);
+   std::vector<std::string> codes;
+   leaf_view view {m, depth};
+   for (auto const& node : view)
+      codes.push_back(node.code);
+   return codes;
 }
 
 // TODO: Pass the field separator as argument to be able to read
@@ -218,7 +222,7 @@ auto parse_tree( menu_node& root, std::string const& menu_str
 }
 
 // Iterator used to traverse the menu depth first.
-void menu_iterator::advance()
+void menu_traversal::advance()
 {
    while (!std::empty(st.back().back()->children) &&
           std::size(st) <= depth)
@@ -228,16 +232,18 @@ void menu_iterator::advance()
    st.back().pop_back();
 }
 
-void menu_iterator::next_internal()
+void menu_traversal::next_internal()
 {
    st.pop_back();
-   if (std::empty(st))
+   if (std::empty(st)) {
+      current = nullptr;
       return;
+   }
    current = st.back().back();
    st.back().pop_back();
 }
 
-menu_iterator::menu_iterator(menu_node* root, unsigned depth_)
+menu_traversal::menu_traversal(menu_node* root, unsigned depth_)
 : depth(depth_)
 , current {root}
 {
@@ -247,18 +253,20 @@ menu_iterator::menu_iterator(menu_node* root, unsigned depth_)
    }
 }
 
-void menu_iterator::next_leaf_node()
+void menu_traversal::next_leaf_node()
 {
    while (std::empty(st.back())) {
       next_internal();
-      if (std::empty(st))
+      if (std::empty(st)) {
+         current = nullptr;
          return;
+      }
    }
 
    advance();
 }
 
-void menu_iterator::next_node()
+void menu_traversal::next_node()
 {
    if (std::empty(st.back())) {
       next_internal();
@@ -287,7 +295,7 @@ menu::menu(std::string const& str)
       return a + p->leaf_counter;
    };
 
-   menu_iterator iter(root.children.front());
+   menu_traversal iter(root.children.front());
    while (!iter.end()) {
       if (std::empty(iter.current->children))
          iter.current->leaf_counter = 0;
@@ -355,21 +363,6 @@ std::string menu::dump(oformat of, unsigned const max_depth)
    }
 }
 
-std::vector<std::string> menu::get_codes_at_depth(unsigned depth) const
-{
-   if (std::empty(root.children))
-      return {};
-
-   std::vector<std::string> ret;
-   menu_iterator iter(root.children.front(), depth);
-   while (!iter.end()) {
-      ret.push_back(iter.current->code);
-      iter.next_leaf_node();
-   }
-
-   return ret;
-}
-
 bool menu::check_leaf_min_depths(unsigned min_depth) const
 {
    // TODO: Change the function to return an iterator to the
@@ -379,7 +372,7 @@ bool menu::check_leaf_min_depths(unsigned min_depth) const
       return {};
 
    auto const max = std::numeric_limits<unsigned>::max();
-   menu_iterator iter(root.children.front(), max);
+   menu_traversal iter(root.children.front(), max);
    while (!iter.end()) {
       auto const d = iter.get_depth();
       if (d < min_depth + 1)
@@ -392,7 +385,7 @@ bool menu::check_leaf_min_depths(unsigned min_depth) const
 
 menu::~menu()
 {
-   menu_iterator iter(root.children.front());
+   menu_traversal iter(root.children.front());
    while (!iter.end()) {
       delete iter.current;
       iter.next_node();

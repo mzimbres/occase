@@ -225,7 +225,6 @@ client_session<Mgr>::on_connect( boost::system::error_code ec
                return;
             }
          }
-
          throw std::runtime_error("client_session<Mgr>::on_timer: fail.");
       };
 

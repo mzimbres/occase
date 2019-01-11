@@ -17,7 +17,7 @@ int client_mgr_gmsg_check::on_read( std::string msg
       auto const res = j.at("result").get<std::string>();
       if (res == "ok") {
          auto const menu_str = j.at("menu").at("data").get<std::string>();
-         auto const channels = get_hashes(menu_str);
+         auto const channels = get_hashes(menu_str, 2);
          if (std::empty(channels))
             throw std::runtime_error("client_mgr_gmsg_check::on_read0");
          tot_msgs = op.n_publishers * std::size(channels)

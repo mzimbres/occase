@@ -36,7 +36,7 @@ get_hashes(std::string const& str, unsigned depth)
       return {};
 
    std::vector<std::string> codes;
-   leaf_view view {m, depth};
+   menu_view<0> view {m, depth};
    for (auto const& node : view)
       codes.push_back(node.code);
    return codes;

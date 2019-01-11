@@ -147,7 +147,7 @@ int main(int argc, char* argv[])
    }
 
    if (op.oformat == 5) {
-      leaf_view view {m, op.depth};
+      menu_view<0> view {m, op.depth};
       for (auto const& o : view)
          std::cout << o.code << "\n";
    } else {

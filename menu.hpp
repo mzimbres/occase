@@ -28,7 +28,8 @@ private:
    menu_node root;
    int max_depth = 0;
 
-   friend class leaf_view;
+   template <int>
+   friend class menu_view;
 public:
    static constexpr auto sep = 3;
    enum class iformat {spaces, counter};
@@ -70,6 +71,7 @@ public:
    bool end() const noexcept { return std::empty(st); }
 };
 
+template <int N>
 class leaf_iterator {
 private:
    menu_traversal iter;
@@ -92,7 +94,11 @@ public:
 
    leaf_iterator& operator++()
    {
-      iter.next_leaf_node();
+      if constexpr (N == 0)
+         iter.next_leaf_node();
+      else
+         iter.next_node();
+
       return *this;
    }
 
@@ -117,20 +123,23 @@ public:
    }
 };
 
-class leaf_view {
+template <int N>
+class menu_view {
 private:
    unsigned depth;
    menu_node* root = nullptr;
 
 public:
-   leaf_view( menu& m
+   using iterator = leaf_iterator<N>;
+
+   menu_view( menu& m
             , unsigned depth_ = std::numeric_limits<unsigned>::max())
    : depth {depth_}
    , root {m.root.children.front()}
    { }
 
-   leaf_iterator begin() const {return leaf_iterator{root, depth};}
-   leaf_iterator end() const {return leaf_iterator{};}
+   iterator begin() const {return iterator{root, depth};}
+   iterator end() const {return iterator{};}
 };
 
 }

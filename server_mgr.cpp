@@ -94,7 +94,7 @@ server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
       if (std::empty(m))
          throw std::runtime_error("Menu is empty.");
 
-      leaf_view view {m, 2}; // TODO: Implement arbitrary depth.
+      menu_view<0> view {m, 2}; // TODO: Implement arbitrary depth.
       for (auto const& gc : view) {
          auto const new_group = channels.insert({gc.code, {}});
          if (new_group.second) {

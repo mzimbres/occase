@@ -218,68 +218,55 @@ auto parse_tree( menu_node& root, std::string const& menu_str
 }
 
 // Iterator used to traverse the menu depth first.
-class menu_iterator {
-private:
-   std::deque<std::deque<menu_node*>> st;
-   unsigned depth;
+void menu_iterator::advance()
+{
+   while (!std::empty(st.back().back()->children) &&
+          std::size(st) <= depth)
+      st.push_back(st.back().back()->children);
 
-   void advance()
-   {
-      while (!std::empty(st.back().back()->children) &&
-             std::size(st) <= depth)
-         st.push_back(st.back().back()->children);
+   current = st.back().back();
+   st.back().pop_back();
+}
 
-      current = st.back().back();
-      st.back().pop_back();
+void menu_iterator::next_internal()
+{
+   st.pop_back();
+   if (std::empty(st))
+      return;
+   current = st.back().back();
+   st.back().pop_back();
+}
+
+menu_iterator::menu_iterator(menu_node* root, unsigned depth_)
+: depth(depth_)
+, current {root}
+{
+   if (root) {
+      st.push_back({root});
+      advance();
    }
+}
 
-   void next_internal()
-   {
-      st.pop_back();
+void menu_iterator::next_leaf_node()
+{
+   while (std::empty(st.back())) {
+      next_internal();
       if (std::empty(st))
          return;
-      current = st.back().back();
-      st.back().pop_back();
    }
 
-public:
-   menu_node* current;
-   menu_iterator( menu_node* root
-                , unsigned depth_ = std::numeric_limits<unsigned>::max())
-   : depth(depth_)
-   , current {root}
-   {
-      if (root) {
-         st.push_back({root});
-         advance();
-      }
+   advance();
+}
+
+void menu_iterator::next_node()
+{
+   if (std::empty(st.back())) {
+      next_internal();
+      return;
    }
 
-   auto get_depth() const noexcept { return std::size(st); }
-
-   void next_leaf_node()
-   {
-      while (std::empty(st.back())) {
-         next_internal();
-         if (std::empty(st))
-            return;
-      }
-
-      advance();
-   }
-
-   void next_node()
-   {
-      if (std::empty(st.back())) {
-         next_internal();
-         return;
-      }
-
-      advance();
-   }
-
-   bool end() const noexcept { return std::empty(st); }
-};
+   advance();
+}
 
 menu::menu(std::string const& str)
 {

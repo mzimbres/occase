@@ -23,6 +23,26 @@ struct menu_node {
    std::deque<menu_node*> children;
 };
 
+class menu_iterator {
+private:
+   std::deque<std::deque<menu_node*>> st;
+   unsigned depth;
+   void advance();
+   void next_internal();
+
+public:
+   menu_node* current;
+   menu_iterator( menu_node* root
+                , unsigned depth_ = std::numeric_limits<unsigned>::max());
+   auto get_depth() const noexcept { return std::size(st); }
+   void next_leaf_node();
+   void next_node();
+   bool end() const noexcept { return std::empty(st); }
+};
+
+struct leaf_view {
+};
+
 class menu {
 private:
    menu_node root;

@@ -58,8 +58,8 @@ private:
    std::deque<std::deque<menu_node*>> st;
    unsigned depth;
 
-   void advance();
-   void next_internal();
+   menu_node* advance_to_leaf();
+   menu_node* next_internal();
 
 public:
    menu_node* current;

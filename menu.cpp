@@ -221,26 +221,24 @@ auto parse_tree( menu_node& root, std::string const& menu_str
    return max_depth;
 }
 
-// Iterator used to traverse the menu depth first.
-void menu_traversal::advance()
+menu_node* menu_traversal::advance_to_leaf()
 {
-   while (!std::empty(st.back().back()->children) &&
-          std::size(st) <= depth)
+   while (!std::empty(st.back().back()->children) && std::size(st) <= depth)
       st.push_back(st.back().back()->children);
 
-   current = st.back().back();
+   auto* tmp = st.back().back();
    st.back().pop_back();
+   return tmp;
 }
 
-void menu_traversal::next_internal()
+menu_node* menu_traversal::next_internal()
 {
    st.pop_back();
-   if (std::empty(st)) {
-      current = nullptr;
-      return;
-   }
-   current = st.back().back();
+   if (std::empty(st))
+      return nullptr;
+   auto* tmp = st.back().back();
    st.back().pop_back();
+   return tmp;
 }
 
 menu_traversal::menu_traversal(menu_node* root, unsigned depth_)
@@ -249,31 +247,31 @@ menu_traversal::menu_traversal(menu_node* root, unsigned depth_)
 {
    if (root) {
       st.push_back({root});
-      advance();
+      current = advance_to_leaf();
    }
 }
 
 void menu_traversal::next_leaf_node()
 {
    while (std::empty(st.back())) {
-      next_internal();
+      current = next_internal();
       if (std::empty(st)) {
          current = nullptr;
          return;
       }
    }
 
-   advance();
+   current = advance_to_leaf();
 }
 
 void menu_traversal::next_node()
 {
    if (std::empty(st.back())) {
-      next_internal();
+      current = next_internal();
       return;
    }
 
-   advance();
+   current = advance_to_leaf();
 }
 
 menu::menu(std::string const& str)

@@ -125,6 +125,7 @@ public:
 
    // Extensions to the common iterator interface.
    auto get_depth() const noexcept { return iter.get_depth(); }
+   auto* get_pointer_to_node() const {return iter.current;}
 };
 
 template <int N>

@@ -367,7 +367,7 @@ bool check_leaf_min_depths(menu& m, unsigned min_depth)
    // invalid node.
 
    menu_view<0> view {m, min_depth};
-   for (auto iter = std::begin(view); iter != std::end(view); ++iter ) {
+   for (auto iter = std::begin(view); iter != std::end(view); ++iter) {
       auto const d = iter.get_depth();
       if (d < min_depth + 1)
          return false;
@@ -378,11 +378,9 @@ bool check_leaf_min_depths(menu& m, unsigned min_depth)
 
 menu::~menu()
 {
-   menu_traversal iter(root.children.front());
-   while (!iter.end()) {
-      delete iter.current;
-      iter.next_node();
-   }
+   menu_view<1> view {*this};
+   for (auto iter = std::begin(view); iter != std::end(view); ++iter)
+      delete iter.get_pointer_to_node();
 }
 
 }

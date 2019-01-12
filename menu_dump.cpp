@@ -19,7 +19,7 @@ struct menu_op {
    int sim_length;
    int oformat;
    unsigned depth;
-   std::string file;
+   std::vector<std::string> file;
    std::string fipe_tipo;
    bool validate = false;
    bool fipe = false;
@@ -76,12 +76,12 @@ int main(int argc, char* argv[])
       ("output-format,o"
       , po::value<int>(&op.oformat)->default_value(1)
       , "Format used in the output file. Available options:\n"
-        " 1: Node depth with indentation.\n"
-        " 2: Node depth from line first digit.\n"
-        " 3: Hash code plus name.\n"
-        " 4: Output all hash codes.\n"
-        " 5: Output hash codes at certain depth (see -d option).\n"
-        " 6: Packs the output in json format ready to be loaded on redis. "
+        " 1: \tNode depth with indentation.\n"
+        " 2: \tNode depth from line first digit.\n"
+        " 3: \tHash code plus name.\n"
+        " 4: \tOutput all hash codes.\n"
+        " 5: \tOutput hash codes at certain depth (see -d option).\n"
+        " 6: \tPacks the output in json format ready to be loaded on redis. "
         "    Will automatically use field-separator ';' and --validate."
       )
       ("sim-length,l"
@@ -92,8 +92,8 @@ int main(int argc, char* argv[])
       , po::value<unsigned>(&op.depth)->default_value(std::numeric_limits<unsigned>::max())
       , "Influences the output."
       )
-      ("file,f"
-      , po::value<std::string>(&op.file)
+      ("files,f"
+      , po::value<std::vector<std::string>>(&op.file)
       , "The file containing the menu. If empty, the menu will be simulated.")
       ("fipe-tipo,k"
       , po::value<std::string>(&op.fipe_tipo)->default_value("1")
@@ -111,8 +111,13 @@ int main(int argc, char* argv[])
       )
    ;
 
+   po::positional_options_description pos;
+   pos.add("files", -1);
+
    po::variables_map vm;        
-   po::store(po::parse_command_line(argc, argv, desc), vm);
+   //po::store(po::parse_command_line(argc, argv, desc), vm);
+   po::store(po::command_line_parser(argc, argv).
+         options(desc).positional(pos).run(), vm);
    po::notify(vm);    
 
    if (vm.count("help")) {
@@ -126,7 +131,7 @@ int main(int argc, char* argv[])
    if (vm.count("fipe"))
       op.fipe = true;
 
-   auto const raw_menu = get_file_as_str(op.file, op.sim_length);
+   auto const raw_menu = get_file_as_str(op.file.front(), op.sim_length);
    auto menu_str = raw_menu;
    if (op.fipe)
       menu_str = fipe_dump(raw_menu, menu::sep, op.fipe_tipo, '\n');

@@ -293,7 +293,7 @@ menu::menu(std::string const& str)
       return a + p->leaf_counter;
    };
 
-   menu_traversal iter(root.children.front());
+   menu_traversal iter {root.children.front()};
    while (!iter.end()) {
       if (std::empty(iter.current->children))
          iter.current->leaf_counter = 0;
@@ -378,7 +378,7 @@ bool check_leaf_min_depths(menu& m, unsigned min_depth)
 
 menu::~menu()
 {
-   menu_view<1> view {*this};
+   menu_view<1> view {root.children.front()};
    for (auto iter = std::begin(view); iter != std::end(view); ++iter)
       delete iter.get_pointer_to_node();
 }

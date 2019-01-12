@@ -32,6 +32,7 @@ private:
    friend class menu_view;
 public:
    static constexpr auto sep = 3;
+   static constexpr unsigned max_supported_depth = 10;
    enum class iformat {spaces, counter};
    enum class oformat {spaces, counter, info, hashes};
    menu() = delete;
@@ -43,8 +44,7 @@ public:
    ~menu();
 
    std::string dump( oformat of
-                   , unsigned max_depth =
-                      std::numeric_limits<unsigned>::max());
+                   , unsigned max_depth = max_supported_depth);
    auto get_max_depth() const noexcept {return max_depth;}
    auto empty() const
    {
@@ -65,7 +65,7 @@ private:
 public:
    menu_node* current;
    menu_traversal( menu_node* root
-                , unsigned depth_ = std::numeric_limits<unsigned>::max());
+                 , unsigned depth_ = menu::max_supported_depth);
    auto get_depth() const noexcept { return std::size(st); }
    void next_leaf_node();
    void next_node();
@@ -81,17 +81,18 @@ public:
    using value_type = menu_node;
    using difference_type = std::ptrdiff_t;
    using reference = menu_node&;
+   using const_reference = menu_node const&;
    using pointer = menu_node*;
    using const_pointer = menu_node const*;
    using iterator_category = std::forward_iterator_tag;
 
    leaf_iterator( menu_node* node = nullptr
-                , unsigned depth = std::numeric_limits<unsigned>::max())
+                , unsigned depth = menu::max_supported_depth)
    : iter {node, depth}
    { }
 
-   menu_node& operator*() { return *iter.current;}
-   menu_node const& operator*() const { return *iter.current;}
+   reference operator*() { return *iter.current;}
+   const_reference const& operator*() const { return *iter.current;}
 
    leaf_iterator& operator++()
    {
@@ -110,8 +111,8 @@ public:
       return ret;
    }
 
-   menu_node* operator->() {return iter.current;}
-   menu_node const* operator->() const {return iter.current;}
+   pointer operator->() {return iter.current;}
+   const_pointer operator->() const {return iter.current;}
 
    friend auto operator==(leaf_iterator const& a, leaf_iterator const& b)
    {
@@ -137,10 +138,15 @@ private:
 public:
    using iterator = leaf_iterator<N>;
 
-   menu_view( menu& m
-            , unsigned depth_ = std::numeric_limits<unsigned>::max())
+   menu_view( menu_node* root_
+            , unsigned depth_ = menu::max_supported_depth)
    : depth {depth_}
-   , root {m.root.children.front()}
+   , root {root_}
+   { }
+
+   menu_view( menu& m
+            , unsigned depth_ = menu::max_supported_depth)
+   : menu_view {m.root.children.front(), depth_}
    { }
 
    iterator begin() const {return iterator{root, depth};}

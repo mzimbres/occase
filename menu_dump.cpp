@@ -134,7 +134,7 @@ int main(int argc, char* argv[])
    menu m {menu_str};
 
    if (op.oformat == 6) {
-      if (!m.check_leaf_min_depths(op.depth))
+      if (!check_leaf_min_depths(m, op.depth))
          return EXIT_FAILURE;
 
       auto const str = m.dump(menu::oformat::counter, op.depth);
@@ -158,7 +158,7 @@ int main(int argc, char* argv[])
    }
 
    if (op.validate)
-      std::cout << "Validate: " << m.check_leaf_min_depths(op.depth)
+      std::cout << "Validate: " << check_leaf_min_depths(m, op.depth)
                 << std::endl;
 
    //std::cout << std::endl;

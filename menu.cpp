@@ -361,21 +361,16 @@ std::string menu::dump(oformat of, unsigned const max_depth)
    }
 }
 
-bool menu::check_leaf_min_depths(unsigned min_depth) const
+bool check_leaf_min_depths(menu& m, unsigned min_depth)
 {
    // TODO: Change the function to return an iterator to the
    // invalid node.
 
-   if (std::empty(root.children))
-      return {};
-
-   auto const max = std::numeric_limits<unsigned>::max();
-   menu_traversal iter(root.children.front(), max);
-   while (!iter.end()) {
+   menu_view<0> view {m, min_depth};
+   for (auto iter = std::begin(view); iter != std::end(view); ++iter ) {
       auto const d = iter.get_depth();
       if (d < min_depth + 1)
          return false;
-      iter.next_leaf_node();
    }
 
    return true;

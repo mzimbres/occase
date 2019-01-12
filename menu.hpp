@@ -46,12 +46,13 @@ public:
                    , unsigned max_depth =
                       std::numeric_limits<unsigned>::max());
    auto get_max_depth() const noexcept {return max_depth;}
-   bool check_leaf_min_depths(unsigned min_depth) const;
    auto empty() const
    {
       return std::empty(root.children);
    }
 };
+
+bool check_leaf_min_depths(menu& m, unsigned min_depth);
 
 class menu_traversal {
 private:
@@ -121,6 +122,9 @@ public:
    {
       return !(a == b);
    }
+
+   // Extensions to the common iterator interface.
+   auto get_depth() const noexcept { return iter.get_depth(); }
 };
 
 template <int N>

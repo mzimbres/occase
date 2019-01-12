@@ -72,7 +72,9 @@ private:
    sessions_stats stats;
 
    redis::facade db;
-   int menu_version = -1;
+
+   std::vector<menu_elem> menus;
+   int menu_version = 0;
    std::string menu_data;
 
    net::steady_timer stats_timer;
@@ -96,7 +98,6 @@ private:
                      , std::shared_ptr<server_session> s);
    ev_res on_publish( std::string msg, json const& j
                     , std::shared_ptr<server_session> s);
-
 
 public:
    server_mgr(server_mgr_cf cf);

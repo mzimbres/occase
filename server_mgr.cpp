@@ -87,10 +87,10 @@ server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
    if (req.cmd == redis::request::get_menu) {
       assert(std::size(data) == 1);
       auto const j_menu = json::parse(data.back());
-      menu_data = j_menu.at("data").get<std::string>();
+      menus = j_menu.at("menus").get<std::vector<menu_elem>>();
       menu_version = j_menu.at("version").get<int>();
 
-      menu m {menu_data};
+      menu m {menus.front().data};
       if (std::empty(m))
          throw std::runtime_error("Menu is empty.");
 
@@ -167,8 +167,7 @@ ev_res server_mgr::on_register(json const& j, std::shared_ptr<server_session> s)
    json resp;
    resp["cmd"] = "register_ack";
    resp["result"] = "ok";
-   resp["menu"]["data"] = menu_data;
-   resp["menu"]["version"] = menu_version;
+   resp["menus"] = menus;
    s->send(resp.dump());
    return ev_res::register_ok;
 }
@@ -208,10 +207,10 @@ ev_res server_mgr::on_login(json const& j, std::shared_ptr<server_session> s)
    resp["cmd"] = "auth_ack";
    resp["result"] = "ok";
 
-   auto const menu_version = j.at("menu").at("version").get<int>();
-   if (menu_version == -1) {
-      resp["menu"]["data"] = menu_data;
-      resp["menu"]["version"] = menu_version;
+   auto const user_version = j.at("version").get<int>();
+   if (user_version < menu_version) {
+      resp["menus"] = menus;
+      resp["version"] = menu_version;
    }
 
    s->send(resp.dump());

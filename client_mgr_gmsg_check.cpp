@@ -16,8 +16,8 @@ int client_mgr_gmsg_check::on_read( std::string msg
    if (cmd == "auth_ack") {
       auto const res = j.at("result").get<std::string>();
       if (res == "ok") {
-         auto const menu_str = j.at("menu").at("data").get<std::string>();
-         auto const channels = get_hashes(menu_str, 2);
+         auto const menus = j.at("menus").get<std::vector<menu_elem>>();
+         auto const channels = get_hashes(menus.front().data, 2);
          if (std::empty(channels))
             throw std::runtime_error("client_mgr_gmsg_check::on_read0");
          tot_msgs = op.n_publishers * std::size(channels)
@@ -118,7 +118,7 @@ int client_mgr_gmsg_check::on_handshake(std::shared_ptr<client_type> s)
    json j;
    j["cmd"] = "auth";
    j["from"] = op.user;
-   j["menu"]["version"] = -1;
+   j["version"] = -1;
    s->send_msg(j.dump());
    //std::cout << "Sending " << j.dump() << std::endl;
    return 1;

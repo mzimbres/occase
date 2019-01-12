@@ -129,11 +129,17 @@ int impl(menu_op const op)
 {
    if (op.oformat == 6) {
       std::vector<menu_elem> elems;
-      for (auto const& e : op.files)
-         elems.push_back(convert_to_menu_elem(e));
+      int max_version = -1;
+      for (auto const& e : op.files) {
+         auto elem = convert_to_menu_elem(e);
+         if (elem.version > max_version)
+            max_version = elem.version;
+         elems.push_back(std::move(elem));
+      }
 
       json j;
       j["menus"] = elems;
+      j["version"] = max_version;
       std::cout << j.dump() << std::flush;
       return 0;
    }

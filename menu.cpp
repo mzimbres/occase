@@ -243,35 +243,26 @@ menu_node* menu_traversal::next_internal()
 
 menu_traversal::menu_traversal(menu_node* root, unsigned depth_)
 : depth(depth_)
-, current {root}
 {
-   if (root) {
+   if (root)
       st.push_back({root});
-      current = advance_to_leaf();
-   }
 }
 
-void menu_traversal::next_leaf_node()
+menu_node* menu_traversal::next_leaf_node()
 {
-   while (std::empty(st.back())) {
-      current = next_internal();
-      if (std::empty(st)) {
-         current = nullptr;
-         return;
-      }
-   }
+   while (std::empty(st.back()))
+      if (!next_internal())
+         return nullptr;
 
-   current = advance_to_leaf();
+   return advance_to_leaf();
 }
 
-void menu_traversal::next_node()
+menu_node* menu_traversal::next_node()
 {
-   if (std::empty(st.back())) {
-      current = next_internal();
-      return;
-   }
+   if (std::empty(st.back()))
+      return next_internal();
 
-   current = advance_to_leaf();
+   return advance_to_leaf();
 }
 
 menu::menu(std::string const& str)

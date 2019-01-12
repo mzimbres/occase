@@ -59,23 +59,23 @@ private:
    std::deque<std::deque<menu_node*>> st;
    unsigned depth;
 
-   menu_node* advance_to_leaf();
-   menu_node* next_internal();
-
 public:
-   menu_node* current;
    menu_traversal( menu_node* root
                  , unsigned depth_ = menu::max_supported_depth);
+   menu_node* advance_to_leaf();
+   menu_node* next_internal();
+   menu_node* next_leaf_node();
+   menu_node* next_node();
+
+   auto end() const noexcept { return std::empty(st); }
    auto get_depth() const noexcept { return std::size(st); }
-   void next_leaf_node();
-   void next_node();
-   bool end() const noexcept { return std::empty(st); }
 };
 
 template <int N>
 class leaf_iterator {
 private:
    menu_traversal iter;
+   menu_node* current = nullptr;
 
 public:
    using value_type = menu_node;
@@ -86,20 +86,23 @@ public:
    using const_pointer = menu_node const*;
    using iterator_category = std::forward_iterator_tag;
 
-   leaf_iterator( menu_node* node = nullptr
+   leaf_iterator( menu_node* root = nullptr
                 , unsigned depth = menu::max_supported_depth)
-   : iter {node, depth}
-   { }
+   : iter {root, depth}
+   { 
+      if (root)
+         current = iter.advance_to_leaf();
+   }
 
-   reference operator*() { return *iter.current;}
-   const_reference const& operator*() const { return *iter.current;}
+   reference operator*() { return *current;}
+   const_reference const& operator*() const { return *current;}
 
    leaf_iterator& operator++()
    {
       if constexpr (N == 0)
-         iter.next_leaf_node();
+         current = iter.next_leaf_node();
       else
-         iter.next_node();
+         current = iter.next_node();
 
       return *this;
    }
@@ -111,12 +114,12 @@ public:
       return ret;
    }
 
-   pointer operator->() {return iter.current;}
-   const_pointer operator->() const {return iter.current;}
+   pointer operator->() {return current;}
+   const_pointer operator->() const {return current;}
 
    friend auto operator==(leaf_iterator const& a, leaf_iterator const& b)
    {
-      return a.iter.current == b.iter.current;
+      return a.current == b.current;
    }
 
    friend auto operator!=(leaf_iterator const& a, leaf_iterator const& b)
@@ -126,7 +129,7 @@ public:
 
    // Extensions to the common iterator interface.
    auto get_depth() const noexcept { return iter.get_depth(); }
-   auto* get_pointer_to_node() const {return iter.current;}
+   auto* get_pointer_to_node() const {return current;}
 };
 
 template <int N>

@@ -44,9 +44,9 @@ get_hashes(std::string const& str, unsigned depth)
 
 // TODO: Pass the field separator as argument to be able to read
 // fields separated with ';' and not only spaces.
-auto get_depth(std::string& line, menu::iformat f, char c)
+auto remove_depth(std::string& line, menu::iformat ifmt)
 {
-   if (f == menu::iformat::spaces) {
+   if (ifmt == menu::iformat::spaces) {
       auto const i = line.find_first_not_of(' ');
       if (i == std::string::npos)
          throw std::runtime_error("Invalid line.");
@@ -58,18 +58,33 @@ auto get_depth(std::string& line, menu::iformat f, char c)
       return i / menu::sep;
    }
 
-   if (f == menu::iformat::counter) {
-      // WARNING: The parsing used here suports only up to a depth of
+   if (ifmt == menu::iformat::counter) {
+      // WARNING: The parser used here suports only up to a depth of
       // 10 (or 16 if we change to hex) where the digit indicating the
       // depth is only one character.
 
-      auto const i = line.find_first_of(c);
-      // To account for files terminating with newline.
-      if (i == std::string::npos)
+      // We have to skip empty lines.
+      if (std::empty(line))
          return std::string::npos;
 
-      auto const digit = line.substr(0, i);
-      line.erase(0, i + 1);
+      // This input format requires the presence of ';'
+      auto const p1 = line.find_first_of(';');
+      if (p1 == std::string::npos)
+         throw std::runtime_error("Invalid line.");
+
+      auto const p2 = line.find_first_of(';', p1 + 1);
+      if (p2 == std::string::npos)
+         throw std::runtime_error("Invalid line.");
+
+      // The middle data cannot be empty.
+      if (p2 == p1 + 1)
+         throw std::runtime_error("Invalid line.");
+
+      auto const digit = line.substr(0, p1);
+      line.erase(0, p1 + 1);
+      line.erase(p2);
+
+      // Now line contains only the middle field.
       return std::stoul(digit);
    }
 
@@ -79,6 +94,14 @@ auto get_depth(std::string& line, menu::iformat f, char c)
 // Detects the file input format.
 menu::iformat detect_iformat(std::string const& menu_str)
 {
+   auto const n = std::count( std::begin(menu_str), std::end(menu_str)
+                            , '=');
+   if (n > 1)
+      return menu::iformat::counter;
+
+   // TODO: Implement support for counter format with newline
+   // separator.
+
    int spaces = 0;
    int digits = 0;
    int none = 0;
@@ -111,13 +134,15 @@ menu::iformat detect_iformat(std::string const& menu_str)
 }
 
 // Finds the max depth in a menu.
-auto get_max_depth(std::string const& menu_str, menu::iformat f, char c)
+auto get_max_depth( std::string const& menu_str
+                  , menu::iformat ifmt)
 {
+   char const line_sep = ifmt == menu::iformat::spaces ? '\n' : '=';
    std::stringstream ss(menu_str);
    std::string line;
    unsigned max_depth = 0;
-   while (std::getline(ss, line, '\n')) {
-      auto const i = get_depth(line, f, c);
+   while (std::getline(ss, line, line_sep)) {
+      auto const i = remove_depth(line, ifmt);
 
       if (i == std::string::npos)
          continue;
@@ -148,12 +173,13 @@ std::string get_code(Iter begin, Iter end)
 
 // Parses the three contained in menu_str and puts its root node in
 // root.children.
-auto parse_tree( menu_node& root, std::string const& menu_str
-               , menu::iformat f, char c)
+auto parse_tree( menu_node& root
+               , std::string const& menu_str
+               , menu::iformat ifmt)
 {
    // TODO: Make it exception safe.
 
-   auto const max_depth = get_max_depth(menu_str, f, c);
+   auto const max_depth = get_max_depth(menu_str, ifmt);
    if (max_depth == 0)
       return static_cast<unsigned>(0);
 
@@ -162,11 +188,12 @@ auto parse_tree( menu_node& root, std::string const& menu_str
    std::deque<int> codes(max_depth - 1, -1);
    std::stack<menu_node*> stack;
    unsigned last_depth = 0;
-   while (std::getline(ss, line, '\n')) {
+   char const line_sep = ifmt == menu::iformat::spaces ? '\n' : '=';
+   while (std::getline(ss, line, line_sep)) {
       if (std::empty(line))
          continue;
 
-      auto const depth = get_depth(line, f, c);
+      auto const depth = remove_depth(line, ifmt);
       if (depth == std::string::npos)
          continue;
 
@@ -270,12 +297,8 @@ menu::menu(std::string const& str)
    // TODO: Catch exceptions and release already acquired memory.
    // TODO: Automatically detect the line separator.
 
-   auto const f = detect_iformat(str);
-   char c = ' ';
-   if (f == iformat::counter)
-      c = ';';
-
-   max_depth = parse_tree(root, str, f, c);
+   auto const ifmt = detect_iformat(str);
+   max_depth = parse_tree(root, str, ifmt);
 
    auto acc = [](auto a, auto const* p)
    {

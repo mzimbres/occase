@@ -153,7 +153,8 @@ int impl(menu_op const op)
          std::cout << o.code << "\n";
    } else {
       auto const oformat = convert_to_menu_oformat(op.oformat);
-      auto const str = m.dump(oformat, '\n', op.depth);
+      auto const line_sep = op.oformat == 2 ? '=' : '\n';
+      auto const str = m.dump(oformat, line_sep, op.depth);
       std::cout << str << std::flush;
    }
 

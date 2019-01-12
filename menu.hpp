@@ -23,6 +23,17 @@ struct menu_node {
    std::deque<menu_node*> children;
 };
 
+/*  If the input file uses spaces to show the depth, then the line
+ *  separator will be assumed to be '\n'. Furthermore it will also
+ *  assume that the leaf counter is not present. 
+ *
+ *  If the input file uses a counter to show the depth, then the field
+ *  separator will be assumed to be ';' and the line separator '='.
+ *
+ *  It is still possible to output with counter using line separator
+ *  '\n' but in this case the output cannot be read back by the menu.
+ */
+
 class menu {
 private:
    menu_node root;

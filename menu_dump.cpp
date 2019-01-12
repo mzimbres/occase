@@ -67,9 +67,43 @@ menu::oformat convert_to_menu_oformat(int i)
    return menu::oformat::hashes;
 }
 
+struct menu_info {
+   std::string file;
+   unsigned long depth = 0;
+   int version = 0;
+};
+
+menu_info convert_to_menu_info(std::string const& data)
+{
+   if (data.back() == ':') {
+      // This is an invalid input string.
+      throw std::runtime_error("Invalid menu info.");
+   }
+
+   auto const p1 = data.find_first_of(':');
+
+   if (p1 == std::string::npos) {
+      // The user did not pass any version or depth.
+      return {data, 0, 0};
+   }
+
+   auto const p2 = data.find_first_of(':', p1 + 1);
+
+   if (p2 == std::string::npos) {
+      // The user passed only the depth, not the version.
+      return {data.substr(0, p1), std::stoul(data.substr(p1 + 1)), 0};
+   }
+   
+   // User passed both the depth and the version.
+   return { data.substr(0, p1)
+          , std::stoul(data.substr(p1 + 1))
+          , std::stoi(data.substr(p2 + 1))};
+}
+
 int impl(menu_op const op)
 {
-   auto const raw_menu = get_file_as_str(op.file.front(), op.sim_length);
+   auto const minfo = convert_to_menu_info(op.file.front());
+   auto const raw_menu = get_file_as_str(minfo.file, op.sim_length);
    auto menu_str = raw_menu;
    if (op.fipe)
       menu_str = fipe_dump(raw_menu, menu::sep, op.fipe_tipo, '\n');

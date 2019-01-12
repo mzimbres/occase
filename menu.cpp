@@ -293,16 +293,15 @@ menu::menu(std::string const& str)
       return a + p->leaf_counter;
    };
 
-   menu_traversal iter {root.children.front()};
-   while (!iter.end()) {
-      if (std::empty(iter.current->children))
-         iter.current->leaf_counter = 0;
+   for (auto& o : menu_view<1> {root.children.front()}) {
+      if (std::empty(o.children))
+         o.leaf_counter = 0;
       else
-         iter.current->leaf_counter =
-            std::accumulate( std::begin(iter.current->children)
-                           , std::end(iter.current->children)
-                           , static_cast<unsigned>(0), acc);
-      iter.next_node();
+         o.leaf_counter =
+            std::accumulate( std::begin(o.children)
+                           , std::end(o.children)
+                           , static_cast<unsigned>(0)
+                           , acc);
    }
 }
 

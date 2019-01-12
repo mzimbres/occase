@@ -67,6 +67,49 @@ menu::oformat convert_to_menu_oformat(int i)
    return menu::oformat::hashes;
 }
 
+int impl(menu_op const op)
+{
+   auto const raw_menu = get_file_as_str(op.file.front(), op.sim_length);
+   auto menu_str = raw_menu;
+   if (op.fipe)
+      menu_str = fipe_dump(raw_menu, menu::sep, op.fipe_tipo, '\n');
+
+   menu m {menu_str};
+
+   if (op.oformat == 6) {
+      if (!check_leaf_min_depths(m, op.depth))
+         return EXIT_FAILURE;
+
+      auto const str = m.dump(menu::oformat::counter, op.depth);
+
+      json j;
+      j["version"] = 1;
+      j["data"] = str;
+      std::cout << j.dump() << std::flush;
+      return 0;
+   }
+
+   if (op.oformat == 5) {
+      menu_view<0> view {m, op.depth};
+      for (auto const& o : view)
+         std::cout << o.code << "\n";
+   } else {
+      auto const oformat = convert_to_menu_oformat(op.oformat);
+      auto const str = m.dump(oformat, op.depth);
+      std::cout << str << std::flush;
+   }
+
+   if (op.validate)
+      std::cout << "Validate: " << check_leaf_min_depths(m, op.depth)
+                << std::endl;
+
+   //std::cout << std::endl;
+   //std::cout << "Menu max depth:      " << m.get_max_depth() << std::endl;
+   //std::cout << "Menu original size:  " << std::size(menu_str) << std::endl;
+   //std::cout << "Menu converted size: " << std::size(str) << std::endl;
+   return 0;
+}
+
 int main(int argc, char* argv[])
 {
    menu_op op;
@@ -115,7 +158,6 @@ int main(int argc, char* argv[])
    pos.add("files", -1);
 
    po::variables_map vm;        
-   //po::store(po::parse_command_line(argc, argv, desc), vm);
    po::store(po::command_line_parser(argc, argv).
          options(desc).positional(pos).run(), vm);
    po::notify(vm);    
@@ -131,45 +173,6 @@ int main(int argc, char* argv[])
    if (vm.count("fipe"))
       op.fipe = true;
 
-   auto const raw_menu = get_file_as_str(op.file.front(), op.sim_length);
-   auto menu_str = raw_menu;
-   if (op.fipe)
-      menu_str = fipe_dump(raw_menu, menu::sep, op.fipe_tipo, '\n');
-
-   menu m {menu_str};
-
-   if (op.oformat == 6) {
-      if (!check_leaf_min_depths(m, op.depth))
-         return EXIT_FAILURE;
-
-      auto const str = m.dump(menu::oformat::counter, op.depth);
-
-      json j;
-      j["version"] = 1;
-      j["data"] = str;
-      std::cout << j.dump() << std::flush;
-      return 0;
-   }
-
-   if (op.oformat == 5) {
-      menu_view<0> view {m, op.depth};
-      for (auto const& o : view)
-         std::cout << o.code << "\n";
-   } else {
-      auto const oformat = convert_to_menu_oformat(op.oformat);
-
-      auto const str = m.dump(oformat, op.depth);
-      std::cout << str << std::flush;
-   }
-
-   if (op.validate)
-      std::cout << "Validate: " << check_leaf_min_depths(m, op.depth)
-                << std::endl;
-
-   //std::cout << std::endl;
-   //std::cout << "Menu max depth:      " << m.get_max_depth() << std::endl;
-   //std::cout << "Menu original size:  " << std::size(menu_str) << std::endl;
-   //std::cout << "Menu converted size: " << std::size(str) << std::endl;
-   return 0;
+   return impl(op);
 }
 

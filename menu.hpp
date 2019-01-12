@@ -60,14 +60,11 @@ private:
    unsigned depth;
 
 public:
-   menu_traversal( menu_node* root
-                 , unsigned depth_ = menu::max_supported_depth);
+   menu_traversal(menu_node* root, unsigned depth_);
    menu_node* advance_to_leaf();
    menu_node* next_internal();
    menu_node* next_leaf_node();
    menu_node* next_node();
-
-   auto end() const noexcept { return std::empty(st); }
    auto get_depth() const noexcept { return std::size(st); }
 };
 

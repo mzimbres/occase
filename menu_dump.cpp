@@ -122,7 +122,7 @@ convert_to_menu_elem(std::string const& file_info_raw)
    if (!check_leaf_min_depths(m, info.depth))
       throw std::runtime_error("Invalid menu.");
 
-   return {m.dump(menu::oformat::counter), info.depth, info.version};
+   return {m.dump(menu::oformat::counter, '='), info.depth, info.version};
 }
 
 int impl(menu_op const op)
@@ -153,7 +153,7 @@ int impl(menu_op const op)
          std::cout << o.code << "\n";
    } else {
       auto const oformat = convert_to_menu_oformat(op.oformat);
-      auto const str = m.dump(oformat, op.depth);
+      auto const str = m.dump(oformat, '\n', op.depth);
       std::cout << str << std::flush;
    }
 

@@ -44,6 +44,7 @@ public:
    ~menu();
 
    std::string dump( oformat of
+                   , char line_sep = '\n'
                    , unsigned max_depth = max_supported_depth);
    auto get_max_depth() const noexcept {return max_depth;}
    auto empty() const

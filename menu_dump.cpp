@@ -19,7 +19,7 @@ struct menu_op {
    int sim_length;
    int oformat;
    unsigned depth;
-   std::vector<std::string> file;
+   std::vector<std::string> files;
    std::string fipe_tipo;
    bool validate = false;
    bool fipe = false;
@@ -75,10 +75,14 @@ struct menu_info {
 
 menu_info convert_to_menu_info(std::string const& data)
 {
-   if (data.back() == ':') {
-      // This is an invalid input string.
+   if (data.front() == ':')
       throw std::runtime_error("Invalid menu info.");
-   }
+
+   if (data.back() == ':')
+      throw std::runtime_error("Invalid menu info.");
+
+   if (std::size(data) < 2)
+      throw std::runtime_error("Invalid menu info.");
 
    auto const p1 = data.find_first_of(':');
 
@@ -88,6 +92,9 @@ menu_info convert_to_menu_info(std::string const& data)
    }
 
    auto const p2 = data.find_first_of(':', p1 + 1);
+
+   if (p2 == p1 + 1)
+      throw std::runtime_error("Invalid menu info.");
 
    if (p2 == std::string::npos) {
       // The user passed only the depth, not the version.
@@ -100,28 +107,45 @@ menu_info convert_to_menu_info(std::string const& data)
           , std::stoi(data.substr(p2 + 1))};
 }
 
+menu_elem
+convert_to_menu_elem(std::string const& file_info_raw)
+{
+   using iter_type = std::istreambuf_iterator<char>;
+
+   auto const info = convert_to_menu_info(file_info_raw);
+
+   std::ifstream ifs(info.file);
+   std::string menu_str {iter_type {ifs}, {}};
+
+   menu m {menu_str};
+
+   if (!check_leaf_min_depths(m, info.depth))
+      throw std::runtime_error("Invalid menu.");
+
+   return {m.dump(menu::oformat::counter), info.depth, info.version};
+}
+
 int impl(menu_op const op)
 {
-   auto const minfo = convert_to_menu_info(op.file.front());
+   if (op.oformat == 6) {
+      std::vector<menu_elem> elems;
+      for (auto const& e : op.files)
+         elems.push_back(convert_to_menu_elem(e));
+
+      json j;
+      j["menus"] = elems;
+      std::cout << j.dump() << std::flush;
+      return 0;
+   }
+
+   menu_info minfo = convert_to_menu_info(op.files.front());
+
    auto const raw_menu = get_file_as_str(minfo.file, op.sim_length);
    auto menu_str = raw_menu;
    if (op.fipe)
       menu_str = fipe_dump(raw_menu, menu::sep, op.fipe_tipo, '\n');
 
    menu m {menu_str};
-
-   if (op.oformat == 6) {
-      if (!check_leaf_min_depths(m, op.depth))
-         return EXIT_FAILURE;
-
-      auto const str = m.dump(menu::oformat::counter, op.depth);
-
-      json j;
-      j["version"] = 1;
-      j["data"] = str;
-      std::cout << j.dump() << std::flush;
-      return 0;
-   }
 
    if (op.oformat == 5) {
       menu_view<0> view {m, op.depth};
@@ -170,7 +194,7 @@ int main(int argc, char* argv[])
       , "Influences the output."
       )
       ("files,f"
-      , po::value<std::vector<std::string>>(&op.file)
+      , po::value<std::vector<std::string>>(&op.files)
       , "The file containing the menu. If empty, the menu will be simulated.")
       ("fipe-tipo,k"
       , po::value<std::string>(&op.fipe_tipo)->default_value("1")

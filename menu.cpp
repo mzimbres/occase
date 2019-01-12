@@ -305,7 +305,7 @@ void node_dump( menu_node const& node, menu::oformat of
    auto const indent = std::size(node.code) - k;
    if (of == menu::oformat::spaces) {
       std::string indent_str(indent, ' ');
-      oss << indent_str << node.name << ' ' << node.leaf_counter;
+      oss << indent_str << node.name;
       return;
    }
 

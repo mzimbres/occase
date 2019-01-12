@@ -5,15 +5,16 @@
 namespace rt
 {
 
-void to_json(json& j, group_info const& g)
+void to_json(json& j, menu_elem const& e)
 {
-  j = json{{"header", g.header}, {"hash", g.hash}};
+  j = json{{"data", e.data}, {"depth", e.depth}, {"version", e.version}};
 }
 
-void from_json(json const& j, group_info& u)
+void from_json(json const& j, menu_elem& e)
 {
-  u.header = j.at("header").get<std::vector<std::string>>();
-  u.hash = j.at("hash").get<std::string>();
+  e.data = j.at("data").get<std::string>();
+  e.depth = j.at("depth").get<unsigned long>();
+  e.depth = j.at("version").get<int>();
 }
 
 }

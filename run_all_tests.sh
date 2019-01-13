@@ -11,4 +11,5 @@
 ./publish_tests --publish-users 20 \
                 --listen-users 20 \
                 --simulations 3 \
-                --msgs-per-channel 4
+                --msgs-per-channel 4 \
+                --handshake-timeout 20

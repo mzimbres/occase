@@ -16,7 +16,8 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
       auto const res = j.at("result").get<std::string>();
       if (res == "ok") {
          auto const menus = j.at("menus").get<std::vector<menu_elem>>();
-         auto const channels = get_hashes(menus.front().data, 2);
+         auto const menu_codes = menu_elems_to_codes(menus);
+         auto const channels = channel_codes(menu_codes);
          if (std::empty(channels))
             throw std::runtime_error("client_mgr_pub::on_read0");
          for (auto const& o : channels)

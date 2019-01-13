@@ -17,7 +17,8 @@ int client_mgr_gmsg_check::on_read( std::string msg
       auto const res = j.at("result").get<std::string>();
       if (res == "ok") {
          auto const menus = j.at("menus").get<std::vector<menu_elem>>();
-         auto const channels = get_hashes(menus.front().data, 2);
+         auto const hash_codes = menu_elems_to_codes(menus);
+         auto const channels = channel_codes(hash_codes);
          if (std::empty(channels))
             throw std::runtime_error("client_mgr_gmsg_check::on_read0");
          tot_msgs = op.n_publishers * std::size(channels)
@@ -25,7 +26,7 @@ int client_mgr_gmsg_check::on_read( std::string msg
          std::cout << op.user << " expects: " << tot_msgs << std::endl;
          json j_sub;
          j_sub["cmd"] = "subscribe";
-         j_sub["channels"] = channels;
+         j_sub["channels"] = hash_codes;
          s->send_msg(j_sub.dump());
 
          for (auto const& e : channels)
@@ -118,7 +119,7 @@ int client_mgr_gmsg_check::on_handshake(std::shared_ptr<client_type> s)
    json j;
    j["cmd"] = "auth";
    j["from"] = op.user;
-   j["version"] = -1;
+   j["menu_versions"] = std::vector<int> {};
    s->send_msg(j.dump());
    //std::cout << "Sending " << j.dump() << std::endl;
    return 1;

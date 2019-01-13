@@ -427,7 +427,7 @@ auto next_tuple( Iter begin, Iter end
 }
 
 std::vector<std::string>
-comb_hash_codes(std::vector<std::vector<std::string>> const& hash_codes)
+channel_codes(std::vector<std::vector<std::string>> const& hash_codes)
 {
    if (std::empty(hash_codes))
       return {};
@@ -453,7 +453,7 @@ comb_hash_codes(std::vector<std::vector<std::string>> const& hash_codes)
 }
 
 std::vector<std::vector<std::string>>
-menu_elems_to_hash_codes(std::vector<menu_elem> const& elems)
+menu_elems_to_codes(std::vector<menu_elem> const& elems)
 {
    // First we collect the codes from each menu at the desired depth.
    std::vector<std::vector<std::string>> hash_codes;

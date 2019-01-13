@@ -142,9 +142,9 @@ int impl(menu_op const& op)
       for (auto const& e : op.files)
          elems.push_back(convert_to_menu_elem(e));
 
-      auto const hash_codes = menu_elems_to_hash_codes(elems);
-      auto const comb_codes = comb_hash_codes(hash_codes);
-      for (auto const& c : comb_codes)
+      auto const hash_codes = menu_elems_to_codes(elems);
+      auto const channels = channel_codes(hash_codes);
+      for (auto const& c : channels)
          std::cout << c << std::endl;
 
       return 0;

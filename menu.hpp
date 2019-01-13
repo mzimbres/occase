@@ -174,5 +174,8 @@ struct menu_elem {
 void to_json(json& j, menu_elem const& e);
 void from_json(json const& j, menu_elem& e);
 
+std::vector<std::string>
+combine_hash_codes(std::vector<menu_elem> const& elems);
+
 }
 

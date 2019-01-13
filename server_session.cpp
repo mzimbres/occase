@@ -358,8 +358,8 @@ void server_session::on_read( boost::system::error_code ec
       auto const r = mgr->on_message(shared_from_this(), std::move(msg));
       handle_ev(r);
       do_read();
-   } catch (...) {
-      std::cerr << "Exception captured." << std::endl;
+   } catch (std::exception const& e) {
+      std::cerr << "Exception captured: " << e.what() << std::endl;
       timer.cancel();
       do_close();
    }

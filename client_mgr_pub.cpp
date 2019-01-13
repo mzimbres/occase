@@ -16,8 +16,8 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
       auto const res = j.at("result").get<std::string>();
       if (res == "ok") {
          auto const menus = j.at("menus").get<std::vector<menu_elem>>();
-         auto const menu_codes = menu_elems_to_codes(menus);
-         auto const channels = channel_codes(menu_codes);
+         auto const hash_codes = menu_elems_to_codes(menus);
+         auto const channels = channel_codes(hash_codes);
          if (std::empty(channels))
             throw std::runtime_error("client_mgr_pub::on_read0");
          for (auto const& o : channels)
@@ -25,7 +25,7 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
                hashes.push_back({false, false, o});
          json j_sub;
          j_sub["cmd"] = "subscribe";
-         j_sub["channels"] = channels;
+         j_sub["channels"] = hash_codes;
          s->send_msg(j_sub.dump());
          return 1;
       }
@@ -107,7 +107,7 @@ int client_mgr_pub::on_handshake(std::shared_ptr<client_type> s)
    json j;
    j["cmd"] = "auth";
    j["from"] = op.user;
-   j["version"] = -1;
+   j["menu_versions"] = std::vector<int> {};
    s->send_msg(j.dump());
    //std::cout << "Sending " << j.dump() << std::endl;
    return 1;

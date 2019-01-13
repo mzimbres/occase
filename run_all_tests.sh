@@ -12,4 +12,4 @@
                 --listen-users 20 \
                 --simulations 3 \
                 --msgs-per-channel 4 \
-                --handshake-timeout 20
+                --handshake-timeout 3

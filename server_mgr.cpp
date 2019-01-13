@@ -261,8 +261,10 @@ server_mgr::on_code_confirmation( json const& j
 ev_res
 server_mgr::on_subscribe(json const& j, std::shared_ptr<server_session> s)
 {
+   std::cout << "__________" << std::endl;
    auto const codes =
       j.at("channels").get<std::vector<std::vector<std::string>>>();
+   std::cout << "===========" << std::endl;
 
    auto const comb_codes = channel_codes(codes);
 

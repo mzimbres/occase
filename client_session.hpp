@@ -96,6 +96,7 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
    if (ec) {
       if (ec == beast::websocket::error::closed) {
          // This means the session has been closed by the server.
+         //std::cout << "Session closed by the server." << std::endl;
          if (mgr.on_closed(ec) == -1) {
             //std::cout << "Cancelling timer." << std::endl;
             timer.cancel();

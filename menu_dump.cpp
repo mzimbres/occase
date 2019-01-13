@@ -141,7 +141,8 @@ auto next_tuple( Iter begin, Iter end
     return j != 0;
 }
 
-void combine_hash_codes(std::vector<menu_elem> const& elems)
+std::vector<std::string>
+combine_hash_codes(std::vector<menu_elem> const& elems)
 {
    // First we collect the codes from each menu at the desired depth.
    std::vector<std::vector<std::string>> hash_codes;
@@ -154,8 +155,14 @@ void combine_hash_codes(std::vector<menu_elem> const& elems)
       for (auto const& o : menu_view<0> {m, elem.depth})
          codes.push_back(o.code);
 
+      if (std::empty(codes))
+         throw std::runtime_error("Invalid menu.");
+
       hash_codes.push_back(std::move(codes));
    }
+
+   if (std::empty(hash_codes))
+      throw std::runtime_error("Menus is empty.");
 
    // Now we have to combine all codes, for that we need the min and
    // max arrays.
@@ -164,16 +171,19 @@ void combine_hash_codes(std::vector<menu_elem> const& elems)
    for (auto const& o : hash_codes)
       max.push_back(std::size(o) - 1);
 
-    auto comb = min;
-    do {
+   
+   auto comb = min;
+   std::vector<std::string> comb_codes;
+   do {
 
-       for (unsigned i = 0; i < std::size(hash_codes); ++i) {
-          std::cout << hash_codes.at(i).at(comb.at(1 + i)) << " -- ";
-       }
-       std::cout << std::endl;
+      std::string code = hash_codes.at(0).at(comb.at(1));
+      for (unsigned i = 1; i < std::size(hash_codes); ++i)
+         code += "." + hash_codes.at(i).at(comb.at(1 + i));
 
-    } while (next_tuple( std::begin(comb), std::end(comb)
+      comb_codes.push_back(std::move(code));
+   } while (next_tuple( std::begin(comb), std::end(comb)
                        , std::begin(min), std::begin(max)));
+   return comb_codes;
 }
 
 int impl(menu_op const op)
@@ -183,7 +193,10 @@ int impl(menu_op const op)
       for (auto const& e : op.files)
          elems.push_back(convert_to_menu_elem(e));
 
-      combine_hash_codes(elems);
+      auto const comb_codes = combine_hash_codes(elems);
+      for (auto const& c : comb_codes)
+         std::cout << c << std::endl;
+
       return 0;
    }
 

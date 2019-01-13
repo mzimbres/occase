@@ -88,7 +88,8 @@ server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
       assert(std::size(data) == 1);
       auto const j_menu = json::parse(data.back());
       menus = j_menu.at("menus").get<std::vector<menu_elem>>();
-      auto const comb_codes = menu_elems_to_comb_hash_codes(menus);
+      auto const hash_codes = menu_elems_to_hash_codes(menus);
+      auto const comb_codes = comb_hash_codes(hash_codes);
       for (auto const& gc : comb_codes) {
          auto const new_group = channels.insert({gc, {}});
          if (new_group.second) {
@@ -260,18 +261,13 @@ server_mgr::on_code_confirmation( json const& j
 ev_res
 server_mgr::on_subscribe(json const& j, std::shared_ptr<server_session> s)
 {
-   auto const codes = j.at("channels").get<std::vector<std::string>>();
+   auto const codes =
+      j.at("channels").get<std::vector<std::vector<std::string>>>();
 
-   if (std::empty(codes)) {
-      json resp;
-      resp["cmd"] = "subscribe_ack";
-      resp["result"] = "ok";
-      resp["count"] = 0;
-      return ev_res::subscribe_ok;
-   }
+   auto const comb_codes = comb_hash_codes(codes);
 
    auto n_channels = 0;
-   for (auto const& o : codes) {
+   for (auto const& o : comb_codes) {
       auto const g = channels.find(o);
       if (g == std::end(channels))
          continue;

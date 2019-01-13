@@ -135,14 +135,15 @@ convert_to_menu_elem(std::string const& file_info_raw)
    return {m.dump(menu::oformat::counter, '='), info.depth, info.version};
 }
 
-int impl(menu_op const op)
+int impl(menu_op const& op)
 {
    if (op.oformat == 7) {
       std::vector<menu_elem> elems;
       for (auto const& e : op.files)
          elems.push_back(convert_to_menu_elem(e));
 
-      auto const comb_codes = menu_elems_to_comb_hash_codes(elems);
+      auto const hash_codes = menu_elems_to_hash_codes(elems);
+      auto const comb_codes = comb_hash_codes(hash_codes);
       for (auto const& c : comb_codes)
          std::cout << c << std::endl;
 

@@ -429,6 +429,9 @@ auto next_tuple( Iter begin, Iter end
 std::vector<std::string>
 comb_hash_codes(std::vector<std::vector<std::string>> const& hash_codes)
 {
+   if (std::empty(hash_codes))
+      return {};
+
    // TODO: Make min and max const.
    std::vector<unsigned> min(1 + std::size(hash_codes), 0);
    std::vector<unsigned> max(1, min[0] + 1);
@@ -449,8 +452,8 @@ comb_hash_codes(std::vector<std::vector<std::string>> const& hash_codes)
    return comb_codes;
 }
 
-std::vector<std::string>
-menu_elems_to_comb_hash_codes(std::vector<menu_elem> const& elems)
+std::vector<std::vector<std::string>>
+menu_elems_to_hash_codes(std::vector<menu_elem> const& elems)
 {
    // First we collect the codes from each menu at the desired depth.
    std::vector<std::vector<std::string>> hash_codes;
@@ -472,7 +475,7 @@ menu_elems_to_comb_hash_codes(std::vector<menu_elem> const& elems)
    if (std::empty(hash_codes))
       throw std::runtime_error("Menus is empty.");
 
-   return comb_hash_codes(hash_codes);
+   return hash_codes;
 }
 
 std::vector<int>
@@ -481,6 +484,8 @@ read_versions(std::vector<menu_elem> const& elems)
    std::vector<int> vs;
    for (auto const& e : elems)
       vs.push_back(e.version);
+
+   return vs;
 }
 
 }

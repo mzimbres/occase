@@ -69,7 +69,7 @@ menu::oformat convert_to_menu_oformat(int i)
 
 struct menu_info {
    std::string file;
-   unsigned long depth = 0;
+   unsigned depth = 0;
    int version = 0;
 };
 
@@ -98,12 +98,14 @@ menu_info convert_to_menu_info(std::string const& data)
 
    if (p2 == std::string::npos) {
       // The user passed only the depth, not the version.
-      return {data.substr(0, p1), std::stoul(data.substr(p1 + 1)), 0};
+      return { data.substr(0, p1)
+             , static_cast<unsigned>(std::stoul(data.substr(p1 + 1)))
+             , 0};
    }
    
    // User passed both the depth and the version.
    return { data.substr(0, p1)
-          , std::stoul(data.substr(p1 + 1))
+          , static_cast<unsigned>(std::stoul(data.substr(p1 + 1)))
           , std::stoi(data.substr(p2 + 1))};
 }
 

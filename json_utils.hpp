@@ -12,7 +12,7 @@ namespace rt
 
 struct menu_elem {
    std::string data;
-   unsigned long depth = 0;
+   unsigned depth = 0;
    int version = 0;
 };
 

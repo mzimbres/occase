@@ -84,7 +84,7 @@ auto remove_depth(std::string& line, menu::iformat ifmt)
       line.erase(0, p1 + 1);
       line.erase(p2);
 
-      // Now line contains only the middle field.
+      // Now the line contains only the middle field.
       return std::stoul(digit);
    }
 

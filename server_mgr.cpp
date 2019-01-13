@@ -88,7 +88,7 @@ server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
       assert(std::size(data) == 1);
       auto const j_menu = json::parse(data.back());
       menus = j_menu.at("menus").get<std::vector<menu_elem>>();
-      auto const comb_codes = combine_hash_codes(menus);
+      auto const comb_codes = menu_elems_to_comb_hash_codes(menus);
       for (auto const& gc : comb_codes) {
          auto const new_group = channels.insert({gc, {}});
          if (new_group.second) {
@@ -203,7 +203,8 @@ ev_res server_mgr::on_login(json const& j, std::shared_ptr<server_session> s)
    resp["cmd"] = "auth_ack";
    resp["result"] = "ok";
 
-   auto const user_versions = j.at("menu_versions").get<std::vector<int>>();
+   auto const user_versions =
+      j.at("menu_versions").get<std::vector<int>>();
    auto const server_versions = read_versions(menus);
 
    auto const b =
@@ -260,7 +261,6 @@ ev_res
 server_mgr::on_subscribe(json const& j, std::shared_ptr<server_session> s)
 {
    auto const codes = j.at("channels").get<std::vector<std::string>>();
-   auto const from = s->get_id();
 
    if (std::empty(codes)) {
       json resp;

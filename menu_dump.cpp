@@ -142,7 +142,7 @@ int impl(menu_op const op)
       for (auto const& e : op.files)
          elems.push_back(convert_to_menu_elem(e));
 
-      auto const comb_codes = combine_hash_codes(elems);
+      auto const comb_codes = menu_elems_to_comb_hash_codes(elems);
       for (auto const& c : comb_codes)
          std::cout << c << std::endl;
 

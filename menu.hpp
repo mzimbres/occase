@@ -174,7 +174,10 @@ void to_json(json& j, menu_elem const& e);
 void from_json(json const& j, menu_elem& e);
 
 std::vector<std::string>
-combine_hash_codes(std::vector<menu_elem> const& elems);
+comb_hash_codes(std::vector<std::vector<std::string>> const& codes);
+
+std::vector<std::string>
+menu_elems_to_comb_hash_codes(std::vector<menu_elem> const& elems);
 
 std::vector<int>
 read_versions(std::vector<menu_elem> const& elems);

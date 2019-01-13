@@ -13,6 +13,7 @@
 #include "config.hpp"
 #include "channel.hpp"
 #include "json_utils.hpp"
+#include "menu.hpp"
 
 namespace rt
 {

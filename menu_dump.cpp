@@ -73,6 +73,12 @@ struct menu_info {
    int version = 0;
 };
 
+/*  Converts the input in the form
+ *
+ *    file:depth:version
+ *
+ *  to the struct menu_info.
+ */
 menu_info convert_to_menu_info(std::string const& data)
 {
    if (data.front() == ':')
@@ -122,13 +128,14 @@ convert_to_menu_elem(std::string const& file_info_raw)
    menu m {menu_str};
 
    // TODO: Should we check this. Depends on the app being able to deal
-   // with menus whose wranches have different depths.
+   // with menus whose ranges have different depths.
    //if (!check_leaf_min_depths(m, info.depth))
    //   throw std::runtime_error("Invalid menu.");
 
    return {m.dump(menu::oformat::counter, '='), info.depth, info.version};
 }
 
+// Stolen from rtcpp.
 template <class Iter>
 auto next_tuple( Iter begin, Iter end
                , Iter min, Iter max)

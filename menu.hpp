@@ -33,7 +33,6 @@ struct menu_node {
  *  It is still possible to output with counter using line separator
  *  '\n' but in this case the output cannot be read back by the menu.
  */
-
 class menu {
 private:
    menu_node root;
@@ -176,6 +175,9 @@ void from_json(json const& j, menu_elem& e);
 
 std::vector<std::string>
 combine_hash_codes(std::vector<menu_elem> const& elems);
+
+std::vector<int>
+read_versions(std::vector<menu_elem> const& elems);
 
 }
 

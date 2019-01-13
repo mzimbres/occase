@@ -75,8 +75,6 @@ private:
    redis::facade db;
 
    std::vector<menu_elem> menus;
-   int menu_version = 0;
-   std::string menu_data;
 
    net::steady_timer stats_timer;
 

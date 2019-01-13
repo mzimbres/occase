@@ -471,5 +471,13 @@ combine_hash_codes(std::vector<menu_elem> const& elems)
    return comb_codes;
 }
 
+std::vector<int>
+read_versions(std::vector<menu_elem> const& elems)
+{
+   std::vector<int> vs;
+   for (auto const& e : elems)
+      vs.push_back(e.version);
+}
+
 }
 

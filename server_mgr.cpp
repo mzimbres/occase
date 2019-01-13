@@ -88,19 +88,15 @@ server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
       assert(std::size(data) == 1);
       auto const j_menu = json::parse(data.back());
       menus = j_menu.at("menus").get<std::vector<menu_elem>>();
-      menu_version = j_menu.at("version").get<int>();
-
-      menu m {menus.front().data};
-      if (std::empty(m))
-         throw std::runtime_error("Menu is empty.");
-
-      menu_view<0> view {m, 2}; // TODO: Implement arbitrary depth.
-      for (auto const& gc : view) {
-         auto const new_group = channels.insert({gc.code, {}});
+      auto const comb_codes = combine_hash_codes(menus);
+      for (auto const& gc : comb_codes) {
+         auto const new_group = channels.insert({gc, {}});
          if (new_group.second) {
-            std::cout << "Successfully created channel: " << gc.code << std::endl;
+            std::cout << "Successfully created channel: "
+                      << gc << std::endl;
          } else {
-            std::cout << "Channel " << gc.code << " already exists." << std::endl;
+            std::cout << "Channel " << gc << " already exists."
+                      << std::endl;
          }
       }
    }
@@ -207,11 +203,18 @@ ev_res server_mgr::on_login(json const& j, std::shared_ptr<server_session> s)
    resp["cmd"] = "auth_ack";
    resp["result"] = "ok";
 
-   auto const user_version = j.at("version").get<int>();
-   if (user_version < menu_version) {
+   auto const user_versions = j.at("menu_versions").get<std::vector<int>>();
+   auto const server_versions = read_versions(menus);
+
+   auto const b =
+      std::lexicographical_compare( std::begin(user_versions)
+                                  , std::end(user_versions)
+                                  , std::begin(server_versions)
+                                  , std::end(server_versions)
+                                  );
+
+   if (b)
       resp["menus"] = menus;
-      resp["version"] = menu_version;
-   }
 
    s->send(resp.dump());
 

@@ -3,7 +3,7 @@ Dependencies
 sudo apt-get install nlohmann-json3-dev
 
 To send the menu to redis.
-./menu_dump -o 6 menus/cidades_small menus/fipe_veiculos.txt | redis-cli -x set menu
+./menu_dump -o 6 menus/cidades_small:3:1 menus/fipe_veiculos.txt:3:1 | redis-cli -x set menu
 
 To increase the number of file descriptors a process can have.
 

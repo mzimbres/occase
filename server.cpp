@@ -19,7 +19,7 @@ namespace po = boost::program_options;
 struct config {
    bool help = false;
    server_mgr_cf mgr;
-   int workers;
+   int number_of_workers;
    unsigned short port;
 
    int auth_timeout;
@@ -53,12 +53,12 @@ auto get_server_op(int argc, char* argv[])
    , po::value<unsigned short>(&cf.port)->default_value(8080)
    , "Server listening port."
    )
-   ("workers,w"
-   , po::value<int>(&cf.workers)->default_value(1)
+   ("number-of-workers,w"
+   , po::value<int>(&cf.number_of_workers)->default_value(1)
    , "The number of worker threads, each"
      " one consuming one thread and having its own io_context."
      " For example, in a CPU with 8 cores this number should lie"
-     " around 5."
+     " around 5. Memory consumption should be considered."
    )
    ("code-timeout,s"
    , po::value<int>(&cf.code_timeout)->default_value(2)
@@ -144,7 +144,7 @@ int main(int argc, char* argv[])
       std::vector<std::shared_ptr<server_mgr>> workers;
 
       std::generate_n( std::back_inserter(workers)
-                     , cf.workers
+                     , cf.number_of_workers
                      , [&cf]()
                        { return std::make_shared<server_mgr>(cf.mgr); });
 

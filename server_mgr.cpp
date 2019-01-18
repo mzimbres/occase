@@ -92,14 +92,14 @@ server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
       auto const comb_codes = channel_codes(menu_codes);
       for (auto const& gc : comb_codes) {
          auto const new_group = channels.insert({gc, {}});
-         if (new_group.second) {
-            std::cout << "Successfully created channel: "
-                      << gc << std::endl;
-         } else {
+         if (!new_group.second) {
             std::cout << "Channel " << gc << " already exists."
                       << std::endl;
          }
       }
+
+      std::cout << "Number of channels created: " << std::size(channels)
+                << std::endl;
    }
 
    if (req.cmd == redis::request::unsolicited_publish) {
@@ -261,10 +261,8 @@ server_mgr::on_code_confirmation( json const& j
 ev_res
 server_mgr::on_subscribe(json const& j, std::shared_ptr<server_session> s)
 {
-   std::cout << "__________" << std::endl;
    auto const codes =
       j.at("channels").get<std::vector<std::vector<std::string>>>();
-   std::cout << "===========" << std::endl;
 
    auto const comb_codes = channel_codes(codes);
 

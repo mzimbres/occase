@@ -23,9 +23,7 @@ struct acceptor_arena {
                  , std::vector<std::shared_ptr<server_mgr>> const& workers)
    : signals(ioc, SIGINT, SIGTERM)
    , lst { {boost::asio::ip::tcp::v4(), port}, workers, ioc}
-   {
-      run();
-   }
+   { }
 
    void run()
    {

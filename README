@@ -5,12 +5,23 @@ sudo apt-get install nlohmann-json3-dev
 To send the menu to redis.
 ./menu_dump -o 6 menus/cidades_small:3:1 menus/fipe_veiculos.txt:3:1 | redis-cli -x set menu
 
-To increase the number of file descriptors a process can have.
+For useful information about the may number of file descriptors
+read haproxy
 
-Shows current value.
-$ cat /proc/sys/fs/file-max
+   haproxy/doc/management.txt
+
+For per process limit (see /proc/sys/fs/file-nr)
+
+   $ sudo sysctl fs.nr_open
+
+For the system wide limit (see /proc/sys/fs/file-max)
+
+   $ sudo sysctl fs.file-max
+
+These values can be changed by means of the sysctl comand.
 
 Current available.
+
 $ cat /proc/sys/fs/file-nr
 
 Change /etc/security/limits.conf. Add for example.

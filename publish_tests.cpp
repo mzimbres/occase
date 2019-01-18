@@ -14,6 +14,7 @@
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
 
+#include "utils.hpp"
 #include "config.hpp"
 #include "menu.hpp"
 #include "client_mgr_confirm_code.hpp"
@@ -198,6 +199,8 @@ int main(int argc, char* argv[])
          std::cout << desc << "\n";
          return 0;
       }
+
+      set_fd_limits(500000);
 
       for (auto i = 0; i < op.sim_runs; ++i) {
          test_pubsub(op);

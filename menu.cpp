@@ -432,6 +432,10 @@ channel_codes(std::vector<std::vector<std::string>> const& hash_codes)
    if (std::empty(hash_codes))
       return {};
 
+   for (auto const& o : hash_codes)
+      if (std::empty(o))
+         return {};
+
    // TODO: Make min and max const.
    std::vector<unsigned> min(1 + std::size(hash_codes), 0);
    std::vector<unsigned> max(1, min[0] + 1);

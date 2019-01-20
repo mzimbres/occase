@@ -91,6 +91,7 @@ server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
       auto const menu_codes = menu_elems_to_codes(menus);
       auto const comb_codes = channel_codes(menu_codes);
       for (auto const& gc : comb_codes) {
+         //std::cout << "Creating channel " << gc << std::endl;
          auto const new_group = channels.insert({gc, {}});
          if (!new_group.second) {
             std::cout << "Channel " << gc << " already exists."
@@ -269,8 +270,10 @@ server_mgr::on_subscribe(json const& j, std::shared_ptr<server_session> s)
    auto n_channels = 0;
    for (auto const& o : comb_codes) {
       auto const g = channels.find(o);
-      if (g == std::end(channels))
+      if (g == std::end(channels)) {
+         std::cout << "Cannot find channel " << o << std::endl;
          continue;
+      }
 
       g->second.add_member(s);
       ++n_channels;

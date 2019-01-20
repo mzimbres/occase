@@ -250,7 +250,7 @@ auto parse_tree( menu_node& root
 
 menu_node* menu_traversal::advance_to_leaf()
 {
-   while (!std::empty(st.back().back()->children) && std::size(st) <= depth)
+   while (!std::empty(st.back().back()->children) && std::size(st) < depth)
       st.push_back(st.back().back()->children);
 
    auto* tmp = st.back().back();

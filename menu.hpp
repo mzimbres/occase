@@ -2,6 +2,7 @@
 
 #include <stack>
 #include <deque>
+#include <vector>
 #include <string>
 #include <limits>
 
@@ -10,14 +11,38 @@
 namespace rt
 {
 
+std::string to_str_raw(int i, int width, char fill);
 std::string to_str(int i);
 
 struct menu_node {
    std::string name;
-   std::string code;
+   std::vector<int> code;
    int leaf_counter = 0;
    std::deque<menu_node*> children;
 };
+
+template <class Iter>
+std::string get_code_as_str_impl(Iter begin, Iter end)
+{
+   if (begin == end)
+      return {};
+
+   if (std::distance(begin, end) == 1)
+      return to_str_raw(*begin, 3, '0');
+
+   std::string code;
+   for (; begin != std::prev(end); ++begin)
+      code += to_str_raw(*begin, 3, '0') + ".";
+
+   code += to_str_raw(*begin, 3, '0');
+   return code;
+}
+
+inline
+std::string get_code_as_str(std::vector<int> const& v)
+{
+   return get_code_as_str_impl(std::begin(v), std::end(v));
+}
 
 /*  If the input file uses spaces to show the depth, then the line
  *  separator will be assumed to be '\n'. Furthermore it will also
@@ -174,9 +199,9 @@ void to_json(json& j, menu_elem const& e);
 void from_json(json const& j, menu_elem& e);
 
 std::vector<std::string>
-channel_codes(std::vector<std::vector<std::string>> const& codes);
+channel_codes(std::vector<std::vector<std::vector<int>>> const& codes);
 
-std::vector<std::vector<std::string>>
+std::vector<std::vector<std::vector<int>>>
 menu_elems_to_codes(std::vector<menu_elem> const& elems);
 
 std::vector<int>

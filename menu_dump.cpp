@@ -181,7 +181,7 @@ int impl(menu_op const& op)
    if (op.oformat == 5) {
       menu_view<0> view {m, op.depth};
       for (auto const& o : view)
-         std::cout << o.code << "\n";
+         std::cout << get_code_as_str(o.code) << "\n";
    } else {
       auto const oformat = convert_to_menu_oformat(op.oformat);
       auto const line_sep = op.oformat == 2 ? '=' : '\n';

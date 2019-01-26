@@ -157,23 +157,6 @@ auto get_max_depth( std::string const& menu_str
    return max_depth;
 }
 
-template <class Iter>
-std::string get_code(Iter begin, Iter end)
-{
-   if (begin == end)
-      return {};
-
-   if (std::distance(begin, end) == 1)
-      return to_str_raw(*begin, 3, '0');
-
-   std::string code;
-   for (; begin != std::prev(end); ++begin)
-      code += to_str_raw(*begin, 3, '0') + ".";
-
-   code += to_str_raw(*begin, 3, '0');
-   return code;
-}
-
 // Parses the three contained in menu_str and puts its root node in
 // root.children.
 auto parse_tree( menu_node& head
@@ -190,7 +173,7 @@ auto parse_tree( menu_node& head
 
    std::stringstream ss(menu_str);
    std::string line;
-   std::deque<int> codes(max_depth, -1);
+   std::vector<int> codes(max_depth, -1);
    std::stack<menu_node*> stack;
    int last_depth = 0;
    char const line_sep = ifmt == menu::iformat::spaces ? '\n' : '=';
@@ -213,8 +196,8 @@ auto parse_tree( menu_node& head
       for (unsigned i = depth; i < std::size(codes); ++i)
          codes[i] = -1;
 
-      auto const code = get_code(std::begin(codes), std::begin(codes) + depth);
-
+      std::vector<int> const code { std::begin(codes)
+                                  , std::begin(codes) + depth};
       if (depth > last_depth) {
          if (last_depth + 1 != depth)
             throw std::runtime_error("Forward Jump not allowed.");
@@ -326,30 +309,27 @@ menu::menu(std::string const& str)
 void node_dump( menu_node const& node, menu::oformat of
               , std::ostringstream& oss, int max_depth)
 {
-   auto const k =
-      std::count(std::begin(node.code), std::end(node.code), '.');
-
-   auto const indent = std::size(node.code) - k;
    if (of == menu::oformat::spaces) {
-      std::string indent_str(indent, ' ');
+      std::string indent_str(std::size(node.code) * menu::sep, ' ');
       oss << indent_str << node.name;
       return;
    }
 
    if (of == menu::oformat::counter) {
-      auto const k =  indent / menu::sep;
-      oss << k << ';' << node.name << ';' << node.leaf_counter;
+      oss << std::size(node.code) << ';'
+          << node.name << ';' << node.leaf_counter;
       return;
    }
 
    if (of == menu::oformat::info) {
       auto const n = max_depth * (menu::sep + 1);
       oss << std::setw(n) << std::left
-          << node.code << ' ' << node.name << ' ' << node.leaf_counter;
+          << get_code_as_str(node.code) << ' '
+          << node.name << ' ' << node.leaf_counter;
       return;
    }
 
-   oss << node.code;
+   oss << get_code_as_str(node.code);
 }
 
 std::string
@@ -432,7 +412,7 @@ auto next_tuple( Iter begin, Iter end
 }
 
 std::vector<std::string>
-channel_codes(std::vector<std::vector<std::string>> const& hash_codes)
+channel_codes(std::vector<std::vector<std::vector<int>>> const& hash_codes)
 {
    if (std::empty(hash_codes))
       return {};
@@ -450,10 +430,9 @@ channel_codes(std::vector<std::vector<std::string>> const& hash_codes)
    auto comb = min;
    std::vector<std::string> comb_codes;
    do {
-
-      std::string code = hash_codes.at(0).at(comb.at(1));
+      std::string code = get_code_as_str(hash_codes.at(0).at(comb.at(1)));
       for (unsigned i = 1; i < std::size(hash_codes); ++i)
-         code += "." + hash_codes.at(i).at(comb.at(1 + i));
+         code += "." + get_code_as_str(hash_codes.at(i).at(comb.at(1 + i)));
 
       comb_codes.push_back(std::move(code));
    } while (next_tuple( std::begin(comb), std::end(comb)
@@ -461,17 +440,17 @@ channel_codes(std::vector<std::vector<std::string>> const& hash_codes)
    return comb_codes;
 }
 
-std::vector<std::vector<std::string>>
+std::vector<std::vector<std::vector<int>>>
 menu_elems_to_codes(std::vector<menu_elem> const& elems)
 {
    // First we collect the codes from each menu at the desired depth.
-   std::vector<std::vector<std::string>> hash_codes;
+   std::vector<std::vector<std::vector<int>>> hash_codes;
    for (auto const& elem : elems) {
       menu m {elem.data};
       if (std::empty(m))
          throw std::runtime_error("Menu is empty.");
 
-      std::vector<std::string> codes;
+      std::vector<std::vector<int>> codes;
       for (auto const& o : menu_view<0> {m, elem.depth})
          codes.push_back(o.code);
 

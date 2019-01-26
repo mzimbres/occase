@@ -411,7 +411,7 @@ auto next_tuple( Iter begin, Iter end
     return j != 0;
 }
 
-std::vector<std::string>
+std::vector<std::vector<std::vector<std::vector<int>>>>
 channel_codes( std::vector<std::vector<std::vector<int>>> const& channels
              , std::vector<menu_elem> const& menus)
 {
@@ -429,24 +429,40 @@ channel_codes( std::vector<std::vector<std::vector<int>>> const& channels
       max.push_back(std::size(o) - 1);
    
    auto comb = min;
-   std::vector<std::string> comb_codes;
+   std::vector<std::vector<std::vector<std::vector<int>>>> ret;
    do {
-      auto code =
-         get_code_as_str_impl( std::begin(channels.front().at(comb.at(1)))
-                             , std::begin(channels.front().at(comb.at(1)))
-                             + menus.front().depth);
-
-      for (unsigned i = 1; i < std::size(channels); ++i) {
-         code += "." +
-         get_code_as_str_impl( std::begin(channels.at(i).at(comb.at(1 + i)))
-                             , std::begin(channels.at(i).at(comb.at(1 + i)))
-                             + menus.at(i).depth);
+      std::vector<std::vector<std::vector<int>>> foo;
+      for (unsigned i = 0; i < std::size(channels); ++i) {
+         foo.push_back(
+               { std::vector<int>(
+                     std::begin(channels.at(i).at(comb.at(1 + i))),
+                     std::begin(channels.at(i).at(comb.at(1 + i)))
+                         + menus.at(i).depth)
+               });
       }
 
-      comb_codes.push_back(std::move(code));
+      ret.push_back(std::move(foo));
    } while (next_tuple( std::begin(comb), std::end(comb)
                       , std::begin(min), std::begin(max)));
-   return comb_codes;
+   return ret;
+}
+
+std::string convert_to_hash_code(
+      std::vector<std::vector<std::vector<int>>> const& codes)
+{
+   if (std::empty(codes))
+      return {};
+
+   assert(std::size(codes.front()) == 1);
+
+   auto code = get_code_as_str(codes.front().front());
+
+   for (unsigned i = 1; i < std::size(codes); ++i) {
+      assert(std::size(codes.at(i)) == 1);
+      code += "." + get_code_as_str(codes.at(i).front());
+   }
+
+   return code;
 }
 
 std::vector<std::vector<std::vector<int>>>

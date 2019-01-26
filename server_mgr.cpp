@@ -1,6 +1,8 @@
 #include "server_mgr.hpp"
 
 #include <mutex>
+#include <iterator>
+#include <algorithm>
 
 #include "resp.hpp"
 #include "menu.hpp"
@@ -89,7 +91,11 @@ server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
       auto const j_menu = json::parse(data.back());
       menus = j_menu.at("menus").get<std::vector<menu_elem>>();
       auto const menu_codes = menu_elems_to_codes(menus);
-      auto const comb_codes = channel_codes(menu_codes, menus);
+      auto const arrays = channel_codes(menu_codes, menus);
+      std::vector<std::string> comb_codes;
+      std::transform( std::begin(arrays), std::end(arrays)
+                    , std::back_inserter(comb_codes)
+                    , convert_to_hash_code);
       for (auto const& gc : comb_codes) {
          //std::cout << "Creating channel " << gc << std::endl;
          auto const new_group = channels.insert({gc, {}});
@@ -106,8 +112,10 @@ server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
    if (req.cmd == redis::request::unsolicited_publish) {
       assert(std::size(data) == 1);
       auto const j = json::parse(data.front());
-      auto const to = j.at("to").get<std::string>();
-      auto const g = channels.find(to);
+      auto const to =
+         j.at("to").get<std::vector<std::vector<std::vector<int>>>>();
+      auto const code = convert_to_hash_code(to);
+      auto const g = channels.find(code);
       if (g == std::end(channels)) {
          // Should not happen as the group is checked on
          // on_user_group:msg before being sent to redis for broadcast.
@@ -265,7 +273,11 @@ server_mgr::on_subscribe(json const& j, std::shared_ptr<server_session> s)
    auto const codes =
       j.at("channels").get<std::vector<std::vector<std::vector<int>>>>();
 
-   auto const comb_codes = channel_codes(codes, menus);
+   auto const arrays = channel_codes(codes, menus);
+   std::vector<std::string> comb_codes;
+   std::transform( std::begin(arrays), std::end(arrays)
+                 , std::back_inserter(comb_codes)
+                 , convert_to_hash_code);
 
    auto n_channels = 0;
    for (auto const& o : comb_codes) {
@@ -290,10 +302,18 @@ server_mgr::on_subscribe(json const& j, std::shared_ptr<server_session> s)
 ev_res
 server_mgr::on_unsubscribe(json const& j, std::shared_ptr<server_session> s)
 {
-   auto const codes = j.at("channels").get<std::vector<std::string>>();
+   auto const codes =
+      j.at("channels").get<std::vector<std::vector<std::vector<int>>>>();
+
+   auto const arrays = channel_codes(codes, menus);
+   std::vector<std::string> comb_codes;
+   std::transform( std::begin(arrays), std::end(arrays)
+                 , std::back_inserter(comb_codes)
+                 , convert_to_hash_code);
+
    auto const from = s->get_id();
 
-   if (std::empty(codes)) {
+   if (std::empty(comb_codes)) {
       json resp;
       resp["cmd"] = "unsubscribe_ack";
       resp["result"] = "ok";
@@ -302,7 +322,7 @@ server_mgr::on_unsubscribe(json const& j, std::shared_ptr<server_session> s)
    }
 
    auto n_channels = 0;
-   for (auto const& o : codes) {
+   for (auto const& o : comb_codes) {
       auto const g = channels.find(o);
       if (g == std::end(channels))
          continue;
@@ -315,7 +335,6 @@ server_mgr::on_unsubscribe(json const& j, std::shared_ptr<server_session> s)
    resp["cmd"] = "unsubscribe_ack";
    resp["result"] = "ok";
    resp["count"] = n_channels;
-   resp["channels"] = codes;
    s->send(resp.dump());
    return ev_res::unsubscribe_ok;
 }
@@ -327,25 +346,18 @@ server_mgr::on_publish( std::string msg, json const& j
 {
    // The publish command has the form [[1, 2], [2, 3, 4], [1, 2]]
    // Where each array in the outermost array refers to one menu.
-   //auto const to = j.at("to").get<std::vector<std::vector<int>>>();
-   auto const to = j.at("to").get<std::string>();
+   auto const to =
+      j.at("to").get<std::vector<std::vector<std::vector<int>>>>();
 
-   // Now we want to form the hash codes obeying the the menu filter
-   // depth, so for example if depth is 2 and the array is
-   //
-   //   [1, 2, 3, 4]
-   //
-   // the hash shall consider only the first two elements. We have to
-   // combine all arrays each with its own depth.
-   //if (std::size(menus) != std::size(to))
-   //   return ev_res::publish_fail;
+   auto const code = convert_to_hash_code(to);
 
-   auto const g = channels.find(to);
+   auto const g = channels.find(code);
    if (g == std::end(channels)) {
       // This is a non-existing channel. Perhaps the json command was
       // sent with the wrong information signaling a logic error in
       // the app. Sending a fail ack back to the app is useful to
-      // debug it?
+      // debug it? See redis::request::unsolicited_publish
+      // Enable only for debug.
       json resp;
       resp["cmd"] = "publish_ack";
       resp["result"] = "fail";

@@ -214,10 +214,16 @@ void from_json(json const& j, menu_elem& e);
  * beyond the filter depth we pass also the array of MenuElem so that
  * we can respect the depths.
  */
-std::vector<std::string>
+std::vector<std::vector<std::vector<std::vector<int>>>>
 channel_codes( std::vector<std::vector<std::vector<int>>> const& codes
              , std::vector<menu_elem> const& menu_elems);
 
+std::string convert_to_hash_code(
+      std::vector<std::vector<std::vector<int>>> const& codes);
+
+/* This function will convert a vector of menu_elem in the structure
+ * that is input for channel_codes decribed above.
+ */
 std::vector<std::vector<std::vector<int>>>
 menu_elems_to_codes(std::vector<menu_elem> const& elems);
 

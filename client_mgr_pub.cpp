@@ -17,10 +17,10 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
       if (res == "ok") {
          auto const menus = j.at("menus").get<std::vector<menu_elem>>();
          auto const hash_codes = menu_elems_to_codes(menus);
-         auto const channels = channel_codes(hash_codes, menus);
-         if (std::empty(channels))
+         auto const comb_codes = channel_codes(hash_codes, menus);
+         if (std::empty(comb_codes))
             throw std::runtime_error("client_mgr_pub::on_read0");
-         for (auto const& o : channels)
+         for (auto const& o : comb_codes)
             for (auto i = 0; i < op.msgs_per_channel; ++i)
                hashes.push_back({false, false, o});
          json j_sub;
@@ -53,7 +53,9 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
       auto const res = j.at("result").get<std::string>();
       if (res == op.expected) {
          auto const id = j.at("id").get<int>();
-         //std::cout << "Receiving publish_ack: " << op.user << " " << id << " " << hashes.at(id).hash << std::endl;
+         //std::cout << "Receiving publish_ack: " << op.user
+         //          << " " << id << " " << hashes.at(id).hash
+         //          << std::endl;
          if (hashes.at(id).ack)
             throw std::runtime_error("client_mgr_pub::on_read4");
          hashes.at(id).ack = true;

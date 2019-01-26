@@ -32,7 +32,7 @@ private:
    struct ch_msg_helper {
       bool ack = false;
       bool msg = false;
-      std::string hash;
+      std::vector<std::vector<std::vector<int>>> hash;
    };
 
    options_type op;

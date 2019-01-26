@@ -353,11 +353,13 @@ server_mgr::on_publish( std::string msg, json const& j
 
    auto const g = channels.find(code);
    if (g == std::end(channels)) {
+      std::cout << code << std::endl;
       // This is a non-existing channel. Perhaps the json command was
       // sent with the wrong information signaling a logic error in
       // the app. Sending a fail ack back to the app is useful to
-      // debug it? See redis::request::unsolicited_publish
-      // Enable only for debug.
+      // debug it? See redis::request::unsolicited_publish Enable only
+      // for debug. But ... It may prevent the traffic of invalid
+      // messages in redis. But invalid messages should never happen.
       json resp;
       resp["cmd"] = "publish_ack";
       resp["result"] = "fail";

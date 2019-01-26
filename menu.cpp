@@ -453,7 +453,8 @@ std::string convert_to_hash_code(
    if (std::empty(codes))
       return {};
 
-   assert(std::size(codes.front()) == 1);
+   if (std::size(codes.front()) != 1)
+      throw std::runtime_error("convert_to_hash_code: Invalid input size");
 
    auto code = get_code_as_str(codes.front().front());
 

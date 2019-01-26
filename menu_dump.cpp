@@ -18,7 +18,7 @@ using namespace rt;
 struct menu_op {
    int sim_length;
    int oformat;
-   unsigned depth;
+   int depth;
    std::vector<std::string> files;
    std::string fipe_tipo;
    bool validate = false;
@@ -69,7 +69,7 @@ menu::oformat convert_to_menu_oformat(int i)
 
 struct menu_info {
    std::string file;
-   unsigned depth = 0;
+   int depth = 0;
    int version = 0;
 };
 
@@ -81,6 +81,9 @@ struct menu_info {
  */
 menu_info convert_to_menu_info(std::string const& data)
 {
+   if (std::empty(data))
+      throw std::runtime_error("Invalid menu info.");
+
    if (data.front() == ':')
       throw std::runtime_error("Invalid menu info.");
 
@@ -105,13 +108,13 @@ menu_info convert_to_menu_info(std::string const& data)
    if (p2 == std::string::npos) {
       // The user passed only the depth, not the version.
       return { data.substr(0, p1)
-             , static_cast<unsigned>(std::stoul(data.substr(p1 + 1)))
+             , std::stoi(data.substr(p1 + 1))
              , 0};
    }
    
    // User passed both the depth and the version.
    return { data.substr(0, p1)
-          , static_cast<unsigned>(std::stoul(data.substr(p1 + 1)))
+          , std::stoi(data.substr(p1 + 1))
           , std::stoi(data.substr(p2 + 1))};
 }
 
@@ -162,6 +165,9 @@ int impl(menu_op const& op)
       std::cout << j.dump() << std::flush;
       return 0;
    }
+
+   if (std::empty(op.files))
+      return 0;
 
    menu_info minfo = convert_to_menu_info(op.files.front());
 
@@ -218,7 +224,7 @@ int main(int argc, char* argv[])
       , "Length of simulated children. Used only if -f is not provided."
       )
       ("depth,d"
-      , po::value<unsigned>(&op.depth)->default_value(std::numeric_limits<unsigned>::max())
+      , po::value<int>(&op.depth)->default_value(std::numeric_limits<int>::max())
       , "Influences the output."
       )
       ("files,f"

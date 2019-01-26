@@ -29,7 +29,7 @@ std::string to_str(int i)
 }
 
 std::vector<std::string>
-get_hashes(std::string const& str, unsigned depth)
+get_hashes(std::string const& str, int depth)
 {
    menu m {str};
    if (std::empty(m))
@@ -55,7 +55,7 @@ auto remove_depth(std::string& line, menu::iformat ifmt)
          throw std::runtime_error("Invalid indentation.");
 
       line.erase(0, i);
-      return i / menu::sep;
+      return static_cast<int>(i) / menu::sep;
    }
 
    if (ifmt == menu::iformat::counter) {
@@ -65,7 +65,7 @@ auto remove_depth(std::string& line, menu::iformat ifmt)
 
       // We have to skip empty lines.
       if (std::empty(line))
-         return std::string::npos;
+         return -1;
 
       // This input format requires the presence of ';'
       auto const p1 = line.find_first_of(';');
@@ -85,10 +85,10 @@ auto remove_depth(std::string& line, menu::iformat ifmt)
       line.erase(p2);
 
       // Now the line contains only the middle field.
-      return std::stoul(digit);
+      return std::stoi(digit);
    }
 
-   return std::string::npos;
+   return -1;
 }
 
 // Detects the file input format.
@@ -133,25 +133,42 @@ menu::iformat detect_iformat(std::string const& menu_str)
    return menu::iformat::counter;
 }
 
-// Finds the max depth in a menu.
+/*
+ * Returns the menu depth. The root node is excluded that means, a
+ * menu in the form
+ *
+ * foo
+ *    bar
+ *    bar
+ *       foobar
+ *       bar
+ *
+ * A menu in the form
+ *
+ * bar
+ *
+ * will have depth 0. An empty menu will have depth -1.  has depth 2.
+ * This is the number of fields in the code that is needed to identify
+ * a node in the tree.
+ */
 auto get_max_depth( std::string const& menu_str
                   , menu::iformat ifmt)
 {
    char const line_sep = ifmt == menu::iformat::spaces ? '\n' : '=';
    std::stringstream ss(menu_str);
    std::string line;
-   unsigned max_depth = 0;
+   int max_depth = -1;
    while (std::getline(ss, line, line_sep)) {
       auto const i = remove_depth(line, ifmt);
 
-      if (i == std::string::npos)
+      if (i == -1)
          continue;
 
-      if (max_depth < static_cast<unsigned>(i))
+      if (max_depth < i)
          max_depth = i;
    }
 
-   return 1 + max_depth;
+   return max_depth;
 }
 
 template <class Iter>
@@ -173,34 +190,35 @@ std::string get_code(Iter begin, Iter end)
 
 // Parses the three contained in menu_str and puts its root node in
 // root.children.
-auto parse_tree( menu_node& root
+auto parse_tree( menu_node& head
                , std::string const& menu_str
                , menu::iformat ifmt)
 {
    // TODO: Make it exception safe.
 
    auto const max_depth = get_max_depth(menu_str, ifmt);
-   if (max_depth == 0)
-      return static_cast<unsigned>(0);
+   if (max_depth == -1) {
+      // The menu is empty.
+      return -1;
+   }
 
    std::stringstream ss(menu_str);
    std::string line;
-   std::deque<int> codes(max_depth - 1, -1);
+   std::deque<int> codes(max_depth, -1);
    std::stack<menu_node*> stack;
-   unsigned last_depth = 0;
+   int last_depth = 0;
    char const line_sep = ifmt == menu::iformat::spaces ? '\n' : '=';
    while (std::getline(ss, line, line_sep)) {
       if (std::empty(line))
          continue;
 
       auto const depth = remove_depth(line, ifmt);
-      if (depth == std::string::npos)
+      if (depth == -1)
          continue;
 
-      if (std::empty(root.children)) {
-         root.name = line;
+      if (std::empty(head.children)) {
          auto* p = new menu_node {line, {}};
-         root.children.push_front(p);
+         head.children.push_front(p);
          stack.push(p);
          continue;
       }
@@ -225,7 +243,7 @@ auto parse_tree( menu_node& root
          // until we get to the node that is should be the parent of
          // the current line.
          auto const delta_depth = last_depth - depth;
-         for (unsigned i = 0; i < delta_depth; ++i)
+         for (auto i = 0; i < delta_depth; ++i)
             stack.pop();
 
          stack.pop();
@@ -250,7 +268,8 @@ auto parse_tree( menu_node& root
 
 menu_node* menu_traversal::advance_to_leaf()
 {
-   while (!std::empty(st.back().back()->children) && std::size(st) < depth)
+   while (!std::empty(st.back().back()->children) &&
+         static_cast<int>(std::size(st)) <= depth)
       st.push_back(st.back().back()->children);
 
    auto* tmp = st.back().back();
@@ -268,7 +287,7 @@ menu_node* menu_traversal::next_internal()
    return tmp;
 }
 
-menu_traversal::menu_traversal(menu_node* root, unsigned depth_)
+menu_traversal::menu_traversal(menu_node* root, int depth_)
 : depth(depth_)
 {
    if (root)
@@ -339,7 +358,7 @@ void node_dump( menu_node const& node, menu::oformat of
    }
 
    if (of == menu::oformat::info) {
-      auto const n = (max_depth - 1) * (menu::sep + 1);
+      auto const n = max_depth * (menu::sep + 1);
       oss << std::setw(n) << std::left
           << node.code << ' ' << node.name << ' ' << node.leaf_counter;
       return;
@@ -351,7 +370,7 @@ void node_dump( menu_node const& node, menu::oformat of
 std::string
 menu::dump( oformat of
           , char line_sep
-          , unsigned const max_depth)
+          , int const max_depth)
 {
    // Traverses the menu in the same order as it would appear in the
    // config file.
@@ -365,7 +384,8 @@ menu::dump( oformat of
    for (;;) {
       auto* node = st.back().back();
       st.back().pop_back();
-      if (!std::empty(node->children) && std::size(st) < max_depth)
+      auto const stack_size = static_cast<int>(std::size(st));
+      if (!std::empty(node->children) && stack_size <= max_depth)
          st.push_back(node->children);
       node_dump(*node, of, oss, max_depth);
       oss << line_sep;
@@ -377,7 +397,7 @@ menu::dump( oformat of
    }
 }
 
-bool check_leaf_min_depths(menu& m, unsigned min_depth)
+bool check_leaf_min_depths(menu& m, int min_depth)
 {
    // TODO: Change the function to return an iterator to the
    // invalid node.
@@ -385,7 +405,7 @@ bool check_leaf_min_depths(menu& m, unsigned min_depth)
    menu_view<0> view {m, min_depth};
    for (auto iter = std::begin(view); iter != std::end(view); ++iter) {
       auto const d = iter.get_depth();
-      if (d < min_depth + 1)
+      if (d < min_depth)
          return false;
    }
 

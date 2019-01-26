@@ -12,7 +12,7 @@ namespace rt
 
 // Puts all group hashes into a vector.
 std::vector<std::string>
-get_hashes(std::string const& str, unsigned depth);
+get_hashes(std::string const& str, int depth);
 
 std::string to_str(int i);
 
@@ -36,13 +36,13 @@ struct menu_node {
 class menu {
 private:
    menu_node root;
-   int max_depth = 0;
+   int max_depth = -1;
 
    template <int>
    friend class menu_view;
 public:
    static constexpr auto sep = 3;
-   static constexpr unsigned max_supported_depth = 10;
+   static constexpr auto max_supported_depth = 10;
    enum class iformat {spaces, counter};
    enum class oformat {spaces, counter, info, hashes};
    menu() = delete;
@@ -55,7 +55,7 @@ public:
 
    std::string dump( oformat of
                    , char line_sep = '\n'
-                   , unsigned max_depth = max_supported_depth);
+                   , int max_depth = max_supported_depth);
    auto get_max_depth() const noexcept {return max_depth;}
    auto empty() const
    {
@@ -63,20 +63,26 @@ public:
    }
 };
 
-bool check_leaf_min_depths(menu& m, unsigned min_depth);
+bool check_leaf_min_depths(menu& m, int min_depth);
 
 class menu_traversal {
 private:
    std::deque<std::deque<menu_node*>> st;
-   unsigned depth;
+   int depth;
 
 public:
-   menu_traversal(menu_node* root, unsigned depth_);
+   menu_traversal(menu_node* root, int depth_);
    menu_node* advance_to_leaf();
    menu_node* next_internal();
    menu_node* next_leaf_node();
    menu_node* next_node();
-   auto get_depth() const noexcept { return std::size(st); }
+   auto get_depth() const noexcept
+   {
+      if (std::empty(st))
+         return -1;
+
+      return static_cast<int>(std::size(st)) - 1;
+   }
 };
 
 template <int N>
@@ -95,7 +101,7 @@ public:
    using iterator_category = std::forward_iterator_tag;
 
    leaf_iterator( menu_node* root = nullptr
-                , unsigned depth = menu::max_supported_depth)
+                , int depth = menu::max_supported_depth)
    : iter {root, depth}
    { 
       if (root)
@@ -143,20 +149,18 @@ public:
 template <int N>
 class menu_view {
 private:
-   unsigned depth;
+   int depth;
    menu_node* root = nullptr;
 
 public:
    using iterator = leaf_iterator<N>;
 
-   menu_view( menu_node* root_
-            , unsigned depth_ = menu::max_supported_depth)
+   menu_view(menu_node* root_, int depth_ = menu::max_supported_depth)
    : depth {depth_}
    , root {root_}
    { }
 
-   menu_view( menu& m
-            , unsigned depth_ = menu::max_supported_depth)
+   menu_view(menu& m, int depth_ = menu::max_supported_depth)
    : menu_view {m.root.children.front(), depth_}
    { }
 
@@ -166,7 +170,7 @@ public:
 
 struct menu_elem {
    std::string data;
-   unsigned depth = 0;
+   int depth = 0;
    int version = 0;
 };
 

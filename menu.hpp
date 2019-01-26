@@ -10,10 +10,6 @@
 namespace rt
 {
 
-// Puts all group hashes into a vector.
-std::vector<std::string>
-get_hashes(std::string const& str, int depth);
-
 std::string to_str(int i);
 
 struct menu_node {

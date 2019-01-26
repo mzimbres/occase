@@ -28,20 +28,6 @@ std::string to_str(int i)
    return to_str_raw(i, 10, '0');
 }
 
-std::vector<std::string>
-get_hashes(std::string const& str, int depth)
-{
-   menu m {str};
-   if (std::empty(m))
-      return {};
-
-   std::vector<std::string> codes;
-   menu_view<0> view {m, depth};
-   for (auto const& node : view)
-      codes.push_back(node.code);
-   return codes;
-}
-
 // TODO: Pass the field separator as argument to be able to read
 // fields separated with ';' and not only spaces.
 auto remove_depth(std::string& line, menu::iformat ifmt)

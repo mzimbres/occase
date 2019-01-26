@@ -412,28 +412,36 @@ auto next_tuple( Iter begin, Iter end
 }
 
 std::vector<std::string>
-channel_codes( std::vector<std::vector<std::vector<int>>> const& hash_codes
-             , std::vector<menu_elem> const& menu_elems)
+channel_codes( std::vector<std::vector<std::vector<int>>> const& channels
+             , std::vector<menu_elem> const& menus)
 {
-   if (std::empty(hash_codes))
+   if (std::empty(channels))
       return {};
 
-   for (auto const& o : hash_codes)
+   for (auto const& o : channels)
       if (std::empty(o))
          return {};
 
    // TODO: Make min and max const.
-   std::vector<unsigned> min(1 + std::size(hash_codes), 0);
+   std::vector<unsigned> min(1 + std::size(channels), 0);
    std::vector<unsigned> max(1, min[0] + 1);
-   for (auto const& o : hash_codes)
+   for (auto const& o : channels)
       max.push_back(std::size(o) - 1);
    
    auto comb = min;
    std::vector<std::string> comb_codes;
    do {
-      std::string code = get_code_as_str(hash_codes.at(0).at(comb.at(1)));
-      for (unsigned i = 1; i < std::size(hash_codes); ++i)
-         code += "." + get_code_as_str(hash_codes.at(i).at(comb.at(1 + i)));
+      auto code =
+         get_code_as_str_impl( std::begin(channels.front().at(comb.at(1)))
+                             , std::begin(channels.front().at(comb.at(1)))
+                             + menus.front().depth);
+
+      for (unsigned i = 1; i < std::size(channels); ++i) {
+         code += "." +
+         get_code_as_str_impl( std::begin(channels.at(i).at(comb.at(1 + i)))
+                             , std::begin(channels.at(i).at(comb.at(1 + i)))
+                             + menus.at(i).depth);
+      }
 
       comb_codes.push_back(std::move(code));
    } while (next_tuple( std::begin(comb), std::end(comb)

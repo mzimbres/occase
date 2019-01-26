@@ -319,8 +319,7 @@ menu::menu(std::string const& str)
          o.leaf_counter =
             std::accumulate( std::begin(o.children)
                            , std::end(o.children)
-                           , static_cast<unsigned>(0)
-                           , acc);
+                           , 0, acc);
    }
 }
 

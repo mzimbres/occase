@@ -412,7 +412,8 @@ auto next_tuple( Iter begin, Iter end
 }
 
 std::vector<std::string>
-channel_codes(std::vector<std::vector<std::vector<int>>> const& hash_codes)
+channel_codes( std::vector<std::vector<std::vector<int>>> const& hash_codes
+             , std::vector<menu_elem> const& menu_elems)
 {
    if (std::empty(hash_codes))
       return {};

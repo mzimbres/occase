@@ -198,8 +198,25 @@ struct menu_elem {
 void to_json(json& j, menu_elem const& e);
 void from_json(json const& j, menu_elem& e);
 
+/* This function receives input in the form
+ *
+ * [[[1, 2, 3], [3, 4, 1], ...], [[1, 2, 3], [3, 4, 1], ...], ...]
+ *
+ * The inner most array contains the coordinate of the menu item the
+ * user wants to subscribe to. This array is contained in another
+ * array with the other channels the user wants to subscribe to. These
+ * arrays in turn are grouped in the outer most array where each
+ * element corresponds to a menu.
+ *
+ * We also use this function to generate the hash code for the publish
+ * command. But in this case the length of the innermost array is the
+ * whole menu depth (down to the leaf node). To ignore the elements
+ * beyond the filter depth we pass also the array of MenuElem so that
+ * we can respect the depths.
+ */
 std::vector<std::string>
-channel_codes(std::vector<std::vector<std::vector<int>>> const& codes);
+channel_codes( std::vector<std::vector<std::vector<int>>> const& codes
+             , std::vector<menu_elem> const& menu_elems);
 
 std::vector<std::vector<std::vector<int>>>
 menu_elems_to_codes(std::vector<menu_elem> const& elems);

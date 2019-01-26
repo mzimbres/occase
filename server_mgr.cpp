@@ -89,7 +89,7 @@ server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
       auto const j_menu = json::parse(data.back());
       menus = j_menu.at("menus").get<std::vector<menu_elem>>();
       auto const menu_codes = menu_elems_to_codes(menus);
-      auto const comb_codes = channel_codes(menu_codes);
+      auto const comb_codes = channel_codes(menu_codes, menus);
       for (auto const& gc : comb_codes) {
          //std::cout << "Creating channel " << gc << std::endl;
          auto const new_group = channels.insert({gc, {}});
@@ -265,7 +265,7 @@ server_mgr::on_subscribe(json const& j, std::shared_ptr<server_session> s)
    auto const codes =
       j.at("channels").get<std::vector<std::vector<std::vector<int>>>>();
 
-   auto const comb_codes = channel_codes(codes);
+   auto const comb_codes = channel_codes(codes, menus);
 
    auto n_channels = 0;
    for (auto const& o : comb_codes) {
@@ -325,14 +325,27 @@ ev_res
 server_mgr::on_publish( std::string msg, json const& j
                       , std::shared_ptr<server_session> s)
 {
+   // The publish command has the form [[1, 2], [2, 3, 4], [1, 2]]
+   // Where each array in the outermost array refers to one menu.
+   //auto const to = j.at("to").get<std::vector<std::vector<int>>>();
    auto const to = j.at("to").get<std::string>();
 
-   // Looks like this should be removed.
+   // Now we want to form the hash codes obeying the the menu filter
+   // depth, so for example if depth is 2 and the array is
+   //
+   //   [1, 2, 3, 4]
+   //
+   // the hash shall consider only the first two elements. We have to
+   // combine all arrays each with its own depth.
+   //if (std::size(menus) != std::size(to))
+   //   return ev_res::publish_fail;
+
    auto const g = channels.find(to);
    if (g == std::end(channels)) {
       // This is a non-existing channel. Perhaps the json command was
       // sent with the wrong information signaling a logic error in
-      // the app.
+      // the app. Sending a fail ack back to the app is useful to
+      // debug it?
       json resp;
       resp["cmd"] = "publish_ack";
       resp["result"] = "fail";

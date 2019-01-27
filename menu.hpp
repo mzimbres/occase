@@ -218,8 +218,11 @@ std::vector<std::vector<std::vector<std::vector<int>>>>
 channel_codes( std::vector<std::vector<std::vector<int>>> const& codes
              , std::vector<menu_elem> const& menu_elems);
 
+// I am not happy having to pass the whole vector of menu_elem to this
+// function as we only need the depths. Refactor in the future maybe.
 std::string convert_to_hash_code(
-      std::vector<std::vector<std::vector<int>>> const& codes);
+      std::vector<std::vector<std::vector<int>>> const& codes,
+      std::vector<menu_elem> const& menu_elems);
 
 /* This function will convert a vector of menu_elem in the structure
  * that is input for channel_codes decribed above.

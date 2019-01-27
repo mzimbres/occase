@@ -16,13 +16,16 @@ int client_mgr_gmsg_check::on_read( std::string msg
    if (cmd == "auth_ack") {
       auto const res = j.at("result").get<std::string>();
       if (res == "ok") {
-         auto const menus = j.at("menus").get<std::vector<menu_elem>>();
+         menus = j.at("menus").get<std::vector<menu_elem>>();
          auto const hash_codes = menu_elems_to_codes(menus);
          auto const arrays = channel_codes(hash_codes, menus);
          std::vector<std::string> comb_codes;
+
          std::transform( std::begin(arrays), std::end(arrays)
                        , std::back_inserter(comb_codes)
-                       , convert_to_hash_code);
+                       , [this](auto const& o) {
+                         return convert_to_hash_code(o, menus);});
+
          if (std::empty(comb_codes))
             throw std::runtime_error("client_mgr_gmsg_check::on_read0");
          tot_msgs = op.n_publishers * std::size(comb_codes)
@@ -57,7 +60,7 @@ int client_mgr_gmsg_check::on_read( std::string msg
       auto const from = j.at("from").get<std::string>();
       auto const to =
          j.at("to").get<std::vector<std::vector<std::vector<int>>>>();
-      auto const code = convert_to_hash_code(to);
+      auto const code = convert_to_hash_code(to, menus);
       //auto const id = j.at("id").get<int>();
 
       //std::cout << "from " << from << ", id " << id << std::endl;

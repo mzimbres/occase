@@ -448,7 +448,8 @@ channel_codes( std::vector<std::vector<std::vector<int>>> const& channels
 }
 
 std::string convert_to_hash_code(
-      std::vector<std::vector<std::vector<int>>> const& codes)
+      std::vector<std::vector<std::vector<int>>> const& codes,
+      std::vector<menu_elem> const& menu_elems)
 {
    if (std::empty(codes))
       return {};
@@ -456,11 +457,18 @@ std::string convert_to_hash_code(
    if (std::size(codes.front()) != 1)
       throw std::runtime_error("convert_to_hash_code: Invalid input size");
 
-   auto code = get_code_as_str(codes.front().front());
+   auto code =
+      get_code_as_str_impl( std::begin(codes.front().front())
+                          , std::begin(codes.front().front())
+                          + menu_elems.front().depth);
 
    for (unsigned i = 1; i < std::size(codes); ++i) {
-      assert(std::size(codes.at(i)) == 1);
-      code += "." + get_code_as_str(codes.at(i).front());
+      if (std::size(codes.at(i)) != 1)
+         throw std::runtime_error("convert_to_hash_code: Invalid input size");
+      code += "."
+            + get_code_as_str_impl( std::begin(codes.at(i).front())
+                                  , std::begin(codes.at(i).front())
+                                  + menu_elems.at(i).depth);
    }
 
    return code;

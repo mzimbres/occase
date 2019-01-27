@@ -6,6 +6,7 @@
 #include <utility>
 #include <stdexcept>
 
+#include "menu.hpp"
 #include "config.hpp"
 #include "json_utils.hpp"
 
@@ -41,6 +42,7 @@ private:
    options_type op;
    std::map<std::string, helper> counters;
    int tot_msgs;
+   std::vector<menu_elem> menus;
 
 public:
    client_mgr_gmsg_check(options_type op_)

@@ -95,7 +95,8 @@ server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
       std::vector<std::string> comb_codes;
       std::transform( std::begin(arrays), std::end(arrays)
                     , std::back_inserter(comb_codes)
-                    , convert_to_hash_code);
+                    , [this](auto const& o) {
+                      return convert_to_hash_code(o, menus);});
       for (auto const& gc : comb_codes) {
          //std::cout << "Creating channel " << gc << std::endl;
          auto const new_group = channels.insert({gc, {}});
@@ -114,7 +115,7 @@ server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
       auto const j = json::parse(data.front());
       auto const to =
          j.at("to").get<std::vector<std::vector<std::vector<int>>>>();
-      auto const code = convert_to_hash_code(to);
+      auto const code = convert_to_hash_code(to, menus);
       auto const g = channels.find(code);
       if (g == std::end(channels)) {
          // Should not happen as the group is checked on
@@ -277,7 +278,8 @@ server_mgr::on_subscribe(json const& j, std::shared_ptr<server_session> s)
    std::vector<std::string> comb_codes;
    std::transform( std::begin(arrays), std::end(arrays)
                  , std::back_inserter(comb_codes)
-                 , convert_to_hash_code);
+                 , [this](auto const& o) {
+                   return convert_to_hash_code(o, menus);});
 
    auto n_channels = 0;
    for (auto const& o : comb_codes) {
@@ -309,7 +311,8 @@ server_mgr::on_unsubscribe(json const& j, std::shared_ptr<server_session> s)
    std::vector<std::string> comb_codes;
    std::transform( std::begin(arrays), std::end(arrays)
                  , std::back_inserter(comb_codes)
-                 , convert_to_hash_code);
+                 , [this](auto const& o) {
+                   return convert_to_hash_code(o, menus);});
 
    auto const from = s->get_id();
 
@@ -349,7 +352,7 @@ server_mgr::on_publish( std::string msg, json const& j
    auto const to =
       j.at("to").get<std::vector<std::vector<std::vector<int>>>>();
 
-   auto const code = convert_to_hash_code(to);
+   auto const code = convert_to_hash_code(to, menus);
 
    auto const g = channels.find(code);
    if (g == std::end(channels)) {

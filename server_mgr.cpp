@@ -1,6 +1,7 @@
 #include "server_mgr.hpp"
 
 #include <mutex>
+#include <chrono>
 #include <iterator>
 #include <algorithm>
 
@@ -68,7 +69,7 @@ server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
 
    if (req.cmd == redis::request::retrieve_msgs) {
       assert(std::size(data) == 1);
-      //std::cout << req.user_id << " ===> " << data.back() << std::endl;
+      std::cout << req.user_id << " ===> " << data.back() << std::endl;
       auto const match = sessions.find(req.user_id);
       if (match == std::end(sessions)) {
          // TODO: The user went offline. We have to enqueue the
@@ -77,6 +78,7 @@ server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
       }
 
       if (auto s = match->second.lock()) {
+         std::cout << "Message sent to " << req.user_id << std::endl;
          s->send(data.back());
       } else {
          // The user went offline but the session was not removed from
@@ -366,17 +368,19 @@ server_mgr::on_publish( std::string msg, json const& j
       json resp;
       resp["cmd"] = "publish_ack";
       resp["result"] = "fail";
-      resp["id"] = j.at("id").get<int>();
       s->send(resp.dump());
       return ev_res::publish_fail;
    }
 
    db.publish_menu_msg(std::move(msg));
 
+   auto const unix_timestamp = std::chrono::seconds(std::time(nullptr));
+   auto const t = std::chrono::milliseconds(unix_timestamp).count();
+
    json ack;
    ack["cmd"] = "publish_ack";
    ack["result"] = "ok";
-   ack["id"] = j.at("id").get<int>();
+   ack["id"] = t;
    s->send(ack.dump());
    return ev_res::publish_ok;
 }
@@ -407,7 +411,8 @@ server_mgr::on_user_msg( std::string msg, json const& j
    // redis server. This would be a big optimization in the case of
    // small number of nodes.
 
-   db.async_store_chat_msg(s->get_id(), std::move(msg));
+   auto const to = j.at("to").get<std::string>();
+   db.async_store_chat_msg(to, std::move(msg));
 
    json ack;
    ack["cmd"] = "user_msg_server_ack";

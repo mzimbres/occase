@@ -95,8 +95,7 @@ private:
    ev_res on_unsubscribe(json const& j, std::shared_ptr<server_session> s);
    ev_res on_user_msg( std::string msg, json const& j
                      , std::shared_ptr<server_session> s);
-   ev_res on_publish( std::string msg, json const& j
-                    , std::shared_ptr<server_session> s);
+   ev_res on_publish(json j, std::shared_ptr<server_session> s);
 
 public:
    server_mgr(server_mgr_cf cf);

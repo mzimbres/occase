@@ -346,8 +346,7 @@ server_mgr::on_unsubscribe(json const& j, std::shared_ptr<server_session> s)
 
 
 ev_res
-server_mgr::on_publish( std::string msg, json const& j
-                      , std::shared_ptr<server_session> s)
+server_mgr::on_publish(json j, std::shared_ptr<server_session> s)
 {
    // The publish command has the form [[1, 2], [2, 3, 4], [1, 2]]
    // Where each array in the outermost array refers to one menu.
@@ -372,10 +371,12 @@ server_mgr::on_publish( std::string msg, json const& j
       return ev_res::publish_fail;
    }
 
-   db.publish_menu_msg(std::move(msg));
 
    auto const unix_timestamp = std::chrono::seconds(std::time(nullptr));
    auto const t = std::chrono::milliseconds(unix_timestamp).count();
+
+   j["id"] = t;
+   db.publish_menu_msg(j.dump());
 
    json ack;
    ack["cmd"] = "publish_ack";
@@ -498,7 +499,7 @@ server_mgr::on_message( std::shared_ptr<server_session> s, std::string msg)
          return on_subscribe(j, s);
 
       if (cmd == "publish")
-         return on_publish(std::move(msg), j, s);
+         return on_publish(std::move(j), s);
 
       if (cmd == "user_msg")
          return on_user_msg(std::move(msg), j, s);

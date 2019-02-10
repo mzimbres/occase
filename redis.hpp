@@ -15,7 +15,7 @@ struct namespaces {
    // key will be a composition of this prefix and the user id
    // separate by a ":".
    std::string msg_prefix;
-   std::string notify_prefix {"__keyspace@0__:"};
+   std::string notify_prefix {"__keyspace@"};
 };
 
 struct config {

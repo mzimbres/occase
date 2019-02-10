@@ -47,6 +47,7 @@ auto get_server_op(int argc, char* argv[])
    std::vector<std::string> ips;
    config cf;
    int conn_retry_interval = 500;
+   std::string redis_db = "0";
    po::options_description desc("Options");
    desc.add_options()
    ("help,h", "Produces help message")
@@ -54,12 +55,13 @@ auto get_server_op(int argc, char* argv[])
    , po::value<unsigned short>(&cf.port)->default_value(8080)
    , "Server listening port."
    )
-   ("number-of-workers,w"
+   ("workers,w"
    , po::value<int>(&cf.number_of_workers)->default_value(1)
    , "The number of worker threads, each"
      " one consuming one thread and having its own io_context."
      " For example, in a CPU with 8 cores this number should lie"
-     " around 5. Memory consumption should be considered."
+     " around 5. Memory consumption should be considered since "
+     " each thread has it own non-shared data structure."
    )
    ("code-timeout,s"
    , po::value<int>(&cf.code_timeout)->default_value(2)
@@ -67,9 +69,8 @@ auto get_server_op(int argc, char* argv[])
    )
    ("auth-timeout,a"
    , po::value<int>(&cf.auth_timeout)->default_value(2)
-   , "Authetication timeout in seconds. Fired after the websocket "
-     "handshake completes. Used also by the login "
-     "command for clients registering for the first time."
+   , "Authetication timeout in seconds. Started after the websocket "
+     "handshake completes."
    )
    ("handshake-timeout,k"
    , po::value<int>(&cf.handshake_timeout)->default_value(2)
@@ -80,41 +81,50 @@ auto get_server_op(int argc, char* argv[])
    , po::value<int>(&cf.pong_timeout)->default_value(2)
    , "Pong timeout in seconds. This is the time the client has to "
      "reply a ping frame sent by the server. If a pong is received "
-     "on time a new ping is sent on timer expiration."
+     "on time a new ping is sent on timer expiration. Otherwise the "
+     "connection is closed."
    )
    ("close-frame-timeout,e"
    , po::value<int>(&cf.close_frame_timeout)->default_value(2)
-   , "The time we are willing to wait for a reply of a sent close frame."
+   , "The time we are willing to wait for an ack to websocket "
+     "close frame that has been sent to the client."
    )
 
    ("redis-address"
    , po::value<std::string>(&cf.mgr.redis_cf.sessions.host)->
        default_value("127.0.0.1")
-   , "Address of redis server."
+   , "Address of the redis server."
    )
    ("redis-port"
    , po::value<std::string>(&cf.mgr.redis_cf.sessions.port)->
        default_value("6379")
    , "Port where redis server is listening."
    )
+   ("redis-database"
+   , po::value<std::string>(&redis_db)->default_value("0")
+   , "The redis database to use: 0, 1, 2 etc."
+   )
    ("redis-menu-channel"
    , po::value<std::string>(&cf.mgr.redis_cf.nms.menu_channel)->
         default_value("menu_channel")
-   , "The name of the redis channel where group messages will be broadcasted."
+   , "The name of the redis channel where group messages "
+     "will be broadcasted."
    )
    ("redis-menu-key"
-   , po::value<std::string>(&cf.mgr.redis_cf.nms.menu_key)->default_value("menu")
-   , "Redis key holding the menu."
+   , po::value<std::string>(&cf.mgr.redis_cf.nms.menu_key)->
+        default_value("menu")
+   , "Redis key holding the menus in json format."
    )
    ("redis-msg-prefix"
-   , po::value<std::string>(&cf.mgr.redis_cf.nms.msg_prefix)->default_value("msg")
+   , po::value<std::string>(&cf.mgr.redis_cf.nms.msg_prefix)->
+        default_value("msg")
    , "That prefix that will be incorporated in the keys that hold"
      " user messages."
    )
    ("redis-conn-retry-interval"
    , po::value<int>(&conn_retry_interval)->default_value(500)
    , "Time in milliseconds the redis session should wait before trying "
-     "to reconnect to redis."
+     "to reconnect to redis in case the connection was lost."
    )
    ;
 
@@ -128,6 +138,7 @@ auto get_server_op(int argc, char* argv[])
    }
 
    cf.mgr.redis_cf.nms.msg_prefix += ":";
+   cf.mgr.redis_cf.nms.notify_prefix += redis_db + "__:";
    cf.mgr.redis_cf.nms.notify_prefix += cf.mgr.redis_cf.nms.msg_prefix;
    cf.mgr.redis_cf.sessions.conn_retry_interval =
       std::chrono::milliseconds{conn_retry_interval};

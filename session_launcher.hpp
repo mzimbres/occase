@@ -6,17 +6,19 @@
 
 #include <boost/asio.hpp>
 
-// This class is used to launch client sessions with a definite
-// launch_interval. This way we can avoid launching them all at once
-// and killing the server, especially when we are dealing with
-// thousands of sessions.
-//
-// It is possible to set a callback that will be called when finished
-// launching the sessions. This is usefull to start launching a timer
-// or other sessions.
-//
-// The user ids will be generated on the fly beginning at begin and
-// ending at end - 1. See launcher_cf.
+/*
+ * This class is used to launch client sessions with a definite
+ * launch_interval. This way we can avoid launching them all at once
+ * and killing the server, especially when we are dealing with
+ * thousands of sessions.
+ *
+ * It is possible to set a callback that will be called when finished
+ * launching the sessions. This is usefull to start launching a timer
+ * or other sessions.
+ *
+ * The user ids will be generated on the fly beginning at begin and
+ * ending at end - 1. See launcher_cf.
+ */
 
 namespace rt
 {

@@ -213,6 +213,9 @@ void from_json(json const& j, menu_elem& e);
  * whole menu depth (down to the leaf node). To ignore the elements
  * beyond the filter depth we pass also the array of MenuElem so that
  * we can respect the depths.
+ *
+ * The output has therefore the form
+ *
  */
 std::vector<std::vector<std::vector<std::vector<int>>>>
 channel_codes( std::vector<std::vector<std::vector<int>>> const& codes

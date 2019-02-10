@@ -1,17 +1,24 @@
 boost_inc_dir = /opt/boost_1_67_0/include
 boost_lib_dir = /opt/boost_1_67_0/lib
 
-boost_libs    =
-boost_libs    += $(boost_lib_dir)/libboost_system.a
-boost_libs    += $(boost_lib_dir)/libboost_program_options.a
+boost_libs =
+boost_libs += $(boost_lib_dir)/libboost_system.a
+boost_libs += $(boost_lib_dir)/libboost_program_options.a
 
-DEBUG         = -g -ggdb3
-LDFLAGS       = -lpthread
-CPPFLAGS      = -I. -I$(boost_inc_dir) -std=c++17 $(DEBUG) -Wall # -Werror
+DEBUG    = -g -ggdb3
+LDFLAGS  = -lpthread
+CPPFLAGS = -I. -I$(boost_inc_dir) -std=c++17 $(DEBUG) -Wall # -Werror
 
-DIST_NAME   = sellit
+DIST_NAME = sellit
 
-exes = publish_tests server menu_dump aedis read_only_tests reg_users_tests
+exes =
+exes += publish_tests
+exes += server
+exes += menu_dump
+exes += aedis
+exes += read_only_tests
+exes += reg_users_tests
+exes += simulation
 
 common_objs += menu.o
 common_objs += utils.o
@@ -39,7 +46,12 @@ menu_dump_objs += fipe.o
 
 exe_objs = $(addsuffix .o, $(exes))
 
-lib_objs = $(server_objs) $(client_objs) $(aedis_objs) $(menu_dump_objs) $(common_objs)
+lib_objs =
+lib_objs += $(server_objs)
+lib_objs += $(client_objs)
+lib_objs += $(aedis_objs)
+lib_objs += $(menu_dump_objs)
+lib_objs += $(common_objs)
 
 srcs =
 srcs += $(lib_objs:.o=.cpp)
@@ -60,6 +72,9 @@ Makefile.dep:
 	-$(CXX) -MM *.cpp > $@
 
 -include Makefile.dep
+
+simulation: % : %.o $(client_objs) $(common_objs)
+	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(boost_libs)
 
 publish_tests: % : %.o $(client_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(boost_libs)

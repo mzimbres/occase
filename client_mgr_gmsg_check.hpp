@@ -13,11 +13,13 @@
 namespace rt
 {
 
-// This test client will hang on the channels silently and check
-// whether we are receiving all all messages.  when the desired number
-// of message per channel is reached it will unsubscribe from the
-// channel. A message from a channel from which it has unsubscribed
-// will cause an error.
+/*
+ * This test client will hang on the channels silently and check
+ * whether we are receiving all messages.  When the desired number of
+ * message per channel is reached it will unsubscribe from the
+ * channel. A message from a channel from which it has unsubscribed
+ * will cause an error.
+ */
 
 template <class Mgr>
 class client_session;

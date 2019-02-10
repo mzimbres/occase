@@ -103,7 +103,15 @@ int client_mgr_gmsg_check::on_read( std::string msg
    }
 
    if (cmd == "user_msg_server_ack") {
-      std::cout << "Ack received" << std::endl;
+      std::cout << op.user << ": Ack received" << std::endl;
+      return 1;
+   }
+
+   if (cmd == "user_msg") {
+      std::cout << msg << std::endl;
+      auto const id = j.at("id").get<long long>();
+      auto const from = j.at("from").get<std::string>();
+      speak_to_publisher(from, id, s);
       return 1;
    }
 

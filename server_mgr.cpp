@@ -141,6 +141,7 @@ server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
          auto const n = data[1].rfind(":");
          assert(n != std::string::npos);
 
+         std::cout << "Received key notification." << std::endl;
          db.async_retrieve_msgs(data[1].substr(n + 1));
 
          //auto const s = sessions.find(user_id);

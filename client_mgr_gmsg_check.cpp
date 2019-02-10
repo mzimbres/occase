@@ -142,7 +142,7 @@ void
 client_mgr_gmsg_check::speak_to_publisher(
       std::string to, long long id, std::shared_ptr<client_type> s)
 {
-   std::cout << "Message to: " << to << std::endl;
+   std::cout << "Message to: " << to << ", id: " << id << std::endl;
    json j;
    j["cmd"] = "user_msg";
    j["from"] = op.user;

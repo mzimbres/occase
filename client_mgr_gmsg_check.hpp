@@ -46,6 +46,9 @@ private:
    int tot_msgs;
    std::vector<menu_elem> menus;
 
+   void speak_to_publisher( std::string user, long long id
+                          , std::shared_ptr<client_type> s);
+
 public:
    client_mgr_gmsg_check(options_type op_)
    : op(op_) { }

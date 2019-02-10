@@ -54,16 +54,12 @@ int client_mgr_gmsg_check::on_read( std::string msg
    }
 
    if (cmd == "publish") {
-      //auto const body = j.at("msg").get<std::string>();
-      //std::cout << "Group msg check: " << body << std::endl;
-      //std::cout << j << std::endl;
+      auto const id = j.at("id").get<long long>();
       auto const from = j.at("from").get<std::string>();
       auto const to =
          j.at("to").get<std::vector<std::vector<std::vector<int>>>>();
       auto const code = convert_to_hash_code(to, menus);
-      //auto const id = j.at("id").get<int>();
 
-      //std::cout << "from " << from << ", id " << id << std::endl;
       auto const match = counters.find(code);
       if (match == std::end(counters))
          throw std::runtime_error("client_mgr_gmsg_check::on_read5");
@@ -92,6 +88,7 @@ int client_mgr_gmsg_check::on_read( std::string msg
          match->second.sent = true;
       }
 
+      speak_to_publisher(from, id, s);
       return 1;
    }
 
@@ -102,6 +99,11 @@ int client_mgr_gmsg_check::on_read( std::string msg
          return -1;
       }
 
+      return 1;
+   }
+
+   if (cmd == "user_msg_server_ack") {
+      std::cout << "Ack received" << std::endl;
       return 1;
    }
 
@@ -127,6 +129,22 @@ int client_mgr_gmsg_check::on_closed(boost::system::error_code ec)
    throw std::runtime_error("client_mgr_gmsg_check::on_closed");
    return -1;
 };
+
+void
+client_mgr_gmsg_check::speak_to_publisher(
+      std::string to, long long id, std::shared_ptr<client_type> s)
+{
+   std::cout << "Message to: " << to << std::endl;
+   json j;
+   j["cmd"] = "user_msg";
+   j["from"] = op.user;
+   j["to"] = to;
+   j["msg"] = "Tenho interesse nesee carro, como podemos proceder.";
+   j["id"] = id;
+   j["is_sender_adv"] = false;
+
+   s->send_msg(j.dump());
+}
 
 }
 

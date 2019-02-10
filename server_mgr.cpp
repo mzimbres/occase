@@ -418,7 +418,6 @@ server_mgr::on_user_msg( std::string msg, json const& j
    json ack;
    ack["cmd"] = "user_msg_server_ack";
    ack["result"] = "ok";
-   ack["id"] = j.at("id").get<int>();
    s->send(ack.dump());
    //std::cout << ack << std::endl;
    return ev_res::user_msg_ok;

@@ -149,7 +149,7 @@ client_mgr_gmsg_check::speak_to_publisher(
    j["to"] = to;
    j["msg"] = "Tenho interesse nesee carro, como podemos proceder.";
    j["id"] = id;
-   j["is_sender_adv"] = false;
+   j["is_sender_post"] = false;
 
    s->send_msg(j.dump());
 }

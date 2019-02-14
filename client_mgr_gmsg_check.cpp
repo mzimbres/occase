@@ -109,9 +109,9 @@ int client_mgr_gmsg_check::on_read( std::string msg
 
    if (cmd == "user_msg") {
       std::cout << msg << std::endl;
-      auto const id = j.at("id").get<long long>();
+      auto const post_id = j.at("post_id").get<long long>();
       auto const from = j.at("from").get<std::string>();
-      speak_to_publisher(from, id, s);
+      speak_to_publisher(from, post_id, s);
       return 1;
    }
 
@@ -140,15 +140,15 @@ int client_mgr_gmsg_check::on_closed(boost::system::error_code ec)
 
 void
 client_mgr_gmsg_check::speak_to_publisher(
-      std::string to, long long id, std::shared_ptr<client_type> s)
+      std::string to, long long post_id, std::shared_ptr<client_type> s)
 {
-   std::cout << "Message to: " << to << ", id: " << id << std::endl;
+   std::cout << "Message to: " << to << ", post_id: " << post_id << std::endl;
    json j;
    j["cmd"] = "user_msg";
    j["from"] = op.user;
    j["to"] = to;
    j["msg"] = "Tenho interesse nesee carro, como podemos proceder.";
-   j["id"] = id;
+   j["post_id"] = post_id;
    j["is_sender_post"] = false;
 
    s->send_msg(j.dump());

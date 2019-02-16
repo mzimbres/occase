@@ -9,97 +9,75 @@ namespace rt
 int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
 {
    auto const j = json::parse(msg);
-   //std::cout << j << std::endl;
-   auto const cmd = j.at("cmd").get<std::string>();
 
+   auto const cmd = j.at("cmd").get<std::string>();
    if (cmd == "auth_ack") {
       auto const res = j.at("result").get<std::string>();
-      if (res == "ok") {
-         auto const menus = j.at("menus").get<std::vector<menu_elem>>();
-         auto const hash_codes = menu_elems_to_codes(menus);
-         auto const comb_codes = channel_codes(hash_codes, menus);
-         if (std::empty(comb_codes))
-            throw std::runtime_error("client_mgr_pub::on_read0");
-         for (auto const& o : comb_codes)
-            for (auto i = 0; i < op.msgs_per_channel; ++i)
-               hashes.push_back({false, false, o});
-         json j_sub;
-         j_sub["cmd"] = "subscribe";
-         j_sub["channels"] = hash_codes;
-         s->send_msg(j_sub.dump());
-         return 1;
-      }
+      if (res != "ok")
+         throw std::runtime_error("client_mgr_pub::auth_ack");
 
-      std::cout << "Test sim: Error." << std::endl;
-      throw std::runtime_error("client_mgr_pub::on_read1");
-      return -1;
+      auto const menus = j.at("menus").get<std::vector<menu_elem>>();
+      auto const menu_codes = menu_elems_to_codes(menus);
+      auto const pub_codes = channel_codes(menu_codes, menus);
+
+      assert(!std::empty(pub_codes));
+
+      auto const pusher = [this](auto const& o)
+      { pub_stack.push({false, -1, o}); };
+
+      std::for_each(std::begin(pub_codes), std::end(pub_codes), pusher);
+
+      json j_sub;
+      j_sub["cmd"] = "subscribe";
+      j_sub["channels"] = menu_codes;
+      s->send_msg(j_sub.dump());
+      return 1;
    }
 
    if (cmd == "subscribe_ack") {
       auto const res = j.at("result").get<std::string>();
-      if (res == op.expected) {
-         //auto const count = j.at("count").get<int>();
-         //std::cout << "subscribe ok: " << count << std::endl;
-         send_group_msg(s, 0);
-         return 1;
-      }
+      if (res != "ok")
+         throw std::runtime_error("client_mgr_pub::subscribe_ack");
 
-      std::cout << "Test sim: subscribe_ack fail." << std::endl;
-      throw std::runtime_error("client_mgr_pub::on_read2");
-      return -1;
+      return send_group_msg(s);
    }
 
    if (cmd == "publish_ack") {
       auto const res = j.at("result").get<std::string>();
-      if (res == op.expected) {
-         auto const id = j.at("id").get<long long>();
-         //std::cout << "Receiving publish_ack: " << op.user
-         //          << " " << id << " " << hashes.at(id).hash
-         //          << std::endl;
-         if (hashes.at(id).ack)
-            throw std::runtime_error("client_mgr_pub::on_read4");
-         hashes.at(id).ack = true;
-         return 1;
-      }
+      if (res != "ok")
+         throw std::runtime_error("client_mgr_pub::publish_ack");
 
-      std::cout << "Test sim: send_group_msg_ack: fail." << std::endl;
-      throw std::runtime_error("client_mgr_pub::on_read3");
-      return -1;
-   }
-
-   if (cmd == "publish") {
-      //auto const body = j.at("msg").get<std::string>();
-      //std::cout << "Group msg: " << body << std::endl;
-      //std::cout << j << std::endl;
-      auto const from = j.at("from").get<std::string>();
-      //std::cout << from << " != " << op.user << std::endl;
-      if (from != op.user)
-         return 1;
-
-      auto const id = j.at("id").get<unsigned>();
-      if (hashes.at(id).msg)
-         throw std::runtime_error("client_mgr_pub::on_read5");
-
-      hashes.at(id).msg = true;
-
-      //std::cout << id << " " << std::size(hashes) << std::endl;
-      if (id == std::size(hashes) - 1) {
-         //std::cout << id << " " << std::size(hashes) << std::endl;
-         for (auto const& o : hashes)
-            if (!o.ack || !o.msg)
-               std::cout << "client_mgr_pub: Test fails." << std::endl;
-
-         std::cout << "FINISH: " << op.user  << std::endl;
-         return -1;
-      }
-
-      //std::cout << "Receiving publish:     " << op.user << " " << id
-      //          << " " << hashes.at(id).hash <<std::endl;
-      send_group_msg(s, id + 1);
+      pub_stack.top().post_id = j.at("id").get<long long>();
       return 1;
    }
 
-   std::cout << "Server error: Unknown command." << std::endl;
+   if (cmd == "publish") {
+      // We are only interested in our own publishes for the moment.
+      auto const from = j.at("from").get<std::string>();
+      if (from != op.user)
+         return 1;
+
+      auto const id = j.at("id").get<long long>();
+      assert(pub_stack.top().post_id == id);
+
+      pub_stack.top().server_echo = true;
+      return 1;
+   }
+
+   if (cmd == "user_msg") {
+      auto const to = j.at("to").get<std::string>();
+      auto const post_id = j.at("post_id").get<long long>();
+
+      assert(to == op.user);
+      assert(pub_stack.top().post_id == post_id);
+      assert(pub_stack.top().server_echo);
+
+      pub_stack.pop();
+
+      // Sends the next message.
+      return send_group_msg(s);
+   }
+
    throw std::runtime_error("client_mgr_pub::on_read4");
    return -1;
 }
@@ -122,23 +100,18 @@ int client_mgr_pub::on_closed(boost::system::error_code ec)
    return -1;
 };
 
-void client_mgr_pub::send_group_msg( std::shared_ptr<client_type> s
-                                   , int c) const
+int client_mgr_pub::send_group_msg(std::shared_ptr<client_type> s) const
 {
-   // For each one of these messages sent we shall receive first one
-   // server ack and then it again from the broadcast channel it was
-   // sent.
+   if (std::empty(pub_stack))
+      return -1;
+
    json j_msg;
    j_msg["cmd"] = "publish";
    j_msg["from"] = op.user;
-   j_msg["to"] = hashes.at(c).hash;
-   j_msg["msg"] = "Group message";
-   j_msg["id"] = c;
+   j_msg["to"] = pub_stack.top().pub_code;
+   j_msg["msg"] = "Not an interesting message.";
    s->send_msg(j_msg.dump());
-   //std::cout << "from " << op.user << ", id " << c << " ---" <<std::endl;
-   //std::cout << "Sending   publish      " << op.user << " "
-   //          << c << " " << hashes.at(c).hash
-   //          << std::endl;
+   return 1;
 }
 
 }

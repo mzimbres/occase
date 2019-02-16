@@ -37,7 +37,6 @@ struct client_op {
    int launch_interval = 100;
    int auth_timeout = 3;
    int sim_runs = 2;
-   int msgs_per_channel;
 
    auto make_session_cf() const
    {
@@ -105,8 +104,7 @@ void test_pubsub(client_op const& op)
       std::cout << "Starting launching pub." << std::endl;
       auto const s2 = std::make_shared< session_launcher<client_mgr_pub>
                       >( ioc
-                       , cmgr_sim_op
-                         { "", "ok", op.msgs_per_channel + 1}
+                       , cmgr_sim_op {"Dummy"}
                        , op.make_session_cf()
                        , op.make_pub_cf()
                        );
@@ -120,8 +118,7 @@ void test_pubsub(client_op const& op)
    auto const s = std::make_shared< session_launcher<client_mgr_gmsg_check>
                    >( ioc
                     , cmgr_gmsg_check_op
-                      {"", pub_cf.end - pub_cf.begin
-                      , op.msgs_per_channel}
+                      {"", pub_cf.end - pub_cf.begin, 1}
                     , op.make_session_cf()
                     , op.make_gmsg_check_cf()
                     );
@@ -183,11 +180,6 @@ int main(int argc, char* argv[])
          ("simulations,r"
          , po::value<int>(&op.sim_runs)->default_value(2)
          , "Number of simulation runs."
-         )
-
-         ("msgs-per-channel,b"
-         , po::value<int>(&op.msgs_per_channel)->default_value(3)
-         , "Number of messages per group used in the simulation."
          )
       ;
 

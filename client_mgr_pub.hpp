@@ -31,8 +31,6 @@ class client_session;
 
 struct cmgr_sim_op {
    std::string user;
-   std::string expected;
-   int msgs_per_channel;
 };
 
 class client_mgr_pub {
@@ -42,16 +40,15 @@ private:
    using client_type = client_session<client_mgr_pub>;
 
    struct ch_msg_helper {
-      bool ack = false;
-      bool msg = false;
-      std::vector<std::vector<std::vector<int>>> hash;
+      bool server_echo = false;
+      long long post_id = -1;
+      std::vector<std::vector<std::vector<int>>> pub_code;
    };
 
    options_type op;
-   std::vector<ch_msg_helper> hashes;
+   std::stack<ch_msg_helper> pub_stack;
 
-   void send_group_msg( std::shared_ptr<client_type> s
-                      , int c) const;
+   int send_group_msg(std::shared_ptr<client_type> s) const;
 
 public:
    client_mgr_pub(options_type op_)

@@ -8,6 +8,7 @@ To send the menu to redis.
 
 To test it is necessary to send smaller menus
 
+   $ redis-cli flushall
    $ ./menu_dump -o 6 menus/cidades_small:2:1 menus/cidades_small:2:1 | redis-cli -x set menu
 
 For useful information about the may number of file descriptors

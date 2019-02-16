@@ -102,6 +102,8 @@ int client_mgr_pub::on_closed(boost::system::error_code ec)
 
 int client_mgr_pub::send_group_msg(std::shared_ptr<client_type> s) const
 {
+   std::cout << "Remaining channels: " << std::size(pub_stack)
+             << std::endl;
    if (std::empty(pub_stack))
       return -1;
 

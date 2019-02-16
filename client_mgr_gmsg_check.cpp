@@ -46,10 +46,9 @@ int client_mgr_gmsg_check::on_read( std::string msg
       auto const post_id = j.at("id").get<long long>();
       auto const from = j.at("from").get<std::string>();
 
+      --to_receive_posts;
       speak_to_publisher(from, post_id, s);
-      if (--to_receive_posts == 0)
-         return -1; // Done.
-
+      std::cout << "====> Waiting for " << to_receive_posts << std::endl;
       return 1;
    }
 
@@ -63,6 +62,11 @@ int client_mgr_gmsg_check::on_read( std::string msg
    }
 
    if (cmd == "user_msg_server_ack") {
+      if (to_receive_posts == 0) {
+         std::cout << "====> Leaving." << std::endl;
+         return -1; // Done.
+      }
+
       return 1; // Fix the server and remove this.
    }
 

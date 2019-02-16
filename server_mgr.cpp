@@ -58,6 +58,103 @@ void server_mgr::init()
 }
 
 void
+server_mgr::on_redis_get_menu(
+   std::vector<std::string> const& data, redis::req_data const& req)
+{
+   assert(std::size(data) == 1);
+   auto const j_menu = json::parse(data.back());
+   menus = j_menu.at("menus").get<std::vector<menu_elem>>();
+   auto const menu_codes = menu_elems_to_codes(menus);
+   auto const arrays = channel_codes(menu_codes, menus);
+   std::vector<std::string> comb_codes;
+   std::transform( std::begin(arrays), std::end(arrays)
+                 , std::back_inserter(comb_codes)
+                 , [this](auto const& o) {
+                   return convert_to_hash_code(o, menus);});
+   for (auto const& gc : comb_codes) {
+      //std::cout << "Creating channel " << gc << std::endl;
+      auto const new_group = channels.insert({gc, {}});
+      if (!new_group.second) {
+         std::cout << "Channel " << gc << " already exists."
+                   << std::endl;
+      }
+   }
+
+   std::cout << "Number of channels created: " << std::size(channels)
+             << std::endl;
+}
+
+void
+server_mgr::on_redis_unsol_pub(
+   std::vector<std::string> const& data, redis::req_data const& req)
+{
+   assert(std::size(data) == 1);
+   auto const j = json::parse(data.front());
+   auto const to =
+      j.at("to").get<std::vector<std::vector<std::vector<int>>>>();
+   auto const code = convert_to_hash_code(to, menus);
+   auto const g = channels.find(code);
+   if (g == std::end(channels)) {
+      // Should not happen as the group is checked on
+      // on_user_group:msg before being sent to redis for broadcast.
+      // TODO: Handle this error.
+      assert(false);
+      return;
+   }
+
+   g->second.broadcast(data.front());
+}
+
+void
+server_mgr::on_redis_unsol_key_not(
+   std::vector<std::string> const& data, redis::req_data const& req)
+{
+   if (data.back() == "rpush") {
+      assert(data.front() == "message");
+      assert(std::size(data) == 3);
+
+      // TODO: Read the user id from the req struct. First
+      // implement tests.
+      auto const n = data[1].rfind(":");
+      assert(n != std::string::npos);
+
+      db.async_retrieve_msgs(data[1].substr(n + 1));
+
+      //auto const s = sessions.find(user_id);
+      //if (s == std::end(sessions)) {
+      //   // Should not happen as we unsubscribe from the user message
+      //   // channel we the user goes offline.
+      //   assert(false);
+      //   return;
+      //}
+   }
+}
+
+void
+server_mgr::on_redis_retrieve_msgs(
+   std::vector<std::string> const& data, redis::req_data const& req)
+{
+   assert(std::size(data) == 1);
+   std::cout << req.user_id << " ===> " << data.back() << std::endl;
+   auto const match = sessions.find(req.user_id);
+   if (match == std::end(sessions)) {
+      // TODO: The user went offline. We have to enqueue the
+      // message again. Rethink this.
+      return;
+   }
+
+   if (auto s = match->second.lock()) {
+      s->send(data.back());
+      return;
+   }
+   
+   // The user went offline but the session was not removed from
+   // the map. This is perhaps not a bug but undesirable as we
+   // do not have garbage collector for expired sessions.
+   assert(false);
+}
+
+void
 server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
                                 , std::vector<std::string> const& data
                                 , redis::req_data const& req)
@@ -67,91 +164,26 @@ server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
       return;
    }
 
-   if (req.cmd == redis::request::retrieve_msgs) {
-      assert(std::size(data) == 1);
-      std::cout << req.user_id << " ===> " << data.back() << std::endl;
-      auto const match = sessions.find(req.user_id);
-      if (match == std::end(sessions)) {
-         // TODO: The user went offline. We have to enqueue the
-         // message again. Rethink this.
-         return;
-      }
+   switch (req.cmd)
+   {
+      case redis::request::retrieve_msgs:
+         on_redis_retrieve_msgs(data, req);
+         break;
 
-      if (auto s = match->second.lock()) {
-         std::cout << "Message sent to " << req.user_id << std::endl;
-         s->send(data.back());
-      } else {
-         // The user went offline but the session was not removed from
-         // the map. This is perhaps not a bug but undesirable as we
-         // do not have garbage collector for expired sessions.
-         assert(false);
-      }
-   }
+      case redis::request::get_menu:
+         on_redis_get_menu(data, req);
+         break;
 
-   if (req.cmd == redis::request::get_menu) {
-      assert(std::size(data) == 1);
-      auto const j_menu = json::parse(data.back());
-      menus = j_menu.at("menus").get<std::vector<menu_elem>>();
-      auto const menu_codes = menu_elems_to_codes(menus);
-      auto const arrays = channel_codes(menu_codes, menus);
-      std::vector<std::string> comb_codes;
-      std::transform( std::begin(arrays), std::end(arrays)
-                    , std::back_inserter(comb_codes)
-                    , [this](auto const& o) {
-                      return convert_to_hash_code(o, menus);});
-      for (auto const& gc : comb_codes) {
-         //std::cout << "Creating channel " << gc << std::endl;
-         auto const new_group = channels.insert({gc, {}});
-         if (!new_group.second) {
-            std::cout << "Channel " << gc << " already exists."
-                      << std::endl;
-         }
-      }
+      case redis::request::unsolicited_publish:
+         on_redis_unsol_pub(data, req);
+         break;
 
-      std::cout << "Number of channels created: " << std::size(channels)
-                << std::endl;
-   }
+      case redis::request::unsolicited_key_not:
+         on_redis_unsol_key_not(data, req);
+         break;
 
-   if (req.cmd == redis::request::unsolicited_publish) {
-      assert(std::size(data) == 1);
-      auto const j = json::parse(data.front());
-      auto const to =
-         j.at("to").get<std::vector<std::vector<std::vector<int>>>>();
-      auto const code = convert_to_hash_code(to, menus);
-      auto const g = channels.find(code);
-      if (g == std::end(channels)) {
-         // Should not happen as the group is checked on
-         // on_user_group:msg before being sent to redis for broadcast.
-         // TODO: Handle this error.
-         assert(false);
-         return;
-      }
-
-      g->second.broadcast(data.front());
-      return;
-   }
-
-   if (req.cmd == redis::request::unsolicited_key_not) {
-      if (data.back() == "rpush") {
-         assert(data.front() == "message");
-         assert(std::size(data) == 3);
-
-         // TODO: Read the user id from the req struct. First
-         // implement tests.
-         auto const n = data[1].rfind(":");
-         assert(n != std::string::npos);
-
-         std::cout << "Received key notification." << std::endl;
-         db.async_retrieve_msgs(data[1].substr(n + 1));
-
-         //auto const s = sessions.find(user_id);
-         //if (s == std::end(sessions)) {
-         //   // Should not happen as we unsubscribe from the user message
-         //   // channel we the user goes offline.
-         //   assert(false);
-         //   return;
-         //}
-      }
+      default:
+         break;
    }
 }
 

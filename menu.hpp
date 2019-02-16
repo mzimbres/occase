@@ -200,22 +200,43 @@ void from_json(json const& j, menu_elem& e);
 
 /* This function receives input in the form
  *
- * [[[1, 2, 3], [3, 4, 1], ...], [[1, 2, 3], [3, 4, 1], ...], ...]
+ *   _________menu_1__________     __________menu_2________   etc.
+ *  |                         |   |                        |
+ * [[[1, 2, 3], [3, 4, 1], ...], [[a, b, c], [d, e, f], ...], ...]
  *
- * The inner most array contains the coordinate of the menu item the
- * user wants to subscribe to. This array is contained in another
- * array with the other channels the user wants to subscribe to. These
- * arrays in turn are grouped in the outer most array where each
- * element corresponds to a menu.
+ * The menu_1 may refer to regions of a country and menu_2 to a
+ * product for example.  The inner most array contains the coordinates
+ * of the menu items the user wants to subscribe to. It has the form
  *
- * We also use this function to generate the hash code for the publish
- * command. But in this case the length of the innermost array is the
- * whole menu depth (down to the leaf node). To ignore the elements
- * beyond the filter depth we pass also the array of MenuElem so that
- * we can respect the depths.
+ *    [1, 2, 3, ..]
  *
- * The output has therefore the form
+ * Each position in this array refers to a level in the menu, for
+ * example
  *
+ *    [State, City, Neighbourhood]
+ *
+ * This array is contained in another array with the other channels
+ * the user wants to subscribe to, for example
+ *
+ *    [Sao Paulo, Atibaia, Vila Santista]
+ *    [Sao Paulo, Atibaia, Centro]
+ *    [Sao Paulo, Compinas, Barao Geraldo]
+ *    ...
+ *
+ * These arrays in turn are grouped in the outer most array where each
+ * element corresponds to a menu. There will be typically two or three
+ * menus per app.
+ * 
+ * The function respects the menu depth, so if the menu coodinates
+ * have length 6 but the the hash codes are generate for depth 2 only
+ * the first two elements will be considered.
+ *
+ * The output is the combination of the codes respecting the depths.
+ * For the input array above the output would be
+ *
+ * [[[[1, 2], [a, b]]], [[[1, 2], [c, d]]], ..., [[[3, 4], [a, b]]], ...
+ *
+ * Each element of the outermost array will have length one.
  */
 std::vector<std::vector<std::vector<std::vector<int>>>>
 channel_codes( std::vector<std::vector<std::vector<int>>> const& codes

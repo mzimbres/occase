@@ -97,6 +97,18 @@ private:
                      , std::shared_ptr<server_session> s);
    ev_res on_publish(json j, std::shared_ptr<server_session> s);
 
+   void on_redis_retrieve_msgs( std::vector<std::string> const& data
+                              , redis::req_data const& req);
+
+   void on_redis_get_menu( std::vector<std::string> const& data
+                         , redis::req_data const& req);
+
+   void on_redis_unsol_pub( std::vector<std::string> const& data
+                          , redis::req_data const& req);
+
+   void on_redis_unsol_key_not( std::vector<std::string> const& data
+                              , redis::req_data const& req);
+
 public:
    server_mgr(server_mgr_cf cf);
    void release_auth_session(std::string const& id);

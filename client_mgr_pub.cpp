@@ -52,7 +52,7 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
    if (cmd == "publish_ack") {
       auto const res = j.at("result").get<std::string>();
       if (res == op.expected) {
-         auto const id = j.at("id").get<int>();
+         auto const id = j.at("id").get<long long>();
          //std::cout << "Receiving publish_ack: " << op.user
          //          << " " << id << " " << hashes.at(id).hash
          //          << std::endl;

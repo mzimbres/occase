@@ -11,6 +11,18 @@
 #include "config.hpp"
 #include "json_utils.hpp"
 
+/* This class is meant to perform the following test
+ *
+ * 1. Log in with menu versions 0 to get the server send us the menus.
+ * 2. Subscribe to all channels received in 1.
+ * 3. Send a publish to one of the channels.
+ * 4. Wait for the publish ack.
+ * 5. Wait the for the publish to be forwarded back.
+ * 6. Wait for a user_msg/unread/read relative to publish that has
+ *    been sent.
+ * 7. Back to step 3. until a publish has been sent to all channels.
+ */
+
 namespace rt
 {
 

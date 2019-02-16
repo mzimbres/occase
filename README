@@ -3,7 +3,12 @@ Dependencies
 sudo apt-get install nlohmann-json3-dev
 
 To send the menu to redis.
-./menu_dump -o 6 menus/cidades_small:2:1 menus/fipe_veiculos.txt:2:1 | redis-cli -x set menu
+
+   $ ./menu_dump -o 6 menus/cidades_small:2:1 menus/fipe_veiculos.txt:2:1 | redis-cli -x set menu
+
+To test it is necessary to send smaller menus
+
+   $ ./menu_dump -o 6 menus/cidades_small:2:1 menus/cidades_small:2:1 | redis-cli -x set menu
 
 For useful information about the may number of file descriptors
 read haproxy

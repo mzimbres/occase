@@ -28,8 +28,10 @@ int client_mgr_gmsg_check::on_read( std::string msg
 
          if (std::empty(comb_codes))
             throw std::runtime_error("client_mgr_gmsg_check::on_read0");
+
          tot_msgs = op.n_publishers * std::size(comb_codes)
                   * op.msgs_per_channel_per_user;
+
          std::cout << op.user << " expects: " << tot_msgs << std::endl;
          json j_sub;
          j_sub["cmd"] = "subscribe";
@@ -147,7 +149,7 @@ client_mgr_gmsg_check::speak_to_publisher(
    j["cmd"] = "user_msg";
    j["from"] = op.user;
    j["to"] = to;
-   j["msg"] = "Tenho interesse nesee carro, como podemos proceder.";
+   j["msg"] = "Tenho interesse nesse carro, podemos conversar?";
    j["post_id"] = post_id;
    j["is_sender_post"] = false;
 

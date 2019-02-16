@@ -41,6 +41,7 @@ private:
       bool acked = false;
       bool sent = false;
    };
+
    options_type op;
    std::map<std::string, helper> counters;
    int tot_msgs;

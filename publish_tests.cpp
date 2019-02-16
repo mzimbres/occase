@@ -30,7 +30,6 @@ namespace po = boost::program_options;
 struct client_op {
    std::string host {"127.0.0.1"};
    std::string port {"8080"};
-   std::string code;
    int publish_users = 10;
    int listen_users = 10;
    int handshake_tm = 3;
@@ -99,8 +98,6 @@ void test_pubsub(client_op const& op)
 
    auto const next = [&ioc, &op, ts]()
    {
-      // Sends one more message per channel to test if the unsubscribe
-      // command is working.
       std::cout << "Starting launching pub." << std::endl;
       auto const s2 = std::make_shared< session_launcher<client_mgr_pub>
                       >( ioc
@@ -117,8 +114,7 @@ void test_pubsub(client_op const& op)
    auto const pub_cf = op.make_pub_cf();
    auto const s = std::make_shared< session_launcher<client_mgr_gmsg_check>
                    >( ioc
-                    , cmgr_gmsg_check_op
-                      {"", pub_cf.end - pub_cf.begin, 1}
+                    , cmgr_gmsg_check_op {"", pub_cf.end - pub_cf.begin}
                     , op.make_session_cf()
                     , op.make_gmsg_check_cf()
                     );
@@ -167,11 +163,6 @@ int main(int argc, char* argv[])
          , po::value<int>(&op.handshake_tm)->default_value(3)
          , "Time before which the server should have given "
            "up on the handshake in seconds.")
-
-         ("code,m"
-         , po::value<std::string>(&op.code)->default_value("8347")
-         , "The code sent via email for account validation."
-         )
 
          ("auth-timeout,l"
          , po::value<int>(&op.auth_timeout)->default_value(3)

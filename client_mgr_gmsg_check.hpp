@@ -14,11 +14,9 @@ namespace rt
 {
 
 /*
- * This test client will hang on the channels silently and check
- * whether we are receiving all messages.  When the desired number of
- * message per channel is reached it will unsubscribe from the
- * channel. A message from a channel from which it has unsubscribed
- * will cause an error.
+ * This test client will hang on the channels and send the publisher a
+ * user_msg. It will exit after receiving a pre-calculated number of
+ * messages.
  */
 
 template <class Mgr>
@@ -27,7 +25,6 @@ class client_session;
 struct cmgr_gmsg_check_op {
    std::string user;
    int n_publishers;
-   int msgs_per_channel_per_user;
 };
 
 class client_mgr_gmsg_check {
@@ -43,8 +40,8 @@ private:
    };
 
    options_type op;
-   std::map<std::string, helper> counters;
-   int tot_msgs;
+
+   int to_receive_posts;
    std::vector<menu_elem> menus;
 
    void speak_to_publisher( std::string user, long long id

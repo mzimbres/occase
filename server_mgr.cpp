@@ -135,7 +135,7 @@ server_mgr::on_redis_retrieve_msgs(
    std::vector<std::string> const& data, redis::req_data const& req)
 {
    assert(std::size(data) == 1);
-   std::cout << req.user_id << " ===> " << data.back() << std::endl;
+   //std::cout << req.user_id << " ===> " << data.back() << std::endl;
    auto const match = sessions.find(req.user_id);
    if (match == std::end(sessions)) {
       // TODO: The user went offline. We have to enqueue the

@@ -24,8 +24,8 @@ int client_mgr_gmsg_check::on_read( std::string msg
 
       to_receive_posts = op.n_publishers * std::size(pub_codes);
 
-      std::cout << "Sub: User " << op.user << " expects: " << to_receive_posts
-                << std::endl;
+      //std::cout << "Sub: User " << op.user << " expects: " << to_receive_posts
+      //          << std::endl;
 
       json j_sub;
       j_sub["cmd"] = "subscribe";
@@ -96,8 +96,8 @@ void
 client_mgr_gmsg_check::speak_to_publisher(
       std::string to, long long post_id, std::shared_ptr<client_type> s)
 {
-   std::cout << "Sub: User " << op.user << " sending to " << to
-             << ", post_id: " << post_id << std::endl;
+   //std::cout << "Sub: User " << op.user << " sending to " << to
+   //          << ", post_id: " << post_id << std::endl;
 
    json j;
    j["cmd"] = "user_msg";

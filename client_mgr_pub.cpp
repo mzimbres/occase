@@ -49,7 +49,7 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
 
       auto const id = j.at("id").get<long long>();
       pub_stack.top().post_id = id;
-      std::cout << "Pub: Received publish ack. Post id: " << id << std::endl;
+      //std::cout << "Pub: Received publish ack. Post id: " << id << std::endl;
       user_msg_counter = op.n_listeners;
       return 1;
    }
@@ -72,9 +72,9 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
       auto const to = j.at("to").get<std::string>();
       auto const post_id = j.at("post_id").get<long long>();
 
-      std::cout << "Pub: Received user_msg from " << from 
-                << " ===> " << user_msg_counter
-                << " post_id: " << post_id << std::endl;
+      //std::cout << "Pub: Received user_msg from " << from 
+      //          << " ===> " << user_msg_counter
+      //          << " post_id: " << post_id << std::endl;
 
       assert(to == op.user);
       assert(pub_stack.top().post_id == post_id);
@@ -119,8 +119,8 @@ int client_mgr_pub::on_closed(boost::system::error_code ec)
 
 int client_mgr_pub::send_group_msg(std::shared_ptr<client_type> s) const
 {
-   std::cout << "Pub: Stack size: " << std::size(pub_stack)
-             << std::endl;
+   //std::cout << "Pub: Stack size: " << std::size(pub_stack)
+   //          << std::endl;
    json j_msg;
    j_msg["cmd"] = "publish";
    j_msg["from"] = op.user;

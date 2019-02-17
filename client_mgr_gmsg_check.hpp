@@ -33,11 +33,6 @@ public:
 
 private:
    using client_type = client_session<client_mgr_gmsg_check>;
-   struct helper {
-      int counter;
-      bool acked = false;
-      bool sent = false;
-   };
 
    options_type op;
 

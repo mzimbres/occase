@@ -30,7 +30,6 @@ namespace po = boost::program_options;
 struct client_op {
    std::string host {"127.0.0.1"};
    std::string port {"8080"};
-   std::string code;
    int listen_users = 10;
    int handshake_tm = 3;
    int launch_interval = 100;
@@ -72,7 +71,7 @@ void launch_sessions(client_op const& op)
    auto const s =
       std::make_shared< session_launcher<client_mgr_gmsg_check>
                       >( ioc
-                       , cmgr_gmsg_check_op {"", 100 , 100}
+                       , cmgr_gmsg_check_op {"", 100}
                        , op.make_session_cf()
                        , op.make_gmsg_check_cf()
                        );
@@ -111,11 +110,6 @@ int main(int argc, char* argv[])
          , po::value<int>(&op.handshake_tm)->default_value(3)
          , "Time before which the server should have given "
            "up on the handshake in seconds.")
-
-         ("code,m"
-         , po::value<std::string>(&op.code)->default_value("8347")
-         , "The code sent via email for account validation."
-         )
 
          ("auth-timeout,l"
          , po::value<int>(&op.auth_timeout)->default_value(3)

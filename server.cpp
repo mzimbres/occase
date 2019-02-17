@@ -107,8 +107,9 @@ auto get_server_op(int argc, char* argv[])
    ("redis-menu-channel"
    , po::value<std::string>(&cf.mgr.redis_cf.nms.menu_channel)->
         default_value("menu_channel")
-   , "The name of the redis channel where group messages "
-     "will be broadcasted."
+   , "The name of the redis channel where publish commands "
+     "are be broadcasted to all workers connected to this channel. "
+     "Which may or may not be on the same machine."
    )
    ("redis-menu-key"
    , po::value<std::string>(&cf.mgr.redis_cf.nms.menu_key)->

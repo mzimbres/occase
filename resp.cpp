@@ -6,16 +6,6 @@
 namespace rt::redis
 {
 
-std::size_t get_length(char const* p)
-{
-   std::size_t len = 0;
-   while (*p != '\r') {
-       len = (10 * len) + (*p - '0');
-       p++;
-   }
-   return len;
-}
-
 char const* get_redis_cmd_as_str(command c)
 {
    switch (c) {

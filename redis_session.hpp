@@ -45,6 +45,16 @@ struct req_data {
 struct session_cf {
    std::string host;
    std::string port;
+
+   // TODO: The retry mechanism has to be rethought since messages
+   // continue to be posted to redis from other machines that did not
+   // go offline. Then, when we get to reconnect we have to retrieve
+   // all those messages and send them to the users before we send the
+   // newer ones, otherwise users will endup with a timestamp the
+   // filters out messages that came while we were offline. For that
+   // it is necessary to lock the set of messages while we pull them
+   // and join the publish channel. This situation is not likely to
+   // occurr and it may be easier to restart the server.
    std::chrono::milliseconds conn_retry_interval {500};
 };
 

@@ -15,6 +15,18 @@
 namespace rt::redis
 {
 
+// Converts a decimal number in ascii format to integer.
+inline
+std::size_t get_length(char const* p)
+{
+   std::size_t len = 0;
+   while (*p != '\r') {
+       len = (10 * len) + (*p - '0');
+       p++;
+   }
+   return len;
+}
+
 struct resp_buffer {
    std::string data;
    std::vector<std::string> res;

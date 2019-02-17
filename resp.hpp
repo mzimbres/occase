@@ -7,8 +7,8 @@
 namespace rt::redis
 {
 
-std::size_t get_length(char const* p);
-
+// Enum of redis commands in one-to-one correspondence with redis
+// documentation.
 enum class command
 { get
 , incrby
@@ -22,6 +22,7 @@ enum class command
 , unsubscribe
 };
 
+// Assembles strings into a redis command (in resp format).
 std::string
 gen_resp_cmd(command cmd, std::initializer_list<std::string> param);
 

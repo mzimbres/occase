@@ -58,8 +58,7 @@ void server_mgr::init()
 }
 
 void
-server_mgr::on_redis_get_menu(
-   std::vector<std::string> const& data, redis::req_data const& req)
+server_mgr::on_redis_get_menu(std::vector<std::string> const& data)
 {
    assert(std::size(data) == 1);
    auto const j_menu = json::parse(data.back());
@@ -88,8 +87,7 @@ server_mgr::on_redis_get_menu(
 }
 
 void
-server_mgr::on_redis_unsol_pub(
-   std::vector<std::string> const& data, redis::req_data const& req)
+server_mgr::on_redis_unsol_pub(std::vector<std::string> const& data)
 {
    assert(std::size(data) == 1);
    auto const j = json::parse(data.front());
@@ -138,6 +136,7 @@ server_mgr::on_redis_retrieve_msgs(
    std::vector<std::string> const& data, redis::req_data const& req)
 {
    assert(std::size(data) == 1);
+
    //std::cout << req.user_id << " ===> " << data.back() << std::endl;
    auto const match = sessions.find(req.user_id);
    if (match == std::end(sessions)) {
@@ -176,11 +175,11 @@ server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
          break;
 
       case redis::request::get_menu:
-         on_redis_get_menu(data, req);
+         on_redis_get_menu(data);
          break;
 
       case redis::request::unsolicited_publish:
-         on_redis_unsol_pub(data, req);
+         on_redis_unsol_pub(data);
          break;
 
       case redis::request::unsolicited_key_not:

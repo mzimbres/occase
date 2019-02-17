@@ -333,9 +333,7 @@ void node_dump( menu_node const& node, menu::oformat of
 }
 
 std::string
-menu::dump( oformat of
-          , char line_sep
-          , int const max_depth)
+menu::dump(oformat of, char line_sep, int const max_depth)
 {
    // Traverses the menu in the same order as it would appear in the
    // config file.
@@ -447,31 +445,32 @@ channel_codes( std::vector<std::vector<std::vector<int>>> const& channels
    return ret;
 }
 
-std::string convert_to_hash_code(
-      std::vector<std::vector<std::vector<int>>> const& codes,
-      std::vector<menu_elem> const& menu_elems)
+std::uint64_t convert_to_channel_code(
+      std::vector<std::vector<std::vector<int>>> const& codes)
 {
    if (std::empty(codes))
       return {};
 
-   if (std::size(codes.front()) != 1)
-      throw std::runtime_error("convert_to_hash_code: Invalid input size");
+   assert(std::size(codes.front()) == 1);
+   assert(std::size(codes) == 2);
 
-   auto code =
-      get_code_as_str_impl( std::begin(codes.front().front())
-                          , std::begin(codes.front().front())
-                          + menu_elems.front().depth);
+   assert(std::size(codes.front().front()) == 2);
+   assert(std::size(codes.front().back()) == 2);
+   
+   // First menu.
+   std::uint64_t c1a = codes.front().front().front();
+   std::uint64_t c1b = codes.front().front().back();
 
-   for (unsigned i = 1; i < std::size(codes); ++i) {
-      if (std::size(codes.at(i)) != 1)
-         throw std::runtime_error("convert_to_hash_code: Invalid input size");
-      code += "."
-            + get_code_as_str_impl( std::begin(codes.at(i).front())
-                                  , std::begin(codes.at(i).front())
-                                  + menu_elems.at(i).depth);
-   }
+   // Second menu.
+   std::uint64_t c2a = codes.back().front().front();
+   std::uint64_t c2b = codes.back().front().back();
 
-   return code;
+   c1a <<= 48;
+   c1b <<= 32;
+   c2a <<= 16;
+   // c2b is already in the correct position.
+
+   return c1a | c1b | c2a | c2b;
 }
 
 std::vector<std::vector<std::vector<int>>>

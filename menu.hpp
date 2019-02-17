@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <limits>
+#include <cstdint>
 
 #include "json_utils.hpp"
 
@@ -242,11 +243,22 @@ std::vector<std::vector<std::vector<std::vector<int>>>>
 channel_codes( std::vector<std::vector<std::vector<int>>> const& codes
              , std::vector<menu_elem> const& menu_elems);
 
-// I am not happy having to pass the whole vector of menu_elem to this
-// function as we only need the depths. Refactor in the future maybe.
-std::string convert_to_hash_code(
-      std::vector<std::vector<std::vector<int>>> const& codes,
-      std::vector<menu_elem> const& menu_elems);
+/* This function will hash a channel code in the form
+ *
+ *   __menu_1__    __menu_2__    __menu_3__         
+ *  |          |  |          |  |          |  
+ * [[[1, 3,  4]], [[5, 1,  4]], [[2, 1,  8]]]
+ *
+ * to an 64 bits integer which will be used for hashing. Each menu
+ * configuration requires its own hashing function. This version is
+ * suitable for two menus where both have filter depth 2.
+ *
+ * TODO: Move this function to some other header.
+ * TODO: Check code validity on every call to this function.
+ *
+ */
+std::uint64_t convert_to_channel_code(
+      std::vector<std::vector<std::vector<int>>> const& codes);
 
 /* This function will convert a vector of menu_elem in the structure
  * that is input for channel_codes decribed above.

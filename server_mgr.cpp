@@ -63,14 +63,17 @@ server_mgr::on_redis_get_menu(
 {
    assert(std::size(data) == 1);
    auto const j_menu = json::parse(data.back());
+
+   // TODO: Check if the menus have the correct number of elements and
+   // the correct depth for each element.
    menus = j_menu.at("menus").get<std::vector<menu_elem>>();
    auto const menu_codes = menu_elems_to_codes(menus);
    auto const arrays = channel_codes(menu_codes, menus);
-   std::vector<std::string> comb_codes;
+   std::vector<std::uint64_t> comb_codes;
    std::transform( std::begin(arrays), std::end(arrays)
                  , std::back_inserter(comb_codes)
                  , [this](auto const& o) {
-                   return convert_to_hash_code(o, menus);});
+                   return convert_to_channel_code(o);});
    for (auto const& gc : comb_codes) {
       //std::cout << "Creating channel " << gc << std::endl;
       auto const new_group = channels.insert({gc, {}});
@@ -92,7 +95,7 @@ server_mgr::on_redis_unsol_pub(
    auto const j = json::parse(data.front());
    auto const to =
       j.at("to").get<std::vector<std::vector<std::vector<int>>>>();
-   auto const code = convert_to_hash_code(to, menus);
+   auto const code = convert_to_channel_code(to);
    auto const g = channels.find(code);
    if (g == std::end(channels)) {
       // Should not happen as the group is checked on
@@ -312,11 +315,11 @@ server_mgr::on_subscribe(json const& j, std::shared_ptr<server_session> s)
       j.at("channels").get<std::vector<std::vector<std::vector<int>>>>();
 
    auto const arrays = channel_codes(codes, menus);
-   std::vector<std::string> comb_codes;
+   std::vector<std::uint64_t> comb_codes;
    std::transform( std::begin(arrays), std::end(arrays)
                  , std::back_inserter(comb_codes)
                  , [this](auto const& o) {
-                   return convert_to_hash_code(o, menus);});
+                   return convert_to_channel_code(o);});
 
    auto n_channels = 0;
    for (auto const& o : comb_codes) {
@@ -345,11 +348,11 @@ server_mgr::on_unsubscribe(json const& j, std::shared_ptr<server_session> s)
       j.at("channels").get<std::vector<std::vector<std::vector<int>>>>();
 
    auto const arrays = channel_codes(codes, menus);
-   std::vector<std::string> comb_codes;
+   std::vector<std::uint64_t> comb_codes;
    std::transform( std::begin(arrays), std::end(arrays)
                  , std::back_inserter(comb_codes)
                  , [this](auto const& o) {
-                   return convert_to_hash_code(o, menus);});
+                   return convert_to_channel_code(o);});
 
    auto const from = s->get_id();
 
@@ -388,7 +391,7 @@ server_mgr::on_publish(json j, std::shared_ptr<server_session> s)
    auto const to =
       j.at("to").get<std::vector<std::vector<std::vector<int>>>>();
 
-   auto const code = convert_to_hash_code(to, menus);
+   auto const code = convert_to_channel_code(to);
 
    auto const g = channels.find(code);
    if (g == std::end(channels)) {

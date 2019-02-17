@@ -67,7 +67,7 @@ private:
                      > sessions;
 
    // Maps a channel id to the corresponding channel object.
-   std::unordered_map<std::string, channel> channels;
+   std::unordered_map<std::uint64_t, channel> channels;
 
    session_timeouts const timeouts;
    sessions_stats stats;

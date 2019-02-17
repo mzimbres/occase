@@ -19,7 +19,7 @@
  * 4. Wait for the publish ack.
  * 5. Wait the for the publish to be forwarded back.
  * 6. Wait for a user_msg/unread/read relative to publish that has
- *    been sent.
+ *    been sent, for each of the listener sessions.
  * 7. Back to step 3. until a publish has been sent to all channels.
  */
 
@@ -31,6 +31,7 @@ class client_session;
 
 struct cmgr_sim_op {
    std::string user;
+   int n_listeners;
 };
 
 class client_mgr_pub {
@@ -45,6 +46,7 @@ private:
       std::vector<std::vector<std::vector<int>>> pub_code;
    };
 
+   int user_msg_counter;
    options_type op;
    std::stack<ch_msg_helper> pub_stack;
 

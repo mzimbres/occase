@@ -24,7 +24,7 @@ int client_mgr_gmsg_check::on_read( std::string msg
 
       to_receive_posts = op.n_publishers * std::size(pub_codes);
 
-      std::cout << op.user << " expects: " << to_receive_posts
+      std::cout << "Sub: User " << op.user << " expects: " << to_receive_posts
                 << std::endl;
 
       json j_sub;
@@ -48,12 +48,12 @@ int client_mgr_gmsg_check::on_read( std::string msg
 
       --to_receive_posts;
       speak_to_publisher(from, post_id, s);
-      std::cout << "====> Waiting for " << to_receive_posts << std::endl;
       return 1;
    }
 
    if (cmd == "user_msg") {
       // Used only by the app. Not in the tests.
+      std::cout << "Should not get here in the tests." << std::endl;
       std::cout << msg << std::endl;
       auto const post_id = j.at("post_id").get<long long>();
       auto const from = j.at("from").get<std::string>();
@@ -63,7 +63,7 @@ int client_mgr_gmsg_check::on_read( std::string msg
 
    if (cmd == "user_msg_server_ack") {
       if (to_receive_posts == 0) {
-         std::cout << "====> Leaving." << std::endl;
+         std::cout << "Sub: User " << op.user << " finished." << std::endl;
          return -1; // Done.
       }
 
@@ -88,7 +88,6 @@ int client_mgr_gmsg_check::on_handshake(std::shared_ptr<client_type> s)
 
 int client_mgr_gmsg_check::on_closed(boost::system::error_code ec)
 {
-   std::cout << "Test sim: fail." << std::endl;
    throw std::runtime_error("client_mgr_gmsg_check::on_closed");
    return -1;
 };
@@ -97,7 +96,8 @@ void
 client_mgr_gmsg_check::speak_to_publisher(
       std::string to, long long post_id, std::shared_ptr<client_type> s)
 {
-   //std::cout << "Message to: " << to << ", post_id: " << post_id << std::endl;
+   std::cout << "Sub: User " << op.user << " sending to " << to
+             << ", post_id: " << post_id << std::endl;
 
    json j;
    j["cmd"] = "user_msg";

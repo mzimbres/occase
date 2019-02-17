@@ -138,12 +138,14 @@ server_mgr::on_redis_retrieve_msgs(
    //std::cout << req.user_id << " ===> " << data.back() << std::endl;
    auto const match = sessions.find(req.user_id);
    if (match == std::end(sessions)) {
+      std::cout << "kdkkdkdkkdkdkdkddk" << std::endl;
       // TODO: The user went offline. We have to enqueue the
       // message again. Rethink this.
       return;
    }
 
    if (auto s = match->second.lock()) {
+      //std::cout << "" << data.back() << std::endl;
       s->send(data.back());
       return;
    }
@@ -445,6 +447,7 @@ server_mgr::on_user_msg( std::string msg, json const& j
    // redis server. This would be a big optimization in the case of
    // small number of nodes.
 
+   //std::cout << msg << std::endl;
    auto const to = j.at("to").get<std::string>();
    db.async_store_chat_msg(to, std::move(msg));
 

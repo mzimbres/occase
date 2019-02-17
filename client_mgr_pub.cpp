@@ -47,7 +47,10 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
       if (res != "ok")
          throw std::runtime_error("client_mgr_pub::publish_ack");
 
-      pub_stack.top().post_id = j.at("id").get<long long>();
+      auto const id = j.at("id").get<long long>();
+      pub_stack.top().post_id = id;
+      std::cout << "Pub: Received publish ack. Post id: " << id << std::endl;
+      user_msg_counter = op.n_listeners;
       return 1;
    }
 
@@ -65,17 +68,32 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
    }
 
    if (cmd == "user_msg") {
+      auto const from = j.at("from").get<std::string>();
       auto const to = j.at("to").get<std::string>();
       auto const post_id = j.at("post_id").get<long long>();
 
+      std::cout << "Pub: Received user_msg from " << from 
+                << " ===> " << user_msg_counter
+                << " post_id: " << post_id << std::endl;
+
       assert(to == op.user);
       assert(pub_stack.top().post_id == post_id);
+
+      // This assert is not strictly necessary but it would be strange
+      // to receive a user message before the server echoed the
+      // publish command back.
       assert(pub_stack.top().server_echo);
 
-      pub_stack.pop();
 
-      // Sends the next message.
-      return send_group_msg(s);
+      if (--user_msg_counter == 0) {
+         pub_stack.pop();
+         if (std::empty(pub_stack))
+            return -1;
+
+         return send_group_msg(s);
+      }
+
+      return 1; // Wait for further user messages.
    }
 
    throw std::runtime_error("client_mgr_pub::on_read4");
@@ -95,18 +113,14 @@ int client_mgr_pub::on_handshake(std::shared_ptr<client_type> s)
 
 int client_mgr_pub::on_closed(boost::system::error_code ec)
 {
-   std::cout << "Test sim: fail." << std::endl;
    throw std::runtime_error("client_mgr_pub::on_closed");
    return -1;
 };
 
 int client_mgr_pub::send_group_msg(std::shared_ptr<client_type> s) const
 {
-   std::cout << "Remaining channels: " << std::size(pub_stack)
+   std::cout << "Pub: Stack size: " << std::size(pub_stack)
              << std::endl;
-   if (std::empty(pub_stack))
-      return -1;
-
    json j_msg;
    j_msg["cmd"] = "publish";
    j_msg["from"] = op.user;

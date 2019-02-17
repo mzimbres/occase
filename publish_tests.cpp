@@ -30,8 +30,8 @@ namespace po = boost::program_options;
 struct client_op {
    std::string host {"127.0.0.1"};
    std::string port {"8080"};
-   int publish_users = 10;
-   int listen_users = 10;
+   int n_publishers = 10;
+   int n_listeners = 10;
    int handshake_tm = 3;
    int launch_interval = 100;
    int auth_timeout = 3;
@@ -50,7 +50,7 @@ struct client_op {
    auto make_pub_cf() const
    {
       return launcher_cf
-      { 0, publish_users
+      { 0, n_publishers
       , std::chrono::milliseconds {launch_interval}
       , {""}
       };
@@ -59,7 +59,7 @@ struct client_op {
    auto make_gmsg_check_cf() const
    {
       return launcher_cf
-      { publish_users, publish_users + listen_users
+      { n_publishers, n_publishers + n_listeners
       , std::chrono::milliseconds {launch_interval}
       , {""}
       };
@@ -101,7 +101,7 @@ void test_pubsub(client_op const& op)
       std::cout << "Starting launching pub." << std::endl;
       auto const s2 = std::make_shared< session_launcher<client_mgr_pub>
                       >( ioc
-                       , cmgr_sim_op {"Dummy"}
+                       , cmgr_sim_op {"Dummy", op.n_listeners}
                        , op.make_session_cf()
                        , op.make_pub_cf()
                        );
@@ -111,10 +111,9 @@ void test_pubsub(client_op const& op)
    };
 
    std::cout << "Starting launching checkers." << std::endl;
-   auto const pub_cf = op.make_pub_cf();
    auto const s = std::make_shared< session_launcher<client_mgr_gmsg_check>
                    >( ioc
-                    , cmgr_gmsg_check_op {"", pub_cf.end - pub_cf.begin}
+                    , cmgr_gmsg_check_op {"", op.n_publishers}
                     , op.make_session_cf()
                     , op.make_gmsg_check_cf()
                     );
@@ -144,14 +143,14 @@ int main(int argc, char* argv[])
          , "Server ip address."
          )
 
-         ("publish-users,u"
-         , po::value<int>(&op.publish_users)->default_value(2)
-         , "Number of publish users."
+         ("publishers,u"
+         , po::value<int>(&op.n_publishers)->default_value(2)
+         , "Number of publishers."
          )
 
-         ("listen-users,c"
-         , po::value<int>(&op.listen_users)->default_value(10)
-         , "Number of listen users."
+         ("listeners,c"
+         , po::value<int>(&op.n_listeners)->default_value(10)
+         , "Number of listeners."
          )
 
          ("launch-interval,g"

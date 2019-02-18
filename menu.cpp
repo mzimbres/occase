@@ -332,32 +332,64 @@ void node_dump( menu_node const& node, menu::oformat of
    oss << get_code_as_str(node.code);
 }
 
-std::string
-menu::dump(oformat of, char line_sep, int const max_depth)
-{
-   // Traverses the menu in the same order as it would appear in the
-   // config file.
-   if (std::empty(root.children))
-      return {};
-
-   std::string output;
+// Traverses the menu in the same order as it would appear in the
+// config file.
+struct menu_traversal2 {
    std::deque<std::deque<menu_node*>> st;
-   st.push_back(root.children);
-   std::ostringstream oss;
-   for (;;) {
-      auto* node = st.back().back();
+   int max_depth = -1;
+   menu_node* current = nullptr;
+
+   menu_traversal2(menu_node const& head, int max_depth_)
+   : max_depth(max_depth_)
+   {
+      if (std::empty(head.children))
+         return;
+
+      st.push_back(head.children);
+      helper();
+   }
+
+   void helper()
+   {
+      current = st.back().back();
       st.back().pop_back();
-      auto const stack_size = static_cast<int>(std::size(st));
-      if (!std::empty(node->children) && stack_size <= max_depth)
-         st.push_back(node->children);
-      node_dump(*node, of, oss, max_depth);
-      oss << line_sep;
+      auto const ss = static_cast<int>(std::size(st));
+      if (!std::empty(current->children) && ss <= max_depth)
+         st.push_back(current->children);
+   }
+
+   void next()
+   {
       while (std::empty(st.back())) {
          st.pop_back();
          if (std::empty(st))
-            return oss.str();
+            return;
       }
+
+      helper();
    }
+
+   auto end() const noexcept
+   {
+      return std::empty(st);
+   }
+};
+
+std::string
+menu::dump(oformat of, char line_sep, int const max_depth)
+{
+   std::string output;
+   std::ostringstream oss;
+
+   menu_traversal2 mt {root, max_depth};
+
+   while (!mt.end()) {
+      node_dump(*mt.current, of, oss, max_depth);
+      oss << line_sep;
+      mt.next();
+   }
+
+   return oss.str();
 }
 
 bool check_leaf_min_depths(menu& m, int min_depth)

@@ -89,25 +89,76 @@ public:
 
 bool check_leaf_min_depths(menu& m, int min_depth);
 
+template <int N>
 class menu_traversal {
 private:
    std::deque<std::deque<menu_node*>> st;
    int depth;
 
 public:
-   menu_traversal(menu_node* root, int depth_);
-   menu_node* advance_to_leaf();
-   menu_node* next_internal();
-   menu_node* next_leaf_node();
-   menu_node* next_node();
+   menu_traversal(menu_node* root, int depth_)
+   : depth(depth_)
+   {
+      if (root)
+         st.push_back({root});
+   }
+
+   menu_node* advance_to_leaf()
+   {
+      while (!std::empty(st.back().back()->children) &&
+            static_cast<int>(std::size(st)) <= depth)
+         st.push_back(st.back().back()->children);
+
+      auto* tmp = st.back().back();
+      st.back().pop_back();
+      return tmp;
+   }
+
+   menu_node* next_internal()
+   {
+      st.pop_back();
+      if (std::empty(st))
+         return nullptr;
+      auto* tmp = st.back().back();
+      st.back().pop_back();
+      return tmp;
+   }
+
+   menu_node* next_leaf_node()
+   {
+      while (std::empty(st.back()))
+         if (!next_internal())
+            return nullptr;
+
+      return advance_to_leaf();
+   }
+
+   menu_node* next_node()
+   {
+      if (std::empty(st.back()))
+         return next_internal();
+
+      return advance_to_leaf();
+   }
+
    auto get_depth() const noexcept
       { return static_cast<int>(std::size(st)) - 1; }
+
+   template <int M = N>
+   typename std::enable_if<M == 0, menu_node*>::type
+   next()
+      { return next_leaf_node(); }
+
+   template <int M = N>
+   typename std::enable_if<M == 1, menu_node*>::type
+   next()
+      { return next_node(); }
 };
 
 template <int N>
-class leaf_iterator {
+class menu_iterator {
 private:
-   menu_traversal iter;
+   menu_traversal<N> iter;
    menu_node* current = nullptr;
 
 public:
@@ -119,7 +170,7 @@ public:
    using const_pointer = menu_node const*;
    using iterator_category = std::forward_iterator_tag;
 
-   leaf_iterator( menu_node* root = nullptr
+   menu_iterator( menu_node* root = nullptr
                 , int depth = menu::max_supported_depth)
    : iter {root, depth}
    { 
@@ -130,19 +181,15 @@ public:
    reference operator*() { return *current;}
    const_reference const& operator*() const { return *current;}
 
-   leaf_iterator& operator++()
+   menu_iterator& operator++()
    {
-      if constexpr (N == 0)
-         current = iter.next_leaf_node();
-      else
-         current = iter.next_node();
-
+      current = iter.next();
       return *this;
    }
 
-   leaf_iterator operator++(int)
+   menu_iterator operator++(int)
    {
-      leaf_iterator ret(*this);
+      menu_iterator ret(*this);
       ++(*this);
       return ret;
    }
@@ -154,11 +201,11 @@ public:
       {return current;}
 
    friend
-   auto operator==(leaf_iterator const& a, leaf_iterator const& b)
+   auto operator==(menu_iterator const& a, menu_iterator const& b)
       { return a.current == b.current; }
 
    friend
-   auto operator!=(leaf_iterator const& a, leaf_iterator const& b)
+   auto operator!=(menu_iterator const& a, menu_iterator const& b)
       { return !(a == b); }
 
    // Extensions to the common iterator interface.
@@ -176,7 +223,7 @@ private:
    menu_node* root = nullptr;
 
 public:
-   using iterator = leaf_iterator<N>;
+   using iterator = menu_iterator<N>;
 
    menu_view(menu_node* root_, int depth_ = menu::max_supported_depth)
    : depth {depth_}

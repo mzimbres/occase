@@ -235,51 +235,6 @@ auto parse_tree( menu_node& head
    return max_depth;
 }
 
-menu_node* menu_traversal::advance_to_leaf()
-{
-   while (!std::empty(st.back().back()->children) &&
-         static_cast<int>(std::size(st)) <= depth)
-      st.push_back(st.back().back()->children);
-
-   auto* tmp = st.back().back();
-   st.back().pop_back();
-   return tmp;
-}
-
-menu_node* menu_traversal::next_internal()
-{
-   st.pop_back();
-   if (std::empty(st))
-      return nullptr;
-   auto* tmp = st.back().back();
-   st.back().pop_back();
-   return tmp;
-}
-
-menu_traversal::menu_traversal(menu_node* root, int depth_)
-: depth(depth_)
-{
-   if (root)
-      st.push_back({root});
-}
-
-menu_node* menu_traversal::next_leaf_node()
-{
-   while (std::empty(st.back()))
-      if (!next_internal())
-         return nullptr;
-
-   return advance_to_leaf();
-}
-
-menu_node* menu_traversal::next_node()
-{
-   if (std::empty(st.back()))
-      return next_internal();
-
-   return advance_to_leaf();
-}
-
 menu::menu(std::string const& str)
 {
    // TODO: Catch exceptions and release already acquired memory.

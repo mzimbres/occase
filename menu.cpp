@@ -286,7 +286,7 @@ menu::menu(std::string const& str)
    // TODO: Automatically detect the line separator.
 
    auto const ifmt = detect_iformat(str);
-   max_depth = parse_tree(root, str, ifmt);
+   max_depth = parse_tree(head, str, ifmt);
 
    auto acc = [](auto a, auto const* p)
    {
@@ -295,7 +295,7 @@ menu::menu(std::string const& str)
       return a + p->leaf_counter;
    };
 
-   for (auto& o : menu_view<1> {root.children.front()}) {
+   for (auto& o : menu_view<1> {head.children.front()}) {
       if (std::empty(o.children))
          o.leaf_counter = 0;
       else
@@ -334,13 +334,16 @@ void node_dump( menu_node const& node, menu::oformat of
 
 // Traverses the menu in the same order as it would appear in the
 // config file.
-struct menu_traversal2 {
+class menu_traversal2 {
+private:
    std::deque<std::deque<menu_node*>> st;
-   int max_depth = -1;
+   int depth = -1;
+
+public:
    menu_node* current = nullptr;
 
    menu_traversal2(menu_node const& head, int max_depth_)
-   : max_depth(max_depth_)
+   : depth(max_depth_)
    {
       if (std::empty(head.children))
          return;
@@ -354,7 +357,7 @@ struct menu_traversal2 {
       current = st.back().back();
       st.back().pop_back();
       auto const ss = static_cast<int>(std::size(st));
-      if (!std::empty(current->children) && ss <= max_depth)
+      if (!std::empty(current->children) && ss <= depth)
          st.push_back(current->children);
    }
 
@@ -381,7 +384,7 @@ menu::dump(oformat of, char line_sep, int const max_depth)
    std::string output;
    std::ostringstream oss;
 
-   menu_traversal2 mt {root, max_depth};
+   menu_traversal2 mt {head, max_depth};
 
    while (!mt.end()) {
       node_dump(*mt.current, of, oss, max_depth);
@@ -409,7 +412,7 @@ bool check_leaf_min_depths(menu& m, int min_depth)
 
 menu::~menu()
 {
-   menu_view<1> view {root.children.front()};
+   menu_view<1> view {head.children.front()};
    for (auto iter = std::begin(view); iter != std::end(view); ++iter)
       delete iter.get_pointer_to_node();
 }

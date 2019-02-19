@@ -57,11 +57,12 @@ std::string get_code_as_str(std::vector<int> const& v)
  */
 class menu {
 private:
-   menu_node root;
+   menu_node head;
    int max_depth = -1;
 
    template <int>
    friend class menu_view;
+
 public:
    static constexpr auto sep = 3;
    static constexpr auto max_supported_depth = 10;
@@ -78,11 +79,12 @@ public:
    std::string dump( oformat of
                    , char line_sep = '\n'
                    , int max_depth = max_supported_depth);
-   auto get_max_depth() const noexcept {return max_depth;}
-   auto empty() const
-   {
-      return std::empty(root.children);
-   }
+
+   auto get_max_depth() const noexcept
+      { return max_depth; }
+
+   auto empty() const noexcept
+      { return std::empty(head.children); }
 };
 
 bool check_leaf_min_depths(menu& m, int min_depth);
@@ -99,12 +101,7 @@ public:
    menu_node* next_leaf_node();
    menu_node* next_node();
    auto get_depth() const noexcept
-   {
-      if (std::empty(st))
-         return -1;
-
-      return static_cast<int>(std::size(st)) - 1;
-   }
+      { return static_cast<int>(std::size(st)) - 1; }
 };
 
 template <int N>
@@ -150,22 +147,26 @@ public:
       return ret;
    }
 
-   pointer operator->() {return current;}
-   const_pointer operator->() const {return current;}
+   pointer operator->()
+      {return current;}
 
-   friend auto operator==(leaf_iterator const& a, leaf_iterator const& b)
-   {
-      return a.current == b.current;
-   }
+   const_pointer operator->() const
+      {return current;}
 
-   friend auto operator!=(leaf_iterator const& a, leaf_iterator const& b)
-   {
-      return !(a == b);
-   }
+   friend
+   auto operator==(leaf_iterator const& a, leaf_iterator const& b)
+      { return a.current == b.current; }
+
+   friend
+   auto operator!=(leaf_iterator const& a, leaf_iterator const& b)
+      { return !(a == b); }
 
    // Extensions to the common iterator interface.
-   auto get_depth() const noexcept { return iter.get_depth(); }
-   auto* get_pointer_to_node() const {return current;}
+   auto get_depth() const noexcept
+      { return iter.get_depth(); }
+
+   auto* get_pointer_to_node() const
+      { return current; }
 };
 
 template <int N>
@@ -183,7 +184,7 @@ public:
    { }
 
    menu_view(menu& m, int depth_ = menu::max_supported_depth)
-   : menu_view {m.root.children.front(), depth_}
+   : menu_view {m.head.children.front(), depth_}
    { }
 
    iterator begin() const {return iterator{root, depth};}

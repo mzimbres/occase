@@ -103,7 +103,7 @@ public:
          st.push_back({root});
    }
 
-   menu_node* advance_to_leaf()
+   menu_node* advance()
    {
       while (!std::empty(st.back().back()->children) &&
             static_cast<int>(std::size(st)) <= depth)
@@ -130,7 +130,7 @@ public:
          if (!next_internal())
             return nullptr;
 
-      return advance_to_leaf();
+      return advance();
    }
 
    menu_node* next_node()
@@ -138,7 +138,7 @@ public:
       if (std::empty(st.back()))
          return next_internal();
 
-      return advance_to_leaf();
+      return advance();
    }
 
    auto get_depth() const noexcept
@@ -155,10 +155,66 @@ public:
       { return next_node(); }
 };
 
+// Traverses the menu in the same order as it would appear in the
+// config file.
+class menu_traversal2 {
+private:
+   std::deque<std::deque<menu_node*>> st;
+   int depth = -1;
+
+public:
+   menu_node* current = nullptr;
+
+   menu_traversal2(menu_node const& head, int max_depth_)
+   : depth(max_depth_)
+   {
+      if (std::empty(head.children))
+         return;
+
+      st.push_back(head.children);
+      helper();
+   }
+
+   void helper()
+   {
+      current = st.back().back();
+      st.back().pop_back();
+      auto const ss = static_cast<int>(std::size(st));
+      if (!std::empty(current->children) && ss <= depth)
+         st.push_back(current->children);
+   }
+
+   void next()
+   {
+      while (std::empty(st.back())) {
+         st.pop_back();
+         if (std::empty(st))
+            return;
+      }
+
+      helper();
+   }
+
+   auto end() const noexcept
+   {
+      return std::empty(st);
+   }
+};
+
+template <int N>
+struct menu_iter_impl {
+   using type = menu_traversal<N>;
+};
+
+template <>
+struct menu_iter_impl<3> {
+   using type = menu_traversal2;
+};
+
 template <int N>
 class menu_iterator {
 private:
-   menu_traversal<N> iter;
+   typename menu_iter_impl<N>::type iter;
    menu_node* current = nullptr;
 
 public:
@@ -175,7 +231,7 @@ public:
    : iter {root, depth}
    { 
       if (root)
-         current = iter.advance_to_leaf();
+         current = iter.advance();
    }
 
    reference operator*() { return *current;}

@@ -287,52 +287,6 @@ void node_dump( menu_node const& node, menu::oformat of
    oss << get_code_as_str(node.code);
 }
 
-// Traverses the menu in the same order as it would appear in the
-// config file.
-class menu_traversal2 {
-private:
-   std::deque<std::deque<menu_node*>> st;
-   int depth = -1;
-
-public:
-   menu_node* current = nullptr;
-
-   menu_traversal2(menu_node const& head, int max_depth_)
-   : depth(max_depth_)
-   {
-      if (std::empty(head.children))
-         return;
-
-      st.push_back(head.children);
-      helper();
-   }
-
-   void helper()
-   {
-      current = st.back().back();
-      st.back().pop_back();
-      auto const ss = static_cast<int>(std::size(st));
-      if (!std::empty(current->children) && ss <= depth)
-         st.push_back(current->children);
-   }
-
-   void next()
-   {
-      while (std::empty(st.back())) {
-         st.pop_back();
-         if (std::empty(st))
-            return;
-      }
-
-      helper();
-   }
-
-   auto end() const noexcept
-   {
-      return std::empty(st);
-   }
-};
-
 std::string
 menu::dump(oformat of, char line_sep, int const max_depth)
 {

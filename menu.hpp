@@ -103,7 +103,7 @@ public:
          st.push_back({root});
    }
 
-   menu_node* advance()
+   auto* advance()
    {
       while (!std::empty(st.back().back()->children) &&
             static_cast<int>(std::size(st)) <= depth)
@@ -133,7 +133,7 @@ public:
       return advance();
    }
 
-   menu_node* next_node()
+   auto* next_node()
    {
       if (std::empty(st.back()))
          return next_internal();
@@ -163,42 +163,38 @@ private:
    int depth = -1;
 
 public:
-   menu_node* current = nullptr;
-
-   menu_traversal2(menu_node const& head, int max_depth_)
-   : depth(max_depth_)
+   menu_traversal2(menu_node* root, int depth_)
+   : depth(depth_)
    {
-      if (std::empty(head.children))
-         return;
-
-      st.push_back(head.children);
-      helper();
+      if (root)
+         st.push_back({root});
    }
 
-   void helper()
+   auto* advance()
    {
-      current = st.back().back();
+      auto* node = st.back().back();
       st.back().pop_back();
       auto const ss = static_cast<int>(std::size(st));
-      if (!std::empty(current->children) && ss <= depth)
-         st.push_back(current->children);
+      if (!std::empty(node->children) && ss <= depth)
+         st.push_back(node->children);
+
+      return node;
    }
 
-   void next()
+   menu_node* next()
    {
       while (std::empty(st.back())) {
          st.pop_back();
          if (std::empty(st))
-            return;
+            return nullptr;
       }
 
-      helper();
+      return advance();
    }
 
-   auto end() const noexcept
-   {
-      return std::empty(st);
-   }
+   auto get_depth() const noexcept
+      { return static_cast<int>(std::size(st)) - 1; }
+
 };
 
 template <int N>

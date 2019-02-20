@@ -5,6 +5,7 @@
 #include <cctype>
 #include <vector>
 #include <iostream>
+#include <iterator>
 #include <algorithm>
 #include <exception>
 #include <ios>
@@ -293,13 +294,15 @@ menu::dump(oformat of, char line_sep, int const max_depth)
    std::string output;
    std::ostringstream oss;
 
-   menu_traversal2 mt {head, max_depth};
+   menu_view<3> view {head.children.front()};
 
-   while (!mt.end()) {
-      node_dump(*mt.current, of, oss, max_depth);
+   auto const f = [&](auto const& node)
+   {
+      node_dump(node, of, oss, max_depth);
       oss << line_sep;
-      mt.next();
-   }
+   };
+
+   std::for_each(std::begin(view), std::end(view), f);
 
    return oss.str();
 }

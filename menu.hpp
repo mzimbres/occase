@@ -67,7 +67,7 @@ public:
    static constexpr auto sep = 3;
    static constexpr auto max_supported_depth = 10;
    enum class iformat {spaces, counter};
-   enum class oformat {spaces, counter, info, hashes};
+   enum class oformat {spaces, counter};
    menu() = delete;
    menu(menu const&) = delete;
    menu& operator=(menu const&) = delete;

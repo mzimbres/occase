@@ -59,12 +59,10 @@ menu::oformat convert_to_menu_oformat(int i)
 {
    if (i == 1) return menu::oformat::spaces;
    if (i == 2) return menu::oformat::counter;
-   if (i == 3) return menu::oformat::info;
-   if (i == 4) return menu::oformat::hashes;
 
    throw std::runtime_error("convert_to_menu_oformat: Invalid input.");
 
-   return menu::oformat::hashes;
+   return menu::oformat::spaces;
 }
 
 struct menu_info {
@@ -140,7 +138,7 @@ convert_to_menu_elem(std::string const& file_info_raw)
 
 int impl(menu_op const& op)
 {
-   if (op.oformat == 7) {
+   if (op.oformat == 5) {
       std::vector<menu_elem> elems;
       for (auto const& e : op.files)
          elems.push_back(convert_to_menu_elem(e));
@@ -153,7 +151,7 @@ int impl(menu_op const& op)
       return 0;
    }
 
-   if (op.oformat == 6) {
+   if (op.oformat == 4) {
       std::vector<menu_elem> elems;
       for (auto const& e : op.files) {
          auto elem = convert_to_menu_elem(e);
@@ -178,7 +176,7 @@ int impl(menu_op const& op)
 
    menu m {menu_str};
 
-   if (op.oformat == 5) {
+   if (op.oformat == 3) {
       menu_view<0> view {m, op.depth};
       for (auto const& o : view)
          std::cout << get_code_as_str(o.code) << "\n";
@@ -211,12 +209,10 @@ int main(int argc, char* argv[])
       , "Format used in the output file. Available options:\n"
         " 1: \tNode depth with indentation.\n"
         " 2: \tNode depth from line first digit.\n"
-        " 3: \tHash code plus name.\n"
-        " 4: \tOutput all hash codes.\n"
-        " 5: \tOutput hash codes at certain depth (see -d option).\n"
-        " 6: \tPacks the output in json format ready to be loaded on redis. "
+        " 3: \tOutput hash codes at certain depth (see -d option).\n"
+        " 4: \tPacks the output in json format ready to be loaded on redis. "
         "Will automatically use field-separator ';' and --validate.\n"
-        " 7: \tSimilar to 6 but outputs the combined codes that will "
+        " 5: \tSimilar to 6 but outputs the combined codes that will "
         "become the channels hash codes."
       )
       ("sim-length,l"

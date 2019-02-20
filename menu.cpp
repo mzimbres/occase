@@ -277,14 +277,6 @@ void node_dump( menu_node const& node, menu::oformat of
       return;
    }
 
-   if (of == menu::oformat::info) {
-      auto const n = max_depth * (menu::sep + 1);
-      oss << std::setw(n) << std::left
-          << get_code_as_str(node.code) << ' '
-          << node.name << ' ' << node.leaf_counter;
-      return;
-   }
-
    oss << get_code_as_str(node.code);
 }
 

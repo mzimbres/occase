@@ -18,6 +18,16 @@
 namespace rt
 {
 
+class server_session;
+
+struct proxy_session {
+   // We have to use a unique pointer here. A share_ptr does not work.
+   // Even when the proxy_session object is explicitly killed. The
+   // object is killed only after the last weak_ptr is destructed. The
+   // shared_ptr will live that long in that case.
+   std::weak_ptr<server_session> session;
+};
+
 class server_session :
    public std::enable_shared_from_this<server_session> {
 private:
@@ -36,6 +46,8 @@ private:
    std::queue<std::string> msg_queue;
    ping_pong pp_state = ping_pong::unset;
    bool closing = false;
+
+   std::shared_ptr<proxy_session> psession;
 
    // This variable is called in this function only in the destructor.
    // So I do not any possibility of race condition arising with it.
@@ -85,6 +97,8 @@ public:
       {return !std::empty(user_id) && std::empty(code);};
    auto is_waiting_auth() const noexcept
       {return std::empty(user_id) && std::empty(code);};
+
+   std::weak_ptr<proxy_session> get_proxy_session(bool new_session);
 };
 
 }

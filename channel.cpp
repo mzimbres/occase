@@ -8,48 +8,35 @@ namespace rt
 void channel::broadcast(std::string const& msg)
 {
    //std::cout << "Broadcast size: " << std::size(members) << std::endl;
-   auto begin = std::begin(members);
-   auto end = std::end(members);
+   auto end = std::size(members);
+   unsigned begin = 0;
    while (begin != end) {
-      if (auto s = begin->second.lock()) {
-         // The user is online. We can just forward his message.
-         // TODO: We incurr here the possibility of sending repeated
-         // messages to the user. The scenario is as follows
-         // 1. We send a message bellow and it is buffered.
-         // 2. The user disconnects before receiving the message.
-         // 3. The message are saved on the database.
-         // 4. The user reconnects and we read and send him his
-         //    messages from the database.
-         // 5. We traverse the channels sending him the latest messages
-         //    that he missed while he was offline and this message is
-         //    between them.
-         // This is perhaps unlikely but should be avoided in the
-         // future.
-         //std::cout << "on_group_msg: sending to " << s->get_id()
-         //          << " " << msg << std::endl;
-         s->send(msg);
+      if (auto s = members[begin].lock()) {
+         // The user is online. Send him a message and continue.
+         if (auto ss = s->session.lock()) {
+            ss->send(msg);
+         } else {
+            assert(false);
+         }
          ++begin;
          continue;
       }
 
-      // Removes users that are not online anymore.
-      begin = members.erase(begin);
+      // The user is offline. We can move its expired session to the
+      // end of the vector to pop it later.
+      --end;
+
+      // Do we need this check?
+      if (begin != end)
+         std::swap(members[begin], members[end]);
    }
+   
+   members.resize(begin + 1);
 }
 
-void channel::add_member(std::shared_ptr<server_session> s)
+void channel::add_member(std::weak_ptr<proxy_session> s)
 {
-   // Overwrites any previous session.
-   auto const from = s->get_id();
-   members[from] = s; // Overwrites any previous session.
-}
-
-void channel::remove_member(std::string const& member)
-{
-   // We could return the count here. But since I am still considering
-   // changing the strategy and use a vector instead of an unordered
-   // map, I will let this open.
-   members.erase(member);
+   members.push_back(s);
 }
 
 }

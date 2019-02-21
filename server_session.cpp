@@ -412,5 +412,18 @@ void server_session::do_send(std::string msg)
       do_write(msg_queue.front());
 }
 
+std::weak_ptr<proxy_session>
+server_session::get_proxy_session(bool new_session)
+{
+   if (!psession) {
+      psession = std::make_shared<proxy_session>();
+      psession->session = shared_from_this();
+   } else if (new_session) {
+      psession->session = shared_from_this();
+   }
+
+   return psession;
+}
+
 }
 

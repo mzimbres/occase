@@ -2,12 +2,12 @@
 
 #include <string>
 #include <memory>
-#include <unordered_map>
+#include <vector>
 
 namespace rt
 {
 
-class server_session;
+class proxy_session;
 
 class channel {
 private:
@@ -20,14 +20,11 @@ private:
    // 
    // Would like to use a vector but cannot pay for the linear search
    // time, even if not occurring very often.
-   std::unordered_map< std::string
-                     , std::weak_ptr<server_session>
-                     > members;
+   std::vector<std::weak_ptr<proxy_session>> members;
 
 public:
    void broadcast(std::string const& msg);
-   void add_member(std::shared_ptr<server_session> s);
-   void remove_member(std::string const& member);
+   void add_member(std::weak_ptr<proxy_session> s);
 };
 
 }

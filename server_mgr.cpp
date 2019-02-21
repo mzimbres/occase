@@ -136,6 +136,12 @@ server_mgr::on_redis_retrieve_msgs(
    std::vector<std::string> const& data, redis::req_data const& req)
 {
    assert(std::size(data) == 1);
+   //assert(!std::empty(data.back()));
+   // TODO: Understand why we are receiving empty messages.
+   if (std::empty(data.back())) {
+      std::cout << "Empty user message received" << std::endl;
+      return;
+   }
 
    //std::cout << req.user_id << " ===> " << data.back() << std::endl;
    auto const match = sessions.find(req.user_id);
@@ -328,7 +334,7 @@ server_mgr::on_subscribe(json const& j, std::shared_ptr<server_session> s)
          continue;
       }
 
-      g->second.add_member(s);
+      g->second.add_member(s->get_proxy_session(true));
       ++n_channels;
    }
 
@@ -364,14 +370,14 @@ server_mgr::on_unsubscribe(json const& j, std::shared_ptr<server_session> s)
    }
 
    auto n_channels = 0;
-   for (auto const& o : comb_codes) {
-      auto const g = channels.find(o);
-      if (g == std::end(channels))
-         continue;
+   //for (auto const& o : comb_codes) {
+   //   auto const g = channels.find(o);
+   //   if (g == std::end(channels))
+   //      continue;
 
-      g->second.remove_member(from);
-      ++n_channels;
-   }
+   //   g->second.remove_member(from);
+   //   ++n_channels;
+   //}
 
    json resp;
    resp["cmd"] = "unsubscribe_ack";

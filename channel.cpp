@@ -7,7 +7,6 @@ namespace rt
 
 void channel::broadcast(std::string const& msg)
 {
-   //std::cout << "Broadcast size: " << std::size(members) << std::endl;
    auto end = std::size(members);
    unsigned begin = 0;
    while (begin != end) {

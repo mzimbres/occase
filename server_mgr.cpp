@@ -347,48 +347,6 @@ server_mgr::on_subscribe(json const& j, std::shared_ptr<server_session> s)
 }
 
 ev_res
-server_mgr::on_unsubscribe(json const& j, std::shared_ptr<server_session> s)
-{
-   auto const codes =
-      j.at("channels").get<std::vector<std::vector<std::vector<int>>>>();
-
-   auto const arrays = channel_codes(codes, menus);
-   std::vector<std::uint64_t> comb_codes;
-   std::transform( std::begin(arrays), std::end(arrays)
-                 , std::back_inserter(comb_codes)
-                 , [this](auto const& o) {
-                   return convert_to_channel_code(o);});
-
-   auto const from = s->get_id();
-
-   if (std::empty(comb_codes)) {
-      json resp;
-      resp["cmd"] = "unsubscribe_ack";
-      resp["result"] = "ok";
-      resp["count"] = 0;
-      return ev_res::subscribe_ok;
-   }
-
-   auto n_channels = 0;
-   //for (auto const& o : comb_codes) {
-   //   auto const g = channels.find(o);
-   //   if (g == std::end(channels))
-   //      continue;
-
-   //   g->second.remove_member(from);
-   //   ++n_channels;
-   //}
-
-   json resp;
-   resp["cmd"] = "unsubscribe_ack";
-   resp["result"] = "ok";
-   resp["count"] = n_channels;
-   s->send(resp.dump());
-   return ev_res::unsubscribe_ok;
-}
-
-
-ev_res
 server_mgr::on_publish(json j, std::shared_ptr<server_session> s)
 {
    // The publish command has the form [[1, 2], [2, 3, 4], [1, 2]]
@@ -546,9 +504,6 @@ server_mgr::on_message( std::shared_ptr<server_session> s, std::string msg)
 
       if (cmd == "user_msg")
          return on_user_msg(std::move(msg), j, s);
-
-      if (cmd == "unsubscribe")
-         return on_unsubscribe(j, s);
 
       std::cerr << "Server: Unknown command " << cmd << std::endl;
       return ev_res::unknown;

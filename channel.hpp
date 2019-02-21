@@ -9,6 +9,10 @@ namespace rt
 
 class proxy_session;
 
+// It is possible to support remove later by keeping a sorted list of
+// user_id that we seach as we traverse the vector when publishing the
+// messages. No need for that at the moment.
+
 class channel {
 private:
    // The number of members in a channel is expected be on the
@@ -16,10 +20,7 @@ private:
    //
    // 1. Insert very often. Can be on the back.
    // 2. Traverse very often.
-   // 3. Remove: Once in a while, requires searching.
-   // 
-   // Would like to use a vector but cannot pay for the linear search
-   // time, even if not occurring very often.
+   // 3. Remove will be handler by expired weak_ptr.
    std::vector<std::weak_ptr<proxy_session>> members;
 
 public:

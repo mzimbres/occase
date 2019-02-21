@@ -136,12 +136,7 @@ server_mgr::on_redis_retrieve_msgs(
    std::vector<std::string> const& data, redis::req_data const& req)
 {
    assert(std::size(data) == 1);
-   //assert(!std::empty(data.back()));
-   // TODO: Understand why we are receiving empty messages.
-   if (std::empty(data.back())) {
-      std::cout << "Empty user message received" << std::endl;
-      return;
-   }
+   assert(!std::empty(data.back()));
 
    //std::cout << req.user_id << " ===> " << data.back() << std::endl;
    auto const match = sessions.find(req.user_id);

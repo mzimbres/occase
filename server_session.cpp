@@ -5,6 +5,8 @@
 #include <boost/beast/websocket/stream.hpp>
 #include <boost/beast/websocket/rfc6455.hpp>
 
+#include "server_mgr.hpp"
+
 namespace rt
 {
 

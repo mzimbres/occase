@@ -13,12 +13,36 @@
 #include <boost/asio/ip/tcp.hpp>
 
 #include "config.hpp"
-#include "server_mgr.hpp"
 
 namespace rt
 {
 
+class server_mgr;
 class server_session;
+
+enum class ev_res
+{ register_ok
+, register_fail
+, login_ok
+, login_fail
+, code_confirmation_ok
+, code_confirmation_fail
+, subscribe_ok
+, subscribe_fail
+, publish_ok
+, publish_fail
+, user_msg_ok
+, user_msg_fail
+, unknown
+};
+
+struct session_timeouts {
+   std::chrono::seconds auth {2};
+   std::chrono::seconds code {2};
+   std::chrono::seconds handshake {2};
+   std::chrono::seconds pong {2};
+   std::chrono::seconds close {2};
+};
 
 struct proxy_session {
    // We have to use a unique pointer here. A share_ptr does not work.

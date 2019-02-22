@@ -90,6 +90,13 @@ auto get_server_op(int argc, char* argv[])
      "close frame that has been sent to the client."
    )
 
+   ("channel-cleanup-frequeny,E"
+   , po::value<int>(&cf.mgr.channel_cleanup_frequency)->default_value(128)
+   , "This is the frequency channels will be  cleaned up if"
+     " no publish activity is observed. Incremented on every channel"
+     " insertion."
+   )
+
    ("redis-address"
    , po::value<std::string>(&cf.mgr.redis_cf.sessions.host)->
        default_value("127.0.0.1")

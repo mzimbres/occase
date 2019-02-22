@@ -14,39 +14,15 @@
 #include "channel.hpp"
 #include "json_utils.hpp"
 #include "menu.hpp"
+#include "server_session.hpp"
 
 namespace rt
 {
 
-class server_session;
-
-enum class ev_res
-{ register_ok
-, register_fail
-, login_ok
-, login_fail
-, code_confirmation_ok
-, code_confirmation_fail
-, subscribe_ok
-, subscribe_fail
-, publish_ok
-, publish_fail
-, user_msg_ok
-, user_msg_fail
-, unknown
-};
-
-struct session_timeouts {
-   std::chrono::seconds auth {2};
-   std::chrono::seconds code {2};
-   std::chrono::seconds handshake {2};
-   std::chrono::seconds pong {2};
-   std::chrono::seconds close {2};
-};
-
 struct server_mgr_cf {
    redis::config redis_cf;
    session_timeouts timeouts;
+   int channel_cleanup_frequency; 
 };
 
 struct sessions_stats {
@@ -75,6 +51,8 @@ private:
    std::vector<menu_elem> menus;
 
    net::steady_timer stats_timer;
+
+   int channel_cleanup_frequency; 
 
    void redis_on_msg_handler( boost::system::error_code const& ec
                             , std::vector<std::string> const& resp

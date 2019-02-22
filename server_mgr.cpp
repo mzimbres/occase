@@ -25,6 +25,7 @@ server_mgr::server_mgr(server_mgr_cf cf)
 , timeouts(cf.timeouts)
 , db(cf.redis_cf, ioc)
 , stats_timer(ioc)
+, channel_cleanup_frequency(cf.channel_cleanup_frequency)
 {
    net::post(ioc, [this]() {init();});
 }
@@ -73,16 +74,21 @@ server_mgr::on_redis_get_menu(std::vector<std::string> const& data)
                  , std::back_inserter(comb_codes)
                  , [this](auto const& o) {
                    return convert_to_channel_code(o);});
+
+   int failed_channel_creation = 0;
    for (auto const& gc : comb_codes) {
-      //std::cout << "Creating channel " << gc << std::endl;
-      auto const new_group = channels.insert({gc, {}});
+      auto const new_group =
+         channels.insert({gc, {channel_cleanup_frequency}});
       if (!new_group.second) {
-         std::cout << "Channel " << gc << " already exists."
-                   << std::endl;
+         ++failed_channel_creation;
       }
    }
 
-   std::cout << "Number of channels created: " << std::size(channels)
+   std::cout << "Channels created: " << std::size(channels)
+             << std::endl;
+
+   std::cout << "Number of already existing channels: "
+             << failed_channel_creation
              << std::endl;
 }
 

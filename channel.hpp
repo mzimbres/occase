@@ -122,7 +122,7 @@ public:
       store_item(std::move(item));
 
       auto const f = [&](auto session)
-      { session->send(msg); };
+      { session->send(msg, false); };
 
       // TODO: Use the return value for statistics.
       cleanup_traversal(f);

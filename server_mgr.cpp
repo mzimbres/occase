@@ -154,7 +154,7 @@ server_mgr::on_redis_retrieve_msgs(
 
    if (auto s = match->second.lock()) {
       //std::cout << "" << data.back() << std::endl;
-      s->send(data.back());
+      s->send(data.back(), true);
       return;
    }
    
@@ -207,7 +207,7 @@ ev_res server_mgr::on_register(json const& j, std::shared_ptr<server_session> s)
       json resp;
       resp["cmd"] = "register_ack";
       resp["result"] = "fail";
-      s->send(resp.dump());
+      s->send(resp.dump(), false);
       return ev_res::register_fail;
    }
 
@@ -220,7 +220,7 @@ ev_res server_mgr::on_register(json const& j, std::shared_ptr<server_session> s)
    resp["cmd"] = "register_ack";
    resp["result"] = "ok";
    resp["menus"] = menus;
-   s->send(resp.dump());
+   s->send(resp.dump(), false);
    return ev_res::register_ok;
 }
 
@@ -235,7 +235,7 @@ ev_res server_mgr::on_login(json const& j, std::shared_ptr<server_session> s)
       json resp;
       resp["cmd"] = "auth_ack";
       resp["result"] = "fail";
-      s->send(resp.dump());
+      s->send(resp.dump(), false);
       return ev_res::login_fail;
    }
 
@@ -273,7 +273,7 @@ ev_res server_mgr::on_login(json const& j, std::shared_ptr<server_session> s)
    if (b)
       resp["menus"] = menus;
 
-   s->send(resp.dump());
+   s->send(resp.dump(), false);
 
    return ev_res::login_ok;
 }
@@ -289,7 +289,7 @@ server_mgr::on_code_confirmation( json const& j
       json resp;
       resp["cmd"] = "code_confirmation_ack";
       resp["result"] = "fail";
-      s->send(resp.dump());
+      s->send(resp.dump(), false);
       return ev_res::code_confirmation_fail;
    }
 
@@ -309,7 +309,7 @@ server_mgr::on_code_confirmation( json const& j
    json resp;
    resp["cmd"] = "code_confirmation_ack";
    resp["result"] = "ok";
-   s->send(resp.dump());
+   s->send(resp.dump(), false);
    return ev_res::code_confirmation_ok;
 }
 
@@ -348,7 +348,7 @@ server_mgr::on_subscribe(json const& j, std::shared_ptr<server_session> s)
    resp["result"] = "ok";
    resp["count"] = n_channels;
    resp["items"] = items;
-   s->send(resp.dump());
+   s->send(resp.dump(), false);
    return ev_res::subscribe_ok;
 }
 
@@ -387,7 +387,7 @@ server_mgr::on_publish(json j, std::shared_ptr<server_session> s)
       json resp;
       resp["cmd"] = "publish_ack";
       resp["result"] = "fail";
-      s->send(resp.dump());
+      s->send(resp.dump(), false);
       return ev_res::publish_fail;
    }
 
@@ -404,7 +404,7 @@ server_mgr::on_publish(json j, std::shared_ptr<server_session> s)
    ack["cmd"] = "publish_ack";
    ack["result"] = "ok";
    ack["id"] = ms;
-   s->send(ack.dump());
+   s->send(ack.dump(), false);
    return ev_res::publish_ok;
 }
 
@@ -441,7 +441,7 @@ server_mgr::on_user_msg( std::string msg, json const& j
    json ack;
    ack["cmd"] = "user_msg_server_ack";
    ack["result"] = "ok";
-   s->send(ack.dump());
+   s->send(ack.dump(), false);
    //std::cout << ack << std::endl;
    return ev_res::user_msg_ok;
 }

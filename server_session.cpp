@@ -190,7 +190,7 @@ void server_session::do_close()
    ws.async_close(reason, net::bind_executor(strand, handler));
 }
 
-void server_session::send(std::string msg)
+void server_session::send(std::string msg, bool persist)
 {
    auto const handler = [m = std::move(msg), p = shared_from_this()]()
    {
@@ -375,8 +375,10 @@ void server_session::on_write( boost::system::error_code ec
    if (ec) {
       // The write operation failed for some reason. That means the
       // last element in the queue could not be written. This is
-      // probably due to a timeout or a connection close. I will think
-      // more what to do here.
+      // probably due to a timeout or a connection close. We have
+      // nothing to do. Unsent user messages will be returned to the
+      // database so that the server can retrieve them next time he
+      // reconnects.
       return;
    }
 

@@ -67,17 +67,15 @@ private:
    beast::multi_buffer buffer;
 
    std::shared_ptr<server_mgr> mgr;
+
    std::queue<std::string> msg_queue;
+
    ping_pong pp_state = ping_pong::unset;
    bool closing = false;
 
    std::shared_ptr<proxy_session> psession;
 
-   // This variable is called in this function only in the destructor.
-   // So I do not any possibility of race condition arising with it.
    std::string user_id;
-
-   // Not used by the session. So there is also not possible race.
    std::string code;
 
    void do_read();
@@ -102,7 +100,10 @@ public:
    ~server_session();
 
    void accept();
-   void send(std::string msg);
+
+   // Messages for which persist is true will be persisted on the
+   // database and sent to the user next time he reconnects.
+   void send(std::string msg, bool persist);
    void shutdown();
 
    void promote()
@@ -112,15 +113,15 @@ public:
    auto const& get_code() const
       { return code; }
    void set_id(std::string id)
-      {user_id = std::move(id); };
+      { user_id = std::move(id); };
    auto const& get_id() const noexcept
-      {return user_id;}
+      { return user_id;}
    auto is_waiting_code() const noexcept
-      {return !std::empty(user_id) && !std::empty(code);};
+      { return !std::empty(user_id) && !std::empty(code);};
    auto is_auth() const noexcept
-      {return !std::empty(user_id) && std::empty(code);};
+      { return !std::empty(user_id) && std::empty(code);};
    auto is_waiting_auth() const noexcept
-      {return std::empty(user_id) && std::empty(code);};
+      { return std::empty(user_id) && std::empty(code);};
 
    std::weak_ptr<proxy_session> get_proxy_session(bool new_session);
 };

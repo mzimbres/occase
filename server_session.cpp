@@ -23,9 +23,14 @@ server_session::server_session( net::ip::tcp::socket socket
 
 server_session::~server_session()
 {
-   //std::cout << "I am dying: " << user_id << std::endl;
-   if (is_auth())
+   if (is_auth()) {
       mgr->release_auth_session(user_id);
+
+      // We also have to store all messages we weren't able to deliver
+      // to the user, due to, for example, a disconnection. But we are
+      // only interested in the persist messages.
+   }
+
    --mgr->get_stats().number_of_sessions;
 }
 
@@ -192,9 +197,10 @@ void server_session::do_close()
 
 void server_session::send(std::string msg, bool persist)
 {
-   auto const handler = [m = std::move(msg), p = shared_from_this()]()
+   auto const handler =
+      [e = std::move(msg), persist, p = shared_from_this()]()
    {
-      p->do_send(m);
+      p->do_send({e, persist});
    };
 
    net::post(net::bind_executor(strand, handler));
@@ -389,7 +395,7 @@ void server_session::on_write( boost::system::error_code ec
 
    // Do not move the front msg. If the write fail we will want to
    // save the message in the database or whatever.
-   do_write(msg_queue.front());
+   do_write(msg_queue.front().msg);
 }
 
 void server_session::do_write(std::string const& msg)
@@ -403,17 +409,15 @@ void server_session::do_write(std::string const& msg)
                  , net::bind_executor(strand, handler));
 }
 
-void server_session::do_send(std::string msg)
+void server_session::do_send(msg_entry entry)
 {
-   assert(!std::empty(msg));
-
    auto const is_empty = msg_queue.empty();
 
    // TODO: Impose a limit on how big the queue can grow.
-   msg_queue.push(std::move(msg));
+   msg_queue.push(std::move(entry));
 
    if (is_empty && !closing)
-      do_write(msg_queue.front());
+      do_write(msg_queue.front().msg);
 }
 
 std::weak_ptr<proxy_session>

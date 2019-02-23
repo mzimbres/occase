@@ -68,7 +68,13 @@ private:
 
    std::shared_ptr<server_mgr> mgr;
 
-   std::queue<std::string> msg_queue;
+   struct msg_entry {
+      std::string msg;
+      bool persist;
+   };
+
+   // TODO: Make this a priority queue.
+   std::queue<msg_entry> msg_queue;
 
    ping_pong pp_state = ping_pong::unset;
    bool closing = false;
@@ -90,7 +96,7 @@ private:
    void do_ping();
    void do_pong_wait();
    void do_close();
-   void do_send(std::string msg);
+   void do_send(msg_entry entry);
    void do_accept();
 
 public:

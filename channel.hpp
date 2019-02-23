@@ -3,9 +3,11 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <deque>
 
 #include "menu.hpp"
 #include "server_session.hpp"
+#include "json_utils.hpp"
 
 namespace rt
 {
@@ -55,6 +57,11 @@ private:
    int insertions_on_inactivity = 0;
    std::vector<std::weak_ptr<proxy_session>> members;
 
+   // For long living servers we need a limit on how big the number of
+   // publish items can grow. For that it is more convenient to use a
+   // deque.
+   std::deque<pub_item> items;
+
    template <class F>
    auto cleanup_traversal(F f)
    {
@@ -85,9 +92,26 @@ private:
       return n - begin + 1;
    }
 
-public:
-   void broadcast(std::string const& msg)
+   void store_item(pub_item item)
    {
+      // We have to ensure this vector stays ordered according to the
+      // publishes id (time stamps). Most of the time there will be no
+      // problem, but it still may happen that messages are routed to
+      // us out of order. Insertion sort is necessary.
+      // TODO: Use insertion sort.
+      items.push_back(std::move(item));
+   }
+
+public:
+   void broadcast(pub_item item)
+   {
+      json j_pub;
+      j_pub["cmd"] = "publish";
+      j_pub["items"] = std::vector<pub_item>{item};
+
+      auto const msg = j_pub.dump();
+      store_item(std::move(item));
+
       auto const f = [&](auto session)
       { session->send(msg); };
 

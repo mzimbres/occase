@@ -11,7 +11,6 @@ using pub_code_type = std::vector<std::vector<std::vector<int>>>;
 namespace rt
 {
 
-
 struct pub_item {
    using id_type = long long;
    id_type id;

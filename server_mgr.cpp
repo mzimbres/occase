@@ -98,7 +98,7 @@ server_mgr::on_redis_unsol_pub(std::vector<std::string> const& data)
 {
    assert(std::size(data) == 1);
    auto const j = json::parse(data.front());
-   auto const item = j.get<pub_item>();
+   auto item = j.get<pub_item>();
    auto const code = convert_to_channel_code(item.to);
    auto const g = channels.find(code);
    if (g == std::end(channels)) {
@@ -108,11 +108,7 @@ server_mgr::on_redis_unsol_pub(std::vector<std::string> const& data)
       return;
    }
 
-   json j_pub;
-   j_pub["cmd"] = "publish";
-   j_pub["items"] = std::vector<pub_item>{item};
-
-   g->second.broadcast(j_pub.dump());
+   g->second.broadcast(item);
 }
 
 void

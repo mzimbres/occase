@@ -10,8 +10,11 @@ using pub_code_type = std::vector<std::vector<std::vector<int>>>;
 
 namespace rt
 {
+
+
 struct pub_item {
-   int id;
+   using id_type = long long;
+   id_type id;
    std::string from;
    std::string msg;
    pub_code_type to;
@@ -26,7 +29,7 @@ void to_json(json& j, pub_item const& e)
 inline
 void from_json(json const& j, pub_item& e)
 {
-  e.id = j.at("id").get<int>();
+  e.id = j.at("id").get<pub_item::id_type>();
   e.from = j.at("from").get<std::string>();
   e.msg = j.at("msg").get<std::string>();
   e.to = j.at("to").get<pub_code_type>();

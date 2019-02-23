@@ -43,11 +43,16 @@ int client_mgr_gmsg_check::on_read( std::string msg
    }
 
    if (cmd == "publish") {
-      auto const post_id = j.at("id").get<long long>();
-      auto const from = j.at("from").get<std::string>();
+      auto items = j.at("items").get<std::vector<pub_item>>();
 
-      --to_receive_posts;
-      speak_to_publisher(from, post_id, s);
+      auto const f = [this, s](auto const& e)
+      {
+         --to_receive_posts;
+         speak_to_publisher(e.from, e.id, s);
+      };
+
+      std::for_each(std::begin(items), std::end(items), f);
+
       return 1;
    }
 

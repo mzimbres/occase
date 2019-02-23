@@ -8,6 +8,7 @@
 #include "resp.hpp"
 #include "menu.hpp"
 #include "server_session.hpp"
+#include "json_utils.hpp"
 
 namespace
 {
@@ -97,19 +98,21 @@ server_mgr::on_redis_unsol_pub(std::vector<std::string> const& data)
 {
    assert(std::size(data) == 1);
    auto const j = json::parse(data.front());
-   auto const to =
-      j.at("to").get<std::vector<std::vector<std::vector<int>>>>();
-   auto const code = convert_to_channel_code(to);
+   auto const item = j.get<pub_item>();
+   auto const code = convert_to_channel_code(item.to);
    auto const g = channels.find(code);
    if (g == std::end(channels)) {
-      // Should not happen as the group is checked on
-      // on_user_group:msg before being sent to redis for broadcast.
-      // TODO: Handle this error.
+      // Should not happen as the group is checked on on_publish:msg
+      // before being sent to redis for broadcast.
       assert(false);
       return;
    }
 
-   g->second.broadcast(data.front());
+   json j_pub;
+   j_pub["cmd"] = "publish";
+   j_pub["items"] = std::vector<pub_item>{item};
+
+   g->second.broadcast(j_pub.dump());
 }
 
 void
@@ -350,12 +353,25 @@ server_mgr::on_subscribe(json const& j, std::shared_ptr<server_session> s)
 ev_res
 server_mgr::on_publish(json j, std::shared_ptr<server_session> s)
 {
-   // The publish command has the form [[1, 2], [2, 3, 4], [1, 2]]
-   // Where each array in the outermost array refers to one menu.
-   auto const to =
-      j.at("to").get<std::vector<std::vector<std::vector<int>>>>();
+   // Though the publish command is vectorial allowing the delivery of
+   // meny items at the same time, the app is required to send only
+   // one item. The reasons are
+   //
+   // 1. We want to ack every publish. This can be handled by making
+   //    the ack to also be vectorial. But this makes the code more
+   //    difficult.
+   // 2. Each publish item needs an id which at the moment is a
+   //    timestamp. Maybe if we change this to be a centralized
+   //    counter, we could implement vectorized publish acks.
+   // 3. We want to test that each individual item has a correct
+   //    channel code. This also makes the code a bit more
+   //    complicated.
+   auto items = j.at("items").get<std::vector<pub_item>>();
+   assert(std::size(items) == 1);
 
-   auto const code = convert_to_channel_code(to);
+   // The channel code has the form [[1, 2], [2, 3, 4], [1, 2]]
+   // where each array in the outermost array refers to one menu.
+   auto const code = convert_to_channel_code(items.front().to);
 
    auto const g = channels.find(code);
    if (g == std::end(channels)) {
@@ -373,17 +389,19 @@ server_mgr::on_publish(json j, std::shared_ptr<server_session> s)
       return ev_res::publish_fail;
    }
 
+   using ms_type = std::chrono::milliseconds;
 
-   auto const unix_timestamp = std::chrono::seconds(std::time(nullptr));
-   auto const t = std::chrono::milliseconds(unix_timestamp).count();
+   auto const tse = std::chrono::system_clock::now().time_since_epoch();
+   auto const ms = std::chrono::duration_cast<ms_type>(tse).count();
 
-   j["id"] = t;
-   db.publish_menu_msg(j.dump());
+   items.front().id = ms;
+   json const j_item = items.front();
+   db.publish_menu_msg(j_item.dump());
 
    json ack;
    ack["cmd"] = "publish_ack";
    ack["result"] = "ok";
-   ack["id"] = t;
+   ack["id"] = ms;
    s->send(ack.dump());
    return ev_res::publish_ok;
 }

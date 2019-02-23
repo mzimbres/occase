@@ -55,15 +55,21 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
    }
 
    if (cmd == "publish") {
-      // We are only interested in our own publishes for the moment.
-      auto const from = j.at("from").get<std::string>();
-      if (from != op.user)
-         return 1;
+      // We are only interested in our own publishes at the moment.
+      auto items = j.at("items").get<std::vector<pub_item>>();
 
-      auto const id = j.at("id").get<long long>();
-      assert(pub_stack.top().post_id == id);
+      auto const cond = [this](auto const& e)
+      { return e.from == op.user; };
 
-      pub_stack.top().server_echo = true;
+      auto point = std::partition(std::begin(items), std::end(items), cond);
+
+      auto const f = [this](auto const& item)
+      {
+         assert(pub_stack.top().post_id == item.id);
+         pub_stack.top().server_echo = true;
+      };
+
+      std::for_each(std::begin(items), point, f);
       return 1;
    }
 
@@ -123,11 +129,13 @@ int client_mgr_pub::send_group_msg(std::shared_ptr<client_type> s) const
 {
    //std::cout << "Pub: Stack size: " << std::size(pub_stack)
    //          << std::endl;
+
+   pub_item item {-1, op.user
+                 , "Not an interesting message."
+                 , pub_stack.top().pub_code};
    json j_msg;
    j_msg["cmd"] = "publish";
-   j_msg["from"] = op.user;
-   j_msg["to"] = pub_stack.top().pub_code;
-   j_msg["msg"] = "Not an interesting message.";
+   j_msg["items"] = std::vector<pub_item>{item};
    s->send_msg(j_msg.dump());
    return 1;
 }

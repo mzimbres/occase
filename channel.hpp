@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 #include <deque>
+#include <algorithm>
 
 #include "menu.hpp"
 #include "server_session.hpp"
@@ -94,12 +95,20 @@ private:
 
    void store_item(pub_item item)
    {
-      // We have to ensure this vector stays ordered according to the
-      // publishes id (time stamps). Most of the time there will be no
+      // We have to ensure this vector stays ordered according to
+      // publish ids (time stamps). Most of the time there will be no
       // problem, but it still may happen that messages are routed to
       // us out of order. Insertion sort is necessary.
-      // TODO: Use insertion sort.
       items.push_back(std::move(item));
+
+      auto prev = std::prev(std::end(items));
+
+      // Sorted insertion.
+      std::rotate( std::upper_bound(std::begin(items), prev, *prev)
+                 , prev
+                 , std::end(items));
+
+      // TODO: Limit the size it can grow.
    }
 
 public:
@@ -130,6 +139,24 @@ public:
          insertions_on_inactivity = 0;
       }
    }
+
+   // Copies all items that are newer than id to inserter.
+   template <class Inserter>
+   void retrieve_pub_items( pub_item::id_type id
+                          , Inserter inserter) const
+   {
+      auto const comp = [](auto const& a, auto const& b)
+      { return a < b.id; };
+
+      auto const point =
+         std::upper_bound( std::begin(items)
+                         , std::end(items)
+                         , id
+                         , comp);
+
+      std::copy(point, std::end(items), inserter);
+   }
+
 };
 
 }

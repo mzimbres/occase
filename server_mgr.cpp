@@ -320,28 +320,34 @@ server_mgr::on_subscribe(json const& j, std::shared_ptr<server_session> s)
       j.at("channels").get<std::vector<std::vector<std::vector<int>>>>();
 
    auto const arrays = channel_codes(codes, menus);
-   std::vector<std::uint64_t> comb_codes;
+   std::vector<std::uint64_t> ch_codes;
    std::transform( std::begin(arrays), std::end(arrays)
-                 , std::back_inserter(comb_codes)
+                 , std::back_inserter(ch_codes)
                  , [this](auto const& o) {
                    return convert_to_channel_code(o);});
 
    auto n_channels = 0;
-   for (auto const& o : comb_codes) {
+   std::vector<pub_item> items;
+   for (auto const& o : ch_codes) {
       auto const g = channels.find(o);
       if (g == std::end(channels)) {
          std::cout << "Cannot find channel " << o << std::endl;
          continue;
       }
 
+      g->second.retrieve_pub_items(0, std::back_inserter(items));
       g->second.add_member(s->get_proxy_session(true), ch_cleanup_freq);
       ++n_channels;
    }
+
+   std::cout << "Size of retrieved items: "
+             << std::size(items) << std::endl;
 
    json resp;
    resp["cmd"] = "subscribe_ack";
    resp["result"] = "ok";
    resp["count"] = n_channels;
+   resp["items"] = items;
    s->send(resp.dump());
    return ev_res::subscribe_ok;
 }

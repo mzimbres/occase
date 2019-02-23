@@ -17,6 +17,12 @@ struct pub_item {
    std::string from;
    std::string msg;
    pub_code_type to;
+
+   friend
+   auto operator<(pub_item const& a, pub_item const& b) noexcept
+   {
+      return a.id < b.id;
+   }
 };
 
 inline

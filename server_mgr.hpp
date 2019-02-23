@@ -52,7 +52,9 @@ private:
 
    net::steady_timer stats_timer;
 
-   int channel_cleanup_frequency; 
+   // This is the frequency we will be cleaning up the channel if no
+   // publish activity is observed.
+   int ch_cleanup_freq; 
 
    void redis_on_msg_handler( boost::system::error_code const& ec
                             , std::vector<std::string> const& resp

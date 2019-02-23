@@ -25,7 +25,7 @@ server_mgr::server_mgr(server_mgr_cf cf)
 , timeouts(cf.timeouts)
 , db(cf.redis_cf, ioc)
 , stats_timer(ioc)
-, channel_cleanup_frequency(cf.channel_cleanup_frequency)
+, ch_cleanup_freq(cf.channel_cleanup_frequency)
 {
    net::post(ioc, [this]() {init();});
 }
@@ -78,7 +78,7 @@ server_mgr::on_redis_get_menu(std::vector<std::string> const& data)
    int failed_channel_creation = 0;
    for (auto const& gc : comb_codes) {
       auto const new_group =
-         channels.insert({gc, {channel_cleanup_frequency}});
+         channels.insert({gc, {}});
       if (!new_group.second) {
          ++failed_channel_creation;
       }
@@ -335,7 +335,7 @@ server_mgr::on_subscribe(json const& j, std::shared_ptr<server_session> s)
          continue;
       }
 
-      g->second.add_member(s->get_proxy_session(true));
+      g->second.add_member(s->get_proxy_session(true), ch_cleanup_freq);
       ++n_channels;
    }
 

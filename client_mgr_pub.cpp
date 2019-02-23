@@ -87,8 +87,10 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
 
       if (--user_msg_counter == 0) {
          pub_stack.pop();
-         if (std::empty(pub_stack))
+         if (std::empty(pub_stack)) {
+            std::cout << "Pub: User " << op.user << " finished." << std::endl;
             return -1;
+         }
 
          return send_group_msg(s);
       }

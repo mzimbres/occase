@@ -357,8 +357,8 @@ channel_codes( std::vector<std::vector<std::vector<int>>> const& codes
  * TODO: Check code validity on every call to this function.
  *
  */
-std::uint64_t convert_to_channel_code(
-      std::vector<std::vector<std::vector<int>>> const& codes);
+
+std::uint64_t convert_to_channel_code(pub_code_type const& codes);
 
 /* This function will convert a vector of menu_elem in the structure
  * that is input for channel_codes decribed above.

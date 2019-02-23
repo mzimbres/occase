@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 
+#include "menu.hpp"
 #include "server_session.hpp"
 
 namespace rt

@@ -40,14 +40,17 @@ void pub(session_cf const& cf, int count, char const* channel)
    pub_session.set_msg_handler(pub_handler);
    for (auto i = 0; i < count; ++i) {
       auto const msg = std::to_string(i);
-      req_data r
-      { request::publish
-      , gen_resp_cmd(cmd::publish, {channel, msg})
-      , "" 
-      };
-      pub_session.send(std::move(r));
-      //std::cout << "Sent: " << msg << std::endl;
+
+      std::initializer_list<std::string const> const param =
+         {channel, msg};
+
+      auto cmd_str = resp_assemble( "PUBLISH"
+                                  , std::begin(param)
+                                  , std::end(param));
+
+      pub_session.send({request::publish, std::move(cmd_str), ""});
    }
+
    pub_session.run();
 
    ioc.run();
@@ -85,13 +88,14 @@ struct sub_arena {
 
       auto const on_conn_handler = [this, channel]()
       {
-         req_data r
-         { request::subscribe
-         , gen_resp_cmd(cmd::subscribe, {channel})
-         , ""
-         };
+         std::initializer_list<std::string const> const param =
+            {channel};
 
-         s.send(std::move(r));
+         auto cmd_str = resp_assemble( "SUBSCRIBE"
+                                     , std::begin(param)
+                                     , std::end(param));
+
+         s.send({request::subscribe, std::move(cmd_str), ""});
       };
 
       s.set_on_conn_handler(on_conn_handler);
@@ -113,26 +117,29 @@ void pubsub(session_cf const& cf, int count, char const* channel)
    session pub_session(cf, ioc, request::unknown);
    pub_session.set_msg_handler(pub_handler);
    for (auto i = 0; i < count; ++i) {
-      auto const msg = std::to_string(i);
-      req_data r
-      { request::publish
-      , gen_resp_cmd(cmd::publish, {channel, msg})
-      , ""
-      };
-      pub_session.send(std::move(r));
-      //std::cout << "Sent: " << msg << std::endl;
+      std::initializer_list<std::string const> const param =
+         {channel, std::to_string(i)};
+
+      auto cmd_str = resp_assemble( "PUBLISH"
+                                  , std::begin(param)
+                                  , std::end(param));
+
+      pub_session.send({request::publish, std::move(cmd_str), ""});
    }
 
    pub_session.run();
 
    session sub_session(cf, ioc, request::unsolicited_publish);
    sub_session.set_msg_handler(sub_on_msg_handler);
-   req_data r
-   { request::subscribe
-   , gen_resp_cmd(cmd::subscribe, {channel})
-   , ""
-   };
-   sub_session.send(std::move(r));
+
+   std::initializer_list<std::string const> const param =
+      {channel};
+
+   auto cmd_str = resp_assemble( "PUBLISH"
+                               , std::begin(param)
+                               , std::end(param));
+
+   sub_session.send({request::subscribe, std::move(cmd_str), ""});
    sub_session.run();
    ioc.run();
 }

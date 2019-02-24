@@ -5,7 +5,6 @@
 #include <iterator>
 #include <algorithm>
 
-#include "resp.hpp"
 #include "menu.hpp"
 #include "server_session.hpp"
 #include "json_utils.hpp"

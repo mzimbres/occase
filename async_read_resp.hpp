@@ -2,11 +2,14 @@
 
 #include <string>
 #include <vector>
+#include <numeric>
 
 #include <boost/asio.hpp>
 #include <boost/asio/async_result.hpp>
+#include <boost/beast/websocket.hpp>
 
-#include "resp.hpp"
+namespace net = boost::asio;
+namespace beast = boost::beast;
 
 // TODO: Improve this according to
 // boost_1_67_0/boost/asio/impl/read.hpp : 654 and 502
@@ -31,6 +34,32 @@ struct resp_buffer {
    std::string data;
    std::vector<std::string> res;
 };
+
+inline
+std::string get_bulky_str(std::string param)
+{
+   auto const s = std::size(param);
+   return "$"
+        + std::to_string(s)
+        + "\r\n"
+        + std::move(param)
+        + "\r\n";
+}
+
+template <class Iter>
+auto resp_assemble(char const* c, Iter begin, Iter end)
+{
+   auto const d = std::distance(begin, end);
+   std::string payload = "*";
+   payload += std::to_string(d + 1);
+   payload += "\r\n";
+   payload += get_bulky_str(c);
+
+   auto const op = [](auto a, auto b)
+   { return std::move(a) + get_bulky_str(std::move(b)); };
+
+   return std::accumulate(begin , end, std::move(payload), op);
+}
 
 template < class AsyncStream
          , class Handler>

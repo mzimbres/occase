@@ -91,7 +91,7 @@ public:
    // cleaned up or persisted. This function is responsible for that
    // TODO: Make it noexcept.
    void on_session_dtor( std::string const& id
-                       , std::deque<std::string> msgs);
+                       , std::vector<std::string> msgs);
 
    ev_res on_message(std::shared_ptr<server_session> s, std::string msg);
 

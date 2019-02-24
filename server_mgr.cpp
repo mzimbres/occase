@@ -339,8 +339,8 @@ server_mgr::on_subscribe(json const& j, std::shared_ptr<server_session> s)
       ++n_channels;
    }
 
-   std::cout << "Size of retrieved items: "
-             << std::size(items) << std::endl;
+   //std::cout << "Size of retrieved items: "
+   //          << std::size(items) << std::endl;
 
    json resp;
    resp["cmd"] = "subscribe_ack";
@@ -408,7 +408,7 @@ server_mgr::on_publish(json j, std::shared_ptr<server_session> s)
 }
 
 void server_mgr::on_session_dtor( std::string const& id
-                                , std::deque<std::string> msgs)
+                                , std::vector<std::string> msgs)
 {
    // TODO: This function is called on the destructor on the server
    // session. Think where should we catch exceptions.
@@ -423,6 +423,11 @@ void server_mgr::on_session_dtor( std::string const& id
 
    sessions.erase(match); // We do not need the return value.
    db.unsubscribe_to_chat_msgs(id);
+
+   if (!std::empty(msgs)) {
+      std::cout << "Sending msg to the database." << std::endl;
+      //db.async_store_chat_msg(id, std::move(msg));
+   }
 }
 
 ev_res

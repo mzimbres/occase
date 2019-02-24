@@ -27,7 +27,28 @@ server_session::~server_session()
       // We also have to store all messages we weren't able to deliver
       // to the user, due to, for example, a disconnection. But we are
       // only interested in the persist messages.
-      mgr->on_session_dtor(std::move(user_id), {});
+      auto const cond = [](auto const& o)
+         { return o.persist; };
+
+      auto const point =
+         std::stable_partition( std::begin(msg_queue)
+                              , std::end(msg_queue)
+                              , cond);
+
+      auto const d = std::distance(point, std::end(msg_queue));
+      std::vector<std::string> msgs;
+      msgs.reserve(d);
+
+      auto const transformer = [](auto item)
+         { return std::move(item.msg); };
+
+      std::transform( std::make_move_iterator(std::begin(msg_queue))
+                    , std::make_move_iterator(point)
+                    , std::back_inserter(msgs)
+                    , transformer);
+
+      std::cout << "dtor: Ramaining msgs: " << std::size(msgs) << std::endl;
+      mgr->on_session_dtor(std::move(user_id), std::move(msgs));
    }
 
    --mgr->get_stats().number_of_sessions;
@@ -384,6 +405,7 @@ void server_session::on_write( boost::system::error_code ec
       // nothing to do. Unsent user messages will be returned to the
       // database so that the server can retrieve them next time he
       // reconnects.
+      std::cout << "on_write: Failed to send." << std::endl;
       return;
    }
 

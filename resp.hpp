@@ -43,17 +43,18 @@ char const* get_redis_cmd_as_str(cmd c)
 }
 
 inline
-std::string get_bulky_str(std::string const& param)
+std::string get_bulky_str(std::string param)
 {
+   auto const s = std::size(param);
    return "$"
-        + std::to_string(std::size(param))
+        + std::to_string(s)
         + "\r\n"
-        + param
+        + std::move(param)
         + "\r\n";
 }
 
 // Assembles strings into a redis command (in resp format).
-inline std::string
+inline auto
 gen_resp_cmd(cmd c, std::initializer_list<std::string> param)
 {
    std::string payload = "*";

@@ -273,7 +273,7 @@ void node_dump( menu_node const& node, menu::oformat of
 
    if (of == menu::oformat::counter) {
       oss << std::size(node.code) << ';'
-          << node.name << ';' << node.leaf_counter;
+          << node.name << ';' << false;
       return;
    }
 

@@ -407,7 +407,8 @@ server_mgr::on_publish(json j, std::shared_ptr<server_session> s)
    return ev_res::publish_ok;
 }
 
-void server_mgr::release_auth_session(std::string const& id)
+void server_mgr::on_session_dtor( std::string const& id
+                                , std::deque<std::string> msgs)
 {
    // TODO: This function is called on the destructor on the server
    // session. Think where should we catch exceptions.

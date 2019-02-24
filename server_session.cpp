@@ -24,11 +24,10 @@ server_session::server_session( net::ip::tcp::socket socket
 server_session::~server_session()
 {
    if (is_auth()) {
-      mgr->release_auth_session(user_id);
-
       // We also have to store all messages we weren't able to deliver
       // to the user, due to, for example, a disconnection. But we are
       // only interested in the persist messages.
+      mgr->on_session_dtor(std::move(user_id), {});
    }
 
    --mgr->get_stats().number_of_sessions;
@@ -388,9 +387,9 @@ void server_session::on_write( boost::system::error_code ec
       return;
    }
 
-   msg_queue.pop();
+   msg_queue.pop_front();
 
-   if (msg_queue.empty())
+   if (std::empty(msg_queue))
       return; // No more message to send to the client.
 
    // Do not move the front msg. If the write fail we will want to
@@ -411,10 +410,10 @@ void server_session::do_write(std::string const& msg)
 
 void server_session::do_send(msg_entry entry)
 {
-   auto const is_empty = msg_queue.empty();
+   auto const is_empty = std::empty(msg_queue);
 
    // TODO: Impose a limit on how big the queue can grow.
-   msg_queue.push(std::move(entry));
+   msg_queue.push_back(std::move(entry));
 
    if (is_empty && !closing)
       do_write(msg_queue.front().msg);

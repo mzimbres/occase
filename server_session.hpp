@@ -1,6 +1,6 @@
 #pragma once
 
-#include <queue>
+#include <deque>
 #include <chrono>
 #include <memory>
 #include <atomic>
@@ -74,7 +74,7 @@ private:
    };
 
    // TODO: Make this a priority queue.
-   std::queue<msg_entry> msg_queue;
+   std::deque<msg_entry> msg_queue;
 
    ping_pong pp_state = ping_pong::unset;
    bool closing = false;

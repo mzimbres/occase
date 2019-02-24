@@ -86,7 +86,13 @@ private:
 
 public:
    server_mgr(server_mgr_cf cf);
-   void release_auth_session(std::string const& id);
+
+   // When a server session dies, there are many things that must be
+   // cleaned up or persisted. This function is responsible for that
+   // TODO: Make it noexcept.
+   void on_session_dtor( std::string const& id
+                       , std::deque<std::string> msgs);
+
    ev_res on_message(std::shared_ptr<server_session> s, std::string msg);
 
    auto const& get_timeouts() const noexcept {return timeouts;}

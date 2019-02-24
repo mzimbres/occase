@@ -38,7 +38,6 @@ client_objs += client_mgr_user_msg.o
 
 aedis_objs =
 aedis_objs += redis_session.o
-aedis_objs += resp.o
 
 menu_dump_objs =
 menu_dump_objs += fipe.o

@@ -42,7 +42,7 @@ void pub(session_cf const& cf, int count, char const* channel)
       auto const msg = std::to_string(i);
       req_data r
       { request::publish
-      , gen_resp_cmd(command::publish, {channel, msg})
+      , gen_resp_cmd(cmd::publish, {channel, msg})
       , "" 
       };
       pub_session.send(std::move(r));
@@ -87,7 +87,7 @@ struct sub_arena {
       {
          req_data r
          { request::subscribe
-         , gen_resp_cmd(command::subscribe, {channel})
+         , gen_resp_cmd(cmd::subscribe, {channel})
          , ""
          };
 
@@ -116,7 +116,7 @@ void pubsub(session_cf const& cf, int count, char const* channel)
       auto const msg = std::to_string(i);
       req_data r
       { request::publish
-      , gen_resp_cmd(command::publish, {channel, msg})
+      , gen_resp_cmd(cmd::publish, {channel, msg})
       , ""
       };
       pub_session.send(std::move(r));
@@ -129,7 +129,7 @@ void pubsub(session_cf const& cf, int count, char const* channel)
    sub_session.set_msg_handler(sub_on_msg_handler);
    req_data r
    { request::subscribe
-   , gen_resp_cmd(command::subscribe, {channel})
+   , gen_resp_cmd(cmd::subscribe, {channel})
    , ""
    };
    sub_session.send(std::move(r));

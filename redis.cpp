@@ -12,7 +12,7 @@ facade::facade(config const& cf, net::io_context& ioc)
    auto const handler = [this]()
    {
       menu_sub.send({ request::subscribe
-                    , gen_resp_cmd(command::subscribe, {nms.menu_channel})
+                    , gen_resp_cmd(cmd::subscribe, {nms.menu_channel})
                     , ""
                     });
    };
@@ -24,7 +24,7 @@ void facade::async_retrieve_menu()
 {
    req_data r
    { request::get_menu
-   , gen_resp_cmd(command::get, {nms.menu_key})
+   , gen_resp_cmd(cmd::get, {nms.menu_key})
    , ""
    };
 
@@ -71,7 +71,7 @@ void facade::async_retrieve_msgs(std::string const& user_id)
    auto const key = nms.msg_prefix + user_id;
    req_data r
    { request::retrieve_msgs
-   , gen_resp_cmd(command::lpop, {key})
+   , gen_resp_cmd(cmd::lpop, {key})
    , user_id
    };
 
@@ -82,7 +82,7 @@ void facade::subscribe_to_chat_msgs(std::string const& id)
 {
    req_data r
    { request::subscribe
-   , gen_resp_cmd( command::subscribe
+   , gen_resp_cmd( cmd::subscribe
                  , {nms.notify_prefix + id})
    , ""
    };
@@ -94,7 +94,7 @@ void facade::unsubscribe_to_chat_msgs(std::string const& id)
 {
    req_data r
    { request::unsubscribe
-   , gen_resp_cmd(command::unsubscribe, { nms.notify_prefix + id})
+   , gen_resp_cmd(cmd::unsubscribe, { nms.notify_prefix + id})
    , ""
    };
 
@@ -105,7 +105,7 @@ void facade::async_store_chat_msg(std::string id, std::string msg)
 {
    req_data r
    { request::store_msg
-   , gen_resp_cmd(command::rpush, {nms.msg_prefix + std::move(id), msg})
+   , gen_resp_cmd(cmd::rpush, {nms.msg_prefix + std::move(id), msg})
    , ""
    };
 
@@ -116,7 +116,7 @@ void facade::publish_menu_msg(std::string msg)
 {
    req_data r
    { request::publish
-   , gen_resp_cmd( command::publish
+   , gen_resp_cmd( cmd::publish
                  , {nms.menu_channel, msg})
    , ""
    };

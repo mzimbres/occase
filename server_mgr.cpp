@@ -425,8 +425,9 @@ void server_mgr::on_session_dtor( std::string const& id
    db.unsubscribe_to_chat_msgs(id);
 
    if (!std::empty(msgs)) {
-      std::cout << "Sending msg to the database." << std::endl;
-      //db.async_store_chat_msg(id, std::move(msg));
+      db.async_store_chat_msg( std::move(id)
+                             , std::make_move_iterator(std::begin(msgs))
+                             , std::make_move_iterator(std::end(msgs)));
    }
 }
 
@@ -439,15 +440,18 @@ server_mgr::on_user_msg( std::string msg, json const& j
    // redis server. This would be a big optimization in the case of
    // small number of nodes.
 
-   //std::cout << msg << std::endl;
-   auto const to = j.at("to").get<std::string>();
-   db.async_store_chat_msg(to, std::move(msg));
+   auto to = j.at("to").get<std::string>();
+
+   std::initializer_list<std::string> param = {msg};
+
+   db.async_store_chat_msg( std::move(to)
+                          , std::make_move_iterator(std::begin(param))
+                          , std::make_move_iterator(std::end(param)));
 
    json ack;
    ack["cmd"] = "user_msg_server_ack";
    ack["result"] = "ok";
    s->send(ack.dump(), false);
-   //std::cout << ack << std::endl;
    return ev_res::user_msg_ok;
 }
 

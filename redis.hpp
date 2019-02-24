@@ -92,7 +92,24 @@ public:
    //
    //   redis::request::store_msg
    //
-   void async_store_chat_msg(std::string id, std::string msg);
+   template <class Iter>
+   void async_store_chat_msg( std::string id
+                            , Iter begin
+                            , Iter end)
+   {
+      auto const d = std::distance(begin, end);
+
+      auto payload = make_cmd_header(2 + d)
+                   + make_bulky_item("RPUSH")
+                   + make_bulky_item(nms.msg_prefix + std::move(id));
+
+      auto cmd_str = std::accumulate( begin
+                                    , end
+                                    , std::move(payload)
+                                    , accumulator{});
+
+      pub.send({request::store_msg, std::move(cmd_str), ""});
+   }
 
    // Publishes the message on a redis channel where it is broadcasted
    // to all workers. TODO: Before posting it on the channel we have

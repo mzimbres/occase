@@ -36,7 +36,7 @@ struct resp_buffer {
 };
 
 inline
-std::string get_bulky_str(std::string param)
+std::string make_bulky_item(std::string param)
 {
    auto const s = std::size(param);
    return "$"
@@ -46,19 +46,25 @@ std::string get_bulky_str(std::string param)
         + "\r\n";
 }
 
+inline
+std::string make_cmd_header(int size)
+{
+   return "*" + std::to_string(size) + "\r\n";
+}
+
+struct accumulator {
+   auto operator()(std::string a, std::string b) const
+   {
+      return std::move(a) + make_bulky_item(std::move(b));
+   }
+};
+
 template <class Iter>
-auto resp_assemble(char const* c, Iter begin, Iter end)
+auto resp_assemble(char const* cmd, Iter begin, Iter end)
 {
    auto const d = std::distance(begin, end);
-   std::string payload = "*";
-   payload += std::to_string(d + 1);
-   payload += "\r\n";
-   payload += get_bulky_str(c);
-
-   auto const op = [](auto a, auto b)
-   { return std::move(a) + get_bulky_str(std::move(b)); };
-
-   return std::accumulate(begin , end, std::move(payload), op);
+   auto payload = make_cmd_header(d + 1) + make_bulky_item(cmd);
+   return std::accumulate(begin , end, std::move(payload), accumulator{});
 }
 
 template < class AsyncStream

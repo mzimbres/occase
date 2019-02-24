@@ -109,14 +109,21 @@ void facade::unsubscribe_to_chat_msgs(std::string const& id)
 
 void facade::async_store_chat_msg(std::string id, std::string msg)
 {
-   std::initializer_list<std::string const> const param =
-      {nms.msg_prefix + std::move(id), msg};
+   std::initializer_list<std::string const> const param = {msg};
 
-   auto cmd_str = resp_assemble( "RPUSH"
-                               , std::begin(param)
-                               , std::end(param));
+   auto const d = std::distance(std::begin(param), std::end(param));
 
-   pub.send({request::store_msg, std::move(cmd_str), "" });
+   auto payload = make_cmd_header(2 + d)
+                + make_bulky_item("RPUSH")
+                + make_bulky_item(nms.msg_prefix + std::move(id));
+
+   auto cmd_str =
+      std::accumulate( std::begin(param)
+                     , std::end(param)
+                     , std::move(payload)
+                     , accumulator{});
+
+   pub.send({request::store_msg, std::move(cmd_str), ""});
 }
 
 void facade::publish_menu_msg(std::string msg)

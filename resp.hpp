@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <string>
+#include <numeric>
 #include <iterator>
 #include <initializer_list>
 
@@ -58,13 +59,15 @@ gen_resp_cmd(cmd c, std::initializer_list<std::string> param)
    std::string payload = "*";
    payload += std::to_string(std::size(param) + 1);
    payload += "\r\n";
-
    payload += get_bulky_str(get_redis_cmd_as_str(c));
 
-   for (auto const& o : param)
-      payload += get_bulky_str(o);
+   auto const op = [](auto a, auto b)
+   { return std::move(a) + get_bulky_str(std::move(b)); };
 
-   return payload;
+   return std::accumulate( std::begin(param)
+                         , std::end(param)
+                         , std::move(payload)
+                         , op);
 }
 
 }

@@ -89,11 +89,9 @@ server_mgr::on_redis_get_menu(std::string const& data)
              << std::endl;
 }
 
-void
-server_mgr::on_redis_unsol_pub(std::vector<std::string> const& data)
+void server_mgr::on_redis_unsol_pub(std::string const& data)
 {
-   assert(std::size(data) == 1);
-   auto const j = json::parse(data.front());
+   auto const j = json::parse(data);
    auto item = j.get<pub_item>();
    auto const code = convert_to_channel_code(item.to);
    auto const g = channels.find(code);
@@ -182,7 +180,8 @@ server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
          break;
 
       case redis::request::unsolicited_publish:
-         on_redis_unsol_pub(data);
+         assert(std::size(data) == 1);
+         on_redis_unsol_pub(data.back());
          break;
 
       case redis::request::unsolicited_key_not:

@@ -60,8 +60,24 @@ void facade::set_on_msg_handler(msg_handler_type h)
    };
 
    menu_sub.set_msg_handler(sub_handler);
-   msg_not.set_msg_handler(h);
    pub.set_msg_handler(h);
+
+   // We do not have to pass keyspace notifications to the server
+   // menager. It just flags we should retrieve the message.
+   auto const key_not_handler = [this]( auto const& ec
+                                      , auto const& data
+                                      , auto const& req)
+   {
+      if (data.back() == "rpush") {
+         assert(data.front() == "message");
+         assert(std::size(data) == 3);
+         auto const n = data[1].rfind(":");
+         assert(n != std::string::npos);
+         async_retrieve_msgs(data[1].substr(n + 1));
+      }
+   };
+
+   msg_not.set_msg_handler(key_not_handler);
 }
 
 void facade::run()

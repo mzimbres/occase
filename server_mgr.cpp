@@ -105,33 +105,7 @@ void server_mgr::on_redis_unsol_pub(std::string const& data)
    g->second.broadcast(item);
 }
 
-void
-server_mgr::on_redis_unsol_key_not(
-   std::vector<std::string> const& data, redis::req_data const& req)
-{
-   if (data.back() == "rpush") {
-      assert(data.front() == "message");
-      assert(std::size(data) == 3);
-
-      // TODO: Read the user id from the req struct. First
-      // implement tests.
-      auto const n = data[1].rfind(":");
-      assert(n != std::string::npos);
-
-      db.async_retrieve_msgs(data[1].substr(n + 1));
-
-      //auto const s = sessions.find(user_id);
-      //if (s == std::end(sessions)) {
-      //   // Should not happen as we unsubscribe from the user message
-      //   // channel we the user goes offline.
-      //   assert(false);
-      //   return;
-      //}
-   }
-}
-
-void
-server_mgr::on_redis_retrieve_msgs(
+void server_mgr::on_redis_retrieve_msgs(
    std::vector<std::string> const& data, redis::req_data const& req)
 {
    assert(std::size(data) == 1);
@@ -182,10 +156,6 @@ server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
       case redis::request::unsolicited_publish:
          assert(std::size(data) == 1);
          on_redis_unsol_pub(data.back());
-         break;
-
-      case redis::request::unsolicited_key_not:
-         on_redis_unsol_key_not(data, req);
          break;
 
       default:

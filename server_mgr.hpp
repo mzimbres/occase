@@ -81,9 +81,6 @@ private:
 
    void on_redis_unsol_pub(std::string const& data);
 
-   void on_redis_unsol_key_not( std::vector<std::string> const& data
-                              , redis::req_data const& req);
-
 public:
    server_mgr(server_mgr_cf cf);
 

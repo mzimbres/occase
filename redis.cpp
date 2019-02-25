@@ -62,20 +62,10 @@ void facade::set_on_msg_handler(msg_handler_type h)
    menu_sub.set_msg_handler(sub_handler);
    pub.set_msg_handler(h);
 
-   // We do not have to pass keyspace notifications to the server
-   // menager. It just flags we should retrieve the message.
    auto const key_not_handler = [this]( auto const& ec
                                       , auto const& data
                                       , auto const& req)
-   {
-      if (data.back() == "rpush") {
-         assert(data.front() == "message");
-         assert(std::size(data) == 3);
-         auto const n = data[1].rfind(":");
-         assert(n != std::string::npos);
-         async_retrieve_msgs(data[1].substr(n + 1));
-      }
-   };
+   { async_retrieve_msgs(ec, data, req); };
 
    msg_not.set_msg_handler(key_not_handler);
 }
@@ -87,9 +77,20 @@ void facade::run()
    pub.run();
 }
 
-void facade::async_retrieve_msgs(std::string const& user_id)
+void
+facade::async_retrieve_msgs( boost::system::error_code const& ec
+                           , std::vector<std::string> const& data
+                           , req_data const& req)
 {
-   std::initializer_list<std::string const> const param =
+   if (data.back() != "rpush")
+      return;
+
+   assert(data.front() == "message");
+   assert(std::size(data) == 3);
+   auto const n = data[1].rfind(":");
+   assert(n != std::string::npos);
+   std::string const user_id = data[1].substr(n + 1);
+   std::initializer_list<std::string> const param =
       {nms.msg_prefix + user_id};
 
    auto cmd_str = resp_assemble( "LPOP"

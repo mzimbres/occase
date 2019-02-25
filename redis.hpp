@@ -49,6 +49,12 @@ private:
 
    namespaces nms;
 
+   // Retrieves user messages asynchronously. Called automatically and
+   // not passed to the server_mgr.
+   void async_retrieve_msgs( boost::system::error_code const& ec
+                           , std::vector<std::string> const& data
+                           , req_data const& req);
+
 public:
    using msg_handler_type = session::msg_handler_type;
 
@@ -63,15 +69,6 @@ public:
    // Retrieves the menu asynchronously. The callback will complete
    // with redis::request::get_menu.
    void async_retrieve_menu();
-
-   // Retrieves user messages asynchronously. The callback will complete
-   // with
-   //
-   //    redis::request::retrieve_msgs
-   //
-   // The user_id will be prefixed with the prefix defined in the
-   // namespace struct above.
-   void async_retrieve_msgs(std::string const& user_id);
 
    // Instructs redis to notify us upon any change to the given
    // user_id. Once a notification arrives the server proceeds with

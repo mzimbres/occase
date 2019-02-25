@@ -63,7 +63,7 @@ public:
    // Retrieves the menu asynchronously. The callback will complete
    // with redis::request::get_menu.
    void async_retrieve_menu();
-   //
+
    // Retrieves user messages asynchronously. The callback will complete
    // with
    //

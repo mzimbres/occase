@@ -33,7 +33,7 @@ void facade::async_retrieve_menu()
                                , std::begin(param)
                                , std::end(param));
 
-   pub.send({request::get_menu, std::move(cmd_str), "" });
+   pub.send({request::get_menu, std::move(cmd_str), ""});
 }
 
 void facade::set_on_msg_handler(msg_handler_type h)

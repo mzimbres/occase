@@ -48,9 +48,7 @@ void server_mgr::init()
    auto const handler = [this]( auto const& ec
                               , auto const& data
                               , auto const& req)
-   {
-      redis_on_msg_handler(ec, data, req);
-   };
+   { redis_on_msg_handler(ec, data, req); };
 
    db.set_on_msg_handler(handler);
 
@@ -59,10 +57,9 @@ void server_mgr::init()
 }
 
 void
-server_mgr::on_redis_get_menu(std::vector<std::string> const& data)
+server_mgr::on_redis_get_menu(std::string const& data)
 {
-   assert(std::size(data) == 1);
-   auto const j_menu = json::parse(data.back());
+   auto const j_menu = json::parse(data);
 
    // TODO: Check if the menus have the correct number of elements and
    // the correct depth for each element.
@@ -180,7 +177,8 @@ server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
          break;
 
       case redis::request::get_menu:
-         on_redis_get_menu(data);
+         assert(std::size(data) == 1);
+         on_redis_get_menu(data.back());
          break;
 
       case redis::request::unsolicited_publish:

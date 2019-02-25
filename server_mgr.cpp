@@ -144,7 +144,7 @@ server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
 
    switch (req.cmd)
    {
-      case redis::request::retrieve_msgs:
+      case redis::request::user_msgs:
          on_redis_retrieve_msgs(data, req);
          break;
 

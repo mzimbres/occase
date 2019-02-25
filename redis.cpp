@@ -97,7 +97,7 @@ facade::async_retrieve_msgs( boost::system::error_code const& ec
                                , std::begin(param)
                                , std::end(param));
 
-   pub.send({request::retrieve_msgs, std::move(cmd_str), user_id });
+   pub.send({request::user_msgs, std::move(cmd_str), user_id });
 }
 
 void facade::subscribe_to_chat_msgs(std::string const& id)

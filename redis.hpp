@@ -51,9 +51,9 @@ private:
 
    // Retrieves user messages asynchronously. Called automatically and
    // not passed to the server_mgr.
-   void async_retrieve_msgs( boost::system::error_code const& ec
-                           , std::vector<std::string> const& data
-                           , req_data const& req);
+   void async_retrieve_user_msgs( boost::system::error_code const& ec
+                                , std::vector<std::string> const& data
+                                , req_data const& req);
 
 public:
    using msg_handler_type = session::msg_handler_type;

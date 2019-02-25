@@ -65,7 +65,7 @@ void facade::set_on_msg_handler(msg_handler_type h)
    auto const key_not_handler = [this]( auto const& ec
                                       , auto const& data
                                       , auto const& req)
-   { async_retrieve_msgs(ec, data, req); };
+   { async_retrieve_user_msgs(ec, data, req); };
 
    msg_not.set_msg_handler(key_not_handler);
 }
@@ -78,9 +78,9 @@ void facade::run()
 }
 
 void
-facade::async_retrieve_msgs( boost::system::error_code const& ec
-                           , std::vector<std::string> const& data
-                           , req_data const& req)
+facade::async_retrieve_user_msgs( boost::system::error_code const& ec
+                                , std::vector<std::string> const& data
+                                , req_data const& req)
 {
    if (data.back() != "rpush")
       return;

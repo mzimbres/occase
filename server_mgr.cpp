@@ -57,7 +57,7 @@ void server_mgr::init()
 }
 
 void
-server_mgr::on_redis_get_menu(std::string const& data)
+server_mgr::on_db_get_menu(std::string const& data)
 {
    auto const j_menu = json::parse(data);
 
@@ -89,14 +89,14 @@ server_mgr::on_redis_get_menu(std::string const& data)
              << std::endl;
 }
 
-void server_mgr::on_redis_unsol_pub(std::string const& data)
+void server_mgr::on_db_unsol_pub(std::string const& data)
 {
    auto const j = json::parse(data);
    auto item = j.get<pub_item>();
    auto const code = convert_to_channel_code(item.to);
    auto const g = channels.find(code);
    if (g == std::end(channels)) {
-      // Should not happen as the group is checked on on_publish:msg
+      // Should not happen as the group is checked on on_user_publish:msg
       // before being sent to redis for broadcast.
       assert(false);
       return;
@@ -105,16 +105,14 @@ void server_mgr::on_redis_unsol_pub(std::string const& data)
    g->second.broadcast(item);
 }
 
-void server_mgr::on_redis_retrieve_msgs(
+void server_mgr::on_db_user_msgs(
    std::vector<std::string> const& data, redis::req_data const& req)
 {
    assert(std::size(data) == 1);
    assert(!std::empty(data.back()));
 
-   //std::cout << req.user_id << " ===> " << data.back() << std::endl;
    auto const match = sessions.find(req.user_id);
    if (match == std::end(sessions)) {
-      std::cout << "kdkkdkdkkdkdkdkddk" << std::endl;
       // TODO: The user went offline. We have to enqueue the
       // message again. Rethink this.
       return;
@@ -145,17 +143,17 @@ server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
    switch (req.cmd)
    {
       case redis::request::user_msgs:
-         on_redis_retrieve_msgs(data, req);
+         on_db_user_msgs(data, req);
          break;
 
       case redis::request::get_menu:
          assert(std::size(data) == 1);
-         on_redis_get_menu(data.back());
+         on_db_get_menu(data.back());
          break;
 
       case redis::request::unsolicited_publish:
          assert(std::size(data) == 1);
-         on_redis_unsol_pub(data.back());
+         on_db_unsol_pub(data.back());
          break;
 
       default:
@@ -163,7 +161,9 @@ server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
    }
 }
 
-ev_res server_mgr::on_register(json const& j, std::shared_ptr<server_session> s)
+ev_res
+server_mgr::on_user_register( json const& j
+                            , std::shared_ptr<server_session> s)
 {
    auto const from = j.at("from").get<std::string>();
 
@@ -190,7 +190,9 @@ ev_res server_mgr::on_register(json const& j, std::shared_ptr<server_session> s)
    return ev_res::register_ok;
 }
 
-ev_res server_mgr::on_login(json const& j, std::shared_ptr<server_session> s)
+ev_res
+server_mgr::on_user_login( json const& j
+                         , std::shared_ptr<server_session> s)
 {
    auto const from = j.at("from").get<std::string>();
 
@@ -245,7 +247,7 @@ ev_res server_mgr::on_login(json const& j, std::shared_ptr<server_session> s)
 }
 
 ev_res
-server_mgr::on_code_confirmation( json const& j
+server_mgr::on_user_code_confirm( json const& j
                                 , std::shared_ptr<server_session> s)
 {
    auto const from = j.at("from").get<std::string>();
@@ -280,7 +282,8 @@ server_mgr::on_code_confirmation( json const& j
 }
 
 ev_res
-server_mgr::on_subscribe(json const& j, std::shared_ptr<server_session> s)
+server_mgr::on_user_subscribe( json const& j
+                             , std::shared_ptr<server_session> s)
 {
    auto const codes =
       j.at("channels").get<std::vector<std::vector<std::vector<int>>>>();
@@ -319,7 +322,7 @@ server_mgr::on_subscribe(json const& j, std::shared_ptr<server_session> s)
 }
 
 ev_res
-server_mgr::on_publish(json j, std::shared_ptr<server_session> s)
+server_mgr::on_user_publish(json j, std::shared_ptr<server_session> s)
 {
    // Though the publish command is vectorial allowing the delivery of
    // meny items at the same time, the app is required to send only
@@ -475,10 +478,10 @@ server_mgr::on_message( std::shared_ptr<server_session> s, std::string msg)
 
    if (s->is_waiting_auth()) {
       if (cmd == "register")
-         return on_register(j, s);
+         return on_user_register(j, s);
 
       if (cmd == "auth")
-         return on_login(j, s);
+         return on_user_login(j, s);
 
       std::cerr << "Server: Unknown command " << cmd << std::endl;
       return ev_res::unknown;
@@ -486,7 +489,7 @@ server_mgr::on_message( std::shared_ptr<server_session> s, std::string msg)
 
    if (s->is_waiting_code()) {
       if (cmd == "code_confirmation")
-         return on_code_confirmation(j, s);
+         return on_user_code_confirm(j, s);
 
       std::cerr << "Server: Unknown command " << cmd << std::endl;
       return ev_res::unknown;
@@ -494,10 +497,10 @@ server_mgr::on_message( std::shared_ptr<server_session> s, std::string msg)
 
    if (s->is_auth()) {
       if (cmd == "subscribe")
-         return on_subscribe(j, s);
+         return on_user_subscribe(j, s);
 
       if (cmd == "publish")
-         return on_publish(std::move(j), s);
+         return on_user_publish(std::move(j), s);
 
       if (cmd == "user_msg")
          return on_user_msg(std::move(msg), j, s);

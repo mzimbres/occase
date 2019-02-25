@@ -65,21 +65,30 @@ private:
 
    void shutdown();
 
-   ev_res on_register(json const& j, std::shared_ptr<server_session> s);
-   ev_res on_login(json const& j, std::shared_ptr<server_session> s);
-   ev_res on_code_confirmation( json const& j
+   ev_res on_user_register( json const& j
+                          , std::shared_ptr<server_session> s);
+
+   ev_res on_user_login( json const& j
+                       , std::shared_ptr<server_session> s);
+
+   ev_res on_user_code_confirm( json const& j
                               , std::shared_ptr<server_session> s);
-   ev_res on_subscribe(json const& j, std::shared_ptr<server_session> s);
+
+   ev_res on_user_subscribe( json const& j
+                           , std::shared_ptr<server_session> s);
+
    ev_res on_user_msg( std::string msg, json const& j
                      , std::shared_ptr<server_session> s);
-   ev_res on_publish(json j, std::shared_ptr<server_session> s);
 
-   void on_redis_retrieve_msgs( std::vector<std::string> const& data
-                              , redis::req_data const& req);
+   ev_res on_user_publish( json j
+                         , std::shared_ptr<server_session> s);
 
-   void on_redis_get_menu(std::string const& data);
+   void on_db_user_msgs( std::vector<std::string> const& data
+                       , redis::req_data const& req);
 
-   void on_redis_unsol_pub(std::string const& data);
+   void on_db_get_menu(std::string const& data);
+
+   void on_db_unsol_pub(std::string const& data);
 
 public:
    server_mgr(server_mgr_cf cf);

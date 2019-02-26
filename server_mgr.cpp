@@ -135,7 +135,7 @@ server_mgr::redis_on_msg_handler( std::vector<std::string> const& data
 {
    switch (req.cmd)
    {
-      case redis::request::user_msgs:
+      case redis::request::unsol_user_msgs:
          on_db_user_msgs(req.user_id, data);
          break;
 

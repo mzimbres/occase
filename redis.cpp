@@ -98,6 +98,19 @@ facade::pub_handler( boost::system::error_code const& ec
       return;
    }
 
+   if (req.cmd == request::pub_msg_counter) {
+      std::cout << "Counter: " << data.front() << std::endl;
+      std::initializer_list<std::string> const param =
+         {nms.menu_channel, pub_msg_buffer};
+
+      auto cmd_str = resp_assemble( "PUBLISH"
+                                  , std::begin(param)
+                                  , std::end(param));
+
+      pub_session.send({request::publish, std::move(cmd_str), ""});
+      return;
+   }
+
    worker_handler({std::move(data.back())}, req);
 }
 
@@ -127,7 +140,7 @@ facade::msg_not_handler( boost::system::error_code const& ec
                                , std::begin(param)
                                , std::end(param));
 
-   pub_session.send({request::user_msgs, std::move(cmd_str), user_id });
+   pub_session.send({request::unsol_user_msgs, std::move(cmd_str), user_id });
 }
 
 void facade::subscribe_to_chat_msgs(std::string const& id)
@@ -156,14 +169,15 @@ void facade::unsubscribe_to_chat_msgs(std::string const& id)
 
 void facade::publish_menu_msg(std::string msg)
 {
-   std::initializer_list<std::string const> const param =
-      {nms.menu_channel, std::move(msg)};
+   pub_msg_buffer = std::move(msg);
 
-   auto cmd_str = resp_assemble( "PUBLISH"
+   std::initializer_list<std::string> const param = {"pub_counter"};
+
+   auto cmd_str = resp_assemble( "INCR"
                                , std::begin(param)
                                , std::end(param));
 
-   pub_session.send({request::publish, std::move(cmd_str), ""});
+   pub_session.send({request::pub_msg_counter, std::move(cmd_str), ""});
 }
 
 void facade::disconnect()

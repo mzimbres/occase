@@ -56,11 +56,25 @@ void facade::set_on_msg_handler(msg_handler_type h)
          return;
 
       //assert(data[1] == nms.menu_channel);
-      h(ec, {std::move(data.back())}, req);
+      h({std::move(data.back())}, req);
    };
 
    menu_sub.set_msg_handler(sub_handler);
-   pub.set_msg_handler(h);
+
+   auto const pub_handler = [h]( auto const& ec
+                               , auto const& data
+                               , auto const& req)
+   {
+      // TODO: Should we handle this here or pass to the mgr?
+      if (ec) {
+         fail(ec,"pub_handler");
+         return;
+      }
+
+      h({std::move(data.back())}, req);
+   };
+
+   pub.set_msg_handler(pub_handler);
 
    auto const key_not_handler = [this]( auto const& ec
                                       , auto const& data

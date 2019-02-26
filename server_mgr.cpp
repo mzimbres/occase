@@ -45,10 +45,8 @@ void server_mgr::init()
 
    do_stats_logger();
 
-   auto const handler = [this]( auto const& ec
-                              , auto const& data
-                              , auto const& req)
-   { redis_on_msg_handler(ec, data, req); };
+   auto const handler = [this](auto const& data, auto const& req)
+   { redis_on_msg_handler(data, req); };
 
    db.set_on_msg_handler(handler);
 
@@ -105,13 +103,14 @@ void server_mgr::on_db_unsol_pub(std::string const& data)
    g->second.broadcast(item);
 }
 
-void server_mgr::on_db_user_msgs(
-   std::vector<std::string> const& data, redis::req_data const& req)
+void
+server_mgr::on_db_user_msgs( std::string const& user_id
+                           , std::vector<std::string> const& msgs) const
 {
-   assert(std::size(data) == 1);
-   assert(!std::empty(data.back()));
+   assert(std::size(msgs) == 1);
+   assert(!std::empty(msgs.back()));
 
-   auto const match = sessions.find(req.user_id);
+   auto const match = sessions.find(user_id);
    if (match == std::end(sessions)) {
       // TODO: The user went offline. We have to enqueue the
       // message again. Rethink this.
@@ -119,8 +118,8 @@ void server_mgr::on_db_user_msgs(
    }
 
    if (auto s = match->second.lock()) {
-      //std::cout << "" << data.back() << std::endl;
-      s->send(data.back(), true);
+      //std::cout << "" << msgs.back() << std::endl;
+      s->send(msgs.back(), true);
       return;
    }
    
@@ -131,19 +130,13 @@ void server_mgr::on_db_user_msgs(
 }
 
 void
-server_mgr::redis_on_msg_handler( boost::system::error_code const& ec
-                                , std::vector<std::string> const& data
+server_mgr::redis_on_msg_handler( std::vector<std::string> const& data
                                 , redis::req_data const& req)
 {
-   if (ec) {
-      std::cout << "pub_handler: " << ec.message() << std::endl;
-      return;
-   }
-
    switch (req.cmd)
    {
       case redis::request::user_msgs:
-         on_db_user_msgs(data, req);
+         on_db_user_msgs(req.user_id, data);
          break;
 
       case redis::request::get_menu:

@@ -56,7 +56,9 @@ private:
                                 , req_data const& req);
 
 public:
-   using msg_handler_type = session::msg_handler_type;
+   using msg_handler_type =
+      std::function<void ( std::vector<std::string> const&
+                         , req_data const&)>;
 
    facade(config const& cf, net::io_context& ioc);
 

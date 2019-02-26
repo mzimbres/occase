@@ -56,9 +56,9 @@ private:
    // publish activity is observed.
    int ch_cleanup_freq; 
 
-   void redis_on_msg_handler( boost::system::error_code const& ec
-                            , std::vector<std::string> const& resp
+   void redis_on_msg_handler( std::vector<std::string> const& resp
                             , redis::req_data const& cmd);
+
    void do_stats_logger();
 
    void init();
@@ -83,8 +83,8 @@ private:
    ev_res on_user_publish( json j
                          , std::shared_ptr<server_session> s);
 
-   void on_db_user_msgs( std::vector<std::string> const& data
-                       , redis::req_data const& req);
+   void on_db_user_msgs( std::string const& user_id
+                       , std::vector<std::string> const& msgs) const;
 
    void on_db_get_menu(std::string const& data);
 

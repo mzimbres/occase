@@ -36,6 +36,11 @@ struct config {
 // Facade class to manage the communication with redis and hide some
 // uninteresting details from the workers.
 class facade {
+public:
+   using msg_handler_type =
+      std::function<void ( std::vector<std::string> const&
+                         , req_data const&)>;
+
 private:
    // The session used to subscribe to menu messages.
    session menu_sub;
@@ -45,21 +50,22 @@ private:
    session msg_not;
 
    // Redis session to send general commands.
-   session pub;
+   session pub_session;
 
    namespaces nms;
 
+   msg_handler_type worker_handler;
+
    // Retrieves user messages asynchronously. Called automatically and
    // not passed to the server_mgr.
-   void async_retrieve_user_msgs( boost::system::error_code const& ec
-                                , std::vector<std::string> const& data
-                                , req_data const& req);
+   void msg_not_handler( boost::system::error_code const& ec
+                       , std::vector<std::string> const& data
+                       , req_data const& req);
 
+   void pub_handler( boost::system::error_code const& ec
+                   , std::vector<std::string> const& data
+                   , req_data const& req);
 public:
-   using msg_handler_type =
-      std::function<void ( std::vector<std::string> const&
-                         , req_data const&)>;
-
    facade(config const& cf, net::io_context& ioc);
 
    // See redis_session.hpp for the signature of message handler.
@@ -107,7 +113,7 @@ public:
                                     , std::move(payload)
                                     , accumulator{});
 
-      pub.send({request::store_msg, std::move(cmd_str), ""});
+      pub_session.send({request::store_msg, std::move(cmd_str), ""});
    }
 
    // Publishes the message on a redis channel where it is broadcasted

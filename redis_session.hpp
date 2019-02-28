@@ -25,7 +25,6 @@ namespace rt::redis
 enum class request
 { get_menu
 , unsol_user_msgs
-, pub_msg_counter
 , store_msg
 , publish_menu_msg
 , publish

@@ -56,8 +56,6 @@ private:
 
    msg_handler_type worker_handler;
 
-   std::string pub_msg_buffer;
-
    // Retrieves user messages asynchronously. Called automatically and
    // not passed to the server_mgr.
    void msg_not_handler( boost::system::error_code const& ec

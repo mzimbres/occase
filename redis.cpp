@@ -98,16 +98,11 @@ facade::pub_handler( boost::system::error_code const& ec
       return;
    }
 
-   if (req.cmd == request::pub_msg_counter) {
-      std::cout << "Counter: " << data.front() << std::endl;
-      std::initializer_list<std::string> const param =
-         {nms.menu_channel, pub_msg_buffer};
-
-      auto cmd_str = resp_assemble( "PUBLISH"
-                                  , std::begin(param)
-                                  , std::end(param));
-
-      pub_session.send({request::publish, std::move(cmd_str), ""});
+   if (req.cmd == request::publish || req.cmd == request::unknown) {
+      //std::cout << "=======> ";
+      //for (auto const& o : data)
+      //  std::cout << o << " ";
+      //std::cout << std::endl;
       return;
    }
 
@@ -169,15 +164,30 @@ void facade::unsubscribe_to_chat_msgs(std::string const& id)
 
 void facade::publish_menu_msg(std::string msg)
 {
-   pub_msg_buffer = std::move(msg);
+   // Using pipeline and transactions toguether.
+   std::initializer_list<std::string> par0 = {};
 
-   std::initializer_list<std::string> const param = {"pub_counter"};
+   auto cmd = resp_assemble( "MULTI"
+                           , std::begin(par0)
+                           , std::end(par0));
 
-   auto cmd_str = resp_assemble( "INCR"
-                               , std::begin(param)
-                               , std::end(param));
+   std::initializer_list<std::string> par1 = {"pub_counter"};
 
-   pub_session.send({request::pub_msg_counter, std::move(cmd_str), ""});
+   cmd += resp_assemble( "INCR"
+                       , std::begin(par1)
+                       , std::end(par1));
+
+   std::initializer_list<std::string> par2 = {nms.menu_channel, msg};
+
+   cmd += resp_assemble( "PUBLISH"
+                       , std::begin(par2)
+                       , std::end(par2));
+
+   cmd += resp_assemble( "EXEC"
+                       , std::begin(par0)
+                       , std::end(par0));
+
+   pub_session.send({request::publish, std::move(cmd), ""});
 }
 
 void facade::disconnect()

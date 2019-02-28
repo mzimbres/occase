@@ -24,13 +24,14 @@ auto const pub_handler = []( auto const& ec
                        , auto const& data
                        , auto const& cmd)
 {
-     if (ec)
-        throw std::runtime_error(ec.message());
+   if (ec)
+     throw std::runtime_error(ec.message());
 
-     for (auto const& o : data)
-        std::cout << "Receivers: " << o << " ";
-     
-     std::cout << std::endl;
+  std::cout << "=======> ";
+   for (auto const& o : data)
+     std::cout << o << " ";
+
+   std::cout << std::endl;
 };
 
 void pub(session_cf const& cf, int count, char const* channel)
@@ -110,37 +111,27 @@ void sub(session_cf const& cf, char const* channel)
    ioc.run();
 }
 
-void pubsub(session_cf const& cf, int count, char const* channel)
+void transaction(session_cf const& cf)
 {
    boost::asio::io_context ioc;
+   session ss(cf, ioc, request::unknown);
+   ss.set_msg_handler(pub_handler);
 
-   session pub_session(cf, ioc, request::unknown);
-   pub_session.set_msg_handler(pub_handler);
-   for (auto i = 0; i < count; ++i) {
-      std::initializer_list<std::string const> const param =
-         {channel, std::to_string(i)};
+   std::initializer_list<std::string> par0 = {};
+   auto c1 = resp_assemble("MULTI", std::begin(par0), std::end(par0));
 
-      auto cmd_str = resp_assemble( "PUBLISH"
-                                  , std::begin(param)
-                                  , std::end(param));
+   std::initializer_list<std::string> par2 = {"pub_counter"};
+   c1 += resp_assemble("INCR", std::begin(par2), std::end(par2));
 
-      pub_session.send({request::publish, std::move(cmd_str), ""});
-   }
+   std::initializer_list<std::string> par1 = {"foo", "bar"};
+   c1 += resp_assemble("PUBLISH", std::begin(par1), std::end(par1));
 
-   pub_session.run();
+   c1 += resp_assemble("EXEC", std::begin(par0), std::end(par0));
 
-   session sub_session(cf, ioc, request::unsolicited_publish);
-   sub_session.set_msg_handler(sub_on_msg_handler);
+   ss.send({request::publish, std::move(c1), ""});
 
-   std::initializer_list<std::string const> const param =
-      {channel};
+   ss.run();
 
-   auto cmd_str = resp_assemble( "PUBLISH"
-                               , std::begin(param)
-                               , std::end(param));
-
-   sub_session.send({request::subscribe, std::move(cmd_str), ""});
-   sub_session.run();
    ioc.run();
 }
 
@@ -165,7 +156,7 @@ int main(int argc, char* argv[])
       , po::value<int>(&test)->default_value(-1)
       , " 1 pub.\n"
         " 2 sub.\n"
-        " 3 pubsub."
+        " 3 transaction."
       )
       ("count,c"
       , po::value<int>(&count)->default_value(20)
@@ -195,7 +186,7 @@ int main(int argc, char* argv[])
       }
 
       if (test == 3) {
-         pubsub(cf, count, channel);
+         transaction(cf);
          return 0;
       }
 

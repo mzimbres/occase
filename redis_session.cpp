@@ -12,8 +12,6 @@
 #include "config.hpp"
 #include "redis_session.hpp"
 
-// TODO: Try to reconnect if the connection to redis is lost.
-
 namespace rt::redis
 {
 
@@ -35,13 +33,13 @@ void session::run()
                            { on_resolve(ec, res); });
 }
 
-void session::send(req_data req)
+void session::send(std::string req)
 {
    auto const is_empty = std::empty(write_queue);
    write_queue.push(std::move(req));
 
    if (is_empty && socket.is_open())
-      net::async_write( socket, net::buffer(write_queue.front().msg)
+      net::async_write( socket, net::buffer(write_queue.front())
                       , [this](auto ec, auto n)
                         {on_write(ec, n);});
 }
@@ -87,7 +85,7 @@ void session::on_connect( boost::system::error_code const& ec
    // Consumes any messages that have been eventually posted while the
    // connection was not established.
    if (!std::empty(write_queue))
-      net::async_write( socket, net::buffer(write_queue.front().msg)
+      net::async_write( socket, net::buffer(write_queue.front())
                       , [this](auto ec, auto n)
                         { on_write(ec, n); });
 }
@@ -136,7 +134,7 @@ void session::on_resp(boost::system::error_code const& ec)
    }
 
    if (std::empty(write_queue)) {
-      msg_handler(ec, buffer.res, {cmd, {}, {}});
+      msg_handler(ec, buffer.res, {});
    } else {
       msg_handler(ec, buffer.res, write_queue.front());
       write_queue.pop();
@@ -145,7 +143,7 @@ void session::on_resp(boost::system::error_code const& ec)
    if (!ec && socket.is_open()) {
       start_reading_resp();
       if (!std::empty(write_queue))
-         net::async_write( socket, net::buffer(write_queue.front().msg)
+         net::async_write( socket, net::buffer(write_queue.front())
                          , [this](auto ec, auto n)
                            { on_write(ec, n); });
    }

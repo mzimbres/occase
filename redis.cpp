@@ -4,9 +4,9 @@ namespace rt::redis
 {
 
 facade::facade(config const& cf, net::io_context& ioc)
-: menu_sub_session(cf.sessions, ioc, request::unsolicited_publish)
-, msg_not(cf.sessions, ioc, request::unsolicited_key_not)
-, pub_session(cf.sessions, ioc, request::unknown)
+: menu_sub_session(cf.sessions, ioc)
+, msg_not(cf.sessions, ioc)
+, pub_session(cf.sessions, ioc)
 , nms(cf.nms)
 {
    auto const handler = [this]()
@@ -18,7 +18,7 @@ facade::facade(config const& cf, net::io_context& ioc)
                                   , std::begin(param)
                                   , std::end(param));
 
-      menu_sub_session.send({request::subscribe, std::move(cmd_str), ""});
+      menu_sub_session.send(std::move(cmd_str));
    };
 
    menu_sub_session.set_on_conn_handler(handler);
@@ -56,13 +56,13 @@ void facade::async_retrieve_menu()
                                , std::begin(param)
                                , std::end(param));
 
-   pub_session.send({request::get_menu, std::move(cmd_str), ""});
+   pub_session.send(std::move(cmd_str));
    pub_ev_queue.push({request::get_menu, {}});
 }
 
 void facade::sub_handler( boost::system::error_code const& ec
                         , std::vector<std::string> const& data
-                        , req_data const& req)
+                        , std::string const& req)
 {
    if (ec) {
       fail(ec,"sub_handler");
@@ -94,7 +94,7 @@ void facade::run()
 void
 facade::pub_handler( boost::system::error_code const& ec
                    , std::vector<std::string> const& data
-                   , req_data const& req)
+                   , std::string const& req)
 {
    // TODO: Should we handle this here or pass to the mgr?
    if (ec) {
@@ -124,7 +124,7 @@ facade::pub_handler( boost::system::error_code const& ec
 void
 facade::msg_not_handler( boost::system::error_code const& ec
                        , std::vector<std::string> const& data
-                       , req_data const& req)
+                       , std::string const& req)
 {
    // TODO: Handle ec.
    if (ec) {
@@ -147,8 +147,7 @@ facade::msg_not_handler( boost::system::error_code const& ec
                                , std::begin(param)
                                , std::end(param));
 
-   pub_session.send( {request::unsol_user_msgs, std::move(cmd_str)
-                   , user_id});
+   pub_session.send(std::move(cmd_str));
    pub_ev_queue.push({request::unsol_user_msgs, user_id});
 }
 
@@ -161,7 +160,7 @@ void facade::subscribe_to_chat_msgs(std::string const& id)
                                , std::begin(param)
                                , std::end(param));
 
-   msg_not.send({request::subscribe, std::move(cmd_str), ""});
+   msg_not.send(std::move(cmd_str));
 }
 
 void facade::unsubscribe_to_chat_msgs(std::string const& id)
@@ -173,7 +172,7 @@ void facade::unsubscribe_to_chat_msgs(std::string const& id)
                                , std::begin(param)
                                , std::end(param));
 
-   msg_not.send({request::unsubscribe, std::move(cmd_str), ""});
+   msg_not.send(std::move(cmd_str));
 }
 
 void facade::publish_menu_msg(std::string msg)
@@ -201,7 +200,7 @@ void facade::publish_menu_msg(std::string msg)
                        , std::begin(par0)
                        , std::end(par0));
 
-   pub_session.send({request::publish, std::move(cmd), ""});
+   pub_session.send(std::move(cmd));
    pub_ev_queue.push({request::ignore, {}});
    pub_ev_queue.push({request::ignore, {}});
    pub_ev_queue.push({request::ignore, {}});

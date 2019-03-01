@@ -37,7 +37,7 @@ auto const pub_handler = []( auto const& ec
 void pub(session_cf const& cf, int count, char const* channel)
 {
    boost::asio::io_context ioc;
-   session pub_session(cf, ioc, request::unknown);
+   session pub_session(cf, ioc);
    pub_session.set_msg_handler(pub_handler);
    for (auto i = 0; i < count; ++i) {
       auto const msg = std::to_string(i);
@@ -49,7 +49,7 @@ void pub(session_cf const& cf, int count, char const* channel)
                                   , std::begin(param)
                                   , std::end(param));
 
-      pub_session.send({request::publish, std::move(cmd_str), ""});
+      pub_session.send(std::move(cmd_str));
    }
 
    pub_session.run();
@@ -83,7 +83,7 @@ struct sub_arena {
    sub_arena( net::io_context& ioc
             , session_cf const& cf
             , std::string channel)
-   : s(cf, ioc, request::unsolicited_publish)
+   : s(cf, ioc)
    {
       s.set_msg_handler(sub_on_msg_handler);
 
@@ -96,7 +96,7 @@ struct sub_arena {
                                      , std::begin(param)
                                      , std::end(param));
 
-         s.send({request::subscribe, std::move(cmd_str), ""});
+         s.send(std::move(cmd_str));
       };
 
       s.set_on_conn_handler(on_conn_handler);
@@ -114,7 +114,7 @@ void sub(session_cf const& cf, char const* channel)
 void transaction(session_cf const& cf)
 {
    boost::asio::io_context ioc;
-   session ss(cf, ioc, request::unknown);
+   session ss(cf, ioc);
    ss.set_msg_handler(pub_handler);
 
    std::initializer_list<std::string> par0 = {};
@@ -128,7 +128,7 @@ void transaction(session_cf const& cf)
 
    c1 += resp_assemble("EXEC", std::begin(par0), std::end(par0));
 
-   ss.send({request::publish, std::move(c1), ""});
+   ss.send(std::move(c1));
 
    ss.run();
 

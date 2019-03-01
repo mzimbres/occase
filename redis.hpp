@@ -7,6 +7,20 @@
 namespace rt::redis
 {
 
+enum class request
+{ get_menu
+, unsol_user_msgs
+, ignore
+, store_msg
+, publish_menu_msg
+, publish
+, subscribe
+, unsubscribe
+, unsolicited_publish
+, unsolicited_key_not
+, unknown
+};
+
 struct req_item {
    request req;
    std::string user_id;
@@ -66,15 +80,15 @@ private:
    // not passed to the server_mgr.
    void msg_not_handler( boost::system::error_code const& ec
                        , std::vector<std::string> const& data
-                       , req_data const& req);
+                       , std::string const& req);
 
    void pub_handler( boost::system::error_code const& ec
                    , std::vector<std::string> const& data
-                   , req_data const& req);
+                   , std::string const& req);
 
    void sub_handler( boost::system::error_code const& ec
                    , std::vector<std::string> const& data
-                   , req_data const& req);
+                   , std::string const& req);
 public:
    facade(config const& cf, net::io_context& ioc);
 
@@ -125,7 +139,7 @@ public:
                                     , std::move(payload)
                                     , accumulator{});
 
-      pub_session.send({request::store_msg, std::move(cmd_str), ""});
+      pub_session.send(std::move(cmd_str));
       pub_ev_queue.push({request::store_msg, {}});
    }
 

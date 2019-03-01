@@ -22,26 +22,6 @@
 namespace rt::redis
 {
 
-enum class request
-{ get_menu
-, unsol_user_msgs
-, ignore
-, store_msg
-, publish_menu_msg
-, publish
-, subscribe
-, unsubscribe
-, unsolicited_publish
-, unsolicited_key_not
-, unknown
-};
-
-struct req_data {
-   request cmd = request::unknown;
-   std::string msg;
-   std::string user_id;
-};
-
 struct session_cf {
    std::string host;
    std::string port;
@@ -65,17 +45,16 @@ public:
    using msg_handler_type =
       std::function<void ( boost::system::error_code const&
                          , std::vector<std::string> const&
-                         , req_data const&)>;
+                         , std::string const&)>;
 private:
    session_cf cf;
    net::ip::tcp::resolver resolver;
    net::ip::tcp::socket socket;
    net::steady_timer timer;
    resp_buffer buffer;
-   std::queue<req_data> write_queue;
+   std::queue<std::string> write_queue;
    msg_handler_type msg_handler =
       []( auto const&, auto const&, auto const&) {};
-   request cmd = request::unknown;
 
    on_conn_handler_type on_conn_handler = []() {};
 
@@ -90,18 +69,15 @@ private:
                 , std::size_t n);
 
 public:
-   session( session_cf cf_
-          , net::io_context& ioc
-          , request cmd_)
+   session(session_cf cf_, net::io_context& ioc)
    : cf {cf_}
    , resolver {ioc} 
    , socket {ioc}
    , timer {ioc, std::chrono::steady_clock::time_point::max()}
-   , cmd {cmd_}
    { }
 
    void run();
-   void send(req_data req);
+   void send(std::string req);
    void close();
 
    void set_msg_handler(msg_handler_type handler)

@@ -79,7 +79,9 @@ void facade::sub_handler( boost::system::error_code const& ec
    assert(std::size(data) == 3);
 
    //assert(data[1] == nms.menu_channel);
-   worker_handler({std::move(data.back())}, req);
+   // TODO: Take data by value to be able to move items here.
+   worker_handler( {std::move(data.back())}
+                 , {request::unsolicited_publish, {}});
 }
 
 void facade::run()
@@ -115,8 +117,8 @@ facade::pub_handler( boost::system::error_code const& ec
       return;
    }
 
+   worker_handler({std::move(data.back())}, pub_ev_queue.front());
    pub_ev_queue.pop();
-   worker_handler({std::move(data.back())}, req);
 }
 
 void
@@ -145,7 +147,8 @@ facade::msg_not_handler( boost::system::error_code const& ec
                                , std::begin(param)
                                , std::end(param));
 
-   pub_session.send({request::unsol_user_msgs, std::move(cmd_str), user_id });
+   pub_session.send( {request::unsol_user_msgs, std::move(cmd_str)
+                   , user_id});
    pub_ev_queue.push({request::unsol_user_msgs, user_id});
 }
 

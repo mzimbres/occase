@@ -7,6 +7,11 @@
 namespace rt::redis
 {
 
+struct req_item {
+   request req;
+   std::string user_id;
+};
+
 // These are the namespaces used inside redis to separate the keys and
 // make it more easily use widecards on them.
 struct namespaces {
@@ -39,14 +44,9 @@ class facade {
 public:
    using msg_handler_type =
       std::function<void ( std::vector<std::string> const&
-                         , req_data const&)>;
+                         , req_item const&)>;
 
 private:
-   struct queue_item {
-      request req;
-      std::string user_id;
-   };
-
    // The session used to subscribe to menu messages.
    session menu_sub_session;
 
@@ -56,7 +56,7 @@ private:
 
    // Redis session to send general commands.
    session pub_session;
-   std::queue<queue_item> pub_ev_queue;
+   std::queue<req_item> pub_ev_queue;
 
    namespaces nms;
 

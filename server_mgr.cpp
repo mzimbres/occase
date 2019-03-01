@@ -46,7 +46,7 @@ void server_mgr::init()
    do_stats_logger();
 
    auto const handler = [this](auto const& data, auto const& req)
-   { redis_on_msg_handler(data, req); };
+   { on_db_msg_handler(data, req); };
 
    db.set_on_msg_handler(handler);
 
@@ -130,10 +130,10 @@ server_mgr::on_db_user_msgs( std::string const& user_id
 }
 
 void
-server_mgr::redis_on_msg_handler( std::vector<std::string> const& data
-                                , redis::req_data const& req)
+server_mgr::on_db_msg_handler( std::vector<std::string> const& data
+                             , redis::req_item const& req)
 {
-   switch (req.cmd)
+   switch (req.req)
    {
       case redis::request::unsol_user_msgs:
          on_db_user_msgs(req.user_id, data);

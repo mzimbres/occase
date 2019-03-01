@@ -56,9 +56,6 @@ private:
    // publish activity is observed.
    int ch_cleanup_freq; 
 
-   void redis_on_msg_handler( std::vector<std::string> const& resp
-                            , redis::req_data const& cmd);
-
    void do_stats_logger();
 
    void init();
@@ -87,8 +84,10 @@ private:
                        , std::vector<std::string> const& msgs) const;
 
    void on_db_get_menu(std::string const& data);
-
    void on_db_unsol_pub(std::string const& data);
+   void on_db_msg_handler( std::vector<std::string> const& resp
+                         , redis::req_item const& cmd);
+
 
 public:
    server_mgr(server_mgr_cf cf);

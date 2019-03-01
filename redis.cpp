@@ -19,7 +19,6 @@ facade::facade(config const& cf, net::io_context& ioc)
                                   , std::end(param));
 
       menu_sub_session.send({request::subscribe, std::move(cmd_str), ""});
-      menu_sub_ev_queue.push({request::ignore, {}});
    };
 
    menu_sub_session.set_on_conn_handler(handler);
@@ -70,20 +69,14 @@ void facade::sub_handler( boost::system::error_code const& ec
       return; // TODO: Add error handling.
    }
 
-   // This handler will receive a message with a not-empty queue only
-   // when it subscribes to a channel, this will happen only once. So
-   // it is easy to filter this event.
-   if (!std::empty(menu_sub_ev_queue)) {
-      menu_sub_ev_queue.pop();
-      return;
-   }
-
-   assert(std::size(data) == 3);
+   assert(!std::empty(data));
 
    // It looks like when subscribing to a redis channel, the
    // confimation is returned twice!?
    if (data.front() != "message")
       return;
+
+   assert(std::size(data) == 3);
 
    //assert(data[1] == nms.menu_channel);
    worker_handler({std::move(data.back())}, req);

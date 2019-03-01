@@ -49,7 +49,6 @@ private:
 
    // The session used to subscribe to menu messages.
    session menu_sub_session;
-   std::queue<queue_item> menu_sub_ev_queue;
 
    // The session used for keyspace notifications e.g. when the user
    // receives a message.

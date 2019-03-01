@@ -4,7 +4,7 @@ namespace rt::redis
 {
 
 facade::facade(config const& cf, net::io_context& ioc)
-: menu_sub(cf.sessions, ioc, request::unsolicited_publish)
+: menu_sub_session(cf.sessions, ioc, request::unsolicited_publish)
 , msg_not(cf.sessions, ioc, request::unsolicited_key_not)
 , pub_session(cf.sessions, ioc, request::unknown)
 , nms(cf.nms)
@@ -18,53 +18,20 @@ facade::facade(config const& cf, net::io_context& ioc)
                                   , std::begin(param)
                                   , std::end(param));
 
-      menu_sub.send({request::subscribe, std::move(cmd_str), ""});
+      menu_sub_session.send({request::subscribe, std::move(cmd_str), ""});
+      menu_sub_ev_queue.push({request::ignore, {}});
    };
 
-   menu_sub.set_on_conn_handler(handler);
+   menu_sub_session.set_on_conn_handler(handler);
 
    worker_handler = [](auto const& data, auto const& req) {};
-}
 
-void facade::async_retrieve_menu()
-{
-   std::initializer_list<std::string const> const param =
-      {nms.menu_key};
+   auto const subh = [this]( auto const& ec
+                           , auto const& data
+                           , auto const& req)
+   { sub_handler(ec, data, req); };
 
-   auto cmd_str = resp_assemble( "GET"
-                               , std::begin(param)
-                               , std::end(param));
-
-   pub_session.send({request::get_menu, std::move(cmd_str), ""});
-   pub_ev_queue.push(request::get_menu);
-}
-
-void facade::set_on_msg_handler(msg_handler_type h)
-{
-   worker_handler = h;
-
-   auto const sub_handler = [h]( auto const& ec
-                               , auto const& data
-                               , auto const& req)
-   {
-      if (ec) {
-         // TODO: Should we handle this here or pass to the mgr?
-         fail(ec,"sub_handler");
-         return;
-      }
-
-      assert(std::size(data) == 3);
-
-      // It looks like when subscribing to a redis channel, the
-      // confimation is returned twice!?
-      if (data.front() != "message")
-         return;
-
-      //assert(data[1] == nms.menu_channel);
-      h({std::move(data.back())}, req);
-   };
-
-   menu_sub.set_msg_handler(sub_handler);
+   menu_sub_session.set_msg_handler(subh);
 
    auto const pubh = [this]( auto const& ec
                            , auto const& data
@@ -81,9 +48,50 @@ void facade::set_on_msg_handler(msg_handler_type h)
    msg_not.set_msg_handler(key_not_handler);
 }
 
+void facade::async_retrieve_menu()
+{
+   std::initializer_list<std::string const> const param =
+      {nms.menu_key};
+
+   auto cmd_str = resp_assemble( "GET"
+                               , std::begin(param)
+                               , std::end(param));
+
+   pub_session.send({request::get_menu, std::move(cmd_str), ""});
+   pub_ev_queue.push({request::get_menu, {}});
+}
+
+void facade::sub_handler( boost::system::error_code const& ec
+                        , std::vector<std::string> const& data
+                        , req_data const& req)
+{
+   if (ec) {
+      fail(ec,"sub_handler");
+      return; // TODO: Add error handling.
+   }
+
+   // This handler will receive a message with a not-empty queue only
+   // when it subscribes to a channel, this will happen only once. So
+   // it is easy to filter this event.
+   if (!std::empty(menu_sub_ev_queue)) {
+      menu_sub_ev_queue.pop();
+      return;
+   }
+
+   assert(std::size(data) == 3);
+
+   // It looks like when subscribing to a redis channel, the
+   // confimation is returned twice!?
+   if (data.front() != "message")
+      return;
+
+   //assert(data[1] == nms.menu_channel);
+   worker_handler({std::move(data.back())}, req);
+}
+
 void facade::run()
 {
-   menu_sub.run();
+   menu_sub_session.run();
    msg_not.run();
    pub_session.run();
 }
@@ -104,12 +112,12 @@ facade::pub_handler( boost::system::error_code const& ec
    // This session is not subscribed to any unsolicited message.
    assert(!std::empty(pub_ev_queue));
 
-   if (pub_ev_queue.front() == request::ignore) {
+   if (pub_ev_queue.front().req == request::ignore) {
       pub_ev_queue.pop();
       return;
    }
 
-   if (pub_ev_queue.front() == request::publish) {
+   if (pub_ev_queue.front().req == request::publish) {
       pub_ev_queue.pop();
       return;
    }
@@ -145,7 +153,7 @@ facade::msg_not_handler( boost::system::error_code const& ec
                                , std::end(param));
 
    pub_session.send({request::unsol_user_msgs, std::move(cmd_str), user_id });
-   pub_ev_queue.push(request::unsol_user_msgs);
+   pub_ev_queue.push({request::unsol_user_msgs, user_id});
 }
 
 void facade::subscribe_to_chat_msgs(std::string const& id)
@@ -198,10 +206,10 @@ void facade::publish_menu_msg(std::string msg)
                        , std::end(par0));
 
    pub_session.send({request::publish, std::move(cmd), ""});
-   pub_ev_queue.push(request::ignore);
-   pub_ev_queue.push(request::ignore);
-   pub_ev_queue.push(request::ignore);
-   pub_ev_queue.push(request::publish);
+   pub_ev_queue.push({request::ignore, {}});
+   pub_ev_queue.push({request::ignore, {}});
+   pub_ev_queue.push({request::ignore, {}});
+   pub_ev_queue.push({request::publish, {}});
 }
 
 void facade::disconnect()
@@ -209,7 +217,7 @@ void facade::disconnect()
    std::cout << "Shuting down redis group subscribe session ..."
              << std::endl;
 
-   menu_sub.close();
+   menu_sub_session.close();
 
    std::cout << "Shuting down redis publish session ..."
              << std::endl;

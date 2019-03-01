@@ -42,8 +42,14 @@ public:
                          , req_data const&)>;
 
 private:
+   struct queue_item {
+      request req;
+      std::string user_id;
+   };
+
    // The session used to subscribe to menu messages.
-   session menu_sub;
+   session menu_sub_session;
+   std::queue<queue_item> menu_sub_ev_queue;
 
    // The session used for keyspace notifications e.g. when the user
    // receives a message.
@@ -51,7 +57,7 @@ private:
 
    // Redis session to send general commands.
    session pub_session;
-   std::queue<request> pub_ev_queue;
+   std::queue<queue_item> pub_ev_queue;
 
    namespaces nms;
 
@@ -66,13 +72,19 @@ private:
    void pub_handler( boost::system::error_code const& ec
                    , std::vector<std::string> const& data
                    , req_data const& req);
+
+   void sub_handler( boost::system::error_code const& ec
+                   , std::vector<std::string> const& data
+                   , req_data const& req);
 public:
    facade(config const& cf, net::io_context& ioc);
 
    // See redis_session.hpp for the signature of message handler.
    // Incomming message handlers will complete on this handler with
    // one of the possible codes defined in redis::request.
-   void set_on_msg_handler(msg_handler_type h);
+   void set_on_msg_handler(msg_handler_type h)
+      { worker_handler = h; }
+
    void run();
 
    // Retrieves the menu asynchronously. The callback will complete
@@ -115,7 +127,7 @@ public:
                                     , accumulator{});
 
       pub_session.send({request::store_msg, std::move(cmd_str), ""});
-      pub_ev_queue.push(request::store_msg);
+      pub_ev_queue.push({request::store_msg, {}});
    }
 
    // Publishes the message on a redis channel where it is broadcasted

@@ -51,6 +51,7 @@ private:
 
    // Redis session to send general commands.
    session pub_session;
+   std::queue<request> pub_ev_queue;
 
    namespaces nms;
 
@@ -114,6 +115,7 @@ public:
                                     , accumulator{});
 
       pub_session.send({request::store_msg, std::move(cmd_str), ""});
+      pub_ev_queue.push(request::store_msg);
    }
 
    // Publishes the message on a redis channel where it is broadcasted

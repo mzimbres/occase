@@ -36,6 +36,7 @@ void facade::async_retrieve_menu()
                                , std::end(param));
 
    pub_session.send({request::get_menu, std::move(cmd_str), ""});
+   pub_ev_queue.push(request::get_menu);
 }
 
 void facade::set_on_msg_handler(msg_handler_type h)
@@ -98,14 +99,22 @@ facade::pub_handler( boost::system::error_code const& ec
       return;
    }
 
-   if (req.cmd == request::publish || req.cmd == request::unknown) {
-      //std::cout << "=======> ";
-      //for (auto const& o : data)
-      //  std::cout << o << " ";
-      //std::cout << std::endl;
+   assert(!std::empty(data));
+
+   // This session is not subscribed to any unsolicited message.
+   assert(!std::empty(pub_ev_queue));
+
+   if (pub_ev_queue.front() == request::ignore) {
+      pub_ev_queue.pop();
       return;
    }
 
+   if (pub_ev_queue.front() == request::publish) {
+      pub_ev_queue.pop();
+      return;
+   }
+
+   pub_ev_queue.pop();
    worker_handler({std::move(data.back())}, req);
 }
 
@@ -136,6 +145,7 @@ facade::msg_not_handler( boost::system::error_code const& ec
                                , std::end(param));
 
    pub_session.send({request::unsol_user_msgs, std::move(cmd_str), user_id });
+   pub_ev_queue.push(request::unsol_user_msgs);
 }
 
 void facade::subscribe_to_chat_msgs(std::string const& id)
@@ -188,6 +198,10 @@ void facade::publish_menu_msg(std::string msg)
                        , std::end(par0));
 
    pub_session.send({request::publish, std::move(cmd), ""});
+   pub_ev_queue.push(request::ignore);
+   pub_ev_queue.push(request::ignore);
+   pub_ev_queue.push(request::ignore);
+   pub_ev_queue.push(request::publish);
 }
 
 void facade::disconnect()

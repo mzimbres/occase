@@ -12,13 +12,8 @@ enum class request
 , unsol_user_msgs
 , ignore
 , store_msg
-, publish_menu_msg
 , publish
-, subscribe
-, unsubscribe
 , unsolicited_publish
-, unsolicited_key_not
-, unknown
 };
 
 struct req_item {
@@ -106,16 +101,15 @@ public:
    // Instructs redis to notify us upon any change to the given
    // user_id. Once a notification arrives the server proceeds with
    // the retrieval of the message, which may be more than one by the
-   // time we get to it. We complete on the callback with
+   // time we get to it. User messages will complete on workers
+   // callback with
    // 
-   //    redis::request::subscribe
+   //    redis::request::unsol_user_msgs
    //
    void subscribe_to_chat_msgs(std::string const& user_id);
 
-   // Usubscribe to the notifications to the key. Completes with
-   //
-   //   redis::request::unsubscribe
-   //
+   // Usubscribe to the notifications to the key. On completion it
+   // calls no function on the worker side.
    void unsubscribe_to_chat_msgs(std::string const& user_id);
 
    // Used to asynchronously store messages on redis. Completes with

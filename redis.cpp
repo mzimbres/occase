@@ -25,24 +25,22 @@ facade::facade(config const& cf, net::io_context& ioc)
 
    worker_handler = [](auto const& data, auto const& req) {};
 
-   auto const subh = [this]( auto const& ec
-                           , auto const& data
+   auto const subh = [this]( auto const& ec, auto const& data
                            , auto const& req)
-   { sub_handler(ec, data, req); };
+      { sub_handler(ec, data, req); };
 
    menu_sub_session.set_msg_handler(subh);
 
    auto const pubh = [this]( auto const& ec
                            , auto const& data
                            , auto const& req)
-   { pub_handler(ec, data, req); };
+      { pub_handler(ec, data, req); };
 
    pub_session.set_msg_handler(pubh);
 
-   auto const key_not_handler = [this]( auto const& ec
-                                      , auto const& data
+   auto const key_not_handler = [this]( auto const& ec, auto const& data
                                       , auto const& req)
-   { msg_not_handler(ec, data, req); };
+      { msg_not_handler(ec, data, req); };
 
    msg_not.set_msg_handler(key_not_handler);
 }

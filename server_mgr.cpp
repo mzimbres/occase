@@ -35,7 +35,7 @@ void server_mgr::init()
    auto const sig_handler = [this](auto const& ec, auto n)
    {
       // TODO: Verify ec here?
-      std::cout << "\nBeginning the shutdown operations ..."
+      std::clog << "\nBeginning the shutdown operations ..."
                 << std::endl;
 
       shutdown();

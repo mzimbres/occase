@@ -54,7 +54,7 @@ private:
    resp_buffer buffer;
    std::queue<std::string> write_queue;
    msg_handler_type msg_handler =
-      []( auto const&, auto const&, auto const&) {};
+      [](auto const&, auto const&, auto const&) {};
 
    on_conn_handler_type on_conn_handler = []() {};
 
@@ -81,10 +81,10 @@ public:
    void close();
 
    void set_msg_handler(msg_handler_type handler)
-   { msg_handler = std::move(handler);};
+      { msg_handler = std::move(handler);};
 
    void set_on_conn_handler(on_conn_handler_type handler)
-   { on_conn_handler = std::move(handler);};
+      { on_conn_handler = std::move(handler);};
 };
 
 }

@@ -45,10 +45,10 @@ struct session_timeouts {
 };
 
 struct proxy_session {
-   // We have to use a unique pointer here. A share_ptr does not work.
+   // We have to use a weak pointer here. A share_ptr does not work.
    // Even when the proxy_session object is explicitly killed. The
-   // object is killed only after the last weak_ptr is destructed. The
-   // shared_ptr will live that long in that case.
+   // object is itself killed only after the last weak_ptr is
+   // destructed. The shared_ptr will live that long in that case.
    std::weak_ptr<server_session> session;
 };
 
@@ -115,7 +115,7 @@ public:
    void promote()
       { code.clear(); }
    void set_code(std::string code_)
-      {code = std::move(code_);}
+      { code = std::move(code_);}
    auto const& get_code() const
       { return code; }
    void set_id(std::string id)

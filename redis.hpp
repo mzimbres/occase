@@ -27,7 +27,7 @@ struct req_item {
 };
 
 // These are the namespaces used inside redis to separate the keys and
-// make it more easily use widecards on them.
+// make it easier to use widecards.
 struct namespaces {
    // The name of the channel where all *publish* commands will be
    // sent.
@@ -77,7 +77,7 @@ private:
    msg_handler_type worker_handler;
 
    // Retrieves user messages asynchronously. Called automatically and
-   // not passed to the server_mgr.
+   // not passed to worker.
    void msg_not_handler( boost::system::error_code const& ec
                        , std::vector<std::string> const& data
                        , std::string const& req);
@@ -92,8 +92,7 @@ private:
 public:
    facade(config const& cf, net::io_context& ioc);
 
-   // See redis_session.hpp for the signature of message handler.
-   // Incomming message handlers will complete on this handler with
+   // Incomming message will complete on this handler with
    // one of the possible codes defined in redis::request.
    void set_on_msg_handler(msg_handler_type h)
       { worker_handler = h; }

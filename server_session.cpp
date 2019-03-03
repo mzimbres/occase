@@ -35,7 +35,7 @@ server_session::~server_session()
                               , std::end(msg_queue)
                               , cond);
 
-      auto const d = std::distance(point, std::end(msg_queue));
+      auto const d = std::distance(std::begin(msg_queue), point);
       std::vector<std::string> msgs;
       msgs.reserve(d);
 
@@ -47,7 +47,9 @@ server_session::~server_session()
                     , std::back_inserter(msgs)
                     , transformer);
 
-      std::cout << "dtor: Ramaining msgs: " << std::size(msgs) << std::endl;
+      std::cout << "Session dying with msgs: " << std::size(msgs)
+                << std::endl;
+
       mgr->on_session_dtor(std::move(user_id), std::move(msgs));
    }
 
@@ -57,16 +59,13 @@ server_session::~server_session()
 void server_session::accept()
 {
    auto const handler = [p = shared_from_this()]()
-   {
-      p->do_accept();
-   };
+      { p->do_accept(); };
 
    net::post(net::bind_executor(strand, handler));
 }
 
 void server_session::do_accept()
 {
-   //auto const handler0 = [](auto kind, auto payload)
    auto const handler0 = [this](auto kind, auto payload)
    {
       if (kind == beast::websocket::frame_type::close) {
@@ -78,7 +77,7 @@ void server_session::do_accept()
          pp_state = ping_pong::pong_received;
       }
 
-      boost::ignore_unused(kind, payload);
+      boost::ignore_unused(payload);
    };
 
    ws.control_callback(handler0);
@@ -104,9 +103,7 @@ void server_session::do_accept()
    timer.async_wait(net::bind_executor(strand, handler1));
 
    auto handler2 = [p = shared_from_this()](auto ec)
-   {
-      p->on_accept(ec);
-   };
+      { p->on_accept(ec); };
 
    ws.async_accept(net::bind_executor(strand, handler2));
 }
@@ -151,7 +148,7 @@ void server_session::on_accept(boost::system::error_code ec)
 void server_session::do_read()
 {
    auto handler = [p = shared_from_this()](auto ec, auto n)
-   { p->on_read(ec, n); };
+      { p->on_read(ec, n); };
 
    ws.async_read(buffer, net::bind_executor(strand, handler));
 }
@@ -207,9 +204,7 @@ void server_session::do_close()
 
    //std::cout << "server_session::do_close()" << std::endl;
    auto const handler = [p = shared_from_this()](auto ec)
-   { 
-      p->on_close(ec);
-   };
+      { p->on_close(ec); };
 
    beast::websocket::close_reason reason {};
    ws.async_close(reason, net::bind_executor(strand, handler));
@@ -219,9 +214,7 @@ void server_session::send(std::string msg, bool persist)
 {
    auto const handler =
       [e = std::move(msg), persist, p = shared_from_this()]()
-   {
-      p->do_send({e, persist});
-   };
+      { p->do_send({e, persist}); };
 
    net::post(net::bind_executor(strand, handler));
 }
@@ -229,9 +222,7 @@ void server_session::send(std::string msg, bool persist)
 void server_session::shutdown()
 {
    auto const handler = [p = shared_from_this()]()
-   {
-      p->do_close();
-   };
+      { p->do_close(); };
 
    net::post(net::bind_executor(strand, handler));
 }
@@ -424,7 +415,7 @@ void server_session::do_write(std::string const& msg)
    ws.text(ws.got_text());
 
    auto handler = [p = shared_from_this()](auto ec, auto n)
-   { p->on_write(ec, n); };
+      { p->on_write(ec, n); };
 
    ws.async_write( net::buffer(msg)
                  , net::bind_executor(strand, handler));
@@ -434,7 +425,6 @@ void server_session::do_send(msg_entry entry)
 {
    auto const is_empty = std::empty(msg_queue);
 
-   // TODO: Impose a limit on how big the queue can grow.
    msg_queue.push_back(std::move(entry));
 
    if (is_empty && !closing)

@@ -14,6 +14,7 @@ enum class request
 , store_msg
 , publish
 , unsolicited_publish
+, pub_counter
 };
 
 struct req_item {
@@ -144,6 +145,8 @@ public:
    //    redis::request::publish
    //
    void publish_menu_msg(std::string msg);
+
+   void request_pub_id();
 
    // Closes the connections to redis.
    void disconnect();

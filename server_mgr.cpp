@@ -149,9 +149,19 @@ server_mgr::on_db_msg_handler( std::vector<std::string> const& data
          on_db_unsol_pub(data.back());
          break;
 
+      case redis::request::pub_counter:
+         assert(std::size(data) == 1);
+         on_db_pub_counter(data.back());
+         break;
+
       default:
          break;
    }
+}
+
+void server_mgr::on_db_pub_counter(std::string const& data)
+{
+   std::cout << data << std::endl;
 }
 
 ev_res
@@ -361,6 +371,7 @@ server_mgr::on_user_publish(json j, std::shared_ptr<server_session> s)
    items.front().id = ms;
    json const j_item = items.front();
    db.publish_menu_msg(j_item.dump());
+   db.request_pub_id();
 
    json ack;
    ack["cmd"] = "publish_ack";

@@ -182,12 +182,6 @@ void facade::publish_menu_msg(std::string msg)
                            , std::begin(par0)
                            , std::end(par0));
 
-   std::initializer_list<std::string> par1 = {"pub_counter"};
-
-   cmd += resp_assemble( "INCR"
-                       , std::begin(par1)
-                       , std::end(par1));
-
    std::initializer_list<std::string> par2 = {nms.menu_channel, msg};
 
    cmd += resp_assemble( "PUBLISH"
@@ -201,8 +195,19 @@ void facade::publish_menu_msg(std::string msg)
    pub_session.send(std::move(cmd));
    pub_ev_queue.push({request::ignore, {}});
    pub_ev_queue.push({request::ignore, {}});
-   pub_ev_queue.push({request::ignore, {}});
    pub_ev_queue.push({request::publish, {}});
+}
+
+void facade::request_pub_id()
+{
+   std::initializer_list<std::string> par1 = {"pub_counter"};
+
+   auto cmd = resp_assemble( "INCR"
+                           , std::begin(par1)
+                           , std::end(par1));
+
+   pub_session.send(std::move(cmd));
+   pub_ev_queue.push({request::pub_counter, {}});
 }
 
 void facade::disconnect()

@@ -87,6 +87,7 @@ private:
    void on_db_unsol_pub(std::string const& data);
    void on_db_msg_handler( std::vector<std::string> const& resp
                          , redis::req_item const& cmd);
+   void on_db_pub_counter(std::string const& data);
 
 
 public:

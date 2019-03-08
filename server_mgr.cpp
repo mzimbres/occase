@@ -159,9 +159,38 @@ server_mgr::on_db_msg_handler( std::vector<std::string> const& data
    }
 }
 
-void server_mgr::on_db_pub_counter(std::string const& data)
+void server_mgr::on_db_pub_counter(std::string const& pub_id_str)
 {
-   std::cout << data << std::endl;
+   auto const pub_id = std::stoi(pub_id_str);
+   std::cout << pub_id << std::endl;
+
+   pub_wait_queue.front().item.id = pub_id;
+   json const j_item = pub_wait_queue.front().item;
+   db.publish_menu_msg(j_item.dump());
+   auto session = pub_wait_queue.front().session;
+   pub_wait_queue.pop();
+
+   json ack;
+   ack["cmd"] = "publish_ack";
+   ack["result"] = "ok";
+   ack["id"] = pub_id;
+   auto const ack_str = ack.dump();
+
+   if (auto s = session.lock()) {
+      s->send(ack_str, true);
+      return;
+   }
+
+   // If we get here the user is not online anymore. This should be a
+   // very rare situation since requesting an id takes milliseconds.
+   // We simply store his ack in the database for later retrieval, for
+   // that however we need the user id. It shall be difficult to test
+   // this.
+   // TODO: Add a new string member in the pub queue item to store the
+   // user id in case he is not online anymore. Another option would
+   // be to pass a shared pointer, but that has other problems. For
+   // example if for anyreason the redis session never returns the
+   // session will leave forever.
 }
 
 ev_res
@@ -341,14 +370,19 @@ server_mgr::on_user_publish(json j, std::shared_ptr<server_session> s)
    //    channel code. This also makes the code a bit more
    //    complicated.
    auto items = j.at("items").get<std::vector<pub_item>>();
-   assert(std::size(items) == 1);
+
+   // Before we request a new pub id, we have to check that the post
+   // is valid and will not be refused later. This prevents the pub
+   // items from being incremented on an invalid message. May be
+   // overkill since we do not expect the app to contain so sever
+   // bugs.
 
    // The channel code has the form [[1, 2], [2, 3, 4], [1, 2]]
    // where each array in the outermost array refers to one menu.
    auto const code = convert_to_channel_code(items.front().to);
 
    auto const g = channels.find(code);
-   if (g == std::end(channels)) {
+   if (g == std::end(channels) || std::size(items) != 1) {
       std::cout << code << std::endl;
       // This is a non-existing channel. Perhaps the json command was
       // sent with the wrong information signaling a logic error in
@@ -363,21 +397,9 @@ server_mgr::on_user_publish(json j, std::shared_ptr<server_session> s)
       return ev_res::publish_fail;
    }
 
-   using ms_type = std::chrono::milliseconds;
-
-   auto const tse = std::chrono::system_clock::now().time_since_epoch();
-   auto const ms = std::chrono::duration_cast<ms_type>(tse).count();
-
-   items.front().id = ms;
-   json const j_item = items.front();
-   db.publish_menu_msg(j_item.dump());
+   pub_wait_queue.push({s, std::move(items.front())});
    db.request_pub_id();
 
-   json ack;
-   ack["cmd"] = "publish_ack";
-   ack["result"] = "ok";
-   ack["id"] = ms;
-   s->send(ack.dump(), false);
    return ev_res::publish_ok;
 }
 

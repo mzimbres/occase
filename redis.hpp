@@ -133,6 +133,7 @@ public:
                                     , std::move(payload)
                                     , accumulator{});
 
+      //std::cout << "store_msg" << std::endl;
       pub_session.send(std::move(cmd_str));
       pub_ev_queue.push({request::store_msg, {}});
    }

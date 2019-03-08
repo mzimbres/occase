@@ -178,23 +178,23 @@ void facade::publish_menu_msg(std::string msg)
    // Using pipeline and transactions toguether.
    std::initializer_list<std::string> par0 = {};
 
-   auto cmd = resp_assemble( "MULTI"
-                           , std::begin(par0)
-                           , std::end(par0));
+   //auto cmd = resp_assemble( "MULTI"
+   //                        , std::begin(par0)
+   //                        , std::end(par0));
 
    std::initializer_list<std::string> par2 = {nms.menu_channel, msg};
 
-   cmd += resp_assemble( "PUBLISH"
+   auto cmd = resp_assemble( "PUBLISH"
                        , std::begin(par2)
                        , std::end(par2));
 
-   cmd += resp_assemble( "EXEC"
-                       , std::begin(par0)
-                       , std::end(par0));
+   //cmd += resp_assemble( "EXEC"
+   //                    , std::begin(par0)
+   //                    , std::end(par0));
 
    pub_session.send(std::move(cmd));
-   pub_ev_queue.push({request::ignore, {}});
-   pub_ev_queue.push({request::ignore, {}});
+   //pub_ev_queue.push({request::ignore, {}});
+   //pub_ev_queue.push({request::ignore, {}});
    pub_ev_queue.push({request::publish, {}});
 }
 

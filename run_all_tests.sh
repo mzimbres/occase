@@ -6,7 +6,7 @@
 
 #./reg_users_tests -u $users -g $launch_interval
 
-./publish_tests --publishers 7 \
-                --listeners 7 \
+./publish_tests --publishers 20 \
+                --listeners 20 \
                 --simulations 3 \
                 --handshake-timeout 3

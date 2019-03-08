@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stack>
+#include <queue>
 #include <vector>
 #include <memory>
 #include <string>
@@ -29,6 +30,13 @@ struct sessions_stats {
    int number_of_sessions {0};
 };
 
+// We have to store publish items in this queue while we wait for
+// the pub id that were requested from redis.
+struct pub_queue_item {
+   std::weak_ptr<server_session> session;
+   pub_item item;
+};
+
 class server_mgr {
 private:
    net::io_context ioc {1};
@@ -51,6 +59,10 @@ private:
    std::vector<menu_elem> menus;
 
    net::steady_timer stats_timer;
+
+   // Queue of user posts waiting for an id that has been requested
+   // from redis.
+   std::queue<pub_queue_item> pub_wait_queue;
 
    // This is the frequency we will be cleaning up the channel if no
    // publish activity is observed.
@@ -88,7 +100,6 @@ private:
    void on_db_msg_handler( std::vector<std::string> const& resp
                          , redis::req_item const& cmd);
    void on_db_pub_counter(std::string const& data);
-
 
 public:
    server_mgr(server_mgr_cf cf);

@@ -35,6 +35,7 @@ struct sessions_stats {
 struct pub_queue_item {
    std::weak_ptr<server_session> session;
    pub_item item;
+   std::string user_id;
 };
 
 class server_mgr {

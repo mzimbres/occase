@@ -161,20 +161,24 @@ server_mgr::on_db_msg_handler( std::vector<std::string> const& data
 
 void server_mgr::on_db_pub_counter(std::string const& pub_id_str)
 {
-   auto const pub_id = std::stoi(pub_id_str);
-   std::cout << pub_id << std::endl;
-
-   pub_wait_queue.front().item.id = pub_id;
+   pub_wait_queue.front().item.id = std::stoi(pub_id_str);
+   std::cout << pub_wait_queue.front().item.id << std::endl;
    json const j_item = pub_wait_queue.front().item;
+   auto const user_id = pub_wait_queue.front().user_id;
    db.publish_menu_msg(j_item.dump());
-   auto session = pub_wait_queue.front().session;
-   pub_wait_queue.pop();
 
+   // It is important that the publisher receives this message before
+   // any user sends him a user message about the post. He needs a
+   // pub_id to know to which post the user refers to.
    json ack;
    ack["cmd"] = "publish_ack";
    ack["result"] = "ok";
-   ack["id"] = pub_id;
+   ack["id"] = pub_wait_queue.front().item.id;
    auto const ack_str = ack.dump();
+
+   // Done with the post.
+   auto session = pub_wait_queue.front().session;
+   pub_wait_queue.pop();
 
    if (auto s = session.lock()) {
       s->send(ack_str, true);
@@ -183,14 +187,15 @@ void server_mgr::on_db_pub_counter(std::string const& pub_id_str)
 
    // If we get here the user is not online anymore. This should be a
    // very rare situation since requesting an id takes milliseconds.
-   // We simply store his ack in the database for later retrieval, for
-   // that however we need the user id. It shall be difficult to test
+   // We can simply store his ack in the database for later retrieval
+   // when the user connects again. It shall be difficult to test
    // this.
-   // TODO: Add a new string member in the pub queue item to store the
-   // user id in case he is not online anymore. Another option would
-   // be to pass a shared pointer, but that has other problems. For
-   // example if for anyreason the redis session never returns the
-   // session will leave forever.
+
+   std::initializer_list<std::string> param = {ack_str};
+
+   db.async_store_chat_msg( std::move(user_id)
+                          , std::make_move_iterator(std::begin(param))
+                          , std::make_move_iterator(std::end(param)));
 }
 
 ev_res
@@ -397,7 +402,7 @@ server_mgr::on_user_publish(json j, std::shared_ptr<server_session> s)
       return ev_res::publish_fail;
    }
 
-   pub_wait_queue.push({s, std::move(items.front())});
+   pub_wait_queue.push({s, std::move(items.front()), items.front().from});
    db.request_pub_id();
 
    return ev_res::publish_ok;

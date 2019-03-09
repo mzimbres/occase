@@ -9,6 +9,7 @@
 #include "menu.hpp"
 #include "server_session.hpp"
 #include "json_utils.hpp"
+#include "utils.hpp"
 
 namespace rt
 {
@@ -18,10 +19,12 @@ namespace rt
  *    The number of members in a channel is expected be on the
  *    thousands, let us say 50k. The operations performed are
  *
- *    1. Insert very often on the back.
+ *    1. Insert sessions very often on the back.
  *    2. Traverse on every publication in the channel. Some channels
  *       have high publication rate.
- *    3. Remove not very frequently.
+ *    3. Remove sessions. Not very frequently and perhaps not at all.
+ *       The session simply expires and we are left with an expired
+ *       std::weak_ptr.
  *
  *    To deal with 3. we introduced the proxy pointers, see
  *    server_session for more details.
@@ -45,7 +48,7 @@ namespace rt
  *      average memory used will be only half of the memory allocated.
  *      This happens because vectors allocate doubling the current
  *      size.  This is nice to avoid reallocations very often, but
- *      given that we may have hundreds of thousends of vectors. There
+ *      given that we may have hundreds of thousands of vectors. There
  *      will be too much memory wasted. To deal with that we have to
  *      release memory once a stable number of users has been reached,
  *      letting only a small margin for growth. A std::deque could be
@@ -93,12 +96,12 @@ private:
       return n - begin + 1;
    }
 
-   void store_item(pub_item item)
+   void store_item(pub_item item, int max_posts)
    {
       // We have to ensure this vector stays ordered according to
-      // publish ids (time stamps). Most of the time there will be no
-      // problem, but it still may happen that messages are routed to
-      // us out of order. Insertion sort is necessary.
+      // publish ids. Most of the time there will be no problem, but
+      // it still may happen that messages are routed to us out of
+      // order. Insertion sort is necessary.
       items.push_back(std::move(item));
 
       auto prev = std::prev(std::end(items));
@@ -108,18 +111,20 @@ private:
                  , prev
                  , std::end(items));
 
-      // TODO: Limit the size it can grow.
+      // Limits the container size.
+      if (ssize(items) > max_posts)
+         items.pop_front();
    }
 
 public:
-   void broadcast(pub_item item)
+   void broadcast(pub_item item, int max_posts)
    {
       json j_pub;
       j_pub["cmd"] = "publish";
       j_pub["items"] = std::vector<pub_item>{item};
 
       auto const msg = j_pub.dump();
-      store_item(std::move(item));
+      store_item(std::move(item), max_posts);
 
       auto const f = [&](auto session)
       { session->send(msg, false); };
@@ -129,8 +134,7 @@ public:
       insertions_on_inactivity = 0;
    }
 
-   void add_member( std::weak_ptr<proxy_session> s
-                  , int cleanup_freq)
+   void add_member( std::weak_ptr<proxy_session> s, int cleanup_freq)
    {
       members.push_back(s);
 

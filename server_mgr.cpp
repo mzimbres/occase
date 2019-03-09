@@ -25,7 +25,8 @@ server_mgr::server_mgr(server_mgr_cf cf)
 , timeouts(cf.timeouts)
 , db(cf.redis_cf, ioc)
 , stats_timer(ioc)
-, ch_cleanup_freq(cf.channel_cleanup_frequency)
+, ch_cleanup_rate(cf.ch_cleanup_rate)
+, ch_max_posts(cf.ch_cleanup_rate)
 {
    net::post(ioc, [this]() {init();});
 }
@@ -100,7 +101,7 @@ void server_mgr::on_db_unsol_pub(std::string const& data)
       return;
    }
 
-   g->second.broadcast(item, 20);
+   g->second.broadcast(item, ch_max_posts);
 }
 
 void
@@ -342,7 +343,7 @@ server_mgr::on_user_subscribe( json const& j
       }
 
       g->second.retrieve_pub_items(0, std::back_inserter(items));
-      g->second.add_member(s->get_proxy_session(true), ch_cleanup_freq);
+      g->second.add_member(s->get_proxy_session(true), ch_cleanup_rate);
       ++n_channels;
    }
 

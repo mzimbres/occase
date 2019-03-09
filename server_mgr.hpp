@@ -23,7 +23,8 @@ namespace rt
 struct server_mgr_cf {
    redis::config redis_cf;
    session_timeouts timeouts;
-   int channel_cleanup_frequency; 
+   int ch_cleanup_rate; 
+   int ch_max_posts; 
 };
 
 struct sessions_stats {
@@ -67,7 +68,10 @@ private:
 
    // This is the frequency we will be cleaning up the channel if no
    // publish activity is observed.
-   int ch_cleanup_freq; 
+   int ch_cleanup_rate; 
+
+   // Max number of messages stored in the each channel.
+   int ch_max_posts; 
 
    void do_stats_logger();
 

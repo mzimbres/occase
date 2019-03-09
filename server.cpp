@@ -90,11 +90,18 @@ auto get_server_op(int argc, char* argv[])
      "close frame that has been sent to the client."
    )
 
-   ("channel-cleanup-frequeny,E"
-   , po::value<int>(&cf.mgr.channel_cleanup_frequency)->default_value(128)
-   , "This is the frequency channels will be  cleaned up if"
-     " no publish activity is observed. Incremented on every channel"
-     " insertion."
+   ("channel-cleanup-rate,E"
+   , po::value<int>(&cf.mgr.ch_cleanup_rate)->default_value(128)
+   , "The rate channels will be  cleaned up if"
+     " no publish activity is observed. Incremented on every publication"
+     " on the channel."
+   )
+
+   ("channel-max-posts,T"
+   , po::value<int>(&cf.mgr.ch_max_posts)->default_value(32)
+   , "Max number of messages stored in each channel. Posting on a"
+     " channel that reached this number of message will cause old"
+     " messages to be removed."
    )
 
    ("redis-address"

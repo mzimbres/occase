@@ -44,8 +44,7 @@ public:
 
    using msg_handler_type =
       std::function<void ( boost::system::error_code const&
-                         , std::vector<std::string> const&
-                         , std::string const&)>;
+                         , std::vector<std::string> const&)>;
 private:
    session_cf cf;
    net::ip::tcp::resolver resolver;
@@ -53,8 +52,7 @@ private:
    net::steady_timer timer;
    resp_buffer buffer;
    std::queue<std::string> write_queue;
-   msg_handler_type msg_handler =
-      [](auto const&, auto const&, auto const&) {};
+   msg_handler_type msg_handler = [](auto const&, auto const&) {};
 
    on_conn_handler_type on_conn_handler = []() {};
 

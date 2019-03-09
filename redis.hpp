@@ -75,16 +75,13 @@ private:
    // Retrieves user messages asynchronously. Called automatically and
    // not passed to worker.
    void msg_not_handler( boost::system::error_code const& ec
-                       , std::vector<std::string> const& data
-                       , std::string const& req);
+                       , std::vector<std::string> const& data);
 
    void pub_handler( boost::system::error_code const& ec
-                   , std::vector<std::string> const& data
-                   , std::string const& req);
+                   , std::vector<std::string> const& data);
 
    void sub_handler( boost::system::error_code const& ec
-                   , std::vector<std::string> const& data
-                   , std::string const& req);
+                   , std::vector<std::string> const& data);
 public:
    facade(config const& cf, net::io_context& ioc);
 

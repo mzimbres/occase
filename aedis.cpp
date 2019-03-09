@@ -20,9 +20,7 @@ namespace po = boost::program_options;
 // TODO: Implement all tests with arena to be able to test
 // reconnection to redis properly.
 
-auto const pub_handler = []( auto const& ec
-                       , auto const& data
-                       , auto const& cmd)
+auto const pub_handler = [](auto const& ec, auto const& data)
 {
    if (ec)
      throw std::runtime_error(ec.message());
@@ -57,9 +55,8 @@ void pub(session_cf const& cf, int count, char const* channel)
    ioc.run();
 }
 
-auto const sub_on_msg_handler = [i = 0]( auto const& ec
-                                       , auto const& data
-                                       , auto const& cmd) mutable
+auto const sub_on_msg_handler =
+   [i = 0]( auto const& ec, auto const& data) mutable
 {
    if (ec) 
       throw std::runtime_error(ec.message());

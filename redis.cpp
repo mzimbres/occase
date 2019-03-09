@@ -25,24 +25,20 @@ facade::facade(config const& cf, net::io_context& ioc)
 
    worker_handler = [](auto const& data, auto const& req) {};
 
-   auto const subh = [this]( auto const& ec, auto const& data
-                           , auto const& req)
-      { sub_handler(ec, data, req); };
+   auto const subh = [this](auto const& ec, auto const& data)
+      { sub_handler(ec, data); };
 
    menu_sub_session.set_msg_handler(subh);
 
-   auto const pubh = [this]( auto const& ec
-                           , auto const& data
-                           , auto const& req)
-      { pub_handler(ec, data, req); };
+   auto const pubh = [this](auto const& ec, auto const& data)
+      { pub_handler(ec, data); };
 
    pub_session.set_msg_handler(pubh);
 
-   auto const key_not_handler = [this]( auto const& ec, auto const& data
-                                      , auto const& req)
-      { msg_not_handler(ec, data, req); };
+   auto const key_not_hdl = [this](auto const& ec, auto const& data)
+      { msg_not_handler(ec, data); };
 
-   msg_not.set_msg_handler(key_not_handler);
+   msg_not.set_msg_handler(key_not_hdl);
 }
 
 void facade::async_retrieve_menu()
@@ -59,8 +55,7 @@ void facade::async_retrieve_menu()
 }
 
 void facade::sub_handler( boost::system::error_code const& ec
-                        , std::vector<std::string> const& data
-                        , std::string const& req)
+                        , std::vector<std::string> const& data)
 {
    if (ec) {
       fail(ec,"sub_handler");
@@ -91,11 +86,9 @@ void facade::run()
 
 void
 facade::pub_handler( boost::system::error_code const& ec
-                   , std::vector<std::string> const& data
-                   , std::string const& req)
+                   , std::vector<std::string> const& data)
 {
-   // TODO: Should we handle this here or pass to the mgr?
-   if (ec) {
+   if (ec) { // TODO: Should we handle this here or pass to the mgr?
       fail(ec,"pub_handler");
       return;
    }
@@ -121,12 +114,11 @@ facade::pub_handler( boost::system::error_code const& ec
 
 void
 facade::msg_not_handler( boost::system::error_code const& ec
-                       , std::vector<std::string> const& data
-                       , std::string const& req)
+                       , std::vector<std::string> const& data)
 {
    // TODO: Handle ec.
    if (ec) {
-      fail(ec,"pub_handler");
+      fail(ec,"msg_not_handler");
       return;
    }
 

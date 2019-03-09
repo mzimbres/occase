@@ -21,16 +21,18 @@ void session::on_resolve( boost::system::error_code const& ec
    if (ec)
       return fail(ec, "resolve");
 
-   net::async_connect( socket, results
-                     , [this](auto ec, auto iter)
-                       { on_connect(ec, iter); });
+   auto const handler = [this](auto ec, auto iter)
+      { on_connect(ec, iter); };
+
+   net::async_connect(socket, results, handler);
 }
 
 void session::run()
 {
-   resolver.async_resolve( cf.host, cf.port
-                         , [this](auto ec, auto res)
-                           { on_resolve(ec, res); });
+   auto const handler = [this](auto ec, auto res)
+      { on_resolve(ec, res); };
+
+   resolver.async_resolve(cf.host, cf.port, handler );
 }
 
 void session::send(std::string req)
@@ -40,8 +42,7 @@ void session::send(std::string req)
 
    if (is_empty && socket.is_open())
       net::async_write( socket, net::buffer(write_queue.front())
-                      , [this](auto ec, auto n)
-                        {on_write(ec, n);});
+                      , [this](auto ec, auto n) {on_write(ec, n);});
 }
 
 void session::close()
@@ -61,9 +62,11 @@ void session::close()
 void session::start_reading_resp()
 {
    buffer.res.clear();
-   async_read_resp( socket, &buffer
-                  , [this](auto const& ec)
-                    { on_resp(ec); });
+
+   auto const handler = [this](auto const& ec)
+      { on_resp(ec); };
+
+   async_read_resp(socket, &buffer, handler);
 }
 
 void session::on_connect( boost::system::error_code const& ec
@@ -133,19 +136,15 @@ void session::on_resp(boost::system::error_code const& ec)
       return;
    }
 
-   if (std::empty(write_queue)) {
-      msg_handler(ec, buffer.res, {});
-   } else {
-      msg_handler(ec, buffer.res, write_queue.front());
+   msg_handler(ec, buffer.res);
+   if (!std::empty(write_queue))
       write_queue.pop();
-   }
 
    if (!ec && socket.is_open()) {
       start_reading_resp();
       if (!std::empty(write_queue))
          net::async_write( socket, net::buffer(write_queue.front())
-                         , [this](auto ec, auto n)
-                           { on_write(ec, n); });
+                         , [this](auto ec, auto n) { on_write(ec, n); });
    }
 }
 

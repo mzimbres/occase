@@ -97,17 +97,23 @@ auto get_server_op(int argc, char* argv[])
      " on the channel."
    )
 
-   ("channel-max-posts,T"
+   ("max-msgs-per-channels,T"
    , po::value<int>(&cf.mgr.ch_max_posts)->default_value(32)
-   , "Max number of messages stored in each channel. Posting on a"
-     " channel that reached this number of message will cause old"
+   , "Max number of messages stored per channel. Posting on a"
+     " channel that reached this number of messages will cause old"
      " messages to be removed."
    )
 
-   ("channel-max-subscribe,S"
+   ("max-channels-subscribe,S"
    , po::value<int>(&cf.mgr.ch_max_sub)->default_value(1024)
-   , "The maximum number of channels are allowed to subscribe to."
+   , "The maximum number of channels the user is allowed to subscribe to."
      " Remaining channels will be ignored."
+   )
+
+   ("max-menu-msgs-on-subscribe,u"
+   , po::value<int>(&cf.mgr.max_menu_msg_on_sub)->default_value(50)
+   , "The maximum number of messages that is allowed to be sent to "
+     "the user when he subscribes to his channels."
    )
 
    ("redis-address"

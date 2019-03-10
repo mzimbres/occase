@@ -26,6 +26,7 @@ struct server_mgr_cf {
    int ch_cleanup_rate; 
    int ch_max_posts; 
    int ch_max_sub; 
+   int max_menu_msg_on_sub; 
 };
 
 struct sessions_stats {
@@ -56,6 +57,10 @@ private:
    // The maximum number of channels a user is allowed to subscribe
    // to. Remaining channels will be ignored.
    int const ch_max_sub; 
+
+   // The maximum number of channels the is allowed to be sent to the
+   // user on subscribe.
+   int const max_menu_msg_on_sub; 
 
    net::io_context ioc {1};
    net::signal_set signals;

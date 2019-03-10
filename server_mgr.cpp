@@ -25,6 +25,7 @@ server_mgr::server_mgr(server_mgr_cf cf, int id_)
 , ch_cleanup_rate(cf.ch_cleanup_rate)
 , ch_max_posts(cf.ch_max_posts)
 , ch_max_sub(cf.ch_max_sub)
+, max_menu_msg_on_sub(cf.max_menu_msg_on_sub)
 , signals(ioc, SIGINT, SIGTERM)
 , timeouts(cf.timeouts)
 , db(cf.redis_cf, ioc)
@@ -173,7 +174,7 @@ void server_mgr::on_db_publish()
 void server_mgr::on_db_pub_counter(std::string const& pub_id_str)
 {
    pub_wait_queue.front().item.id = std::stoi(pub_id_str);
-   std::cout << pub_wait_queue.front().item.id << std::endl;
+   //std::cout << pub_wait_queue.front().item.id << std::endl;
    json const j_item = pub_wait_queue.front().item;
    db.publish_menu_msg(j_item.dump());
 
@@ -363,6 +364,23 @@ server_mgr::on_user_subscribe( json const& j
    auto const n = ch_max_sub > size ? size : ch_max_sub;
    auto const end = std::begin(ch_codes) + n;
    std::for_each(std::begin(ch_codes), end, func);
+
+   if (ssize(items) > max_menu_msg_on_sub) {
+      auto const d = ssize(items) - max_menu_msg_on_sub;
+      std::cout << "====> " << d << std::endl;
+      // Notice here we want to move the most recent elements to the
+      // front of the vector.
+      auto comp = [](auto const& a, auto const& b)
+         { return a.id > b.id; };
+
+      std::nth_element( std::begin(items)
+                      , std::begin(items) + max_menu_msg_on_sub
+                      , std::end(items)
+                      , comp);
+
+      items.erase( std::begin(items) + max_menu_msg_on_sub
+                 , std::end(items));
+   }
 
    //std::cout << "Size of retrieved items: "
    //          << std::size(items) << std::endl;

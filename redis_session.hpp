@@ -42,9 +42,13 @@ class session {
 public:
    using on_conn_handler_type = std::function<void()>;
 
+   using on_disconnect_handler_type =
+      std::function<void ( boost::system::error_code const&)>;
+
    using msg_handler_type =
       std::function<void ( boost::system::error_code const&
                          , std::vector<std::string> const&)>;
+
 private:
    session_cf cf;
    net::ip::tcp::resolver resolver;
@@ -52,9 +56,10 @@ private:
    net::steady_timer timer;
    resp_buffer buffer;
    std::queue<std::string> msg_queue;
-   msg_handler_type msg_handler = [](auto const&, auto const&) {};
 
+   msg_handler_type on_msg_handler = [](auto const&, auto const&) {};
    on_conn_handler_type on_conn_handler = [](){};
+   on_disconnect_handler_type on_disconnect_handler = [](auto const&){};
 
    void start_reading_resp();
 
@@ -74,15 +79,18 @@ public:
    , timer {ioc, std::chrono::steady_clock::time_point::max()}
    { }
 
-   void run();
-   void send(std::string req);
-   void close();
-
-   void set_msg_handler(msg_handler_type handler)
-      { msg_handler = std::move(handler);};
-
    void set_on_conn_handler(on_conn_handler_type handler)
       { on_conn_handler = std::move(handler);};
+
+   void set_on_disconnect_handler(on_disconnect_handler_type handler)
+      { on_disconnect_handler = std::move(handler);};
+
+   void set_msg_handler(msg_handler_type handler)
+      { on_msg_handler = std::move(handler);};
+
+   void send(std::string req);
+   void close();
+   void run();
 };
 
 }

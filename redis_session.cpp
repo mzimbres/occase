@@ -86,7 +86,7 @@ void session::on_connect( boost::system::error_code const& ec
    start_reading_resp();
 
    // Calls user callback to inform a successfull connect to redis.
-   // He may wish to start sending some command.
+   // It may wish to start sending some command.
    on_conn_handler();
 
    // Consumes any messages that have been eventually posted while the
@@ -140,7 +140,7 @@ void session::on_resp(boost::system::error_code const& ec)
       return;
    }
 
-   msg_handler(ec, buffer.res);
+   on_msg_handler(ec, buffer.res);
    if (!std::empty(msg_queue))
       msg_queue.pop();
 

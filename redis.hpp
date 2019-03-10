@@ -79,16 +79,17 @@ private:
 
    msg_handler_type worker_handler;
 
+   void menu_sub_handler( boost::system::error_code const& ec
+                        , std::vector<std::string> const& data);
+
+   void menu_pub_handler( boost::system::error_code const& ec
+                        , std::vector<std::string> const& data);
+
    // Retrieves user messages asynchronously. Called automatically and
    // not passed to worker.
-   void msg_not_handler( boost::system::error_code const& ec
-                       , std::vector<std::string> const& data);
+   void user_msg_sub_handler( boost::system::error_code const& ec
+                            , std::vector<std::string> const& data);
 
-   void pub_handler( boost::system::error_code const& ec
-                   , std::vector<std::string> const& data);
-
-   void sub_handler( boost::system::error_code const& ec
-                   , std::vector<std::string> const& data);
 public:
    facade(config const& cf, net::io_context& ioc);
 

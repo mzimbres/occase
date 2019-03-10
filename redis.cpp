@@ -26,20 +26,20 @@ facade::facade(config const& cf, net::io_context& ioc)
 
    worker_handler = [](auto const& data, auto const& req) {};
 
-   auto const subh = [this](auto const& ec, auto const& data)
-      { sub_handler(ec, data); };
+   auto const a = [this](auto const& ec, auto const& data)
+      { menu_sub_handler(ec, data); };
 
-   ss_menu_sub.set_msg_handler(subh);
+   ss_menu_sub.set_msg_handler(a);
 
-   auto const pubh = [this](auto const& ec, auto const& data)
-      { pub_handler(ec, data); };
+   auto const b = [this](auto const& ec, auto const& data)
+      { menu_pub_handler(ec, data); };
 
-   ss_menu_pub.set_msg_handler(pubh);
+   ss_menu_pub.set_msg_handler(b);
 
-   auto const key_not_hdl = [this](auto const& ec, auto const& data)
-      { msg_not_handler(ec, data); };
+   auto const c = [this](auto const& ec, auto const& data)
+      { user_msg_sub_handler(ec, data); };
 
-   ss_user_msg_sub.set_msg_handler(key_not_hdl);
+   ss_user_msg_sub.set_msg_handler(c);
 }
 
 void facade::async_retrieve_menu()
@@ -55,11 +55,11 @@ void facade::async_retrieve_menu()
    pub_ev_queue.push({request::get_menu, {}});
 }
 
-void facade::sub_handler( boost::system::error_code const& ec
+void facade::menu_sub_handler( boost::system::error_code const& ec
                         , std::vector<std::string> const& data)
 {
    if (ec) {
-      fail(ec,"sub_handler");
+      fail(ec,"menu_sub_handler");
       return; // TODO: Add error handling.
    }
 
@@ -86,11 +86,11 @@ void facade::run()
 }
 
 void
-facade::pub_handler( boost::system::error_code const& ec
-                   , std::vector<std::string> const& data)
+facade::menu_pub_handler( boost::system::error_code const& ec
+                        , std::vector<std::string> const& data)
 {
    if (ec) { // TODO: Should we handle this here or pass to the mgr?
-      fail(ec,"pub_handler");
+      fail(ec,"menu_pub_handler");
       return;
    }
 
@@ -109,12 +109,11 @@ facade::pub_handler( boost::system::error_code const& ec
 }
 
 void
-facade::msg_not_handler( boost::system::error_code const& ec
-                       , std::vector<std::string> const& data)
+facade::user_msg_sub_handler( boost::system::error_code const& ec
+                            , std::vector<std::string> const& data)
 {
-   // TODO: Handle ec.
    if (ec) {
-      fail(ec,"msg_not_handler");
+      fail(ec,"user_msg_sub_handler");
       return;
    }
 
@@ -125,7 +124,7 @@ facade::msg_not_handler( boost::system::error_code const& ec
    assert(std::size(data) == 3);
    auto const n = data[1].rfind(":");
    assert(n != std::string::npos);
-   std::string const user_id = data[1].substr(n + 1);
+   auto const user_id = data[1].substr(n + 1);
    std::initializer_list<std::string> const param =
       {nms.msg_prefix + user_id};
 

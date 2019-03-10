@@ -35,10 +35,14 @@ void session::run()
    resolver.async_resolve(cf.host, cf.port, handler );
 }
 
-void session::send(std::string req)
+void session::send(std::string msg)
 {
    auto const is_empty = std::empty(msg_queue);
-   msg_queue.push(std::move(req));
+
+   if (is_empty || std::size(msg_queue) == 1)
+      msg_queue.push(std::move(msg));
+   else
+      msg_queue.back() += msg; // Uses pipeline.
 
    if (is_empty && socket.is_open())
       net::async_write( socket, net::buffer(msg_queue.front())

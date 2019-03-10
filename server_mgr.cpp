@@ -23,7 +23,8 @@ namespace rt
 server_mgr::server_mgr(server_mgr_cf cf, int id_)
 : id(id_)
 , ch_cleanup_rate(cf.ch_cleanup_rate)
-, ch_max_posts(cf.ch_cleanup_rate)
+, ch_max_posts(cf.ch_max_posts)
+, ch_max_sub(cf.ch_max_sub)
 , signals(ioc, SIGINT, SIGTERM)
 , timeouts(cf.timeouts)
 , db(cf.redis_cf, ioc)
@@ -332,24 +333,36 @@ server_mgr::on_user_subscribe( json const& j
 
    auto const arrays = channel_codes(codes, menus);
    std::vector<std::uint64_t> ch_codes;
+
+   auto const converter = [this](auto const& o)
+      { return convert_to_channel_code(o);};
+
    std::transform( std::begin(arrays), std::end(arrays)
                  , std::back_inserter(ch_codes)
-                 , [this](auto const& o) {
-                   return convert_to_channel_code(o);});
+                 , converter);
 
    auto n_channels = 0;
    std::vector<pub_item> items;
-   for (auto const& o : ch_codes) {
-      auto const g = channels.find(o);
-      if (g == std::end(channels)) {
-         std::cout << "Cannot find channel " << o << std::endl;
-         continue;
-      }
 
+   auto func = [&, this](auto const& o)
+   {
+      auto const g = channels.find(o);
+      assert(g != std::end(channels));
+      if (g == std::end(channels))
+         return;
+
+      // TODO: Change 0 with the latest id the user has received.
       g->second.retrieve_pub_items(0, std::back_inserter(items));
-      g->second.add_member(s->get_proxy_session(true), ch_cleanup_rate);
+      g->second.add_member( s->get_proxy_session(true)
+                          , ch_cleanup_rate);
       ++n_channels;
-   }
+   };
+
+   // TODO: Update the compiler and use std::for_each_n.
+   auto const size = ssize(ch_codes);
+   auto const n = ch_max_sub > size ? size : ch_max_sub;
+   auto const end = std::begin(ch_codes) + n;
+   std::for_each(std::begin(ch_codes), end, func);
 
    //std::cout << "Size of retrieved items: "
    //          << std::size(items) << std::endl;

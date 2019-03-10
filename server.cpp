@@ -104,6 +104,12 @@ auto get_server_op(int argc, char* argv[])
      " messages to be removed."
    )
 
+   ("channel-max-subscribe,S"
+   , po::value<int>(&cf.mgr.ch_max_sub)->default_value(1024)
+   , "The maximum number of channels are allowed to subscribe to."
+     " Remaining channels will be ignored."
+   )
+
    ("redis-address"
    , po::value<std::string>(&cf.mgr.redis_cf.sessions.host)->
        default_value("127.0.0.1")

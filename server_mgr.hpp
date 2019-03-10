@@ -25,6 +25,7 @@ struct server_mgr_cf {
    session_timeouts timeouts;
    int ch_cleanup_rate; 
    int ch_max_posts; 
+   int ch_max_sub; 
 };
 
 struct sessions_stats {
@@ -51,6 +52,10 @@ private:
 
    // Max number of messages stored in the each channel.
    int const ch_max_posts; 
+
+   // The maximum number of channels a user is allowed to subscribe
+   // to. Remaining channels will be ignored.
+   int const ch_max_sub; 
 
    net::io_context ioc {1};
    net::signal_set signals;

@@ -29,10 +29,13 @@ facade::facade(config const& cf, net::io_context& ioc)
       { on_menu_pub_msg(ec, data); };
    auto on_msg_c = [this](auto const& ec, auto const& data)
       { on_user_msg_sub_msg(ec, data); };
+   auto on_msg_d = [this](auto const& ec, auto const& data)
+      { on_user_msg_retr_msg(ec, data); };
 
    ss_menu_sub.set_msg_handler(on_msg_a);
    ss_menu_pub.set_msg_handler(on_msg_b);
    ss_user_msg_sub.set_msg_handler(on_msg_c);
+   ss_user_msg_retr.set_msg_handler(on_msg_d);
 }
 
 void facade::on_menu_sub_conn()
@@ -103,15 +106,28 @@ void facade::on_menu_sub_msg( boost::system::error_code const& ec
 void facade::run()
 {
    ss_menu_sub.run();
-   ss_user_msg_sub.run();
    ss_menu_pub.run();
+   ss_user_msg_sub.run();
+   ss_user_msg_retr.run();
+}
+
+void
+facade::on_user_msg_retr_msg( boost::system::error_code const& ec
+                       , std::vector<std::string> const& data)
+{
+   if (ec) {
+      fail(ec,"on_user_msg_retr_msg");
+      return;
+   }
+
+   assert(!std::empty(data));
 }
 
 void
 facade::on_menu_pub_msg( boost::system::error_code const& ec
                        , std::vector<std::string> const& data)
 {
-   if (ec) { // TODO: Should we handle this here or pass to the mgr?
+   if (ec) {
       fail(ec,"on_menu_pub_msg");
       return;
    }
@@ -221,20 +237,17 @@ void facade::request_pub_id()
 
 void facade::disconnect()
 {
-   std::cout << "Shuting down redis group subscribe session ..."
-             << std::endl;
-
+   std::clog << "ss_menu_sub: Closing." << std::endl;
    ss_menu_sub.close();
 
-   std::cout << "Shuting down redis publish session ..."
-             << std::endl;
-
+   std::clog << "ss_menu_sub: Closing." << std::endl;
    ss_menu_pub.close();
 
-   std::cout << "Shuting down redis user msg subscribe session ..."
-             << std::endl;
-
+   std::clog << "ss_menu_pub: Closing." << std::endl;
    ss_user_msg_sub.close();
+
+   std::clog << "ss_user_msg_retr: Closing." << std::endl;
+   ss_user_msg_retr.close();
 }
 
 }

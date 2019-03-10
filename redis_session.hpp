@@ -51,7 +51,7 @@ private:
    net::ip::tcp::socket socket;
    net::steady_timer timer;
    resp_buffer buffer;
-   std::queue<std::string> write_queue;
+   std::queue<std::string> msg_queue;
    msg_handler_type msg_handler = [](auto const&, auto const&) {};
 
    on_conn_handler_type on_conn_handler = []() {};

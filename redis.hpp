@@ -89,6 +89,9 @@ private:
    void on_user_msg_sub_msg( boost::system::error_code const& ec
                            , std::vector<std::string> const& data);
 
+   void on_user_msg_retr_msg( boost::system::error_code const& ec
+                            , std::vector<std::string> const& data);
+
    // Callback called when sessions connect to redis server.
    void on_menu_sub_conn();
    void on_menu_pub_conn();

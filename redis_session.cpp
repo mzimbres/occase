@@ -37,11 +37,11 @@ void session::run()
 
 void session::send(std::string req)
 {
-   auto const is_empty = std::empty(write_queue);
-   write_queue.push(std::move(req));
+   auto const is_empty = std::empty(msg_queue);
+   msg_queue.push(std::move(req));
 
    if (is_empty && socket.is_open())
-      net::async_write( socket, net::buffer(write_queue.front())
+      net::async_write( socket, net::buffer(msg_queue.front())
                       , [this](auto ec, auto n) {on_write(ec, n);});
 }
 
@@ -87,8 +87,8 @@ void session::on_connect( boost::system::error_code const& ec
 
    // Consumes any messages that have been eventually posted while the
    // connection was not established.
-   if (!std::empty(write_queue))
-      net::async_write( socket, net::buffer(write_queue.front())
+   if (!std::empty(msg_queue))
+      net::async_write( socket, net::buffer(msg_queue.front())
                       , [this](auto ec, auto n)
                         { on_write(ec, n); });
 }
@@ -137,13 +137,13 @@ void session::on_resp(boost::system::error_code const& ec)
    }
 
    msg_handler(ec, buffer.res);
-   if (!std::empty(write_queue))
-      write_queue.pop();
+   if (!std::empty(msg_queue))
+      msg_queue.pop();
 
    if (!ec && socket.is_open()) {
       start_reading_resp();
-      if (!std::empty(write_queue))
-         net::async_write( socket, net::buffer(write_queue.front())
+      if (!std::empty(msg_queue))
+         net::async_write( socket, net::buffer(msg_queue.front())
                          , [this](auto ec, auto n) { on_write(ec, n); });
    }
 }

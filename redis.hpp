@@ -44,7 +44,7 @@ struct namespaces {
 };
 
 struct config {
-   session_cf sessions;
+   session_cf ss_cf;
    namespaces nms;
 };
 

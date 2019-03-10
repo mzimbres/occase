@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <stdexcept>
 #include <string_view>
 
 #include <boost/asio.hpp>
@@ -14,6 +15,16 @@
 
 namespace rt::redis
 {
+
+session::session(session_cf cf_, net::io_context& ioc)
+: cf {cf_}
+, resolver {ioc} 
+, socket {ioc}
+, timer {ioc, std::chrono::steady_clock::time_point::max()}
+{
+   if (cf.max_pipeline_size < 1)
+      throw std::runtime_error("session: Invalid max pipeline size.");
+}
 
 void session::on_resolve( boost::system::error_code const& ec
                         , net::ip::tcp::resolver::results_type results)
@@ -39,10 +50,19 @@ void session::send(std::string msg)
 {
    auto const is_empty = std::empty(msg_queue);
 
-   if (is_empty || std::size(msg_queue) == 1)
+   auto const max_pp_size_reached =
+      pipeline_counter >= cf.max_pipeline_size;
+
+   if (max_pp_size_reached) {
+      pipeline_counter = 0;
+   }
+
+   if (is_empty || std::size(msg_queue) == 1 || max_pp_size_reached) {
       msg_queue.push(std::move(msg));
-   else
+   } else {
       msg_queue.back() += msg; // Uses pipeline.
+      ++pipeline_counter;
+   }
 
    if (is_empty && socket.is_open())
       net::async_write( socket, net::buffer(msg_queue.front())

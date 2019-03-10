@@ -116,20 +116,30 @@ auto get_server_op(int argc, char* argv[])
      "the user when he subscribes to his channels."
    )
 
-   ("redis-address"
-   , po::value<std::string>(&cf.mgr.redis_cf.sessions.host)->
+   ("redis-server-address"
+   , po::value<std::string>(&cf.mgr.redis_cf.ss_cf.host)->
        default_value("127.0.0.1")
    , "Address of the redis server."
    )
-   ("redis-port"
-   , po::value<std::string>(&cf.mgr.redis_cf.sessions.port)->
+
+   ("redis-server-port"
+   , po::value<std::string>(&cf.mgr.redis_cf.ss_cf.port)->
        default_value("6379")
    , "Port where redis server is listening."
    )
+
+   ("redis-max-pipeline-size"
+   , po::value<int>(&cf.mgr.redis_cf.ss_cf.max_pipeline_size)->
+       default_value(10000)
+   , "The maximum allowed size of pipelined commands in the redis "
+     " session."
+   )
+
    ("redis-database"
    , po::value<std::string>(&redis_db)->default_value("0")
    , "The redis database to use: 0, 1, 2 etc."
    )
+
    ("redis-menu-channel"
    , po::value<std::string>(&cf.mgr.redis_cf.nms.menu_channel)->
         default_value("menu_channel")
@@ -167,7 +177,7 @@ auto get_server_op(int argc, char* argv[])
    cf.mgr.redis_cf.nms.msg_prefix += ":";
    cf.mgr.redis_cf.nms.notify_prefix += redis_db + "__:";
    cf.mgr.redis_cf.nms.notify_prefix += cf.mgr.redis_cf.nms.msg_prefix;
-   cf.mgr.redis_cf.sessions.conn_retry_interval =
+   cf.mgr.redis_cf.ss_cf.conn_retry_interval =
       std::chrono::milliseconds{conn_retry_interval};
    cf.mgr.timeouts = cf.get_timeouts();
    return cf;

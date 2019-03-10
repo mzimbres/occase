@@ -36,6 +36,10 @@ struct session_cf {
    // and join the publish channel. This situation is not likely to
    // occurr and it may be easier to restart the server.
    std::chrono::milliseconds conn_retry_interval {500};
+
+   // We have to restrict the length of the pipeline to not block
+   // redis for long periods.
+   int max_pipeline_size;
 };
 
 class session {
@@ -56,6 +60,7 @@ private:
    net::steady_timer timer;
    resp_buffer buffer;
    std::queue<std::string> msg_queue;
+   int pipeline_counter = 0;
 
    msg_handler_type on_msg_handler = [](auto const&, auto const&) {};
    on_conn_handler_type on_conn_handler = [](){};
@@ -72,12 +77,7 @@ private:
                 , std::size_t n);
 
 public:
-   session(session_cf cf_, net::io_context& ioc)
-   : cf {cf_}
-   , resolver {ioc} 
-   , socket {ioc}
-   , timer {ioc, std::chrono::steady_clock::time_point::max()}
-   { }
+   session(session_cf cf_, net::io_context& ioc);
 
    void set_on_conn_handler(on_conn_handler_type handler)
       { on_conn_handler = std::move(handler);};

@@ -4,10 +4,10 @@ namespace rt::redis
 {
 
 facade::facade(config const& cf, net::io_context& ioc)
-: ss_menu_sub(cf.sessions, ioc)
-, ss_menu_pub(cf.sessions, ioc)
-, ss_user_msg_sub(cf.sessions, ioc)
-, ss_user_msg_retr(cf.sessions, ioc)
+: ss_menu_sub(cf.ss_cf, ioc)
+, ss_menu_pub(cf.ss_cf, ioc)
+, ss_user_msg_sub(cf.ss_cf, ioc)
+, ss_user_msg_retr(cf.ss_cf, ioc)
 , nms(cf.nms)
 , worker_handler([](auto const& data, auto const& req) {})
 {

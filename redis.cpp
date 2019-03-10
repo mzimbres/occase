@@ -103,11 +103,6 @@ facade::pub_handler( boost::system::error_code const& ec
       return;
    }
 
-   if (pub_ev_queue.front().req == request::publish) {
-      pub_ev_queue.pop();
-      return;
-   }
-
    worker_handler({std::move(data.back())}, pub_ev_queue.front());
    pub_ev_queue.pop();
 }

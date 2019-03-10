@@ -68,10 +68,10 @@ private:
 
    // This is the frequency we will be cleaning up the channel if no
    // publish activity is observed.
-   int ch_cleanup_rate; 
+   int const ch_cleanup_rate; 
 
    // Max number of messages stored in the each channel.
-   int ch_max_posts; 
+   int const ch_max_posts; 
 
    void do_stats_logger();
 
@@ -105,6 +105,7 @@ private:
    void on_db_msg_handler( std::vector<std::string> const& resp
                          , redis::req_item const& cmd);
    void on_db_pub_counter(std::string const& data);
+   void on_db_publish();
 
 public:
    server_mgr(server_mgr_cf cf);

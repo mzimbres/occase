@@ -155,9 +155,20 @@ server_mgr::on_db_msg_handler( std::vector<std::string> const& data
          on_db_pub_counter(data.back());
          break;
 
+      case redis::request::publish:
+         on_db_publish();
+         break;
+
       default:
          break;
    }
+}
+
+void server_mgr::on_db_publish()
+{
+   pub_wait_queue.pop();
+   if (!std::empty(pub_wait_queue))
+      db.request_pub_id();
 }
 
 void server_mgr::on_db_pub_counter(std::string const& pub_id_str)
@@ -165,7 +176,6 @@ void server_mgr::on_db_pub_counter(std::string const& pub_id_str)
    pub_wait_queue.front().item.id = std::stoi(pub_id_str);
    std::cout << pub_wait_queue.front().item.id << std::endl;
    json const j_item = pub_wait_queue.front().item;
-   auto const user_id = pub_wait_queue.front().user_id;
    db.publish_menu_msg(j_item.dump());
 
    // It is important that the publisher receives this message before
@@ -177,11 +187,7 @@ void server_mgr::on_db_pub_counter(std::string const& pub_id_str)
    ack["id"] = pub_wait_queue.front().item.id;
    auto const ack_str = ack.dump();
 
-   // Done with the post.
-   auto session = pub_wait_queue.front().session;
-   pub_wait_queue.pop();
-
-   if (auto s = session.lock()) {
+   if (auto s = pub_wait_queue.front().session.lock()) {
       s->send(ack_str, true);
       return;
    }
@@ -194,7 +200,7 @@ void server_mgr::on_db_pub_counter(std::string const& pub_id_str)
 
    std::initializer_list<std::string> param = {ack_str};
 
-   db.async_store_chat_msg( std::move(user_id)
+   db.async_store_chat_msg( std::move(pub_wait_queue.front().user_id)
                           , std::make_move_iterator(std::begin(param))
                           , std::make_move_iterator(std::end(param)));
 }
@@ -362,19 +368,8 @@ server_mgr::on_user_subscribe( json const& j
 ev_res
 server_mgr::on_user_publish(json j, std::shared_ptr<server_session> s)
 {
-   // Though the publish command is vectorial allowing the delivery of
-   // meny items at the same time, the app is required to send only
-   // one item. The reasons are
-   //
-   // 1. We want to ack every publish. This can be handled by making
-   //    the ack to also be vectorial. But this makes the code more
-   //    difficult.
-   // 2. Each publish item needs an id which at the moment is a
-   //    timestamp. Maybe if we change this to be a centralized
-   //    counter, we could implement vectorized publish acks.
-   // 3. We want to test that each individual item has a correct
-   //    channel code. This also makes the code a bit more
-   //    complicated.
+   // TODO: Remove the restriction below that the items vector have
+   // size one.
    auto items = j.at("items").get<std::vector<pub_item>>();
 
    // Before we request a new pub id, we have to check that the post
@@ -403,8 +398,12 @@ server_mgr::on_user_publish(json j, std::shared_ptr<server_session> s)
       return ev_res::publish_fail;
    }
 
+   auto const is_empty = std::empty(pub_wait_queue);
+
    pub_wait_queue.push({s, std::move(items.front()), items.front().from});
-   db.request_pub_id();
+
+   if (is_empty)
+      db.request_pub_id();
 
    return ev_res::publish_ok;
 }

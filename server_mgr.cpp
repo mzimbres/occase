@@ -20,13 +20,14 @@ std::mutex m;
 namespace rt
 {
 
-server_mgr::server_mgr(server_mgr_cf cf)
-: signals(ioc, SIGINT, SIGTERM)
+server_mgr::server_mgr(server_mgr_cf cf, int id_)
+: id(id_)
+, ch_cleanup_rate(cf.ch_cleanup_rate)
+, ch_max_posts(cf.ch_cleanup_rate)
+, signals(ioc, SIGINT, SIGTERM)
 , timeouts(cf.timeouts)
 , db(cf.redis_cf, ioc)
 , stats_timer(ioc)
-, ch_cleanup_rate(cf.ch_cleanup_rate)
-, ch_max_posts(cf.ch_cleanup_rate)
 {
    net::post(ioc, [this]() {init();});
 }
@@ -36,9 +37,7 @@ void server_mgr::init()
    auto const sig_handler = [this](auto const& ec, auto n)
    {
       // TODO: Verify ec here?
-      std::clog << "\nBeginning the shutdown operations ..."
-                << std::endl;
-
+      std::clog << "Shutting down server " << id << std::endl;
       shutdown();
    };
 
@@ -46,8 +45,8 @@ void server_mgr::init()
 
    do_stats_logger();
 
-   auto const handler = [this](auto const& data, auto const& req)
-   { on_db_msg_handler(data, req); };
+   auto handler = [this](auto const& data, auto const& req)
+      { on_db_msg_handler(data, req); };
 
    db.set_on_msg_handler(handler);
 
@@ -80,12 +79,11 @@ server_mgr::on_db_get_menu(std::string const& data)
       }
    }
 
-   std::cout << "Channels created: " << std::size(channels)
-             << std::endl;
+   std::clog << "Worker " << id << ": " << std::size(channels)
+             << " channels created." << std::endl;
 
-   std::cout << "Number of already existing channels: "
-             << failed_channel_creation
-             << std::endl;
+   std::clog << "Worker " << id << ": " << failed_channel_creation
+             << " channels already existed." << std::endl;
 }
 
 void server_mgr::on_db_unsol_pub(std::string const& data)

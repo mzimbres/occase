@@ -41,6 +41,17 @@ struct pub_queue_item {
 
 class server_mgr {
 private:
+   // This worker id needed to put individual worker log messages
+   // apart.
+   int const id;
+
+   // This is the frequency we will be cleaning up the channel if no
+   // publish activity is observed.
+   int const ch_cleanup_rate; 
+
+   // Max number of messages stored in the each channel.
+   int const ch_max_posts; 
+
    net::io_context ioc {1};
    net::signal_set signals;
 
@@ -65,13 +76,6 @@ private:
    // Queue of user posts waiting for an id that has been requested
    // from redis.
    std::queue<pub_queue_item> pub_wait_queue;
-
-   // This is the frequency we will be cleaning up the channel if no
-   // publish activity is observed.
-   int const ch_cleanup_rate; 
-
-   // Max number of messages stored in the each channel.
-   int const ch_max_posts; 
 
    void do_stats_logger();
 
@@ -108,7 +112,7 @@ private:
    void on_db_publish();
 
 public:
-   server_mgr(server_mgr_cf cf);
+   server_mgr(server_mgr_cf cf, int id_);
 
    // When a server session dies, there are many things that must be
    // cleaned up or persisted. This function is responsible for that

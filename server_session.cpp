@@ -47,8 +47,8 @@ server_session::~server_session()
                     , std::back_inserter(msgs)
                     , transformer);
 
-      std::cout << "Session dying with msgs: " << std::size(msgs)
-                << std::endl;
+      //std::cout << "Session dying with msgs: " << std::size(msgs)
+      //          << std::endl;
 
       mgr->on_session_dtor(std::move(user_id), std::move(msgs));
    }

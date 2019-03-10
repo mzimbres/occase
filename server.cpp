@@ -172,10 +172,12 @@ int main(int argc, char* argv[])
 
       std::vector<std::shared_ptr<server_mgr>> workers;
 
+      auto generator = [&cf, i = -1]() mutable
+         { return std::make_shared<server_mgr>(cf.mgr, ++i); };
+
       std::generate_n( std::back_inserter(workers)
                      , cf.number_of_workers
-                     , [&cf]()
-                       { return std::make_shared<server_mgr>(cf.mgr); });
+                     , generator);
 
       std::vector<std::thread> threads;
       for (auto o : workers)

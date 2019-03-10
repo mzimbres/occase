@@ -71,6 +71,7 @@ private:
    // Session used to retrieve user messages whose notification
    // arrived on session ss_user_msg_sub.
    session ss_user_msg_retr;
+   std::queue<std::string> user_msg_queue;
 
    // TODO: We need a session to subscribe to changes in the menu.
    // Instead we may also consider using signals to trigger it.

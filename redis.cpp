@@ -112,18 +112,6 @@ void facade::run()
 }
 
 void
-facade::on_user_msg_retr_msg( boost::system::error_code const& ec
-                       , std::vector<std::string> const& data)
-{
-   if (ec) {
-      fail(ec,"on_user_msg_retr_msg");
-      return;
-   }
-
-   assert(!std::empty(data));
-}
-
-void
 facade::on_menu_pub_msg( boost::system::error_code const& ec
                        , std::vector<std::string> const& data)
 {
@@ -147,6 +135,27 @@ facade::on_menu_pub_msg( boost::system::error_code const& ec
 }
 
 void
+facade::on_user_msg_retr_msg( boost::system::error_code const& ec
+                            , std::vector<std::string> const& data)
+{
+   if (ec) {
+      fail(ec,"on_user_msg_retr_msg");
+      return;
+   }
+
+   assert(!std::empty(data));
+
+   // This session is not subscribed to any unsolicited message.
+   assert(!std::empty(user_msg_queue));
+
+   req_item const item { request::unsol_user_msgs
+                       , std::move(user_msg_queue.front()) };
+
+   worker_handler({std::move(data.back())}, item);
+   user_msg_queue.pop();
+}
+
+void
 facade::on_user_msg_sub_msg( boost::system::error_code const& ec
                            , std::vector<std::string> const& data)
 {
@@ -163,15 +172,14 @@ facade::on_user_msg_sub_msg( boost::system::error_code const& ec
    auto const n = data[1].rfind(":");
    assert(n != std::string::npos);
    auto const user_id = data[1].substr(n + 1);
-   std::initializer_list<std::string> const param =
-      {nms.msg_prefix + user_id};
+   std::initializer_list<std::string> param = {nms.msg_prefix + user_id};
 
    auto cmd_str = resp_assemble( "LPOP"
                                , std::begin(param)
                                , std::end(param));
 
-   ss_menu_pub.send(std::move(cmd_str));
-   pub_ev_queue.push({request::unsol_user_msgs, user_id});
+   ss_user_msg_retr.send(std::move(cmd_str));
+   user_msg_queue.push(std::move(user_id));
 }
 
 void facade::subscribe_to_chat_msgs(std::string const& id)

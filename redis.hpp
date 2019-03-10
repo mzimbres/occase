@@ -70,7 +70,7 @@ private:
 
    // Session used to retrieve user messages whose notification
    // arrived on session ss_user_msg_sub.
-   session ss_user_msg_retriever;
+   session ss_user_msg_retr;
 
    // TODO: We need a session to subscribe to changes in the menu.
    // Instead we may also consider using signals to trigger it.
@@ -79,16 +79,21 @@ private:
 
    msg_handler_type worker_handler;
 
-   void menu_sub_handler( boost::system::error_code const& ec
-                        , std::vector<std::string> const& data);
+   // Callbacks called when a message is received from redis.
+   void on_menu_sub_msg( boost::system::error_code const& ec
+                       , std::vector<std::string> const& data);
 
-   void menu_pub_handler( boost::system::error_code const& ec
-                        , std::vector<std::string> const& data);
+   void on_menu_pub_msg( boost::system::error_code const& ec
+                       , std::vector<std::string> const& data);
 
-   // Retrieves user messages asynchronously. Called automatically and
-   // not passed to worker.
-   void user_msg_sub_handler( boost::system::error_code const& ec
-                            , std::vector<std::string> const& data);
+   void on_user_msg_sub_msg( boost::system::error_code const& ec
+                           , std::vector<std::string> const& data);
+
+   // Callback called when sessions connect to redis server.
+   void on_menu_sub_conn();
+   void on_menu_pub_conn();
+   void on_user_msg_sub_conn();
+   void on_user_msg_retr_conn();
 
 public:
    facade(config const& cf, net::io_context& ioc);

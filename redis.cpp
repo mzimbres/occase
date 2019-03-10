@@ -7,39 +7,61 @@ facade::facade(config const& cf, net::io_context& ioc)
 : ss_menu_sub(cf.sessions, ioc)
 , ss_menu_pub(cf.sessions, ioc)
 , ss_user_msg_sub(cf.sessions, ioc)
-, ss_user_msg_retriever(cf.sessions, ioc)
+, ss_user_msg_retr(cf.sessions, ioc)
 , nms(cf.nms)
+, worker_handler([](auto const& data, auto const& req) {})
 {
-   auto const handler = [this]()
-   {
-      std::initializer_list<std::string const> const param =
-         {nms.menu_channel};
+   // Sets on connection handlers.
+   auto on_conn_a = [this]() { on_menu_sub_conn(); };
+   auto on_conn_b = [this]() { on_menu_pub_conn(); };
+   auto on_conn_c = [this]() { on_user_msg_sub_conn(); };
+   auto on_conn_d = [this]() { on_user_msg_retr_conn(); };
 
-      auto cmd_str = resp_assemble( "SUBSCRIBE"
-                                  , std::begin(param)
-                                  , std::end(param));
+   ss_menu_sub.set_on_conn_handler(on_conn_a);
+   ss_menu_pub.set_on_conn_handler(on_conn_b);
+   ss_user_msg_sub.set_on_conn_handler(on_conn_c);
+   ss_user_msg_retr.set_on_conn_handler(on_conn_d);
 
-      ss_menu_sub.send(std::move(cmd_str));
-   };
+   // Sets on msg handlers.
+   auto on_msg_a = [this](auto const& ec, auto const& data)
+      { on_menu_sub_msg(ec, data); };
+   auto on_msg_b = [this](auto const& ec, auto const& data)
+      { on_menu_pub_msg(ec, data); };
+   auto on_msg_c = [this](auto const& ec, auto const& data)
+      { on_user_msg_sub_msg(ec, data); };
 
-   ss_menu_sub.set_on_conn_handler(handler);
+   ss_menu_sub.set_msg_handler(on_msg_a);
+   ss_menu_pub.set_msg_handler(on_msg_b);
+   ss_user_msg_sub.set_msg_handler(on_msg_c);
+}
 
-   worker_handler = [](auto const& data, auto const& req) {};
+void facade::on_menu_sub_conn()
+{
+   std::clog << "on_menu_sub_conn: connected" << std::endl;
 
-   auto const a = [this](auto const& ec, auto const& data)
-      { menu_sub_handler(ec, data); };
+   std::initializer_list<std::string const> const param =
+      {nms.menu_channel};
 
-   ss_menu_sub.set_msg_handler(a);
+   auto cmd_str = resp_assemble( "SUBSCRIBE"
+                               , std::begin(param)
+                               , std::end(param));
 
-   auto const b = [this](auto const& ec, auto const& data)
-      { menu_pub_handler(ec, data); };
+   ss_menu_sub.send(std::move(cmd_str));
+}
 
-   ss_menu_pub.set_msg_handler(b);
+void facade::on_menu_pub_conn()
+{
+   std::clog << "on_menu_pub_conn: connected" << std::endl;
+}
 
-   auto const c = [this](auto const& ec, auto const& data)
-      { user_msg_sub_handler(ec, data); };
+void facade::on_user_msg_sub_conn()
+{
+   std::clog << "on_user_msg_sub_conn: connected" << std::endl;
+}
 
-   ss_user_msg_sub.set_msg_handler(c);
+void facade::on_user_msg_retr_conn()
+{
+   std::clog << "on_user_msg_retr_conn: connected" << std::endl;
 }
 
 void facade::async_retrieve_menu()
@@ -55,11 +77,11 @@ void facade::async_retrieve_menu()
    pub_ev_queue.push({request::get_menu, {}});
 }
 
-void facade::menu_sub_handler( boost::system::error_code const& ec
-                        , std::vector<std::string> const& data)
+void facade::on_menu_sub_msg( boost::system::error_code const& ec
+                            , std::vector<std::string> const& data)
 {
    if (ec) {
-      fail(ec,"menu_sub_handler");
+      fail(ec,"on_menu_sub_msg");
       return; // TODO: Add error handling.
    }
 
@@ -86,11 +108,11 @@ void facade::run()
 }
 
 void
-facade::menu_pub_handler( boost::system::error_code const& ec
-                        , std::vector<std::string> const& data)
+facade::on_menu_pub_msg( boost::system::error_code const& ec
+                       , std::vector<std::string> const& data)
 {
    if (ec) { // TODO: Should we handle this here or pass to the mgr?
-      fail(ec,"menu_pub_handler");
+      fail(ec,"on_menu_pub_msg");
       return;
    }
 
@@ -109,11 +131,11 @@ facade::menu_pub_handler( boost::system::error_code const& ec
 }
 
 void
-facade::user_msg_sub_handler( boost::system::error_code const& ec
-                            , std::vector<std::string> const& data)
+facade::on_user_msg_sub_msg( boost::system::error_code const& ec
+                           , std::vector<std::string> const& data)
 {
    if (ec) {
-      fail(ec,"user_msg_sub_handler");
+      fail(ec,"on_user_msg_sub_msg");
       return;
    }
 

@@ -4,9 +4,10 @@ namespace rt::redis
 {
 
 facade::facade(config const& cf, net::io_context& ioc)
-: menu_sub_session(cf.sessions, ioc)
-, msg_not(cf.sessions, ioc)
-, pub_session(cf.sessions, ioc)
+: ss_menu_sub(cf.sessions, ioc)
+, ss_menu_pub(cf.sessions, ioc)
+, ss_user_msg_sub(cf.sessions, ioc)
+, ss_user_msg_retriever(cf.sessions, ioc)
 , nms(cf.nms)
 {
    auto const handler = [this]()
@@ -18,27 +19,27 @@ facade::facade(config const& cf, net::io_context& ioc)
                                   , std::begin(param)
                                   , std::end(param));
 
-      menu_sub_session.send(std::move(cmd_str));
+      ss_menu_sub.send(std::move(cmd_str));
    };
 
-   menu_sub_session.set_on_conn_handler(handler);
+   ss_menu_sub.set_on_conn_handler(handler);
 
    worker_handler = [](auto const& data, auto const& req) {};
 
    auto const subh = [this](auto const& ec, auto const& data)
       { sub_handler(ec, data); };
 
-   menu_sub_session.set_msg_handler(subh);
+   ss_menu_sub.set_msg_handler(subh);
 
    auto const pubh = [this](auto const& ec, auto const& data)
       { pub_handler(ec, data); };
 
-   pub_session.set_msg_handler(pubh);
+   ss_menu_pub.set_msg_handler(pubh);
 
    auto const key_not_hdl = [this](auto const& ec, auto const& data)
       { msg_not_handler(ec, data); };
 
-   msg_not.set_msg_handler(key_not_hdl);
+   ss_user_msg_sub.set_msg_handler(key_not_hdl);
 }
 
 void facade::async_retrieve_menu()
@@ -50,7 +51,7 @@ void facade::async_retrieve_menu()
                                , std::begin(param)
                                , std::end(param));
 
-   pub_session.send(std::move(cmd_str));
+   ss_menu_pub.send(std::move(cmd_str));
    pub_ev_queue.push({request::get_menu, {}});
 }
 
@@ -79,9 +80,9 @@ void facade::sub_handler( boost::system::error_code const& ec
 
 void facade::run()
 {
-   menu_sub_session.run();
-   msg_not.run();
-   pub_session.run();
+   ss_menu_sub.run();
+   ss_user_msg_sub.run();
+   ss_menu_pub.run();
 }
 
 void
@@ -132,7 +133,7 @@ facade::msg_not_handler( boost::system::error_code const& ec
                                , std::begin(param)
                                , std::end(param));
 
-   pub_session.send(std::move(cmd_str));
+   ss_menu_pub.send(std::move(cmd_str));
    pub_ev_queue.push({request::unsol_user_msgs, user_id});
 }
 
@@ -145,7 +146,7 @@ void facade::subscribe_to_chat_msgs(std::string const& id)
                                , std::begin(param)
                                , std::end(param));
 
-   msg_not.send(std::move(cmd_str));
+   ss_user_msg_sub.send(std::move(cmd_str));
 }
 
 void facade::unsubscribe_to_chat_msgs(std::string const& id)
@@ -157,7 +158,7 @@ void facade::unsubscribe_to_chat_msgs(std::string const& id)
                                , std::begin(param)
                                , std::end(param));
 
-   msg_not.send(std::move(cmd_str));
+   ss_user_msg_sub.send(std::move(cmd_str));
 }
 
 void facade::publish_menu_msg(std::string msg)
@@ -179,7 +180,7 @@ void facade::publish_menu_msg(std::string msg)
    //                    , std::begin(par0)
    //                    , std::end(par0));
 
-   pub_session.send(std::move(cmd));
+   ss_menu_pub.send(std::move(cmd));
    //pub_ev_queue.push({request::ignore, {}});
    //pub_ev_queue.push({request::ignore, {}});
    pub_ev_queue.push({request::publish, {}});
@@ -193,7 +194,7 @@ void facade::request_pub_id()
                            , std::begin(par1)
                            , std::end(par1));
 
-   pub_session.send(std::move(cmd));
+   ss_menu_pub.send(std::move(cmd));
    pub_ev_queue.push({request::pub_counter, {}});
 }
 
@@ -202,17 +203,17 @@ void facade::disconnect()
    std::cout << "Shuting down redis group subscribe session ..."
              << std::endl;
 
-   menu_sub_session.close();
+   ss_menu_sub.close();
 
    std::cout << "Shuting down redis publish session ..."
              << std::endl;
 
-   pub_session.close();
+   ss_menu_pub.close();
 
    std::cout << "Shuting down redis user msg subscribe session ..."
              << std::endl;
 
-   msg_not.close();
+   ss_user_msg_sub.close();
 }
 
 }

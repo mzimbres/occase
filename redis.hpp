@@ -57,16 +57,23 @@ public:
                          , req_item const&)>;
 
 private:
-   // The session used to subscribe to menu messages.
-   session menu_sub_session;
+   // Session used to subscribe to menu messages.
+   session ss_menu_sub;
 
-   // The session used for keyspace notifications e.g. when the user
-   // receives a message.
-   session msg_not;
-
-   // Redis session to send general commands.
-   session pub_session;
+   // Session that deals with the publication of menu commands.
+   session ss_menu_pub;
    std::queue<req_item> pub_ev_queue;
+
+   // The session used to subscribe to keyspace notifications e.g.
+   // when the user receives a message.
+   session ss_user_msg_sub;
+
+   // Session used to retrieve user messages whose notification
+   // arrived on session ss_user_msg_sub.
+   session ss_user_msg_retriever;
+
+   // TODO: We need a session to subscribe to changes in the menu.
+   // Instead we may also consider using signals to trigger it.
 
    namespaces nms;
 
@@ -131,7 +138,7 @@ public:
                                     , accumulator{});
 
       //std::cout << "store_msg" << std::endl;
-      pub_session.send(std::move(cmd_str));
+      ss_menu_pub.send(std::move(cmd_str));
       pub_ev_queue.push({request::store_msg, {}});
    }
 

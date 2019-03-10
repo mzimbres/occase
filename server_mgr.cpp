@@ -375,8 +375,9 @@ server_mgr::on_user_publish(json j, std::shared_ptr<server_session> s)
    // Before we request a new pub id, we have to check that the post
    // is valid and will not be refused later. This prevents the pub
    // items from being incremented on an invalid message. May be
-   // overkill since we do not expect the app to contain so sever
-   // bugs.
+   // overkill since we do not expect the app to contain so severe
+   // bugs. Also, the session at this point has been authenticated and
+   // can be thrusted.
 
    // The channel code has the form [[1, 2], [2, 3, 4], [1, 2]]
    // where each array in the outermost array refers to one menu.

@@ -55,7 +55,8 @@ std::string make_cmd_header(int size)
 struct accumulator {
    auto operator()(std::string a, std::string b) const
    {
-      return std::move(a) + make_bulky_item(std::move(b));
+      a += make_bulky_item(b);
+      return a;
    }
 };
 

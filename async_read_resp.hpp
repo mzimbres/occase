@@ -36,13 +36,13 @@ struct resp_buffer {
 };
 
 inline
-std::string make_bulky_item(std::string param)
+std::string make_bulky_item(std::string const& param)
 {
    auto const s = std::size(param);
    return "$"
         + std::to_string(s)
         + "\r\n"
-        + std::move(param)
+        + param
         + "\r\n";
 }
 

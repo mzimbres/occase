@@ -40,8 +40,7 @@ void pub(session_cf const& cf, int count, char const* channel)
    for (auto i = 0; i < count; ++i) {
       auto const msg = std::to_string(i);
 
-      std::initializer_list<std::string const> const param =
-         {channel, msg};
+      auto param = {std::string {channel}, msg};
 
       auto cmd_str = resp_assemble( "PUBLISH"
                                   , std::begin(param)
@@ -86,8 +85,7 @@ struct sub_arena {
 
       auto const on_conn_handler = [this, channel]()
       {
-         std::initializer_list<std::string const> const param =
-            {channel};
+         auto param = {channel};
 
          auto cmd_str = resp_assemble( "SUBSCRIBE"
                                      , std::begin(param)
@@ -114,13 +112,13 @@ void transaction(session_cf const& cf)
    session ss(cf, ioc);
    ss.set_msg_handler(pub_handler);
 
-   std::initializer_list<std::string> par0 = {};
+   std::initializer_list<std::string> par0;
    auto c1 = resp_assemble("MULTI", std::begin(par0), std::end(par0));
 
-   std::initializer_list<std::string> par2 = {"pub_counter"};
+   auto par2 = {"pub_counter"};
    c1 += resp_assemble("INCR", std::begin(par2), std::end(par2));
 
-   std::initializer_list<std::string> par1 = {"foo", "bar"};
+   auto par1 = {"foo", "bar"};
    c1 += resp_assemble("PUBLISH", std::begin(par1), std::end(par1));
 
    c1 += resp_assemble("EXEC", std::begin(par0), std::end(par0));

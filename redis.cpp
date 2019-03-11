@@ -42,8 +42,7 @@ void facade::on_menu_sub_conn()
 {
    std::clog << "on_menu_sub_conn: connected" << std::endl;
 
-   std::initializer_list<std::string const> const param =
-      {nms.menu_channel};
+   auto param = {nms.menu_channel};
 
    auto cmd_str = resp_assemble( "SUBSCRIBE"
                                , std::begin(param)
@@ -69,8 +68,7 @@ void facade::on_user_msg_retr_conn()
 
 void facade::async_retrieve_menu()
 {
-   std::initializer_list<std::string const> const param =
-      {nms.menu_key};
+   auto param = {nms.menu_key};
 
    auto cmd_str = resp_assemble( "GET"
                                , std::begin(param)
@@ -172,7 +170,7 @@ facade::on_user_msg_sub_msg( boost::system::error_code const& ec
    auto const n = data[1].rfind(":");
    assert(n != std::string::npos);
    auto const user_id = data[1].substr(n + 1);
-   std::initializer_list<std::string> param = {nms.msg_prefix + user_id};
+   auto param = {nms.msg_prefix + user_id};
 
    auto cmd_str = resp_assemble( "LPOP"
                                , std::begin(param)
@@ -184,8 +182,7 @@ facade::on_user_msg_sub_msg( boost::system::error_code const& ec
 
 void facade::subscribe_to_chat_msgs(std::string const& id)
 {
-   std::initializer_list<std::string const> const param =
-      {nms.notify_prefix + id};
+   auto param = {nms.notify_prefix + id};
 
    auto cmd_str = resp_assemble( "SUBSCRIBE"
                                , std::begin(param)
@@ -196,8 +193,7 @@ void facade::subscribe_to_chat_msgs(std::string const& id)
 
 void facade::unsubscribe_to_chat_msgs(std::string const& id)
 {
-   std::initializer_list<std::string const> const param =
-      {nms.notify_prefix + id};
+   auto param = {nms.notify_prefix + id};
 
    auto cmd_str = resp_assemble( "UNSUBSCRIBE"
                                , std::begin(param)
@@ -209,13 +205,13 @@ void facade::unsubscribe_to_chat_msgs(std::string const& id)
 void facade::publish_menu_msg(std::string msg)
 {
    // Using pipeline and transactions toguether.
-   std::initializer_list<std::string> par0 = {};
+   //auto par0 = {};
 
    //auto cmd = resp_assemble( "MULTI"
    //                        , std::begin(par0)
    //                        , std::end(par0));
 
-   std::initializer_list<std::string> par2 = {nms.menu_channel, msg};
+   auto par2 = {nms.menu_channel, msg};
 
    auto cmd = resp_assemble( "PUBLISH"
                        , std::begin(par2)
@@ -233,7 +229,7 @@ void facade::publish_menu_msg(std::string msg)
 
 void facade::request_pub_id()
 {
-   std::initializer_list<std::string> par1 = {"pub_counter"};
+   auto par1 = {"pub_counter"};
 
    auto cmd = resp_assemble( "INCR"
                            , std::begin(par1)

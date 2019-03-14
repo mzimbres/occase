@@ -149,8 +149,8 @@ public:
                                     , accumulator{});
 
       //std::cout << "store_msg" << std::endl;
-      ss_menu_pub.send(std::move(cmd_str));
-      pub_ev_queue.push({request::store_msg, {}});
+      ss_user_msg_retr.send(std::move(cmd_str));
+      user_msg_queue.push({request::store_msg, {}});
    }
 
    // Publishes the message on a redis channel where it is broadcasted

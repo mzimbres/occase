@@ -149,10 +149,10 @@ facade::on_user_msg_retr_msg( boost::system::error_code const& ec
    if (user_msg_queue.front().req == request::get_user_msg) {
       req_item const item { request::unsol_user_msgs
                           , std::move(user_msg_queue.front().user_id)};
-      user_msg_queue.pop();
-
       worker_handler({std::move(data.back())}, item);
    }
+
+   user_msg_queue.pop();
 }
 
 void
@@ -169,6 +169,9 @@ facade::on_user_msg_sub_msg( boost::system::error_code const& ec
 
    assert(data.front() == "message");
    assert(std::size(data) == 3);
+
+   // TODO: Use the prefix size to get the usbstring instead of
+   // searching.
    auto const n = data[1].rfind(":");
    assert(n != std::string::npos);
    auto user_id = data[1].substr(n + 1);

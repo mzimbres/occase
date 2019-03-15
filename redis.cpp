@@ -75,7 +75,7 @@ void facade::async_retrieve_menu()
                                , std::end(param));
 
    ss_menu_pub.send(std::move(cmd_str));
-   pub_ev_queue.push({request::get_menu, {}});
+   menu_ev_queue.push(request::get_menu);
 }
 
 void facade::on_menu_sub_msg( boost::system::error_code const& ec
@@ -121,15 +121,15 @@ facade::on_menu_pub_msg( boost::system::error_code const& ec
    assert(!std::empty(data));
 
    // This session is not subscribed to any unsolicited message.
-   assert(!std::empty(pub_ev_queue));
+   assert(!std::empty(menu_ev_queue));
 
-   if (pub_ev_queue.front().req == request::ignore) {
-      pub_ev_queue.pop();
+   if (menu_ev_queue.front() == request::ignore) {
+      menu_ev_queue.pop();
       return;
    }
 
-   worker_handler({std::move(data.back())}, pub_ev_queue.front());
-   pub_ev_queue.pop();
+   worker_handler(data, {menu_ev_queue.front(), {}});
+   menu_ev_queue.pop();
 }
 
 void
@@ -227,21 +227,21 @@ void facade::publish_menu_msg(std::string msg)
    //                    , std::end(par0));
 
    ss_menu_pub.send(std::move(cmd));
-   //pub_ev_queue.push({request::ignore, {}});
-   //pub_ev_queue.push({request::ignore, {}});
-   pub_ev_queue.push({request::publish, {}});
+   //menu_ev_queue.push({request::ignore, {}});
+   //menu_ev_queue.push({request::ignore, {}});
+   menu_ev_queue.push(request::publish);
 }
 
 void facade::request_pub_id()
 {
-   auto par1 = {"pub_counter"};
+   auto par1 = {nms.menu_msgs_counter_key};
 
    auto cmd = resp_assemble( "INCR"
                            , std::begin(par1)
                            , std::end(par1));
 
    ss_menu_pub.send(std::move(cmd));
-   pub_ev_queue.push({request::pub_counter, {}});
+   menu_ev_queue.push(request::pub_counter);
 }
 
 void facade::disconnect()

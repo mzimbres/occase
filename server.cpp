@@ -55,7 +55,8 @@ auto get_server_op(int argc, char* argv[])
    , po::value<unsigned short>(&cf.port)->default_value(8080)
    , "Server listening port."
    )
-   ("workers,w"
+
+   ( "workers,w"
    , po::value<int>(&cf.number_of_workers)->default_value(1)
    , "The number of worker threads, each"
      " one consuming one thread and having its own io_context."
@@ -63,101 +64,120 @@ auto get_server_op(int argc, char* argv[])
      " around 5. Memory consumption should be considered since "
      " each thread has it own non-shared data structure."
    )
-   ("code-timeout,s"
+   ( "code-timeout,s"
    , po::value<int>(&cf.code_timeout)->default_value(2)
    , "Code confirmation timeout in seconds."
    )
-   ("auth-timeout,a"
+
+   ( "auth-timeout,a"
    , po::value<int>(&cf.auth_timeout)->default_value(2)
    , "Authetication timeout in seconds. Started after the websocket "
      "handshake completes."
    )
-   ("handshake-timeout,k"
+   ( "handshake-timeout,k"
    , po::value<int>(&cf.handshake_timeout)->default_value(2)
    , "Handshake timeout in seconds. If the websocket handshake lasts "
      "more than that the socket is shutdown and closed."
    )
-   ("pong-timeout,r"
+
+   ( "pong-timeout,r"
    , po::value<int>(&cf.pong_timeout)->default_value(2)
    , "Pong timeout in seconds. This is the time the client has to "
      "reply a ping frame sent by the server. If a pong is received "
      "on time a new ping is sent on timer expiration. Otherwise the "
      "connection is closed."
    )
-   ("close-frame-timeout,e"
+   ( "close-frame-timeout,e"
    , po::value<int>(&cf.close_frame_timeout)->default_value(2)
    , "The time we are willing to wait for an ack to websocket "
      "close frame that has been sent to the client."
    )
 
-   ("channel-cleanup-rate,E"
+   ( "channel-cleanup-rate,E"
    , po::value<int>(&cf.mgr.ch_cleanup_rate)->default_value(128)
    , "The rate channels will be  cleaned up if"
      " no publish activity is observed. Incremented on every publication"
      " on the channel."
    )
 
-   ("max-msgs-per-channels,T"
+   ( "max-msgs-per-channels,T"
    , po::value<int>(&cf.mgr.ch_max_posts)->default_value(32)
    , "Max number of messages stored per channel. Posting on a"
      " channel that reached this number of messages will cause old"
      " messages to be removed."
    )
 
-   ("max-channels-subscribe,S"
+   ( "max-channels-subscribe,S"
    , po::value<int>(&cf.mgr.ch_max_sub)->default_value(1024)
    , "The maximum number of channels the user is allowed to subscribe to."
      " Remaining channels will be ignored."
    )
 
-   ("max-menu-msgs-on-subscribe,u"
+   ( "max-menu-msgs-on-subscribe,u"
    , po::value<int>(&cf.mgr.max_menu_msg_on_sub)->default_value(50)
    , "The maximum number of messages that is allowed to be sent to "
      "the user when he subscribes to his channels."
    )
 
-   ("redis-server-address"
+   ( "redis-server-address"
    , po::value<std::string>(&cf.mgr.redis_cf.ss_cf.host)->
        default_value("127.0.0.1")
    , "Address of the redis server."
    )
 
-   ("redis-server-port"
+   ( "redis-server-port"
    , po::value<std::string>(&cf.mgr.redis_cf.ss_cf.port)->
        default_value("6379")
    , "Port where redis server is listening."
    )
 
-   ("redis-max-pipeline-size"
+   ( "redis-max-pipeline-size"
    , po::value<int>(&cf.mgr.redis_cf.ss_cf.max_pipeline_size)->
        default_value(10000)
    , "The maximum allowed size of pipelined commands in the redis "
      " session."
    )
 
-   ("redis-database"
+   ( "redis-database"
    , po::value<std::string>(&redis_db)->default_value("0")
    , "The redis database to use: 0, 1, 2 etc."
    )
 
-   ("redis-menu-channel"
+   ( "redis-menu-channel"
    , po::value<std::string>(&cf.mgr.redis_cf.nms.menu_channel)->
         default_value("menu_channel")
    , "The name of the redis channel where publish commands "
      "are be broadcasted to all workers connected to this channel. "
      "Which may or may not be on the same machine."
    )
-   ("redis-menu-key"
+
+   ( "redis-menu-key"
    , po::value<std::string>(&cf.mgr.redis_cf.nms.menu_key)->
         default_value("menu")
    , "Redis key holding the menus in json format."
    )
-   ("redis-msg-prefix"
+
+   ( "redis-menu-msgs-counter-key"
+   , po::value<std::string>(&cf.mgr.redis_cf.nms.menu_msgs_counter_key)->
+        default_value("menu_msgs_counter")
+   , "The name of the key used to store the number of menu messages sent"
+     " so far."
+   )
+
+   ( "redis-user-msgs-counter-key"
+   , po::value<std::string>(&cf.mgr.redis_cf.nms.user_msgs_counter_key)->
+        default_value("user_msgs_counter")
+   , "The name of the key used to store the number of user messages sent"
+     " so far."
+   )
+
+   ( "redis-msg-prefix"
    , po::value<std::string>(&cf.mgr.redis_cf.nms.msg_prefix)->
         default_value("msg")
    , "That prefix that will be incorporated in the keys that hold"
      " user messages."
    )
+
    ("redis-conn-retry-interval"
    , po::value<int>(&conn_retry_interval)->default_value(500)
    , "Time in milliseconds the redis session should wait before trying "
@@ -194,27 +214,35 @@ int main(int argc, char* argv[])
 
       std::vector<std::shared_ptr<server_mgr>> workers;
 
-      auto generator = [&cf, i = -1]() mutable
+      auto worker_gen = [&cf, i = -1]() mutable
          { return std::make_shared<server_mgr>(cf.mgr, ++i); };
 
       std::generate_n( std::back_inserter(workers)
                      , cf.number_of_workers
-                     , generator);
+                     , worker_gen);
+
+      auto thread_gen = [](auto o)
+         { return std::thread {[o](){ o->run();}}; };
 
       std::vector<std::thread> threads;
-      for (auto o : workers)
-         threads.emplace_back(std::thread {[o](){ o->run();}});
+      std::transform( std::begin(workers)
+                    , std::end(workers)
+                    , std::back_inserter(threads)
+                    , thread_gen);
 
       acceptor_arena acc {cf.port, workers};
       acc.run();
 
-      for (auto& o : threads)
-         o.join();
+      auto joiner = [](auto& o)
+         { o.join(); };
 
-      return 0;
+      std::for_each(std::begin(threads), std::end(threads), joiner);
+
    } catch (std::exception const& e) {
        std::cerr << "Error: " << e.what() << "\n";
        return 1;
    }
+
+   return 0;
 }
 

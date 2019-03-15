@@ -16,6 +16,7 @@ enum class request
 , unsolicited_publish
 , pub_counter
 , get_user_msg
+, user_msg_counter
 };
 
 struct req_item {
@@ -23,9 +24,9 @@ struct req_item {
    std::string user_id;
 };
 
-// These are the namespaces used inside redis to separate the keys and
+// These are the names used inside redis to separate the keys and
 // make it easier to use widecards.
-struct namespaces {
+struct names {
    // The name of the channel where all *publish* commands will be
    // sent.
    std::string menu_channel;
@@ -42,11 +43,19 @@ struct namespaces {
    // sent us notification. This is how a worker gets notified that it
    // has to retrieve messages from the database for this user.
    std::string notify_prefix {"__keyspace@"};
+
+   // The name of the key used to store the number of menu messages
+   // sent so far.
+   std::string menu_msgs_counter_key;
+
+   // The name of the key used to store the number of user messages
+   // sent so far.
+   std::string user_msgs_counter_key;
 };
 
 struct config {
    session_cf ss_cf;
-   namespaces nms;
+   names nms;
 };
 
 // Facade class to manage the communication with redis and hide some
@@ -63,7 +72,7 @@ private:
 
    // Session that deals with the publication of menu commands.
    session ss_menu_pub;
-   std::queue<req_item> pub_ev_queue;
+   std::queue<request> menu_ev_queue;
 
    // The session used to subscribe to keyspace notifications e.g.
    // when the user receives a message.
@@ -77,7 +86,7 @@ private:
    // TODO: We need a session to subscribe to changes in the menu.
    // Instead we may also consider using signals to trigger it.
 
-   namespaces nms;
+   names nms;
 
    msg_handler_type worker_handler;
 
@@ -137,20 +146,29 @@ public:
                             , Iter begin
                             , Iter end)
    {
+      auto par1 = {nms.user_msgs_counter_key};
+
+      auto cmd_str = resp_assemble( "INCR"
+                                  , std::begin(par1)
+                                  , std::end(par1));
+
+      user_msg_queue.push({request::user_msg_counter, {}});
+
       auto const d = std::distance(begin, end);
 
       auto payload = make_cmd_header(2 + d)
                    + make_bulky_item("RPUSH")
                    + make_bulky_item(nms.msg_prefix + std::move(id));
 
-      auto cmd_str = std::accumulate( begin
-                                    , end
-                                    , std::move(payload)
-                                    , accumulator{});
+      cmd_str += std::accumulate( begin
+                                , end
+                                , std::move(payload)
+                                , accumulator{});
+
+      user_msg_queue.push({request::store_msg, {}});
 
       //std::cout << "store_msg" << std::endl;
       ss_user_msg_retr.send(std::move(cmd_str));
-      user_msg_queue.push({request::store_msg, {}});
    }
 
    // Publishes the message on a redis channel where it is broadcasted

@@ -87,11 +87,14 @@ private:
    // from redis.
    std::queue<pub_queue_item> pub_wait_queue;
 
+   int last_menu_msg_id = 0;
+   int menu_msg_inversions = 0;
+
    void do_stats_logger();
 
    void init();
 
-   void shutdown();
+   void shutdown(boost::system::error_code const& ec);
 
    ev_res on_user_register( json const& j
                           , std::shared_ptr<server_session> s);

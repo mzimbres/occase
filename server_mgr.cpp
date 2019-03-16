@@ -36,12 +36,8 @@ server_mgr::server_mgr(server_mgr_cf cf, int id_)
 
 void server_mgr::init()
 {
-   auto const sig_handler = [this](auto const& ec, auto n)
-   {
-      // TODO: Verify ec here?
-      std::clog << "Shutting down server " << id << std::endl;
-      shutdown();
-   };
+   auto sig_handler = [this](auto const& ec, auto n)
+      { shutdown(ec); };
 
    signals.async_wait(sig_handler);
 
@@ -100,6 +96,11 @@ void server_mgr::on_db_unsol_pub(std::string const& data)
       assert(false);
       return;
    }
+
+   if (item.id > last_menu_msg_id)
+      last_menu_msg_id = item.id;
+   else
+      ++menu_msg_inversions;
 
    g->second.broadcast(item, ch_max_posts);
 }
@@ -173,10 +174,10 @@ void server_mgr::on_db_publish()
 
 void server_mgr::on_db_pub_counter(std::string const& pub_id_str)
 {
-   pub_wait_queue.front().item.id = std::stoi(pub_id_str);
-   //std::cout << pub_wait_queue.front().item.id << std::endl;
+   auto const pub_id = std::stoi(pub_id_str);
+   pub_wait_queue.front().item.id = pub_id;
    json const j_item = pub_wait_queue.front().item;
-   db.pub_menu_msg(j_item.dump());
+   db.pub_menu_msg(j_item.dump(), pub_id);
 
    // It is important that the publisher receives this message before
    // any user sends him a user message about the post. He needs a
@@ -486,18 +487,28 @@ server_mgr::on_user_msg( std::string msg, json const& j
    return ev_res::user_msg_ok;
 }
 
-void server_mgr::shutdown()
+void server_mgr::shutdown(boost::system::error_code const& ec)
 {
-   std::cout << "Shutting down " << std::size(sessions) 
+   // TODO: Verify ec here?
+   std::clog << "Shutting down server " << id << std::endl;
+
+   std::clog << "Shutting down " << std::size(sessions) 
              << " user sessions ..." << std::endl;
 
-   for (auto o : sessions)
+   auto f = [](auto o)
+   {
       if (auto s = o.second.lock())
          s->shutdown();
+   };
+
+   std::for_each(std::begin(sessions), std::end(sessions), f);
 
    db.disconnect();
 
    stats_timer.cancel();
+
+   std::clog << "Number of inversions: " << menu_msg_inversions
+             << std::endl;
 }
 
 void server_mgr::do_stats_logger()

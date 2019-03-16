@@ -161,6 +161,13 @@ auto expire(std::string const& key, int secs)
    return resp_assemble("EXPIRE", std::begin(par), std::end(par));
 }
 
+inline
+auto zadd(std::string const& key, int score, std::string const& value)
+{
+   auto par = {key, std::to_string(score), value};
+   return resp_assemble("zadd", std::begin(par), std::end(par));
+}
+
 template < class AsyncStream
          , class Handler>
 struct read_resp_op {

@@ -190,6 +190,12 @@ auto get_server_op(int argc, char* argv[])
    , "Expiration time in seconds for redis user message keys."
      " After the time has elapsed the keys will be deleted."
    )
+
+   ( "redis-menu-msgs-key"
+   , po::value<std::string>(&cf.mgr.redis_cf.cf.menu_msgs_key)->
+        default_value("menu_msgs")
+   , "Redis key used to store menu msgs (in a sorted set)."
+   )
    ;
 
    po::variables_map vm;        

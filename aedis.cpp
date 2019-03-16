@@ -123,6 +123,24 @@ void expire(session_cf const& cf)
    ioc.run();
 }
 
+void zadd(session_cf const& cf)
+{
+   boost::asio::io_context ioc;
+   session ss(cf, ioc);
+   ss.set_msg_handler(pub_handler);
+
+   auto c1 = zadd("foo", 1, "bar1")
+           + zadd("foo", 2, "bar2")
+           + zadd("foo", 3, "bar3")
+           + zadd("foo", 4, "bar4")
+           + zadd("foo", 5, "bar5");
+
+   ss.send(c1);
+
+   ss.run();
+   ioc.run();
+}
+
 int main(int argc, char* argv[])
 {
    try {
@@ -146,7 +164,8 @@ int main(int argc, char* argv[])
       , " 1 pub.\n"
         " 2 sub.\n"
         " 3 transaction.\n"
-        " 4 expire."
+        " 4 expire.\n"
+        " 5 zadd."
       )
 
       ("count,c"
@@ -183,6 +202,11 @@ int main(int argc, char* argv[])
 
       if (test == 4) {
          expire(cf);
+         return 0;
+      }
+
+      if (test == 5) {
+         zadd(cf);
          return 0;
       }
 

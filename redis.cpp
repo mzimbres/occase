@@ -177,13 +177,15 @@ void facade::unsub_to_user_msgs(std::string const& id)
    ss_user_sub.send(unsubscribe(cf.notify_prefix + id));
 }
 
-void facade::pub_menu_msg(std::string const& msg)
+void facade::pub_menu_msg(std::string const& msg, int id)
 {
    auto cmd = multi()
+            + zadd(cf.menu_msgs_key, id, msg)
             + publish(cf.menu_channel, msg)
             + exec();
 
    ss_menu_pub.send(std::move(cmd));
+   menu_pub_queue.push(request::ignore);
    menu_pub_queue.push(request::ignore);
    menu_pub_queue.push(request::ignore);
    menu_pub_queue.push(request::publish);

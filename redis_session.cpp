@@ -119,57 +119,68 @@ void session::on_connect( boost::system::error_code const& ec
 
 void session::on_resp(boost::system::error_code const& ec)
 {
-   if (ec == net::error::eof) {
-      // Redis has cleanly closed the connection. We try a reconnect.
-      timer.expires_after(cf.conn_retry_interval);
+   if (ec) {
+      if (ec == net::error::eof) {
+         // Redis has cleanly closed the connection. We try a reconnect.
+         timer.expires_after(cf.conn_retry_interval);
 
-      auto const handler = [this](auto ec)
-      {
-         if (ec) {
-            if (ec == net::error::operation_aborted) {
-               // The timer has been canceled. Probably somebody
-               // shutting down the application while we are trying to
-               // reconnect.
-               //
-               // TODO: How should we do with messages that have not
-               // been sent to the database.
+         auto const handler = [this](auto ec)
+         {
+            if (ec) {
+               if (ec == net::error::operation_aborted) {
+                  // The timer has been canceled. Probably somebody
+                  // shutting down the application while we are trying to
+                  // reconnect.
+                  //
+                  // TODO: How should we do with messages that have not
+                  // been sent to the database.
+                  return;
+               }
+
+               fail(ec, "Redis reconnect handler");
                return;
             }
 
-            fail(ec, "Redis reconnect handler");
-            return;
-         }
+            // Given that the peer has shutdown the connection (I think)
+            // we do not need to call shutdown.
+            //socket.shutdown(net::ip::tcp::socket::shutdown_both, ec);
+            socket.close(ec);
+            assert(!socket.is_open());
 
-         // Given that the peer has shutdown the connection (I think)
-         // we do not need to call shutdown.
-         //socket.shutdown(net::ip::tcp::socket::shutdown_both, ec);
-         socket.close(ec);
-         assert(!socket.is_open());
+            // Instead of simply trying to reconnect I will run the
+            // resolver again.
+            //
+            // TODO: Store the endpoints object obtained from the first
+            // call to resolve and try only to reconnect instead. Or will
+            // resolving again can be useful?
+            std::cout << "Trying to reconnect." << std::endl;
+            run();
+         };
 
-         // Instead of simply trying to reconnect I will run the
-         // resolver again.
-         //
-         // TODO: Store the endpoints object obtained from the first
-         // call to resolve and try only to reconnect instead. Or will
-         // resolving again can be useful?
-         std::cout << "Trying to reconnect." << std::endl;
-         run();
-      };
+         timer.async_wait(handler);
+         return;
+      }
 
-      timer.async_wait(handler);
-      return;
+      return fail(ec, "redis::session: unhandled.");
    }
 
    on_msg_handler(ec, buffer.res);
-   if (!std::empty(msg_queue))
-      msg_queue.pop();
 
-   if (!ec && socket.is_open()) {
-      start_reading_resp();
-      if (!std::empty(msg_queue))
-         net::async_write( socket, net::buffer(msg_queue.front())
-                         , [this](auto ec, auto n) { on_write(ec, n); });
-   }
+   start_reading_resp();
+
+   if (std::empty(msg_queue))
+      return;
+
+   msg_queue.pop();
+
+   if (std::empty(msg_queue))
+      return;
+
+   auto handler = [this](auto ec, auto n)
+      { on_write(ec, n); };
+
+   net::async_write( socket, net::buffer(msg_queue.front())
+                   , handler);
 }
 
 void session::on_write(boost::system::error_code ec, std::size_t n)

@@ -50,6 +50,9 @@ struct db_cf {
    // sent so far.
    std::string user_msgs_counter_key;
 
+   // The key used to store menu_msgs in redis.
+   std::string menu_msgs_key;
+
    // Expiration time for user message keys. Keys will be deleted on
    // expiration.
    int user_msg_exp_time {3600};
@@ -174,7 +177,7 @@ public:
    //
    //    redis::request::publish
    //
-   void pub_menu_msg(std::string const& msg);
+   void pub_menu_msg(std::string const& msg, int id);
 
    void request_pub_id();
 

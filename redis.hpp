@@ -15,6 +15,8 @@ enum class request
 , unsolicited_publish
 , pub_counter
 , get_user_msg
+, menu_connect
+, menu_msgs
 };
 
 struct req_item {
@@ -180,6 +182,13 @@ public:
    void pub_menu_msg(std::string const& msg, int id);
 
    void request_pub_id();
+
+   // Will retrieve menu messages whose ids are greater than or equal
+   // to begin. Completes with the event
+   //
+   //    redis::request::menu_msgs
+   //
+   void retrieve_menu_msgs(int begin);
 
    // Closes the connections to redis.
    void disconnect();

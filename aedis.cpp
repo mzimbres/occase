@@ -35,7 +35,7 @@ auto const pub_handler = [](auto const& ec, auto const& data)
 void pub(session_cf const& cf, int count, char const* channel)
 {
    boost::asio::io_context ioc;
-   session pub_session(cf, ioc);
+   session pub_session(cf, ioc, "1");
    pub_session.set_msg_handler(pub_handler);
    for (auto i = 0; i < count; ++i)
       pub_session.send(publish(channel, std::to_string(i)));
@@ -70,7 +70,7 @@ struct sub_arena {
    sub_arena( net::io_context& ioc
             , session_cf const& cf
             , std::string channel)
-   : s(cf, ioc)
+   : s(cf, ioc, "1")
    {
       s.set_msg_handler(sub_on_msg_handler);
 
@@ -92,7 +92,7 @@ void sub(session_cf const& cf, char const* channel)
 void transaction(session_cf const& cf)
 {
    boost::asio::io_context ioc;
-   session ss(cf, ioc);
+   session ss(cf, ioc, "1");
    ss.set_msg_handler(pub_handler);
 
    auto c1 = multi()
@@ -109,7 +109,7 @@ void transaction(session_cf const& cf)
 void expire(session_cf const& cf)
 {
    boost::asio::io_context ioc;
-   session ss(cf, ioc);
+   session ss(cf, ioc, "1");
    ss.set_msg_handler(pub_handler);
 
    auto c1 = multi()
@@ -126,7 +126,7 @@ void expire(session_cf const& cf)
 void zadd(session_cf const& cf)
 {
    boost::asio::io_context ioc;
-   session ss(cf, ioc);
+   session ss(cf, ioc, "1");
    ss.set_msg_handler(pub_handler);
 
    auto c1 = zadd("foo", 1, "bar1")
@@ -134,6 +134,34 @@ void zadd(session_cf const& cf)
            + zadd("foo", 3, "bar3")
            + zadd("foo", 4, "bar4")
            + zadd("foo", 5, "bar5");
+
+   ss.send(c1);
+
+   ss.run();
+   ioc.run();
+}
+
+void zrangebyscore(session_cf const& cf)
+{
+   boost::asio::io_context ioc;
+   session ss(cf, ioc, "1");
+   ss.set_msg_handler(pub_handler);
+
+   auto c1 = zrangebyscore("foo", 2, -1);
+
+   ss.send(c1);
+
+   ss.run();
+   ioc.run();
+}
+
+void zrange(session_cf const& cf)
+{
+   boost::asio::io_context ioc;
+   session ss(cf, ioc, "1");
+   ss.set_msg_handler(pub_handler);
+
+   auto c1 = zrange("foo", 2, -1);
 
    ss.send(c1);
 
@@ -165,7 +193,9 @@ int main(int argc, char* argv[])
         " 2 sub.\n"
         " 3 transaction.\n"
         " 4 expire.\n"
-        " 5 zadd."
+        " 5 zadd.\n"
+        " 6 zrangebyscore.\n"
+        " 7 zrange.\n"
       )
 
       ("count,c"
@@ -207,6 +237,16 @@ int main(int argc, char* argv[])
 
       if (test == 5) {
          zadd(cf);
+         return 0;
+      }
+
+      if (test == 6) {
+         zrangebyscore(cf);
+         return 0;
+      }
+
+      if (test == 7) {
+         zrange(cf);
          return 0;
       }
 

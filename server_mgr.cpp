@@ -47,8 +47,6 @@ void server_mgr::init()
       { on_db_msg_handler(data, req); };
 
    db.set_on_msg_handler(handler);
-
-   db.async_retrieve_menu();
    db.run();
 }
 
@@ -82,6 +80,8 @@ server_mgr::on_db_get_menu(std::string const& data)
 
    std::clog << "Worker " << id << ": " << failed_channel_creation
              << " channels already existed." << std::endl;
+
+   db.retrieve_menu_msgs(1 + last_menu_msg_id);
 }
 
 void server_mgr::on_db_unsol_pub(std::string const& data)
@@ -91,9 +91,10 @@ void server_mgr::on_db_unsol_pub(std::string const& data)
    auto const code = convert_to_channel_code(item.to);
    auto const g = channels.find(code);
    if (g == std::end(channels)) {
-      // Should not happen as the group is checked on on_user_publish:msg
-      // before being sent to redis for broadcast.
-      assert(false);
+      // This can happen if the subscription to the menu channel
+      // happens before we receive the menu a generate the channels.
+      // That is why it is important to update the last message id
+      // only after this check.
       return;
    }
 
@@ -158,6 +159,15 @@ server_mgr::on_db_msg_handler( std::vector<std::string> const& data
 
       case redis::request::publish:
          on_db_publish();
+         break;
+
+      case redis::request::menu_connect:
+         db.async_retrieve_menu();
+         break;
+
+      case redis::request::menu_msgs:
+         std::cout << "receiving menu msgs: " << std::size(data)
+                   << std::endl;
          break;
 
       default:

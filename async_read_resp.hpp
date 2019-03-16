@@ -168,6 +168,33 @@ auto zadd(std::string const& key, int score, std::string const& value)
    return resp_assemble("zadd", std::begin(par), std::end(par));
 }
 
+inline
+auto zrange(std::string const& key, int min, int max)
+{
+   auto par = { key
+              , std::to_string(min)
+              , std::to_string(max)
+              };
+
+   return resp_assemble("zrangebyscore", std::begin(par), std::end(par));
+}
+
+inline
+auto zrangebyscore(std::string const& key, int min, int max)
+{
+   auto max_str = std::string {"inf"};
+   if (max != -1)
+      max_str = std::to_string(max);
+
+   auto par = { key
+              , std::to_string(min)
+              , max_str
+              , std::string {"withscores"}
+              };
+
+   return resp_assemble("zrangebyscore", std::begin(par), std::end(par));
+}
+
 template < class AsyncStream
          , class Handler>
 struct read_resp_op {

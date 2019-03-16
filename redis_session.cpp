@@ -16,8 +16,9 @@
 namespace rt::redis
 {
 
-session::session(session_cf cf_, net::io_context& ioc)
-: cf {cf_}
+session::session(session_cf cf_, net::io_context& ioc, std::string id_)
+: id(id_)
+, cf {cf_}
 , resolver {ioc} 
 , socket {ioc}
 , timer {ioc, std::chrono::steady_clock::time_point::max()}
@@ -48,14 +49,14 @@ void session::run()
 
 void session::send(std::string msg)
 {
-   auto const is_empty = std::empty(msg_queue);
-
    auto const max_pp_size_reached =
       pipeline_counter >= cf.max_pipeline_size;
 
    if (max_pp_size_reached) {
       pipeline_counter = 0;
    }
+
+   auto const is_empty = std::empty(msg_queue);
 
    if (is_empty || std::size(msg_queue) == 1 || max_pp_size_reached) {
       msg_queue.push(std::move(msg));
@@ -105,16 +106,23 @@ void session::on_connect( boost::system::error_code const& ec
 
    start_reading_resp();
 
-   // Calls user callback to inform a successfull connect to redis.
-   // It may wish to start sending some command.
-   on_conn_handler();
-
    // Consumes any messages that have been eventually posted while the
    // connection was not established.
-   if (!std::empty(msg_queue))
+   if (!std::empty(msg_queue)) {
+      auto handler = [this](auto ec, auto n)
+         { on_write(ec, n); };
+
       net::async_write( socket, net::buffer(msg_queue.front())
-                      , [this](auto ec, auto n)
-                        { on_write(ec, n); });
+                      , handler);
+   }
+
+   // Calls user callback to inform a successfull connect to redis.
+   // It may wish to start sending some command.
+   //
+   // Since this callback may call the send member function on this
+   // object, we have to call it AFTER the write operation above,
+   // otherwise the message will be sent twice.
+   on_conn_handler();
 }
 
 void session::on_resp(boost::system::error_code const& ec)

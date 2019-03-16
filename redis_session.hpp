@@ -54,6 +54,7 @@ public:
                          , std::vector<std::string> const&)>;
 
 private:
+   std::string id;
    session_cf cf;
    net::ip::tcp::resolver resolver;
    net::ip::tcp::socket socket;
@@ -77,7 +78,7 @@ private:
                 , std::size_t n);
 
 public:
-   session(session_cf cf_, net::io_context& ioc);
+   session(session_cf cf_, net::io_context& ioc, std::string id_);
 
    void set_on_conn_handler(on_conn_handler_type handler)
       { on_conn_handler = std::move(handler);};

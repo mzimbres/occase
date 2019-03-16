@@ -4,10 +4,10 @@ namespace rt::redis
 {
 
 facade::facade(config const& cf, net::io_context& ioc)
-: ss_menu_sub(cf.ss_cf, ioc)
-, ss_menu_pub(cf.ss_cf, ioc)
-, ss_user_sub(cf.ss_cf, ioc)
-, ss_user_pub(cf.ss_cf, ioc)
+: ss_menu_sub(cf.ss_cf, ioc, "1")
+, ss_menu_pub(cf.ss_cf, ioc, "2")
+, ss_user_sub(cf.ss_cf, ioc, "3")
+, ss_user_pub(cf.ss_cf, ioc, "4")
 , cf(cf.cf)
 , worker_handler([](auto const& data, auto const& req) {})
 {
@@ -47,6 +47,8 @@ void facade::on_menu_sub_conn()
 void facade::on_menu_pub_conn()
 {
    std::clog << "on_menu_pub_conn: connected" << std::endl;
+
+   worker_handler({}, {request::menu_connect, {}});
 }
 
 void facade::on_user_sub_conn()
@@ -105,7 +107,10 @@ facade::on_menu_pub( boost::system::error_code const& ec
       return;
    }
 
-   assert(!std::empty(data));
+   if (menu_pub_queue.front() == request::menu_msgs) {
+   } else {
+      assert(!std::empty(data));
+   }
 
    // This session is not subscribed to any unsolicited message.
    assert(!std::empty(menu_pub_queue));
@@ -195,6 +200,12 @@ void facade::request_pub_id()
 {
    ss_menu_pub.send(incr(cf.menu_msgs_counter_key));
    menu_pub_queue.push(request::pub_counter);
+}
+
+void facade::retrieve_menu_msgs(int begin)
+{
+   ss_menu_pub.send(zrange(cf.menu_msgs_key, begin, -1));
+   menu_pub_queue.push(request::menu_msgs);
 }
 
 void facade::disconnect()

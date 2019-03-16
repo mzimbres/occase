@@ -24,7 +24,7 @@ struct req_item {
 
 // These are the names used inside redis to separate the keys and
 // make it easier to use widecards.
-struct names {
+struct db_cf {
    // The name of the channel where all *publish* commands will be
    // sent.
    std::string menu_channel;
@@ -49,11 +49,15 @@ struct names {
    // The name of the key used to store the number of user messages
    // sent so far.
    std::string user_msgs_counter_key;
+
+   // Expiration time for user message keys. Keys will be deleted on
+   // expiration.
+   int user_msg_exp_time {3600};
 };
 
 struct config {
    session_cf ss_cf;
-   names nms;
+   db_cf cf;
 };
 
 // Facade class to manage the communication with redis and hide some
@@ -89,7 +93,7 @@ private:
    // TODO: We need a session to subscribe to changes in the menu.
    // Instead we may also consider using signals to trigger it.
 
-   names const nms;
+   db_cf const cf;
 
    msg_handler_type worker_handler;
 
@@ -145,11 +149,16 @@ public:
    template <class Iter>
    void store_user_msg(std::string id, Iter begin, Iter end)
    {
+      // Should we also impose a maximum length?
+
+      auto const key = cf.msg_prefix + id;
       auto cmd_str = multi()
-                   + incr(nms.user_msgs_counter_key)
-                   + rpush(nms.msg_prefix + id, begin, end)
+                   + incr(cf.user_msgs_counter_key)
+                   + rpush(key, begin, end)
+                   + expire(key, cf.user_msg_exp_time)
                    + exec();
 
+      user_pub_queue.push({request::ignore, {}});
       user_pub_queue.push({request::ignore, {}});
       user_pub_queue.push({request::ignore, {}});
       user_pub_queue.push({request::ignore, {}});

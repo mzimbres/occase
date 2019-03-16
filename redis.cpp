@@ -8,7 +8,7 @@ facade::facade(config const& cf, net::io_context& ioc)
 , ss_menu_pub(cf.ss_cf, ioc)
 , ss_user_sub(cf.ss_cf, ioc)
 , ss_user_pub(cf.ss_cf, ioc)
-, nms(cf.nms)
+, cf(cf.cf)
 , worker_handler([](auto const& data, auto const& req) {})
 {
    // Sets on connection handlers.
@@ -41,7 +41,7 @@ facade::facade(config const& cf, net::io_context& ioc)
 void facade::on_menu_sub_conn()
 {
    std::clog << "on_menu_sub_conn: connected" << std::endl;
-   ss_menu_sub.send(subscribe(nms.menu_channel));
+   ss_menu_sub.send(subscribe(cf.menu_channel));
 }
 
 void facade::on_menu_pub_conn()
@@ -61,7 +61,7 @@ void facade::on_user_pub_conn()
 
 void facade::async_retrieve_menu()
 {
-   ss_menu_pub.send(get(nms.menu_key));
+   ss_menu_pub.send(get(cf.menu_key));
    menu_pub_queue.push(request::get_menu);
 }
 
@@ -82,7 +82,7 @@ void facade::on_menu_sub( boost::system::error_code const& ec
 
    assert(std::size(data) == 3);
 
-   //assert(data[1] == nms.menu_channel);
+   //assert(data[1] == cf.menu_channel);
    // TODO: Take data by value to be able to move items here.
    worker_handler( {std::move(data.back())}
                  , {request::unsolicited_publish, {}});
@@ -163,24 +163,24 @@ facade::on_user_sub( boost::system::error_code const& ec
    assert(n != std::string::npos);
    auto user_id = data[1].substr(n + 1);
 
-   ss_user_pub.send(lpop(nms.msg_prefix + user_id));
+   ss_user_pub.send(lpop(cf.msg_prefix + user_id));
    user_pub_queue.push({request::get_user_msg, std::move(user_id)});
 }
 
 void facade::sub_to_user_msgs(std::string const& id)
 {
-   ss_user_sub.send(subscribe(nms.notify_prefix + id));
+   ss_user_sub.send(subscribe(cf.notify_prefix + id));
 }
 
 void facade::unsub_to_user_msgs(std::string const& id)
 {
-   ss_user_sub.send(unsubscribe(nms.notify_prefix + id));
+   ss_user_sub.send(unsubscribe(cf.notify_prefix + id));
 }
 
 void facade::pub_menu_msg(std::string const& msg)
 {
    auto cmd = multi()
-            + publish(nms.menu_channel, msg)
+            + publish(cf.menu_channel, msg)
             + exec();
 
    ss_menu_pub.send(std::move(cmd));
@@ -191,7 +191,7 @@ void facade::pub_menu_msg(std::string const& msg)
 
 void facade::request_pub_id()
 {
-   ss_menu_pub.send(incr(nms.menu_msgs_counter_key));
+   ss_menu_pub.send(incr(cf.menu_msgs_counter_key));
    menu_pub_queue.push(request::pub_counter);
 }
 

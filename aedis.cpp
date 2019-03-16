@@ -37,17 +37,8 @@ void pub(session_cf const& cf, int count, char const* channel)
    boost::asio::io_context ioc;
    session pub_session(cf, ioc);
    pub_session.set_msg_handler(pub_handler);
-   for (auto i = 0; i < count; ++i) {
-      auto const msg = std::to_string(i);
-
-      auto param = {std::string {channel}, msg};
-
-      auto cmd_str = resp_assemble( "PUBLISH"
-                                  , std::begin(param)
-                                  , std::end(param));
-
-      pub_session.send(std::move(cmd_str));
-   }
+   for (auto i = 0; i < count; ++i)
+      pub_session.send(publish(channel, std::to_string(i)));
 
    pub_session.run();
 
@@ -84,15 +75,7 @@ struct sub_arena {
       s.set_msg_handler(sub_on_msg_handler);
 
       auto const on_conn_handler = [this, channel]()
-      {
-         auto param = {channel};
-
-         auto cmd_str = resp_assemble( "SUBSCRIBE"
-                                     , std::begin(param)
-                                     , std::end(param));
-
-         s.send(std::move(cmd_str));
-      };
+         { s.send(subscribe(channel)); };
 
       s.set_on_conn_handler(on_conn_handler);
       s.run();
@@ -112,21 +95,31 @@ void transaction(session_cf const& cf)
    session ss(cf, ioc);
    ss.set_msg_handler(pub_handler);
 
-   std::initializer_list<std::string> par0;
-   auto c1 = resp_assemble("MULTI", std::begin(par0), std::end(par0));
-
-   auto par2 = {"pub_counter"};
-   c1 += resp_assemble("INCR", std::begin(par2), std::end(par2));
-
-   auto par1 = {"foo", "bar"};
-   c1 += resp_assemble("PUBLISH", std::begin(par1), std::end(par1));
-
-   c1 += resp_assemble("EXEC", std::begin(par0), std::end(par0));
+   auto c1 = multi()
+           + incr("pub_counter")
+           + publish("foo", "bar")
+           + exec();
 
    ss.send(std::move(c1));
 
    ss.run();
+   ioc.run();
+}
 
+void expire(session_cf const& cf)
+{
+   boost::asio::io_context ioc;
+   session ss(cf, ioc);
+   ss.set_msg_handler(pub_handler);
+
+   auto c1 = multi()
+           + set("foo", "bar")
+           + expire("foo", 10)
+           + exec();
+
+   ss.send(std::move(c1));
+
+   ss.run();
    ioc.run();
 }
 
@@ -147,12 +140,15 @@ int main(int argc, char* argv[])
       , po::value<std::string>(&cf.host)->default_value("127.0.0.1")
       , "Redis server ip address."
       )
+
       ("Run mode,t"
       , po::value<int>(&test)->default_value(-1)
       , " 1 pub.\n"
         " 2 sub.\n"
-        " 3 transaction."
+        " 3 transaction.\n"
+        " 4 expire."
       )
+
       ("count,c"
       , po::value<int>(&count)->default_value(20)
       , "Count."
@@ -182,6 +178,11 @@ int main(int argc, char* argv[])
 
       if (test == 3) {
          transaction(cf);
+         return 0;
+      }
+
+      if (test == 4) {
+         expire(cf);
          return 0;
       }
 

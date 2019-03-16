@@ -39,7 +39,7 @@ struct session_cf {
 
    // We have to restrict the length of the pipeline to not block
    // redis for long periods.
-   int max_pipeline_size;
+   int max_pipeline_size {10000};
 };
 
 class session {

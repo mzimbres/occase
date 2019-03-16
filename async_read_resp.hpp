@@ -147,6 +147,20 @@ auto publish(std::string const& key, std::string const& msg)
    return resp_assemble("PUBLISH", std::begin(par), std::end(par));
 }
 
+inline
+auto set(std::string const& key, std::string const& value)
+{
+   auto par = {key, value};
+   return resp_assemble("SET", std::begin(par), std::end(par));
+}
+
+inline
+auto expire(std::string const& key, int secs)
+{
+   auto par = {key, std::to_string(secs)};
+   return resp_assemble("EXPIRE", std::begin(par), std::end(par));
+}
+
 template < class AsyncStream
          , class Handler>
 struct read_resp_op {

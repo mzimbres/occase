@@ -68,6 +68,85 @@ auto resp_assemble(char const* cmd, Iter begin, Iter end)
    return std::accumulate(begin , end, std::move(payload), accumulator{});
 }
 
+inline
+auto resp_assemble(char const* cmd)
+{
+   std::initializer_list<std::string> arg;
+   return resp_assemble(cmd, std::begin(arg), std::end(arg));
+}
+
+inline
+auto resp_assemble(char const* cmd, std::string const& str)
+{
+   auto arg = {str};
+   return resp_assemble(cmd, std::begin(arg), std::end(arg));
+}
+
+template <class Iter>
+auto rpush(std::string const& key, Iter begin, Iter end)
+{
+   auto const d = std::distance(begin, end);
+
+   auto payload = make_cmd_header(2 + d)
+                + make_bulky_item("RPUSH")
+                + make_bulky_item(key);
+
+   auto cmd_str = std::accumulate( begin
+                                 , end
+                                 , std::move(payload)
+                                 , accumulator{});
+   return cmd_str;
+}
+
+inline
+auto multi()
+{
+   return resp_assemble("MULTI");
+}
+
+inline
+auto exec()
+{
+   return resp_assemble("EXEC");
+}
+
+inline
+auto incr(std::string const& key)
+{
+   return resp_assemble("INCR", key);
+}
+
+inline
+auto lpop(std::string const& key)
+{
+   return resp_assemble("LPOP", key);
+}
+
+inline
+auto subscribe(std::string const& key)
+{
+   return resp_assemble("SUBSCRIBE", key);
+}
+
+inline
+auto unsubscribe(std::string const& key)
+{
+   return resp_assemble("UNSUBSCRIBE", key);
+}
+
+inline
+auto get(std::string const& key)
+{
+   return resp_assemble("GET", key);
+}
+
+inline
+auto publish(std::string const& key, std::string const& msg)
+{
+   auto par = {key, msg};
+   return resp_assemble("PUBLISH", std::begin(par), std::end(par));
+}
+
 template < class AsyncStream
          , class Handler>
 struct read_resp_op {

@@ -11,12 +11,10 @@ enum class request
 { get_menu
 , unsol_user_msgs
 , ignore
-, store_msg
 , publish
 , unsolicited_publish
 , pub_counter
 , get_user_msg
-, user_msg_counter
 };
 
 struct req_item {
@@ -67,47 +65,52 @@ public:
                          , req_item const&)>;
 
 private:
-   // Session used to subscribe to menu messages.
+   // Session used to subscribe to menu messages. No commands should
+   // be posted here (with the exception of subscribe and
+   // unsubscribe).
    session ss_menu_sub;
 
-   // Session that deals with the publication of menu commands.
+   // Session that deals with the publication of menu commands.  On
+   // startup it will also be used to retrieve menu messages to load
+   // the workers.
    session ss_menu_pub;
-   std::queue<request> menu_ev_queue;
+   std::queue<request> menu_pub_queue;
 
    // The session used to subscribe to keyspace notifications e.g.
-   // when the user receives a message.
-   session ss_user_msg_sub;
+   // when the user receives a message. Again, no commands should be
+   // posted here (with the exception of subscribe and unsubscribe)
+   session ss_user_sub;
 
-   // Session used to retrieve user messages whose notification
-   // arrived on session ss_user_msg_sub.
-   session ss_user_msg_retr;
-   std::queue<req_item> user_msg_queue;
+   // Session used to store and retrieve user messages whose notification
+   // arrived on session ss_user_sub.
+   session ss_user_pub;
+   std::queue<req_item> user_pub_queue;
 
    // TODO: We need a session to subscribe to changes in the menu.
    // Instead we may also consider using signals to trigger it.
 
-   names nms;
+   names const nms;
 
    msg_handler_type worker_handler;
 
    // Callbacks called when a message is received from redis.
-   void on_menu_sub_msg( boost::system::error_code const& ec
-                       , std::vector<std::string> const& data);
+   void on_menu_sub( boost::system::error_code const& ec
+                   , std::vector<std::string> const& data);
 
-   void on_menu_pub_msg( boost::system::error_code const& ec
-                       , std::vector<std::string> const& data);
+   void on_menu_pub( boost::system::error_code const& ec
+                   , std::vector<std::string> const& data);
 
-   void on_user_msg_sub_msg( boost::system::error_code const& ec
-                           , std::vector<std::string> const& data);
+   void on_user_sub( boost::system::error_code const& ec
+                   , std::vector<std::string> const& data);
 
-   void on_user_msg_retr_msg( boost::system::error_code const& ec
-                            , std::vector<std::string> const& data);
+   void on_user_pub( boost::system::error_code const& ec
+                   , std::vector<std::string> const& data);
 
    // Callback called when sessions connect to redis server.
    void on_menu_sub_conn();
    void on_menu_pub_conn();
-   void on_user_msg_sub_conn();
-   void on_user_msg_retr_conn();
+   void on_user_sub_conn();
+   void on_user_pub_conn();
 
 public:
    facade(config const& cf, net::io_context& ioc);
@@ -131,44 +134,28 @@ public:
    // 
    //    redis::request::unsol_user_msgs
    //
-   void subscribe_to_chat_msgs(std::string const& user_id);
+   void sub_to_user_msgs(std::string const& user_id);
 
    // Usubscribe to the notifications to the key. On completion it
-   // calls no function on the worker side.
-   void unsubscribe_to_chat_msgs(std::string const& user_id);
+   // passes no event to the worker.
+   void unsub_to_user_msgs(std::string const& user_id);
 
-   // Used to asynchronously store messages on redis. Completes with
-   //
-   //   redis::request::store_msg
-   //
+   // Used to asynchronously store messages on redis. On completion it
+   // passes no event to the worker.
    template <class Iter>
-   void async_store_chat_msg( std::string id
-                            , Iter begin
-                            , Iter end)
+   void store_user_msg(std::string id, Iter begin, Iter end)
    {
-      auto par1 = {nms.user_msgs_counter_key};
+      auto cmd_str = multi()
+                   + incr(nms.user_msgs_counter_key)
+                   + rpush(nms.msg_prefix + id, begin, end)
+                   + exec();
 
-      auto cmd_str = resp_assemble( "INCR"
-                                  , std::begin(par1)
-                                  , std::end(par1));
+      user_pub_queue.push({request::ignore, {}});
+      user_pub_queue.push({request::ignore, {}});
+      user_pub_queue.push({request::ignore, {}});
+      user_pub_queue.push({request::ignore, {}});
 
-      user_msg_queue.push({request::user_msg_counter, {}});
-
-      auto const d = std::distance(begin, end);
-
-      auto payload = make_cmd_header(2 + d)
-                   + make_bulky_item("RPUSH")
-                   + make_bulky_item(nms.msg_prefix + std::move(id));
-
-      cmd_str += std::accumulate( begin
-                                , end
-                                , std::move(payload)
-                                , accumulator{});
-
-      user_msg_queue.push({request::store_msg, {}});
-
-      //std::cout << "store_msg" << std::endl;
-      ss_user_msg_retr.send(std::move(cmd_str));
+      ss_user_pub.send(std::move(cmd_str));
    }
 
    // Publishes the message on a redis channel where it is broadcasted
@@ -178,7 +165,7 @@ public:
    //
    //    redis::request::publish
    //
-   void publish_menu_msg(std::string msg);
+   void pub_menu_msg(std::string const& msg);
 
    void request_pub_id();
 

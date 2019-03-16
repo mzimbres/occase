@@ -176,7 +176,7 @@ void server_mgr::on_db_pub_counter(std::string const& pub_id_str)
    pub_wait_queue.front().item.id = std::stoi(pub_id_str);
    //std::cout << pub_wait_queue.front().item.id << std::endl;
    json const j_item = pub_wait_queue.front().item;
-   db.publish_menu_msg(j_item.dump());
+   db.pub_menu_msg(j_item.dump());
 
    // It is important that the publisher receives this message before
    // any user sends him a user message about the post. He needs a
@@ -200,9 +200,9 @@ void server_mgr::on_db_pub_counter(std::string const& pub_id_str)
 
    std::initializer_list<std::string> param = {ack_str};
 
-   db.async_store_chat_msg( std::move(pub_wait_queue.front().user_id)
-                          , std::make_move_iterator(std::begin(param))
-                          , std::make_move_iterator(std::end(param)));
+   db.store_user_msg( std::move(pub_wait_queue.front().user_id)
+                    , std::make_move_iterator(std::begin(param))
+                    , std::make_move_iterator(std::end(param)));
 }
 
 ev_res
@@ -265,7 +265,7 @@ server_mgr::on_user_login( json const& j
    s->promote();
    assert(s->is_auth());
 
-   db.subscribe_to_chat_msgs(s->get_id());
+   db.sub_to_user_msgs(s->get_id());
 
    json resp;
    resp["cmd"] = "auth_ack";
@@ -316,7 +316,7 @@ server_mgr::on_user_code_confirm( json const& j
    // which means we did something wrong in the register command.
    assert(new_user.second);
 
-   db.subscribe_to_chat_msgs(s->get_id());
+   db.sub_to_user_msgs(s->get_id());
 
    json resp;
    resp["cmd"] = "code_confirmation_ack";
@@ -453,12 +453,12 @@ void server_mgr::on_session_dtor( std::string const& id
    }
 
    sessions.erase(match); // We do not need the return value.
-   db.unsubscribe_to_chat_msgs(id);
+   db.unsub_to_user_msgs(id);
 
    if (!std::empty(msgs)) {
-      db.async_store_chat_msg( std::move(id)
-                             , std::make_move_iterator(std::begin(msgs))
-                             , std::make_move_iterator(std::end(msgs)));
+      db.store_user_msg( std::move(id)
+                       , std::make_move_iterator(std::begin(msgs))
+                       , std::make_move_iterator(std::end(msgs)));
    }
 }
 
@@ -475,9 +475,9 @@ server_mgr::on_user_msg( std::string msg, json const& j
 
    std::initializer_list<std::string> param = {msg};
 
-   db.async_store_chat_msg( std::move(to)
-                          , std::make_move_iterator(std::begin(param))
-                          , std::make_move_iterator(std::end(param)));
+   db.store_user_msg( std::move(to)
+                    , std::make_move_iterator(std::begin(param))
+                    , std::make_move_iterator(std::end(param)));
 
    json ack;
    ack["cmd"] = "user_msg_server_ack";

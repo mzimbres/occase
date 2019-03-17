@@ -20,7 +20,7 @@
 namespace rt
 {
 
-struct server_mgr_cf {
+struct server_cf {
    redis::config redis_cf;
    session_timeouts timeouts;
    int ch_cleanup_rate; 
@@ -41,7 +41,7 @@ struct pub_queue_item {
    std::string user_id;
 };
 
-class server_mgr {
+class worker {
 private:
    // This worker id needed to put individual worker log messages
    // apart.
@@ -128,7 +128,7 @@ private:
    void on_db_menu_connect();
 
 public:
-   server_mgr(server_mgr_cf cf, int id_);
+   worker(server_cf cf, int id_);
 
    // When a server session dies, there are many things that must be
    // cleaned up or persisted. This function is responsible for that

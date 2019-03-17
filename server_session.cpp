@@ -5,18 +5,18 @@
 #include <boost/beast/websocket/stream.hpp>
 #include <boost/beast/websocket/rfc6455.hpp>
 
-#include "server_mgr.hpp"
+#include "worker.hpp"
 
 namespace rt
 {
 
 server_session::server_session( net::ip::tcp::socket socket
-                              , std::shared_ptr<server_mgr> mgr_)
+                              , std::shared_ptr<worker> worker_)
 : ws(std::move(socket))
 , strand(ws.get_executor())
 , timer( ws.get_executor().context()
        , std::chrono::steady_clock::time_point::max())
-, mgr(mgr_)
+, mgr(worker_)
 {
    ++mgr->get_stats().number_of_sessions;
 }

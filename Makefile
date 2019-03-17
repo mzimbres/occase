@@ -1,12 +1,12 @@
 boost_inc_dir = /opt/boost_1_67_0/include
 boost_lib_dir = /opt/boost_1_67_0/lib
 
-boost_libs =
-boost_libs += $(boost_lib_dir)/libboost_system.a
-boost_libs += $(boost_lib_dir)/libboost_program_options.a
+ext_libs =
+ext_libs += $(boost_lib_dir)/libboost_system.a
+ext_libs += $(boost_lib_dir)/libboost_program_options.a
 
 DEBUG    = -g -ggdb3
-LDFLAGS  = -lpthread
+LDFLAGS  = -lpthread -lfmt
 CPPFLAGS = -I. -I$(boost_inc_dir) -std=c++17 $(DEBUG) -Wall # -Werror
 
 DIST_NAME = sellit
@@ -24,7 +24,7 @@ common_objs += menu.o
 common_objs += utils.o
 
 server_objs =
-server_objs += server_mgr.o
+server_objs += worker.o
 server_objs += server_session.o
 server_objs += listener.o
 server_objs += redis.o
@@ -72,25 +72,25 @@ Makefile.dep:
 -include Makefile.dep
 
 simulation: % : %.o $(client_objs) $(common_objs)
-	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(boost_libs)
+	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
 publish_tests: % : %.o $(client_objs) $(common_objs)
-	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(boost_libs)
+	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
 read_only_tests: % : %.o $(client_objs) $(common_objs)
-	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(boost_libs)
+	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
 reg_users_tests: % : %.o $(client_objs) $(common_objs)
-	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(boost_libs)
+	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
 server: % : %.o $(server_objs) $(common_objs) $(aedis_objs)
-	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(boost_libs)
+	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
 menu_dump: % : %.o $(menu_dump_objs) $(common_objs)
-	$(CXX) -o $@ $^ $(CPPFLAGS) $(boost_libs)
+	$(CXX) -o $@ $^ $(CPPFLAGS) -lfmt $(ext_libs)
 
 aedis: % : %.o $(aedis_objs)
-	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(boost_libs)
+	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
 .PHONY: clean
 clean:

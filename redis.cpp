@@ -1,5 +1,9 @@
 #include "redis.hpp"
 
+#include <fmt/format.h>
+
+#include "utils.hpp"
+
 namespace rt::redis
 {
 
@@ -40,25 +44,24 @@ facade::facade(config const& cf, net::io_context& ioc)
 
 void facade::on_menu_sub_conn()
 {
-   std::clog << "on_menu_sub_conn: connected" << std::endl;
+   log("on_menu_sub_conn: connected", loglevel::debug);
    ss_menu_sub.send(subscribe(cf.menu_channel));
 }
 
 void facade::on_menu_pub_conn()
 {
-   std::clog << "on_menu_pub_conn: connected" << std::endl;
-
+   log("on_menu_pub_conn: connected", loglevel::debug);
    worker_handler({}, {request::menu_connect, {}});
 }
 
 void facade::on_user_sub_conn()
 {
-   std::clog << "on_user_sub_conn: connected" << std::endl;
+   log("on_user_sub_conn: connected", loglevel::debug);
 }
 
 void facade::on_user_pub_conn()
 {
-   std::clog << "on_user_pub_conn: connected" << std::endl;
+   log("on_user_pub_conn: connected", loglevel::debug);
 }
 
 void facade::async_retrieve_menu()
@@ -77,8 +80,6 @@ void facade::on_menu_sub( boost::system::error_code const& ec
 
    assert(!std::empty(data));
 
-   // It looks like when subscribing to a redis channel, the
-   // confimation is returned twice!?
    if (data.front() != "message")
       return;
 
@@ -210,16 +211,9 @@ void facade::retrieve_menu_msgs(int begin)
 
 void facade::disconnect()
 {
-   std::clog << "ss_menu_sub: Closing." << std::endl;
    ss_menu_sub.close();
-
-   std::clog << "ss_menu_sub: Closing." << std::endl;
    ss_menu_pub.close();
-
-   std::clog << "ss_menu_pub: Closing." << std::endl;
    ss_user_sub.close();
-
-   std::clog << "ss_user_pub: Closing." << std::endl;
    ss_user_pub.close();
 }
 

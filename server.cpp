@@ -10,7 +10,7 @@
 #include <boost/program_options/variables_map.hpp>
 
 #include "listener.hpp"
-#include "server_mgr.hpp"
+#include "worker.hpp"
 #include "utils.hpp"
 
 using namespace rt;
@@ -19,7 +19,7 @@ namespace po = boost::program_options;
 
 struct config {
    bool help = false;
-   server_mgr_cf mgr;
+   server_cf mgr;
    int number_of_workers;
    unsigned short port;
 
@@ -224,11 +224,12 @@ int main(int argc, char* argv[])
          return 0;
 
       set_fd_limits(500000);
+      logger logg {argv[0], false};
 
-      std::vector<std::shared_ptr<server_mgr>> workers;
+      std::vector<std::shared_ptr<worker>> workers;
 
       auto worker_gen = [&cf, i = -1]() mutable
-         { return std::make_shared<server_mgr>(cf.mgr, ++i); };
+         { return std::make_shared<worker>(cf.mgr, ++i); };
 
       std::generate_n( std::back_inserter(workers)
                      , cf.number_of_workers
@@ -252,8 +253,8 @@ int main(int argc, char* argv[])
       std::for_each(std::begin(threads), std::end(threads), joiner);
 
    } catch (std::exception const& e) {
-       std::cerr << "Error: " << e.what() << "\n";
-       return 1;
+      log(e.what(), loglevel::emerg);
+      return 1;
    }
 
    return 0;

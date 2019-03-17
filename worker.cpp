@@ -1,9 +1,11 @@
-#include "server_mgr.hpp"
+#include "worker.hpp"
 
 #include <mutex>
 #include <chrono>
 #include <iterator>
 #include <algorithm>
+
+#include <fmt/format.h>
 
 #include "menu.hpp"
 #include "server_session.hpp"
@@ -20,7 +22,7 @@ std::mutex m;
 namespace rt
 {
 
-server_mgr::server_mgr(server_mgr_cf cf, int id_)
+worker::worker(server_cf cf, int id_)
 : id(id_)
 , ch_cleanup_rate(cf.ch_cleanup_rate)
 , ch_max_posts(cf.ch_max_posts)
@@ -34,7 +36,7 @@ server_mgr::server_mgr(server_mgr_cf cf, int id_)
    net::post(ioc, [this]() {init();});
 }
 
-void server_mgr::init()
+void worker::init()
 {
    auto sig_handler = [this](auto const& ec, auto n)
       { shutdown(ec); };
@@ -50,7 +52,7 @@ void server_mgr::init()
    db.run();
 }
 
-void server_mgr::on_db_get_menu(std::string const& data)
+void worker::on_db_get_menu(std::string const& data)
 {
    auto const j_menu = json::parse(data);
 
@@ -80,7 +82,7 @@ void server_mgr::on_db_get_menu(std::string const& data)
    // TODO: Create the aditional channels.
 }
 
-void server_mgr::on_db_menu_msgs(std::vector<std::string> const& msgs)
+void worker::on_db_menu_msgs(std::vector<std::string> const& msgs)
 {
    // This function has two roles.
    //
@@ -112,28 +114,27 @@ void server_mgr::on_db_menu_msgs(std::vector<std::string> const& msgs)
 
       std::for_each(std::begin(comb_codes), std::end(comb_codes), f);
 
-      std::clog << "Worker " << id << ": " << std::size(channels)
-                << " channels created." << std::endl;
+      auto const* fmt1 = "Worker {0}: {1} channels created.";
+      log( fmt::format(fmt1, id, std::size(channels))
+         , loglevel::info);
 
       if (i != 0) {
-         std::clog << "Worker " << id << ": "
-                   << i << " channels already existed." << std::endl;
+         auto const* fmt2 = "Worker {0}: {1} already existed.";
+         log( fmt::format(fmt2, id, i), loglevel::info);
       }
    }
 
-   std::clog << "Menu messages size: " << std::size(msgs) << std::endl;
+   auto const* fmt3 =
+      "Worker {0}: {1} messages received from the database.";
+   log(fmt::format(fmt3, id, std::size(msgs)), loglevel::info);
 
    auto loader = [this](auto const& msg)
       { on_db_unsol_pub(msg); };
 
    std::for_each(std::begin(msgs), std::end(msgs), loader);
-
-   std::clog << "Worker " << id << ": "
-             << "Ready to receive menu msgs."
-             << std::endl;
 }
 
-void server_mgr::on_db_unsol_pub(std::string const& msg)
+void worker::on_db_unsol_pub(std::string const& msg)
 {
    auto const j = json::parse(msg);
    auto item = j.get<pub_item>();
@@ -156,7 +157,7 @@ void server_mgr::on_db_unsol_pub(std::string const& msg)
 }
 
 void
-server_mgr::on_db_user_msgs( std::string const& user_id
+worker::on_db_user_msgs( std::string const& user_id
                            , std::vector<std::string> const& msgs) const
 {
    assert(std::size(msgs) == 1);
@@ -182,8 +183,8 @@ server_mgr::on_db_user_msgs( std::string const& user_id
 }
 
 void
-server_mgr::on_db_msg_handler( std::vector<std::string> const& data
-                             , redis::req_item const& req)
+worker::on_db_msg_handler( std::vector<std::string> const& data
+                         , redis::req_item const& req)
 {
    switch (req.req)
    {
@@ -223,7 +224,7 @@ server_mgr::on_db_msg_handler( std::vector<std::string> const& data
    }
 }
 
-void server_mgr::on_db_menu_connect()
+void worker::on_db_menu_connect()
 {
    // There are two situations we have to distinguish here.
    //
@@ -242,14 +243,14 @@ void server_mgr::on_db_menu_connect()
    }
 }
 
-void server_mgr::on_db_publish()
+void worker::on_db_publish()
 {
    pub_wait_queue.pop();
    if (!std::empty(pub_wait_queue))
       db.request_pub_id();
 }
 
-void server_mgr::on_db_pub_counter(std::string const& pub_id_str)
+void worker::on_db_pub_counter(std::string const& pub_id_str)
 {
    auto const pub_id = std::stoi(pub_id_str);
    pub_wait_queue.front().item.id = pub_id;
@@ -284,8 +285,8 @@ void server_mgr::on_db_pub_counter(std::string const& pub_id_str)
 }
 
 ev_res
-server_mgr::on_user_register( json const& j
-                            , std::shared_ptr<server_session> s)
+worker::on_user_register( json const& j
+                        , std::shared_ptr<server_session> s)
 {
    auto const from = j.at("from").get<std::string>();
 
@@ -313,8 +314,8 @@ server_mgr::on_user_register( json const& j
 }
 
 ev_res
-server_mgr::on_user_login( json const& j
-                         , std::shared_ptr<server_session> s)
+worker::on_user_login( json const& j
+                     , std::shared_ptr<server_session> s)
 {
    auto const from = j.at("from").get<std::string>();
 
@@ -369,8 +370,8 @@ server_mgr::on_user_login( json const& j
 }
 
 ev_res
-server_mgr::on_user_code_confirm( json const& j
-                                , std::shared_ptr<server_session> s)
+worker::on_user_code_confirm( json const& j
+                            , std::shared_ptr<server_session> s)
 {
    auto const from = j.at("from").get<std::string>();
    auto const code = j.at("code").get<std::string>();
@@ -404,8 +405,8 @@ server_mgr::on_user_code_confirm( json const& j
 }
 
 ev_res
-server_mgr::on_user_subscribe( json const& j
-                             , std::shared_ptr<server_session> s)
+worker::on_user_subscribe( json const& j
+                         , std::shared_ptr<server_session> s)
 {
    auto const codes =
       j.at("channels").get<std::vector<std::vector<std::vector<int>>>>();
@@ -473,7 +474,7 @@ server_mgr::on_user_subscribe( json const& j
 }
 
 ev_res
-server_mgr::on_user_publish(json j, std::shared_ptr<server_session> s)
+worker::on_user_publish(json j, std::shared_ptr<server_session> s)
 {
    // TODO: Remove the restriction below that the items vector have
    // size one.
@@ -516,8 +517,8 @@ server_mgr::on_user_publish(json j, std::shared_ptr<server_session> s)
    return ev_res::publish_ok;
 }
 
-void server_mgr::on_session_dtor( std::string const& id
-                                , std::vector<std::string> msgs)
+void worker::on_session_dtor( std::string const& id
+                            , std::vector<std::string> msgs)
 {
    // TODO: This function is called on the destructor on the server
    // session. Think where should we catch exceptions.
@@ -541,8 +542,8 @@ void server_mgr::on_session_dtor( std::string const& id
 }
 
 ev_res
-server_mgr::on_user_msg( std::string msg, json const& j
-                       , std::shared_ptr<server_session> s)
+worker::on_user_msg( std::string msg, json const& j
+                   , std::shared_ptr<server_session> s)
 {
    // TODO: Search the sessions map if the user is online and in this
    // node and send him his message directly to avoid overloading the
@@ -564,13 +565,16 @@ server_mgr::on_user_msg( std::string msg, json const& j
    return ev_res::user_msg_ok;
 }
 
-void server_mgr::shutdown(boost::system::error_code const& ec)
+void worker::shutdown(boost::system::error_code const& ec)
 {
    // TODO: Verify ec here?
-   std::clog << "Shutting down server " << id << std::endl;
 
-   std::clog << "Shutting down " << std::size(sessions) 
-             << " user sessions ..." << std::endl;
+   auto const* fmt1 = "Worker {0}: Shutting down has been requested.";
+   log(fmt::format(fmt1, id), loglevel::notice);
+
+   auto const* fmt2 = "Worker {0}: {1} sessions will be closed.";
+   log( fmt::format(fmt2, id, std::size(sessions))
+      , loglevel::notice);
 
    auto f = [](auto o)
    {
@@ -584,11 +588,13 @@ void server_mgr::shutdown(boost::system::error_code const& ec)
 
    stats_timer.cancel();
 
-   std::clog << "Number of inversions: " << menu_msg_inversions
-             << std::endl;
+   auto const* fmt3 = "Worker {0}: Number of inversion {1}.";
+   log( fmt::format(fmt3, id, menu_msg_inversions)
+      , loglevel::notice);
+
 }
 
-void server_mgr::do_stats_logger()
+void worker::do_stats_logger()
 {
    stats_timer.expires_after(std::chrono::seconds{1});
 
@@ -610,7 +616,7 @@ void server_mgr::do_stats_logger()
    stats_timer.async_wait(handler);
 }
 
-void server_mgr::run() noexcept
+void worker::run() noexcept
 {
    try {
       ioc.run();
@@ -620,7 +626,7 @@ void server_mgr::run() noexcept
 }
 
 ev_res
-server_mgr::on_message( std::shared_ptr<server_session> s, std::string msg)
+worker::on_message( std::shared_ptr<server_session> s, std::string msg)
 {
    auto const j = json::parse(msg);
    auto const cmd = j.at("cmd").get<std::string>();
@@ -632,7 +638,6 @@ server_mgr::on_message( std::shared_ptr<server_session> s, std::string msg)
       if (cmd == "auth")
          return on_user_login(j, s);
 
-      std::cerr << "Server: Unknown command " << cmd << std::endl;
       return ev_res::unknown;
    }
 
@@ -640,7 +645,6 @@ server_mgr::on_message( std::shared_ptr<server_session> s, std::string msg)
       if (cmd == "code_confirmation")
          return on_user_code_confirm(j, s);
 
-      std::cerr << "Server: Unknown command " << cmd << std::endl;
       return ev_res::unknown;
    }
 
@@ -654,11 +658,9 @@ server_mgr::on_message( std::shared_ptr<server_session> s, std::string msg)
       if (cmd == "user_msg")
          return on_user_msg(std::move(msg), j, s);
 
-      std::cerr << "Server: Unknown command " << cmd << std::endl;
       return ev_res::unknown;
    }
 
-   std::cerr << "Server: Unknown command " << cmd << std::endl;
    return ev_res::unknown;
 }
 

@@ -2,22 +2,24 @@
 
 #include <iostream>
 
+#include <fmt/format.h>
+#include <fmt/ostream.h>
+
 #include "server_session.hpp"
-#include "server_mgr.hpp"
-#include "server_mgr.hpp"
+#include "worker.hpp"
 
 namespace rt
 {
 
 listener::listener( net::ip::tcp::endpoint const& endpoint
-                  , std::vector< std::shared_ptr<server_mgr>
+                  , std::vector< std::shared_ptr<worker>
                                > const& workers_)
 : signals(ioc, SIGINT, SIGTERM)
 , acceptor(ioc, endpoint)
 , workers(workers_)
 {
-   std::clog << "Binding server to " << acceptor.local_endpoint()
-             << std::endl;
+   auto const* fmt1 = "Binding server to {}";
+   log(fmt::format(fmt1, acceptor.local_endpoint()), loglevel::info);
 }
 
 void listener::run()
@@ -25,9 +27,7 @@ void listener::run()
    auto const handler = [this](auto ec, auto n)
    {
       // TODO: Verify ec here.
-      std::clog << "\nBeginning the shutdown operations ..."
-                << std::endl;
-
+      log("Beginning the shutdown operation.", loglevel::info);
       shutdown();
    };
 
@@ -54,7 +54,7 @@ void listener::on_accept( boost::system::error_code ec
 {
    if (ec) {
       if (ec == net::error::operation_aborted) {
-         std::cout << "Stopping accepting connections ..." << std::endl;
+         log("Stopping accepting connections", loglevel::info);
          return;
       }
 

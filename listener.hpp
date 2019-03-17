@@ -12,14 +12,14 @@
 namespace rt
 {
 
-class server_mgr;
+class worker;
 
 class listener {
 private:
    net::io_context ioc {1};
    net::signal_set signals;
    net::ip::tcp::acceptor acceptor;
-   std::vector<std::shared_ptr<server_mgr>> const& workers;
+   std::vector<std::shared_ptr<worker>> const& workers;
    long long next = 0;
 
    void do_accept();
@@ -28,7 +28,7 @@ private:
 
 public:
    listener( net::ip::tcp::endpoint const& endpoint
-           , std::vector<std::shared_ptr<server_mgr>> const& workers);
+           , std::vector<std::shared_ptr<worker>> const& workers);
    void run();
    void shutdown() {acceptor.cancel();}
 };

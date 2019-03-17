@@ -17,7 +17,7 @@
 namespace rt
 {
 
-class server_mgr;
+class worker;
 class server_session;
 
 enum class ev_res
@@ -66,7 +66,7 @@ private:
    net::steady_timer timer;
    beast::multi_buffer buffer;
 
-   std::shared_ptr<server_mgr> mgr;
+   std::shared_ptr<worker> mgr;
 
    struct msg_entry {
       std::string msg;
@@ -102,7 +102,7 @@ private:
 public:
    explicit
    server_session( net::ip::tcp::socket socket
-                 , std::shared_ptr<server_mgr> mgr);
+                 , std::shared_ptr<worker> worker_);
    ~server_session();
 
    void accept();

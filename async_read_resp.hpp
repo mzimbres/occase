@@ -176,7 +176,7 @@ auto zrange(std::string const& key, int min, int max)
               , std::to_string(max)
               };
 
-   return resp_assemble("zrangebyscore", std::begin(par), std::end(par));
+   return resp_assemble("zrange", std::begin(par), std::end(par));
 }
 
 inline

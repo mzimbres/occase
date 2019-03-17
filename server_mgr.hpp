@@ -117,12 +117,15 @@ private:
    void on_db_user_msgs( std::string const& user_id
                        , std::vector<std::string> const& msgs) const;
 
+   // Handlers for events we receive from the database.
    void on_db_get_menu(std::string const& data);
    void on_db_unsol_pub(std::string const& data);
    void on_db_msg_handler( std::vector<std::string> const& resp
                          , redis::req_item const& cmd);
    void on_db_pub_counter(std::string const& data);
    void on_db_publish();
+   void on_db_menu_msgs(std::vector<std::string> const& msgs);
+   void on_db_menu_connect();
 
 public:
    server_mgr(server_mgr_cf cf, int id_);

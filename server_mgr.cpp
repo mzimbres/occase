@@ -50,49 +50,98 @@ void server_mgr::init()
    db.run();
 }
 
-void
-server_mgr::on_db_get_menu(std::string const& data)
+void server_mgr::on_db_get_menu(std::string const& data)
 {
    auto const j_menu = json::parse(data);
 
-   // TODO: Check if the menus have the correct number of elements and
-   // the correct depth for each element.
-   menus = j_menu.at("menus").get<std::vector<menu_elem>>();
-   auto const menu_codes = menu_elems_to_codes(menus);
-   auto const arrays = channel_codes(menu_codes, menus);
-   std::vector<std::uint64_t> comb_codes;
-   std::transform( std::begin(arrays), std::end(arrays)
-                 , std::back_inserter(comb_codes)
-                 , [this](auto const& o) {
-                   return convert_to_channel_code(o);});
+   if (std::empty(menus)) {
+      // The menus were empty. This happens only when the server is
+      // started. We just save the menu and retrieve menu messages
+      // from the database. It is important to not create the channels
+      // here since if we do it and we are alredy subscribed to the
+      // menu channel we will begin to receive messages and send to
+      // the users. Since these messages will be more recent, they
+      // will update their last message counter. Then if they
+      // disconnect and connect again the old messages will not be
+      // sent to them anymore. This is a very unlikely situation since
+      // the retrieval of messages should be fast.
+      menus = j_menu.at("menus").get<std::vector<menu_elem>>();
 
-   int failed_channel_creation = 0;
-   for (auto const& gc : comb_codes) {
-      auto const new_group =
-         channels.insert({gc, {}});
-      if (!new_group.second) {
-         ++failed_channel_creation;
+      // We may wish to check whether the menu received above is valid
+      // before we proceed with the retrieval of the menu messages.
+      // For example check if the menus have the correct number of
+      // elements and the correct depth for each element.
+      db.retrieve_menu_msgs(last_menu_msg_id);
+      return;
+   }
+
+   // The menus is not empty which means we have received an updated
+   // menu. We only have to create the additional channels.
+   // TODO: Create the aditional channels.
+}
+
+void server_mgr::on_db_menu_msgs(std::vector<std::string> const& msgs)
+{
+   // This function has two roles.
+   //
+   // 1. Create the channels if they do not already exist. If they do
+   //    exist a connection to the database that has been restablished
+   //    and we requested all message that we may have missed while we
+   //    were offline.
+   //
+   // 2. Fill the channels with the menu messages.
+
+   if (std::empty(channels)) {
+      auto const menu_codes = menu_elems_to_codes(menus);
+      auto const arrays = channel_codes(menu_codes, menus);
+
+      auto converter = [this](auto const& o)
+         { return convert_to_channel_code(o);};
+
+      std::vector<std::uint64_t> comb_codes;
+      std::transform( std::begin(arrays), std::end(arrays)
+                    , std::back_inserter(comb_codes)
+                    , converter);
+
+      int i = 0;
+      auto f = [&i, this](auto const& o)
+      {
+         if (!channels.insert({o, {}}).second)
+            ++i;
+      };
+
+      std::for_each(std::begin(comb_codes), std::end(comb_codes), f);
+
+      std::clog << "Worker " << id << ": " << std::size(channels)
+                << " channels created." << std::endl;
+
+      if (i != 0) {
+         std::clog << "Worker " << id << ": "
+                   << i << " channels already existed." << std::endl;
       }
    }
 
-   std::clog << "Worker " << id << ": " << std::size(channels)
-             << " channels created." << std::endl;
+   std::clog << "Menu messages size: " << std::size(msgs) << std::endl;
 
-   std::clog << "Worker " << id << ": " << failed_channel_creation
-             << " channels already existed." << std::endl;
+   auto loader = [this](auto const& msg)
+      { on_db_unsol_pub(msg); };
 
-   db.retrieve_menu_msgs(1 + last_menu_msg_id);
+   std::for_each(std::begin(msgs), std::end(msgs), loader);
+
+   std::clog << "Worker " << id << ": "
+             << "Ready to receive menu msgs."
+             << std::endl;
 }
 
-void server_mgr::on_db_unsol_pub(std::string const& data)
+void server_mgr::on_db_unsol_pub(std::string const& msg)
 {
-   auto const j = json::parse(data);
+   auto const j = json::parse(msg);
    auto item = j.get<pub_item>();
    auto const code = convert_to_channel_code(item.to);
    auto const g = channels.find(code);
    if (g == std::end(channels)) {
       // This can happen if the subscription to the menu channel
-      // happens before we receive the menu a generate the channels.
+      // happens before we receive the menu and generate the channels.
       // That is why it is important to update the last message id
       // only after this check.
       return;
@@ -162,16 +211,34 @@ server_mgr::on_db_msg_handler( std::vector<std::string> const& data
          break;
 
       case redis::request::menu_connect:
-         db.async_retrieve_menu();
+         on_db_menu_connect();
          break;
 
       case redis::request::menu_msgs:
-         std::cout << "receiving menu msgs: " << std::size(data)
-                   << std::endl;
+         on_db_menu_msgs(data);
          break;
 
       default:
          break;
+   }
+}
+
+void server_mgr::on_db_menu_connect()
+{
+   // There are two situations we have to distinguish here.
+   //
+   // 1. The server has started and still does not have the menu, we
+   //    have to retrieve it.
+   //
+   // 2. The connection to the database (redis) has been lost and
+   //    restablished. In this case we have to retrieve all the
+   //    messages that may have arrived while we were offline.
+
+   if (std::empty(menus)) {
+      db.async_retrieve_menu();
+      return;
+   } else {
+      db.retrieve_menu_msgs(1 + last_menu_msg_id);
    }
 }
 

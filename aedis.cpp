@@ -169,6 +169,37 @@ void zrange(session_cf const& cf)
    ioc.run();
 }
 
+void lrange(session_cf const& cf)
+{
+   boost::asio::io_context ioc;
+   session ss(cf, ioc, "1");
+   ss.set_msg_handler(pub_handler);
+
+   auto c1 = lrange("foo", 0, -1);
+
+   ss.send(c1);
+
+   ss.run();
+   ioc.run();
+}
+
+void read_msg_op(session_cf const& cf)
+{
+   boost::asio::io_context ioc;
+   session ss(cf, ioc, "1");
+   ss.set_msg_handler(pub_handler);
+
+   auto c1 = multi()
+           + lrange("foo", 0, -1)
+           + del("foo")
+           + exec();
+
+   ss.send(c1);
+
+   ss.run();
+   ioc.run();
+}
+
 int main(int argc, char* argv[])
 {
    try {
@@ -196,6 +227,8 @@ int main(int argc, char* argv[])
         " 5 zadd.\n"
         " 6 zrangebyscore.\n"
         " 7 zrange.\n"
+        " 8 lrange.\n"
+        " 9 read msg op.\n"
       )
 
       ("count,c"
@@ -247,6 +280,16 @@ int main(int argc, char* argv[])
 
       if (test == 7) {
          zrange(cf);
+         return 0;
+      }
+
+      if (test == 8) {
+         lrange(cf);
+         return 0;
+      }
+
+      if (test == 9) {
+         read_msg_op(cf);
          return 0;
       }
 

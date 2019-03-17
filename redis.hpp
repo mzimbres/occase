@@ -190,6 +190,12 @@ public:
    //
    void retrieve_menu_msgs(int begin);
 
+   // Retrieves user messages. Completes with the event
+   //
+   //    redis::request::unsol_user_msgs
+   //
+   void retrieve_user_msgs(std::string const& user_id);
+
    // Closes the connections to redis.
    void disconnect();
 };

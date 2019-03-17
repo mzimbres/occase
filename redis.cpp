@@ -140,6 +140,12 @@ facade::on_user_pub( boost::system::error_code const& ec
    assert(!std::empty(user_pub_queue));
 
    if (user_pub_queue.front().req == request::get_user_msg) {
+      //std::cout << "=======> ";
+      //for (auto const& o : data)
+      //  std::cout << o << " ";
+
+      //std::cout << std::endl;
+
       req_item const item { request::unsol_user_msgs
                           , std::move(user_pub_queue.front().user_id)};
       worker_handler({std::move(data.back())}, item);
@@ -169,8 +175,19 @@ facade::on_user_sub( boost::system::error_code const& ec
    assert(n != std::string::npos);
    auto user_id = data[1].substr(n + 1);
 
-   ss_user_pub.send(lpop(cf.msg_prefix + user_id));
-   user_pub_queue.push({request::get_user_msg, std::move(user_id)});
+   retrieve_user_msgs(user_id);
+}
+
+void facade::retrieve_user_msgs(std::string const& user_id)
+{
+   auto cmd = multi()
+            + lpop(cf.msg_prefix + user_id)
+            + exec();
+
+   ss_user_pub.send(std::move(cmd));
+   user_pub_queue.push({request::ignore, {}});
+   user_pub_queue.push({request::ignore, {}});
+   user_pub_queue.push({request::get_user_msg, user_id});
 }
 
 void facade::sub_to_user_msgs(std::string const& id)

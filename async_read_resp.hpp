@@ -195,6 +195,24 @@ auto zrangebyscore(std::string const& key, int min, int max)
    return resp_assemble("zrangebyscore", std::begin(par), std::end(par));
 }
 
+inline
+auto lrange(std::string const& key, int min, int max)
+{
+   auto par = { key
+              , std::to_string(min)
+              , std::to_string(max)
+              };
+
+   return resp_assemble("lrange", std::begin(par), std::end(par));
+}
+
+inline
+auto del(std::string const& key)
+{
+   auto par = {key};
+   return resp_assemble("del", std::begin(par), std::end(par));
+}
+
 template < class AsyncStream
          , class Handler>
 struct read_resp_op {
@@ -274,7 +292,7 @@ struct read_resp_op {
                      break;
                      case '*':
                      {
-                        assert(counter == 1);
+                        //assert(counter == 1);
                         counter = get_length(buffer->data.data() + 1);
                      }
                      break;

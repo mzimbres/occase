@@ -9,7 +9,7 @@
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
 
-#include "acceptor_arena.hpp"
+#include "listener.hpp"
 #include "server_mgr.hpp"
 #include "utils.hpp"
 
@@ -243,8 +243,8 @@ int main(int argc, char* argv[])
                     , std::back_inserter(threads)
                     , thread_gen);
 
-      acceptor_arena acc {cf.port, workers};
-      acc.run();
+      listener lst {{boost::asio::ip::tcp::v4(), cf.port}, workers};
+      lst.run();
 
       auto joiner = [](auto& o)
          { o.join(); };

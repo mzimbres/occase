@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <boost/asio.hpp>
+#include <boost/asio/signal_set.hpp>
 
 #include "config.hpp"
 #include "server_session.hpp"
@@ -15,6 +16,8 @@ class server_mgr;
 
 class listener {
 private:
+   net::io_context ioc {1};
+   net::signal_set signals;
    net::ip::tcp::acceptor acceptor;
    std::vector<std::shared_ptr<server_mgr>> const& workers;
    long long next = 0;
@@ -25,8 +28,7 @@ private:
 
 public:
    listener( net::ip::tcp::endpoint const& endpoint
-           , std::vector<std::shared_ptr<server_mgr>> const& arenas_
-           , net::io_context& ioc);
+           , std::vector<std::shared_ptr<server_mgr>> const& workers);
    void run();
    void shutdown() {acceptor.cancel();}
 };

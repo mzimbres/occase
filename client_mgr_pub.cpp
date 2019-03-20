@@ -47,7 +47,7 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
       if (res != "ok")
          throw std::runtime_error("client_mgr_pub::publish_ack");
 
-      auto const id = j.at("id").get<long long>();
+      auto const id = j.at("id").get<int>();
       pub_stack.top().post_id = id;
       //std::cout << "Pub: Received publish ack. Post id: " << id << std::endl;
       user_msg_counter = op.n_listeners;
@@ -59,9 +59,9 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
       auto items = j.at("items").get<std::vector<pub_item>>();
 
       auto const cond = [this](auto const& e)
-      { return e.from == op.user; };
+      { return e.from != op.user; };
 
-      auto point = std::partition(std::begin(items), std::end(items), cond);
+      auto point = std::remove_if(std::begin(items), std::end(items), cond);
 
       auto const f = [this](auto const& item)
       {
@@ -76,7 +76,7 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
    if (cmd == "user_msg") {
       auto const from = j.at("from").get<std::string>();
       auto const to = j.at("to").get<std::string>();
-      //auto const post_id = j.at("post_id").get<long long>();
+      auto const post_id = j.at("post_id").get<long long>();
 
       // TODO: Why I had to uncomment the asserts below to get the
       // tests passed, after introducing the counter.
@@ -85,12 +85,12 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
       //          << " post_id: " << post_id << std::endl;
 
       assert(to == op.user);
-      //assert(pub_stack.top().post_id == post_id);
+      assert(pub_stack.top().post_id == post_id);
 
       // This assert is not strictly necessary but it would be strange
       // to receive a user message before the server echoed the
       // publish command back.
-      //assert(pub_stack.top().server_echo);
+      assert(pub_stack.top().server_echo);
 
       if (--user_msg_counter == 0) {
          pub_stack.pop();

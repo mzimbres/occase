@@ -18,9 +18,16 @@
  * 3. Send a publish to one of the channels.
  * 4. Wait for the publish ack.
  * 5. Wait the for the publish to be forwarded back.
- * 6. Wait for a user_msg/unread/read relative to publish that has
- *    been sent, for each of the listener sessions.
+ * 6. Wait for a user_msg directed to publish that has been sent,
+ *    from each of the listener sessions.
  * 7. Back to step 3. until a publish has been sent to all channels.
+ *
+ * Notice: When more than one of this clients are started it may
+ * appear on the server logs a failed write. This happens because
+ * these clients will exit while the session on the server is still
+ * alive and message to a channel are still sent. It is to investigate
+ * however why they are lasting so long as we sent a clean wensocket
+ * frame.
  */
 
 namespace rt
@@ -42,7 +49,7 @@ private:
 
    struct ch_msg_helper {
       bool server_echo = false;
-      long long post_id = -1;
+      int post_id = -1;
       std::vector<std::vector<std::vector<int>>> pub_code;
    };
 

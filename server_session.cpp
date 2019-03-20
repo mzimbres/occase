@@ -396,7 +396,8 @@ void server_session::on_write( boost::system::error_code ec
       // nothing to do. Unsent user messages will be returned to the
       // database so that the server can retrieve them next time he
       // reconnects.
-      std::cout << "on_write: Failed to send." << std::endl;
+      std::cout << "server_session::on_write: " << user_id 
+                << " " << ec.message() << std::endl;
       return;
    }
 

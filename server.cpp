@@ -19,6 +19,7 @@ namespace po = boost::program_options;
 
 struct config {
    bool help = false;
+   bool log_on_stderr = false;
    server_cf mgr;
    int number_of_workers;
    unsigned short port;
@@ -51,6 +52,11 @@ auto get_server_op(int argc, char* argv[])
    po::options_description desc("Options");
    desc.add_options()
    ("help,h", "Produces help message")
+
+   ("log-on-stderr"
+   , "Instructs syslog to write the messages on stderr as well."
+   )
+
    ( "port,p"
    , po::value<unsigned short>(&cf.port)->default_value(8080)
    , "Server listening port."
@@ -207,6 +213,9 @@ auto get_server_op(int argc, char* argv[])
       return config {true};
    }
 
+   if (vm.count("log-on-stderr"))
+      cf.log_on_stderr = true;
+
    cf.mgr.redis_cf.cf.msg_prefix += ":";
    cf.mgr.redis_cf.cf.notify_prefix += redis_db + "__:";
    cf.mgr.redis_cf.cf.notify_prefix += cf.mgr.redis_cf.cf.msg_prefix;
@@ -224,7 +233,7 @@ int main(int argc, char* argv[])
          return 0;
 
       set_fd_limits(500000);
-      logger logg {argv[0], false};
+      logger logg {argv[0], cf.log_on_stderr};
 
       std::vector<std::shared_ptr<worker>> workers;
 

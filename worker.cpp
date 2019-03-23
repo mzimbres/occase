@@ -70,7 +70,7 @@ void worker::on_db_get_menu(std::string const& data)
       // before we proceed with the retrieval of the menu messages.
       // For example check if the menus have the correct number of
       // elements and the correct depth for each element.
-      db.retrieve_menu_msgs(last_menu_msg_id);
+      db.retrieve_menu_msgs(0);
       return;
    }
 
@@ -85,11 +85,12 @@ void worker::on_db_menu_msgs(std::vector<std::string> const& msgs)
    //
    // 1. Create the channels if they do not already exist. If they do
    //    exist a connection to the database that has been restablished
-   //    and we requested all message that we may have missed while we
-   //    were offline.
+   //    and we requested all messages that we may have missed while
+   //    we were offline.
    //
    // 2. Fill the channels with the menu messages.
 
+   // TODO: Move this to the get_menu event.
    if (std::empty(channels)) {
       auto const menu_codes = menu_elems_to_codes(menus);
       auto const arrays = channel_codes(menu_codes, menus);
@@ -194,11 +195,6 @@ worker::on_db_msg_handler( std::vector<std::string> const& data
          on_db_get_menu(data.back());
          break;
 
-      case redis::request::unsolicited_publish:
-         assert(std::size(data) == 1);
-         on_db_unsol_pub(data.back());
-         break;
-
       case redis::request::pub_counter:
          assert(std::size(data) == 1);
          on_db_pub_counter(data.back());
@@ -214,6 +210,10 @@ worker::on_db_msg_handler( std::vector<std::string> const& data
 
       case redis::request::menu_msgs:
          on_db_menu_msgs(data);
+         break;
+
+      case redis::request::new_menu_msg_available:
+         db.retrieve_menu_msgs(1 + last_menu_msg_id);
          break;
 
       default:

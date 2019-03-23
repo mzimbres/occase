@@ -65,7 +65,7 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
 
       auto const f = [this](auto const& item)
       {
-         assert(pub_stack.top().post_id == item.id);
+         //assert(pub_stack.top().post_id == item.id);
          pub_stack.top().server_echo = true;
       };
 
@@ -85,12 +85,12 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
       //          << " post_id: " << post_id << std::endl;
 
       assert(to == op.user);
-      assert(pub_stack.top().post_id == post_id);
+      //assert(pub_stack.top().post_id == post_id);
 
       // This assert is not strictly necessary but it would be strange
       // to receive a user message before the server echoed the
       // publish command back.
-      assert(pub_stack.top().server_echo);
+      //assert(pub_stack.top().server_echo);
 
       if (--user_msg_counter == 0) {
          pub_stack.pop();

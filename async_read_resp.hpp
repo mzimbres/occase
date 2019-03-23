@@ -205,7 +205,7 @@ auto zrangebyscore(std::string const& key, int min, int max)
    auto par = { key
               , std::to_string(min)
               , max_str
-              , std::string {"withscores"}
+              //, std::string {"withscores"}
               };
 
    return resp_assemble("zrangebyscore", std::begin(par), std::end(par));

@@ -149,14 +149,6 @@ auto get_server_op(int argc, char* argv[])
    , "The redis database to use: 0, 1, 2 etc."
    )
 
-   ( "redis-menu-channel"
-   , po::value<std::string>(&cf.mgr.db.cf.menu_channel)->
-        default_value("menu_channel")
-   , "The name of the redis channel where publish commands "
-     "are be broadcasted to all workers connected to this channel. "
-     "Which may or may not be on the same machine."
-   )
-
    ( "redis-menu-key"
    , po::value<std::string>(&cf.mgr.db.cf.menu_key)->
         default_value("menu")

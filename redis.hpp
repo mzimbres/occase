@@ -12,11 +12,11 @@ enum class request
 , unsol_user_msgs
 , ignore
 , publish
-, unsolicited_publish
 , pub_counter
 , get_user_msg
 , menu_connect
 , menu_msgs
+, new_menu_msg_available
 };
 
 struct req_item {
@@ -25,10 +25,6 @@ struct req_item {
 };
 
 struct db_cf {
-   // The name of the channel where all *publish* commands will be
-   // sent.
-   std::string menu_channel;
-
    // This is the key in redis holding the menus in json format.
    std::string menu_key;
 

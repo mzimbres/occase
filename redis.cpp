@@ -46,6 +46,7 @@ void facade::on_menu_sub_conn()
 {
    log("on_menu_sub_conn: connected", loglevel::debug);
    ss_menu_sub.send(subscribe(cf.menu_channel));
+   ss_menu_sub.send(subscribe(cf.notify_prefix + cf.menu_msgs_key));
 }
 
 void facade::on_menu_pub_conn()
@@ -82,6 +83,13 @@ void facade::on_menu_sub( boost::system::error_code const& ec
 
    if (data.front() != "message")
       return;
+
+   if (data.back() == "zadd") {
+      //for (auto const& o : data)
+      //   std::cout << o << " ";
+      //std::cout << std::endl;
+      return;
+   }
 
    assert(std::size(data) == 3);
 
@@ -169,7 +177,7 @@ facade::on_user_sub( boost::system::error_code const& ec
    assert(data.front() == "message");
    assert(std::size(data) == 3);
 
-   auto const pos = std::size(cf.notify_prefix);
+   auto const pos = std::size(cf.user_notify_prefix);
    auto user_id = data[1].substr(pos);
    assert(!std::empty(user_id));
    retrieve_user_msgs(user_id);
@@ -189,12 +197,12 @@ void facade::retrieve_user_msgs(std::string const& user_id)
 
 void facade::sub_to_user_msgs(std::string const& id)
 {
-   ss_user_sub.send(subscribe(cf.notify_prefix + id));
+   ss_user_sub.send(subscribe(cf.user_notify_prefix + id));
 }
 
 void facade::unsub_to_user_msgs(std::string const& id)
 {
-   ss_user_sub.send(unsubscribe(cf.notify_prefix + id));
+   ss_user_sub.send(unsubscribe(cf.user_notify_prefix + id));
 }
 
 void facade::pub_menu_msg(std::string const& msg, int id)

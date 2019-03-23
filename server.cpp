@@ -225,7 +225,8 @@ auto get_server_op(int argc, char* argv[])
 
    cf.mgr.db.cf.msg_prefix += ":";
    cf.mgr.db.cf.notify_prefix += redis_db + "__:";
-   cf.mgr.db.cf.notify_prefix += cf.mgr.db.cf.msg_prefix;
+   cf.mgr.db.cf.user_notify_prefix = cf.mgr.db.cf.notify_prefix
+                                   + cf.mgr.db.cf.msg_prefix;
    cf.mgr.db.ss_cf.conn_retry_interval =
       std::chrono::milliseconds{conn_retry_interval};
    cf.mgr.timeouts = cf.get_timeouts();

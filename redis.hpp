@@ -42,6 +42,8 @@ struct db_cf {
    // has to retrieve messages from the database for this user.
    std::string notify_prefix {"__keyspace@"};
 
+   std::string user_notify_prefix;
+
    // The name of the key used to store the number of menu messages
    // sent so far.
    std::string menu_msgs_counter_key;

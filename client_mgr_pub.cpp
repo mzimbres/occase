@@ -22,8 +22,8 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
 
       assert(!std::empty(pub_codes));
 
-      auto const pusher = [this](auto const& o)
-      { pub_stack.push({false, -1, o}); };
+      auto pusher = [this](auto const& o)
+         { pub_stack.push(o); };
 
       std::for_each(std::begin(pub_codes), std::end(pub_codes), pusher);
 
@@ -47,66 +47,70 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
       if (res != "ok")
          throw std::runtime_error("client_mgr_pub::publish_ack");
 
-      auto const id = j.at("id").get<int>();
-      pub_stack.top().post_id = id;
-      //std::cout << "Pub: Received publish ack. Post id: " << id << std::endl;
-      user_msg_counter = op.n_listeners;
-      return 1;
+      post_id = j.at("id").get<int>();
+      return handle_msg(s);
    }
 
    if (cmd == "publish") {
       // We are only interested in our own publishes at the moment.
       auto items = j.at("items").get<std::vector<pub_item>>();
 
-      auto const cond = [this](auto const& e)
-      { return e.from != op.user; };
+      auto cond = [this](auto const& e)
+         { return e.from != op.user; };
 
-      auto point = std::remove_if(std::begin(items), std::end(items), cond);
+      items.erase( std::remove_if( std::begin(items), std::end(items)
+                                 , cond)
+                 , std::end(items));
 
-      auto const f = [this](auto const& item)
-      {
-         //assert(pub_stack.top().post_id == item.id);
-         pub_stack.top().server_echo = true;
-      };
+      if (std::size(items) != 1)
+         throw std::runtime_error("client_mgr_pub::publish1");
 
-      std::for_each(std::begin(items), point, f);
-      return 1;
+      // Since we send only one publish at time items should contain
+      // only one item now.
+
+      //if (post_id == items.front().id)
+      //   throw std::runtime_error("client_mgr_pub::publish2");
+
+      server_echo = true;
+      return handle_msg(s);
    }
 
    if (cmd == "user_msg") {
-      auto const from = j.at("from").get<std::string>();
+      // This test is to make sure the server is not sending us a
+      // message meant to some other user.
       auto const to = j.at("to").get<std::string>();
-      auto const post_id = j.at("post_id").get<long long>();
+      if (to != op.user)
+         throw std::runtime_error("client_mgr_pub::on_read5");
 
-      // TODO: Why I had to uncomment the asserts below to get the
-      // tests passed, after introducing the counter.
-      //std::cout << "Pub: Received user_msg from " << from 
-      //          << " ===> " << user_msg_counter
-      //          << " post_id: " << post_id << std::endl;
+      // It looks like sometimes the user_msg comes before the
+      // publish_ack is received, therefore we still do not have the
+      // post_id and cannot assert it is the correct one.
+      //auto const post_id = j.at("post_id").get<int>();
 
-      assert(to == op.user);
-      //assert(pub_stack.top().post_id == post_id);
-
-      // This assert is not strictly necessary but it would be strange
-      // to receive a user message before the server echoed the
-      // publish command back.
-      //assert(pub_stack.top().server_echo);
-
-      if (--user_msg_counter == 0) {
-         pub_stack.pop();
-         if (std::empty(pub_stack)) {
-            std::cout << "Pub: User " << op.user << " finished." << std::endl;
-            return -1;
-         }
-
-         return send_group_msg(s);
-      }
-
-      return 1; // Wait for further user messages.
+      --user_msg_counter;
+      return handle_msg(s);
    }
 
    throw std::runtime_error("client_mgr_pub::on_read4");
    return -1;
+}
+
+int client_mgr_pub::handle_msg(std::shared_ptr<client_type> s)
+{
+   if (server_echo && post_id != -1 && user_msg_counter == 0) {
+      pub_stack.pop();
+      if (std::empty(pub_stack)) {
+         std::cout << "Pub: User " << op.user << " finished." << std::endl;
+         return -1;
+      }
+
+      server_echo = false;
+      post_id = -1;
+      user_msg_counter = op.n_listeners;
+      return send_group_msg(s);
+   }
+
+   return 1;
 }
 
 int client_mgr_pub::on_handshake(std::shared_ptr<client_type> s)
@@ -131,9 +135,8 @@ int client_mgr_pub::send_group_msg(std::shared_ptr<client_type> s) const
    //std::cout << "Pub: Stack size: " << std::size(pub_stack)
    //          << std::endl;
 
-   pub_item item {-1, op.user
-                 , "Not an interesting message."
-                 , pub_stack.top().pub_code};
+   pub_item item {-1, op.user, "Not an interesting message."
+                 , pub_stack.top()};
    json j_msg;
    j_msg["cmd"] = "publish";
    j_msg["items"] = std::vector<pub_item>{item};

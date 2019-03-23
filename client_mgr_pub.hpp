@@ -46,22 +46,25 @@ public:
    using options_type = cmgr_sim_op;
 private:
    using client_type = client_session<client_mgr_pub>;
+   using code_type = std::vector<std::vector<std::vector<int>>>;
 
-   struct ch_msg_helper {
-      bool server_echo = false;
-      int post_id = -1;
-      std::vector<std::vector<std::vector<int>>> pub_code;
-   };
-
-   int user_msg_counter;
    options_type op;
-   std::stack<ch_msg_helper> pub_stack;
+
+   bool server_echo = false;
+   int post_id = -1;
+   int user_msg_counter;
+
+   std::stack<code_type> pub_stack;
 
    int send_group_msg(std::shared_ptr<client_type> s) const;
 
+   int handle_msg(std::shared_ptr<client_type> s);
+
 public:
    client_mgr_pub(options_type op_)
-   : op(op_) { }
+   : op {op_}
+   , user_msg_counter {op.n_listeners}
+   { }
 
    int on_read(std::string msg, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec);

@@ -98,6 +98,22 @@ auto rpush(std::string const& key, Iter begin, Iter end)
    return cmd_str;
 }
 
+template <class Iter>
+auto lpush(std::string const& key, Iter begin, Iter end)
+{
+   auto const d = std::distance(begin, end);
+
+   auto payload = make_cmd_header(2 + d)
+                + make_bulky_item("LPUSH")
+                + make_bulky_item(key);
+
+   auto cmd_str = std::accumulate( begin
+                                 , end
+                                 , std::move(payload)
+                                 , accumulator{});
+   return cmd_str;
+}
+
 inline
 auto multi()
 {

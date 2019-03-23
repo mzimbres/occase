@@ -38,7 +38,7 @@ struct worker_cf {
 };
 
 struct server_cf {
-   redis::config redis_cf;
+   redis::config db;
    session_timeouts timeouts;
    worker_cf worker;
 };

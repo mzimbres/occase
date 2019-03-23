@@ -27,7 +27,7 @@ worker::worker(server_cf cf, int id_)
 , cf {cf.worker}
 , signals {ioc, SIGINT, SIGTERM}
 , timeouts {cf.timeouts}
-, db {cf.redis_cf, ioc}
+, db {cf.db, ioc}
 , stats_timer {ioc}
 {
    net::post(ioc, [this]() {init();});
@@ -155,7 +155,7 @@ void worker::on_db_unsol_pub(std::string const& msg)
 
 void
 worker::on_db_user_msgs( std::string const& user_id
-                           , std::vector<std::string> const& msgs) const
+                       , std::vector<std::string> const& msgs) const
 {
    assert(std::size(msgs) == 1);
    assert(!std::empty(msgs.back()));

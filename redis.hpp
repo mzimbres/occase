@@ -24,8 +24,6 @@ struct req_item {
    std::string user_id;
 };
 
-// These are the names used inside redis to separate the keys and
-// make it easier to use widecards.
 struct db_cf {
    // The name of the channel where all *publish* commands will be
    // sent.
@@ -58,6 +56,10 @@ struct db_cf {
    // Expiration time for user message keys. Keys will be deleted on
    // expiration.
    int user_msg_exp_time {3600};
+
+   // The maximum number of messages a user is allowed to accumulate
+   // on the server (when he is offline).
+   int max_offline_msgs {100};
 };
 
 struct config {
@@ -159,7 +161,7 @@ public:
       auto const key = cf.msg_prefix + id;
       auto cmd_str = multi()
                    + incr(cf.user_msgs_counter_key)
-                   + rpush(key, begin, end)
+                   + lpush(key, begin, end)
                    + expire(key, cf.user_msg_exp_time)
                    + exec();
 

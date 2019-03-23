@@ -163,7 +163,7 @@ facade::on_user_sub( boost::system::error_code const& ec
       return;
    }
 
-   if (data.back() != "rpush")
+   if (data.back() != "lpush")
       return;
 
    assert(data.front() == "message");

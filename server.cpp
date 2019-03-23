@@ -126,19 +126,19 @@ auto get_server_op(int argc, char* argv[])
    )
 
    ( "redis-server-address"
-   , po::value<std::string>(&cf.mgr.redis_cf.ss_cf.host)->
+   , po::value<std::string>(&cf.mgr.db.ss_cf.host)->
        default_value("127.0.0.1")
    , "Address of the redis server."
    )
 
    ( "redis-server-port"
-   , po::value<std::string>(&cf.mgr.redis_cf.ss_cf.port)->
+   , po::value<std::string>(&cf.mgr.db.ss_cf.port)->
        default_value("6379")
    , "Port where redis server is listening."
    )
 
    ( "redis-max-pipeline-size"
-   , po::value<int>(&cf.mgr.redis_cf.ss_cf.max_pipeline_size)->
+   , po::value<int>(&cf.mgr.db.ss_cf.max_pipeline_size)->
        default_value(10000)
    , "The maximum allowed size of pipelined commands in the redis "
      " session."
@@ -150,7 +150,7 @@ auto get_server_op(int argc, char* argv[])
    )
 
    ( "redis-menu-channel"
-   , po::value<std::string>(&cf.mgr.redis_cf.cf.menu_channel)->
+   , po::value<std::string>(&cf.mgr.db.cf.menu_channel)->
         default_value("menu_channel")
    , "The name of the redis channel where publish commands "
      "are be broadcasted to all workers connected to this channel. "
@@ -158,27 +158,27 @@ auto get_server_op(int argc, char* argv[])
    )
 
    ( "redis-menu-key"
-   , po::value<std::string>(&cf.mgr.redis_cf.cf.menu_key)->
+   , po::value<std::string>(&cf.mgr.db.cf.menu_key)->
         default_value("menu")
    , "Redis key holding the menus in json format."
    )
 
    ( "redis-menu-msgs-counter-key"
-   , po::value<std::string>(&cf.mgr.redis_cf.cf.menu_msgs_counter_key)->
+   , po::value<std::string>(&cf.mgr.db.cf.menu_msgs_counter_key)->
         default_value("menu_msgs_counter")
    , "The name of the key used to store the number of menu messages sent"
      " so far."
    )
 
    ( "redis-user-msgs-counter-key"
-   , po::value<std::string>(&cf.mgr.redis_cf.cf.user_msgs_counter_key)->
+   , po::value<std::string>(&cf.mgr.db.cf.user_msgs_counter_key)->
         default_value("user_msgs_counter")
    , "The name of the key used to store the number of user messages sent"
      " so far."
    )
 
    ( "redis-msg-prefix"
-   , po::value<std::string>(&cf.mgr.redis_cf.cf.msg_prefix)->
+   , po::value<std::string>(&cf.mgr.db.cf.msg_prefix)->
         default_value("msg")
    , "That prefix that will be incorporated in the keys that hold"
      " user messages."
@@ -191,16 +191,23 @@ auto get_server_op(int argc, char* argv[])
    )
 
    ("redis-user-msg-exp_time"
-   , po::value<int>(&cf.mgr.redis_cf.cf.user_msg_exp_time)->
+   , po::value<int>(&cf.mgr.db.cf.user_msg_exp_time)->
         default_value(7 * 24 * 60 * 60)
    , "Expiration time in seconds for redis user message keys."
      " After the time has elapsed the keys will be deleted."
    )
 
    ( "redis-menu-msgs-key"
-   , po::value<std::string>(&cf.mgr.redis_cf.cf.menu_msgs_key)->
+   , po::value<std::string>(&cf.mgr.db.cf.menu_msgs_key)->
         default_value("menu_msgs")
    , "Redis key used to store menu msgs (in a sorted set)."
+   )
+
+   ( "redis-user-max-offline-msgs"
+   , po::value<int>(&cf.mgr.db.cf.max_offline_msgs)->
+        default_value(100)
+   , "The maximum number of messages a user is allowed to accumulate "
+     " (while he is offline)."
    )
    ;
 
@@ -216,10 +223,10 @@ auto get_server_op(int argc, char* argv[])
    if (vm.count("log-on-stderr"))
       cf.log_on_stderr = true;
 
-   cf.mgr.redis_cf.cf.msg_prefix += ":";
-   cf.mgr.redis_cf.cf.notify_prefix += redis_db + "__:";
-   cf.mgr.redis_cf.cf.notify_prefix += cf.mgr.redis_cf.cf.msg_prefix;
-   cf.mgr.redis_cf.ss_cf.conn_retry_interval =
+   cf.mgr.db.cf.msg_prefix += ":";
+   cf.mgr.db.cf.notify_prefix += redis_db + "__:";
+   cf.mgr.db.cf.notify_prefix += cf.mgr.db.cf.msg_prefix;
+   cf.mgr.db.ss_cf.conn_retry_interval =
       std::chrono::milliseconds{conn_retry_interval};
    cf.mgr.timeouts = cf.get_timeouts();
    return cf;

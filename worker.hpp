@@ -10,23 +10,37 @@
 #include <boost/asio.hpp>
 #include <boost/asio/steady_timer.hpp>
 
+#include "menu.hpp"
 #include "redis.hpp"
 #include "config.hpp"
 #include "channel.hpp"
 #include "json_utils.hpp"
-#include "menu.hpp"
 #include "server_session.hpp"
 
 namespace rt
 {
 
+struct worker_cf {
+   // This is the frequency we will be cleaning up the channel if no
+   // publish activity is observed.
+   int ch_cleanup_rate; 
+
+   // Max number of messages stored in the each channel.
+   int ch_max_posts; 
+
+   // The maximum number of channels a user is allowed to subscribe
+   // to. Remaining channels will be ignored.
+   int ch_max_sub; 
+
+   // The maximum number of channels the is allowed to be sent to the
+   // user on subscribe.
+   int max_menu_msg_on_sub; 
+};
+
 struct server_cf {
    redis::config redis_cf;
    session_timeouts timeouts;
-   int ch_cleanup_rate; 
-   int ch_max_posts; 
-   int ch_max_sub; 
-   int max_menu_msg_on_sub; 
+   worker_cf worker;
 };
 
 struct sessions_stats {
@@ -47,20 +61,7 @@ private:
    // apart.
    int const id;
 
-   // This is the frequency we will be cleaning up the channel if no
-   // publish activity is observed.
-   int const ch_cleanup_rate; 
-
-   // Max number of messages stored in the each channel.
-   int const ch_max_posts; 
-
-   // The maximum number of channels a user is allowed to subscribe
-   // to. Remaining channels will be ignored.
-   int const ch_max_sub; 
-
-   // The maximum number of channels the is allowed to be sent to the
-   // user on subscribe.
-   int const max_menu_msg_on_sub; 
+   worker_cf const cf;
 
    net::io_context ioc {1};
    net::signal_set signals;

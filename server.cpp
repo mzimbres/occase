@@ -94,27 +94,27 @@ auto get_server_op(int argc, char* argv[])
    )
 
    ( "channel-cleanup-rate,E"
-   , po::value<int>(&cf.mgr.ch_cleanup_rate)->default_value(128)
+   , po::value<int>(&cf.mgr.worker.ch_cleanup_rate)->default_value(128)
    , "The rate channels will be  cleaned up if"
      " no publish activity is observed. Incremented on every publication"
      " on the channel."
    )
 
    ( "max-msgs-per-channels,T"
-   , po::value<int>(&cf.mgr.ch_max_posts)->default_value(32)
+   , po::value<int>(&cf.mgr.worker.ch_max_posts)->default_value(32)
    , "Max number of messages stored per channel. Posting on a"
      " channel that reached this number of messages will cause old"
      " messages to be removed."
    )
 
    ( "max-channels-subscribe,S"
-   , po::value<int>(&cf.mgr.ch_max_sub)->default_value(1024)
+   , po::value<int>(&cf.mgr.worker.ch_max_sub)->default_value(1024)
    , "The maximum number of channels the user is allowed to subscribe to."
      " Remaining channels will be ignored."
    )
 
    ( "max-menu-msgs-on-subscribe,u"
-   , po::value<int>(&cf.mgr.max_menu_msg_on_sub)->default_value(50)
+   , po::value<int>(&cf.mgr.worker.max_menu_msg_on_sub)->default_value(50)
    , "The maximum number of messages that is allowed to be sent to "
      "the user when he subscribes to his channels."
    )

@@ -23,15 +23,12 @@ namespace rt
 {
 
 worker::worker(server_cf cf, int id_)
-: id(id_)
-, ch_cleanup_rate(cf.ch_cleanup_rate)
-, ch_max_posts(cf.ch_max_posts)
-, ch_max_sub(cf.ch_max_sub)
-, max_menu_msg_on_sub(cf.max_menu_msg_on_sub)
-, signals(ioc, SIGINT, SIGTERM)
-, timeouts(cf.timeouts)
-, db(cf.redis_cf, ioc)
-, stats_timer(ioc)
+: id {id_}
+, cf {cf.worker}
+, signals {ioc, SIGINT, SIGTERM}
+, timeouts {cf.timeouts}
+, db {cf.redis_cf, ioc}
+, stats_timer {ioc}
 {
    net::post(ioc, [this]() {init();});
 }
@@ -153,7 +150,7 @@ void worker::on_db_unsol_pub(std::string const& msg)
    else
       ++menu_msg_inversions;
 
-   g->second.broadcast(item, ch_max_posts);
+   g->second.broadcast(item, cf.ch_max_posts);
 }
 
 void
@@ -434,18 +431,18 @@ worker::on_user_subscribe( json const& j
       // TODO: Change 0 with the latest id the user has received.
       g->second.retrieve_pub_items(0, std::back_inserter(items));
       g->second.add_member( s->get_proxy_session(true)
-                          , ch_cleanup_rate);
+                          , cf.ch_cleanup_rate);
       ++n_channels;
    };
 
    // TODO: Update the compiler and use std::for_each_n.
    auto const size = ssize(ch_codes);
-   auto const n = ch_max_sub > size ? size : ch_max_sub;
+   auto const n = cf.ch_max_sub > size ? size : cf.ch_max_sub;
    auto const end = std::begin(ch_codes) + n;
    std::for_each(std::begin(ch_codes), end, func);
 
-   if (ssize(items) > max_menu_msg_on_sub) {
-      auto const d = ssize(items) - max_menu_msg_on_sub;
+   if (ssize(items) > cf.max_menu_msg_on_sub) {
+      auto const d = ssize(items) - cf.max_menu_msg_on_sub;
       std::cout << "====> " << d << std::endl;
       // Notice here we want to move the most recent elements to the
       // front of the vector.
@@ -453,11 +450,11 @@ worker::on_user_subscribe( json const& j
          { return a.id > b.id; };
 
       std::nth_element( std::begin(items)
-                      , std::begin(items) + max_menu_msg_on_sub
+                      , std::begin(items) + cf.max_menu_msg_on_sub
                       , std::end(items)
                       , comp);
 
-      items.erase( std::begin(items) + max_menu_msg_on_sub
+      items.erase( std::begin(items) + cf.max_menu_msg_on_sub
                  , std::end(items));
    }
 
@@ -606,8 +603,8 @@ void worker::do_stats_logger()
       }
       
       std::lock_guard mut(m);
-      std::cout << "Current number of sessions: "
-                << stats.number_of_sessions
+      std::cout << "Stats: " << stats.number_of_sessions
+                << " " << std::size(pub_wait_queue)
                 << std::endl;
 
       do_stats_logger();

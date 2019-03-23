@@ -181,7 +181,7 @@ inline
 auto zadd(std::string const& key, int score, std::string const& value)
 {
    auto par = {key, std::to_string(score), value};
-   return resp_assemble("zadd", std::begin(par), std::end(par));
+   return resp_assemble("ZADD", std::begin(par), std::end(par));
 }
 
 inline

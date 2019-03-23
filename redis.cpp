@@ -169,12 +169,9 @@ facade::on_user_sub( boost::system::error_code const& ec
    assert(data.front() == "message");
    assert(std::size(data) == 3);
 
-   // TODO: Use the prefix size to get the usbstring instead of
-   // searching.
-   auto const n = data[1].rfind(":");
-   assert(n != std::string::npos);
-   auto user_id = data[1].substr(n + 1);
-
+   auto const pos = std::size(cf.notify_prefix);
+   auto user_id = data[1].substr(pos);
+   assert(!std::empty(user_id));
    retrieve_user_msgs(user_id);
 }
 

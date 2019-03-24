@@ -172,9 +172,6 @@ void
 worker::on_db_user_msgs( std::string const& user_id
                        , std::vector<std::string> const& msgs) const
 {
-   assert(std::size(msgs) == 1);
-   assert(!std::empty(msgs.back()));
-
    auto const match = sessions.find(user_id);
    if (match == std::end(sessions)) {
       // TODO: The user went offline. We have to enqueue the
@@ -183,8 +180,17 @@ worker::on_db_user_msgs( std::string const& user_id
    }
 
    if (auto s = match->second.lock()) {
-      //std::cout << "" << msgs.back() << std::endl;
-      s->send(msgs.back(), true);
+      // TODO: Vectorize the user messages so that it is possible to
+      // call send only once.
+      auto f = [s](auto o)
+      {
+         assert(!std::empty(o));
+         s->send(std::move(o), true);
+      };
+
+      std::for_each( std::make_move_iterator(std::begin(msgs))
+                   , std::make_move_iterator(std::end(msgs))
+                   , f);
       return;
    }
    

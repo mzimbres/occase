@@ -132,7 +132,10 @@ facade::on_user_pub( boost::system::error_code const& ec
       return;
    }
 
-   assert(!std::empty(data));
+   if (std::empty(data)) {
+      user_pub_queue.pop();
+      return;
+   }
 
    // This session is not subscribed to any unsolicited message.
    assert(!std::empty(user_pub_queue));
@@ -141,9 +144,7 @@ facade::on_user_pub( boost::system::error_code const& ec
       req_item const item { request::unsol_user_msgs
                           , std::move(user_pub_queue.front().user_id)};
 
-      // TODO: Remove the unwanted parts of data to avoid having to
-      // copy it here.
-      worker_handler({std::move(data.back())}, item);
+      worker_handler(data, item);
    }
 
    user_pub_queue.pop();
@@ -172,14 +173,18 @@ facade::on_user_sub( boost::system::error_code const& ec
 
 void facade::retrieve_user_msgs(std::string const& user_id)
 {
+   auto const key = cf.msg_prefix + user_id;
    auto cmd = multi()
-            + lpop(cf.msg_prefix + user_id)
+            + lrange(key, 0, -1)
+            + del(key)
             + exec();
 
    ss_user_pub.send(std::move(cmd));
    user_pub_queue.push({request::ignore, {}});
    user_pub_queue.push({request::ignore, {}});
+   user_pub_queue.push({request::ignore, {}});
    user_pub_queue.push({request::get_user_msg, user_id});
+   user_pub_queue.push({request::ignore, {}});
 }
 
 void facade::sub_to_user_msgs(std::string const& id)

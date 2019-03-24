@@ -146,10 +146,25 @@ void worker::on_db_unsol_pub(std::string const& msg)
       return;
    }
 
-   if (item.id > last_menu_msg_id)
-      last_menu_msg_id = item.id;
-   else
-      ++menu_msg_inversions;
+   // This condition can be triggered for example if the retrieval and
+   // processing of menu messages do not complete before the next
+   // notification arrives. It can also happens in very concurrent
+   // uses that we get holes in the indices, for example
+   //
+   // Worker 1: gets counter 300
+   // Worker 2: gets counter 301
+   // Worker 1: zadd
+   // Worker 3: gets counter 302
+   // Worker 3: zadd
+   // Worker 1: zrange <=== it will see 300 302 (missing the 301)
+   // Worker 2: zadd
+   //
+   // In realife I do not expect this to happen often.
+
+   if (item.id != (last_menu_msg_id + 1))
+      return;
+
+   last_menu_msg_id = item.id;
 
    g->second.broadcast(item, cf.ch_max_posts);
 }
@@ -442,8 +457,8 @@ worker::on_user_subscribe( json const& j
    std::for_each(std::begin(ch_codes), end, func);
 
    if (ssize(items) > cf.max_menu_msg_on_sub) {
-      auto const d = ssize(items) - cf.max_menu_msg_on_sub;
-      std::cout << "====> " << d << std::endl;
+      //auto const d = ssize(items) - cf.max_menu_msg_on_sub;
+      //std::cout << "====> " << d << std::endl;
       // Notice here we want to move the most recent elements to the
       // front of the vector.
       auto comp = [](auto const& a, auto const& b)
@@ -584,11 +599,6 @@ void worker::shutdown(boost::system::error_code const& ec)
    db.disconnect();
 
    stats_timer.cancel();
-
-   auto const* fmt3 = "Worker {0}: Number of inversion {1}.";
-   log( fmt::format(fmt3, id, menu_msg_inversions)
-      , loglevel::notice);
-
 }
 
 void worker::do_stats_logger()

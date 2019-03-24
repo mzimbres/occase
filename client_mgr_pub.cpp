@@ -48,6 +48,7 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
          throw std::runtime_error("client_mgr_pub::publish_ack");
 
       post_id = j.at("id").get<int>();
+      //std::cout << op.user << " publish_ack " << post_id << std::endl;
       return handle_msg(s);
    }
 
@@ -62,15 +63,22 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
                                  , cond)
                  , std::end(items));
 
-      if (std::size(items) != 1)
+      // Ignores messages that are not our own.
+      if (std::empty(items))
+         return 1;
+
+      if (std::size(items) != 1) {
+         std::cout << std::size(items) << " " << msg << std::endl;
          throw std::runtime_error("client_mgr_pub::publish1");
+      }
 
       // Since we send only one publish at time items should contain
       // only one item now.
 
-      //if (post_id == items.front().id)
-      //   throw std::runtime_error("client_mgr_pub::publish2");
+      if (post_id != items.front().id)
+         throw std::runtime_error("client_mgr_pub::publish2");
 
+      //std::cout << op.user << " publish echo " << post_id << std::endl;
       server_echo = true;
       return handle_msg(s);
    }
@@ -82,11 +90,15 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
       if (to != op.user)
          throw std::runtime_error("client_mgr_pub::on_read5");
 
-      // It looks like sometimes the user_msg comes before the
-      // publish_ack is received, therefore we still do not have the
-      // post_id and cannot assert it is the correct one.
-      //auto const post_id = j.at("post_id").get<int>();
+      auto const post_id2 = j.at("post_id").get<int>();
+      if (post_id != post_id2) {
+         std::cout << op.user << " " << post_id << " != " << post_id2 << " " << msg
+                   << std::endl;
+         throw std::runtime_error("client_mgr_pub::on_read6");
+      }
 
+      //std::cout << op.user << " user_msg " << post_id << " "
+      //          << user_msg_counter << std::endl;
       --user_msg_counter;
       return handle_msg(s);
    }
@@ -107,6 +119,8 @@ int client_mgr_pub::handle_msg(std::shared_ptr<client_type> s)
       server_echo = false;
       post_id = -1;
       user_msg_counter = op.n_listeners;
+      //std::cout << "=====> " << op.user << " " << post_id
+      //          << " " << user_msg_counter <<  std::endl;
       return send_group_msg(s);
    }
 

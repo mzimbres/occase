@@ -339,7 +339,7 @@ worker::on_user_login( json const& j
 
    auto const new_user = sessions.insert({from, s});
    if (!new_user.second) {
-      // The user is already logged into the system. We do not allow
+      // The user is already logged on the system. We do not allow
       // this yet.
       json resp;
       resp["cmd"] = "auth_ack";
@@ -363,6 +363,7 @@ worker::on_user_login( json const& j
    assert(s->is_auth());
 
    db.sub_to_user_msgs(s->get_id());
+   db.retrieve_user_msgs(s->get_id());
 
    json resp;
    resp["cmd"] = "auth_ack";

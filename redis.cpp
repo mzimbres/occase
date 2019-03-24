@@ -45,7 +45,7 @@ facade::facade(config const& cf, net::io_context& ioc)
 void facade::on_menu_sub_conn()
 {
    log("on_menu_sub_conn: connected", loglevel::debug);
-   ss_menu_sub.send(subscribe(cf.notify_prefix + cf.menu_msgs_key));
+   ss_menu_sub.send(subscribe(cf.menu_channel));
 }
 
 void facade::on_menu_pub_conn()
@@ -85,10 +85,10 @@ void facade::on_menu_sub( boost::system::error_code const& ec
 
    assert(std::size(data) == 3);
 
-   if (data.back() == "zadd") {
-      worker_handler({} , {request::new_menu_msg_available, {}});
-      return;
-   }
+   //assert(data[1] == cf.menu_channel);
+   // TODO: Take data by value to be able to move items here.
+   worker_handler( {std::move(data.back())}
+                 , {request::unsol_publish, {}});
 }
 
 void facade::run()
@@ -199,7 +199,15 @@ void facade::unsub_to_user_msgs(std::string const& id)
 
 void facade::pub_menu_msg(std::string const& msg, int id)
 {
-   ss_menu_pub.send(zadd(cf.menu_msgs_key, id, msg));
+   auto cmd = multi()
+            + zadd(cf.menu_msgs_key, id, msg)
+            + publish(cf.menu_channel, msg)
+            + exec();
+
+   ss_menu_pub.send(std::move(cmd));
+   menu_pub_queue.push(request::ignore);
+   menu_pub_queue.push(request::ignore);
+   menu_pub_queue.push(request::ignore);
    menu_pub_queue.push(request::publish);
 }
 

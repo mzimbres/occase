@@ -201,6 +201,14 @@ auto get_server_op(int argc, char* argv[])
    , "The maximum number of messages a user is allowed to accumulate "
      " (while he is offline)."
    )
+
+   ( "redis-menu-channel"
+   , po::value<std::string>(&cf.mgr.db.cf.menu_channel)->
+        default_value("menu_channel")
+   , "The name of the redis channel where publish commands "
+     "are be broadcasted to all workers connected to this channel. "
+     "Which may or may not be on the same machine."
+   )
    ;
 
    po::variables_map vm;        

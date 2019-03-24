@@ -146,6 +146,9 @@ void worker::on_db_unsol_pub(std::string const& msg)
       return;
    }
 
+   // The comment below does not apply anymore. It came out on the try
+   // to user key notifications to deal with menu messages.
+   //
    // This condition can be triggered for example if the retrieval and
    // processing of menu messages do not complete before the next
    // notification arrives. It can also happens in very concurrent
@@ -158,13 +161,9 @@ void worker::on_db_unsol_pub(std::string const& msg)
    // Worker 3: zadd
    // Worker 1: zrange <=== it will see 300 302 (missing the 301)
    // Worker 2: zadd
-   //
-   // In realife I do not expect this to happen often.
 
-   if (item.id != (last_menu_msg_id + 1))
-      return;
-
-   last_menu_msg_id = item.id;
+   if (item.id > last_menu_msg_id)
+      last_menu_msg_id = item.id;
 
    g->second.broadcast(item, cf.ch_max_posts);
 }
@@ -227,8 +226,9 @@ worker::on_db_msg_handler( std::vector<std::string> const& data
          on_db_menu_msgs(data);
          break;
 
-      case redis::request::new_menu_msg_available:
-         db.retrieve_menu_msgs(1 + last_menu_msg_id);
+      case redis::request::unsol_publish:
+         assert(std::size(data) == 1);
+         on_db_unsol_pub(data.back());
          break;
 
       default:

@@ -24,7 +24,7 @@ session::session(session_cf cf_, net::io_context& ioc, std::string id_)
 , timer {ioc, std::chrono::steady_clock::time_point::max()}
 {
    if (cf.max_pipeline_size < 1)
-      throw std::runtime_error("session: Invalid max pipeline size.");
+      throw std::runtime_error("redis::session: Invalid max pipeline size.");
 }
 
 void session::on_resolve( boost::system::error_code const& ec
@@ -33,7 +33,7 @@ void session::on_resolve( boost::system::error_code const& ec
    if (ec)
       return fail(ec, "resolve");
 
-   auto const handler = [this](auto ec, auto iter)
+   auto handler = [this](auto ec, auto iter)
       { on_connect(ec, iter); };
 
    net::async_connect(socket, results, handler);
@@ -41,10 +41,10 @@ void session::on_resolve( boost::system::error_code const& ec
 
 void session::run()
 {
-   auto const handler = [this](auto ec, auto res)
+   auto handler = [this](auto ec, auto res)
       { on_resolve(ec, res); };
 
-   resolver.async_resolve(cf.host, cf.port, handler );
+   resolver.async_resolve(cf.host, cf.port, handler);
 }
 
 void session::send(std::string msg)
@@ -88,7 +88,7 @@ void session::start_reading_resp()
 {
    buffer.res.clear();
 
-   auto const handler = [this](auto const& ec)
+   auto handler = [this](auto const& ec)
       { on_resp(ec); };
 
    async_read_resp(socket, &buffer, handler);
@@ -99,8 +99,7 @@ void session::on_connect( boost::system::error_code const& ec
 {
    if (ec) {
       // TODO: Traverse all endpoints if this one is not available. If
-      // none is available should we continue? What to do with
-      // messages that have no been sent to redis.
+      // none is available should we continue?
       return;
    }
 
@@ -139,9 +138,6 @@ void session::on_resp(boost::system::error_code const& ec)
                   // The timer has been canceled. Probably somebody
                   // shutting down the application while we are trying to
                   // reconnect.
-                  //
-                  // TODO: How should we do with messages that have not
-                  // been sent to the database.
                   return;
                }
 
@@ -157,10 +153,6 @@ void session::on_resp(boost::system::error_code const& ec)
 
             // Instead of simply trying to reconnect I will run the
             // resolver again.
-            //
-            // TODO: Store the endpoints object obtained from the first
-            // call to resolve and try only to reconnect instead. Or will
-            // resolving again can be useful?
             std::cout << "Trying to reconnect." << std::endl;
             run();
          };
@@ -172,7 +164,7 @@ void session::on_resp(boost::system::error_code const& ec)
       return fail(ec, "redis::session: unhandled.");
    }
 
-   on_msg_handler(ec, buffer.res);
+   on_msg_handler(ec, std::move(buffer.res));
 
    start_reading_resp();
 
@@ -187,8 +179,7 @@ void session::on_resp(boost::system::error_code const& ec)
    auto handler = [this](auto ec, auto n)
       { on_write(ec, n); };
 
-   net::async_write( socket, net::buffer(msg_queue.front())
-                   , handler);
+   net::async_write(socket, net::buffer(msg_queue.front()), handler);
 }
 
 void session::on_write(boost::system::error_code ec, std::size_t n)

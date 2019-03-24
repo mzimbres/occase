@@ -108,16 +108,16 @@ private:
 
    // Callbacks called when a message is received from redis.
    void on_menu_sub( boost::system::error_code const& ec
-                   , std::vector<std::string> const& data);
+                   , std::vector<std::string> data);
 
    void on_menu_pub( boost::system::error_code const& ec
-                   , std::vector<std::string> const& data);
+                   , std::vector<std::string> data);
 
    void on_user_sub( boost::system::error_code const& ec
-                   , std::vector<std::string> const& data);
+                   , std::vector<std::string> data);
 
    void on_user_pub( boost::system::error_code const& ec
-                   , std::vector<std::string> const& data);
+                   , std::vector<std::string> data);
 
    // Callback called when sessions connect to redis server.
    void on_menu_sub_conn();

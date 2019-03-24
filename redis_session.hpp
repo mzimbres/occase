@@ -26,15 +26,6 @@ struct session_cf {
    std::string host;
    std::string port;
 
-   // TODO: The retry mechanism has to be rethought since messages
-   // continue to be posted to redis from other machines that did not
-   // go offline. Then, when we get to reconnect we have to retrieve
-   // all those messages and send them to the users before we send the
-   // newer ones, otherwise users will endup with a timestamp the
-   // filters out messages that came while we were offline. For that
-   // it is necessary to lock the set of messages while we pull them
-   // and join the publish channel. This situation is not likely to
-   // occurr and it may be easier to restart the server.
    std::chrono::milliseconds conn_retry_interval {500};
 
    // We have to restrict the length of the pipeline to not block
@@ -47,11 +38,11 @@ public:
    using on_conn_handler_type = std::function<void()>;
 
    using on_disconnect_handler_type =
-      std::function<void ( boost::system::error_code const&)>;
+      std::function<void(boost::system::error_code const&)>;
 
    using msg_handler_type =
-      std::function<void ( boost::system::error_code const&
-                         , std::vector<std::string> const&)>;
+      std::function<void( boost::system::error_code const&
+                        , std::vector<std::string>)>;
 
 private:
    std::string id;
@@ -63,7 +54,7 @@ private:
    std::queue<std::string> msg_queue;
    int pipeline_counter = 0;
 
-   msg_handler_type on_msg_handler = [](auto const&, auto const&) {};
+   msg_handler_type on_msg_handler = [](auto const&, auto) {};
    on_conn_handler_type on_conn_handler = [](){};
    on_disconnect_handler_type on_disconnect_handler = [](auto const&){};
 

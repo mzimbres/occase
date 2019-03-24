@@ -26,15 +26,14 @@ facade::facade(config const& cf, net::io_context& ioc)
    ss_user_sub.set_on_conn_handler(on_conn_c);
    ss_user_pub.set_on_conn_handler(on_conn_d);
 
-   // Sets on msg handlers.
-   auto on_msg_a = [this](auto const& ec, auto const& data)
-      { on_menu_sub(ec, data); };
-   auto on_msg_b = [this](auto const& ec, auto const& data)
-      { on_menu_pub(ec, data); };
-   auto on_msg_c = [this](auto const& ec, auto const& data)
-      { on_user_sub(ec, data); };
-   auto on_msg_d = [this](auto const& ec, auto const& data)
-      { on_user_pub(ec, data); };
+   auto on_msg_a = [this](auto const& ec, auto data)
+      { on_menu_sub(ec, std::move(data)); };
+   auto on_msg_b = [this](auto const& ec, auto data)
+      { on_menu_pub(ec, std::move(data)); };
+   auto on_msg_c = [this](auto const& ec, auto data)
+      { on_user_sub(ec, std::move(data)); };
+   auto on_msg_d = [this](auto const& ec, auto data)
+      { on_user_pub(ec, std::move(data)); };
 
    ss_menu_sub.set_msg_handler(on_msg_a);
    ss_menu_pub.set_msg_handler(on_msg_b);
@@ -71,7 +70,7 @@ void facade::async_retrieve_menu()
 }
 
 void facade::on_menu_sub( boost::system::error_code const& ec
-                        , std::vector<std::string> const& data)
+                        , std::vector<std::string> data)
 {
    if (ec) {
       fail(ec,"on_menu_sub");
@@ -84,11 +83,11 @@ void facade::on_menu_sub( boost::system::error_code const& ec
       return;
 
    assert(std::size(data) == 3);
+   assert(data[1] == cf.menu_channel);
 
-   //assert(data[1] == cf.menu_channel);
-   // TODO: Take data by value to be able to move items here.
-   worker_handler( {std::move(data.back())}
-                 , {request::unsol_publish, {}});
+   std::swap(data.front(), data.back());
+   data.resize(1);
+   worker_handler(data , {request::unsol_publish, {}});
 }
 
 void facade::run()
@@ -101,15 +100,14 @@ void facade::run()
 
 void
 facade::on_menu_pub( boost::system::error_code const& ec
-                   , std::vector<std::string> const& data)
+                   , std::vector<std::string> data)
 {
    if (ec) {
       fail(ec,"on_menu_pub");
       return;
    }
 
-   if (menu_pub_queue.front() == request::menu_msgs) {
-   } else {
+   if (menu_pub_queue.front() != request::menu_msgs) {
       assert(!std::empty(data));
    }
 
@@ -127,7 +125,7 @@ facade::on_menu_pub( boost::system::error_code const& ec
 
 void
 facade::on_user_pub( boost::system::error_code const& ec
-                   , std::vector<std::string> const& data)
+                   , std::vector<std::string> data)
 {
    if (ec) {
       fail(ec,"on_user_pub");
@@ -140,14 +138,11 @@ facade::on_user_pub( boost::system::error_code const& ec
    assert(!std::empty(user_pub_queue));
 
    if (user_pub_queue.front().req == request::get_user_msg) {
-      //std::cout << "=======> ";
-      //for (auto const& o : data)
-      //  std::cout << o << " ";
-
-      //std::cout << std::endl;
-
       req_item const item { request::unsol_user_msgs
                           , std::move(user_pub_queue.front().user_id)};
+
+      // TODO: Remove the unwanted parts of data to avoid having to
+      // copy it here.
       worker_handler({std::move(data.back())}, item);
    }
 
@@ -156,7 +151,7 @@ facade::on_user_pub( boost::system::error_code const& ec
 
 void
 facade::on_user_sub( boost::system::error_code const& ec
-                   , std::vector<std::string> const& data)
+                   , std::vector<std::string> data)
 {
    if (ec) {
       fail(ec,"on_user_sub");

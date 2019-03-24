@@ -212,11 +212,22 @@ void server_session::do_close()
 
 void server_session::send(std::string msg, bool persist)
 {
-   auto const handler =
-      [e = std::move(msg), persist, p = shared_from_this()]()
-      { p->do_send({e, persist}); };
+   auto const is_empty = std::empty(msg_queue);
 
-   net::post(net::bind_executor(strand, handler));
+   msg_queue.push_back({std::move(msg), {}, persist});
+
+   if (is_empty && !closing)
+      do_write(msg_queue.front().msg);
+}
+
+void server_session::send_menu_msg(std::shared_ptr<std::string> msg)
+{
+   auto const is_empty = std::empty(msg_queue);
+
+   msg_queue.push_back({{}, msg, false});
+
+   if (is_empty && !closing)
+      do_write(*msg_queue.front().menu_msg);
 }
 
 void server_session::shutdown()
@@ -408,7 +419,11 @@ void server_session::on_write( boost::system::error_code ec
 
    // Do not move the front msg. If the write fail we will want to
    // save the message in the database or whatever.
-   do_write(msg_queue.front().msg);
+   if (msg_queue.front().menu_msg) {
+      do_write(*msg_queue.front().menu_msg);
+   } else {
+      do_write(msg_queue.front().msg);
+   }
 }
 
 void server_session::do_write(std::string const& msg)
@@ -420,16 +435,6 @@ void server_session::do_write(std::string const& msg)
 
    ws.async_write( net::buffer(msg)
                  , net::bind_executor(strand, handler));
-}
-
-void server_session::do_send(msg_entry entry)
-{
-   auto const is_empty = std::empty(msg_queue);
-
-   msg_queue.push_back(std::move(entry));
-
-   if (is_empty && !closing)
-      do_write(msg_queue.front().msg);
 }
 
 std::weak_ptr<proxy_session>

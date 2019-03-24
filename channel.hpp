@@ -123,11 +123,11 @@ public:
       j_pub["cmd"] = "publish";
       j_pub["items"] = std::vector<pub_item>{item};
 
-      auto const msg = j_pub.dump();
+      auto msg = std::make_shared<std::string>(j_pub.dump());
       store_item(std::move(item), max_posts);
 
-      auto const f = [&](auto session)
-      { session->send(msg, false); };
+      auto f = [msg](auto session)
+         { session->send_menu_msg(msg); };
 
       // TODO: Use the return value for statistics.
       cleanup_traversal(f);

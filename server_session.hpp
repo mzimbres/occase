@@ -70,6 +70,7 @@ private:
 
    struct msg_entry {
       std::string msg;
+      std::shared_ptr<std::string> menu_msg;
       bool persist;
    };
 
@@ -110,6 +111,7 @@ public:
    // Messages for which persist is true will be persisted on the
    // database and sent to the user next time he reconnects.
    void send(std::string msg, bool persist);
+   void send_menu_msg(std::shared_ptr<std::string> msg);
    void shutdown();
 
    void promote()

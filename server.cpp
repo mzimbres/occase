@@ -4,6 +4,7 @@
 #include <chrono>
 #include <iterator>
 #include <algorithm>
+#include <fstream>
 
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/parsers.hpp>
@@ -49,11 +50,16 @@ auto get_server_op(int argc, char* argv[])
    config cf;
    int conn_retry_interval = 500;
    std::string redis_db = "0";
+   std::string log_on_stderr = "no";
+
    po::options_description desc("Options");
    desc.add_options()
-   ("help,h", "Produces help message")
+   ("help,h"
+   , "Produces help message"
+   )
 
    ("log-on-stderr"
+   , po::value<std::string>(&log_on_stderr)->default_value("no")
    , "Instructs syslog to write the messages on stderr as well."
    )
 
@@ -70,6 +76,7 @@ auto get_server_op(int argc, char* argv[])
      " around 5. Memory consumption should be considered since "
      " each thread has it own non-shared data structure."
    )
+
    ( "code-timeout,s"
    , po::value<int>(&cf.code_timeout)->default_value(2)
    , "Code confirmation timeout in seconds."
@@ -212,16 +219,23 @@ auto get_server_op(int argc, char* argv[])
    ;
 
    po::variables_map vm;        
-   po::store(po::parse_command_line(argc, argv, desc), vm);
+   po::store(po::command_line_parser(argc, argv).
+         options(desc).run(), vm);
    po::notify(vm);    
+
+   std::ifstream ifs {"menu_chat_server.conf"};
+
+   if (ifs) {
+      po::store(po::parse_config_file(ifs, desc, true), vm);
+      notify(vm);
+   }
 
    if (vm.count("help")) {
       std::cout << desc << "\n";
       return config {true};
    }
 
-   if (vm.count("log-on-stderr"))
-      cf.log_on_stderr = true;
+   cf.log_on_stderr = log_on_stderr == "yes";
 
    cf.mgr.db.cf.msg_prefix += ":";
    cf.mgr.db.cf.notify_prefix += redis_db + "__:";

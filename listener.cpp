@@ -1,6 +1,7 @@
 #include "listener.hpp"
 
 #include <iostream>
+#include <algorithm>
 
 #include <fmt/format.h>
 #include <fmt/ostream.h>
@@ -11,15 +12,38 @@
 namespace rt
 {
 
-listener::listener( net::ip::tcp::endpoint const& endpoint
-                  , std::vector< std::shared_ptr<worker>
-                               > const& workers_)
-: signals(ioc, SIGINT, SIGTERM)
-, acceptor(ioc, endpoint)
-, workers(workers_)
+listener::listener(listener_cfg const& cfg)
+: signals {ioc, SIGINT, SIGTERM}
+, acceptor {ioc, {boost::asio::ip::tcp::v4(), cfg.port}}
 {
+   //acceptor.listen(256);
    auto const* fmt1 = "Binding server to {}";
    log(fmt::format(fmt1, acceptor.local_endpoint()), loglevel::info);
+
+   auto worker_gen = [&cfg, i = -1]() mutable
+      { return std::make_shared<worker>(cfg.mgr, ++i); };
+
+   std::generate_n( std::back_inserter(workers)
+                  , cfg.number_of_workers
+                  , worker_gen);
+
+   auto thread_gen = [](auto o)
+      { return std::thread {[o](){ o->run();}}; };
+
+   std::transform( std::begin(workers)
+                 , std::end(workers)
+                 , std::back_inserter(threads)
+                 , thread_gen);
+}
+
+void listener::shutdown()
+{
+   acceptor.cancel();
+
+   auto joiner = [](auto& o)
+      { o.join(); };
+
+   std::for_each(std::begin(threads), std::end(threads), joiner);
 }
 
 void listener::run()

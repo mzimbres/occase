@@ -11,43 +11,16 @@
 #include <boost/program_options/variables_map.hpp>
 
 #include "listener.hpp"
-#include "worker.hpp"
 #include "utils.hpp"
 
 using namespace rt;
 
 namespace po = boost::program_options;
 
-struct config {
-   bool help = false;
-   bool log_on_stderr = false;
-   server_cf mgr;
-   int number_of_workers;
-   unsigned short port;
-
-   int auth_timeout;
-   int code_timeout;
-   int handshake_timeout;
-   int pong_timeout;
-   int close_frame_timeout;
-
-   auto get_timeouts() const noexcept
-   {
-      return session_timeouts
-      { std::chrono::seconds {auth_timeout}
-      , std::chrono::seconds {code_timeout}
-      , std::chrono::seconds {handshake_timeout}
-      , std::chrono::seconds {pong_timeout}
-      , std::chrono::seconds {close_frame_timeout}
-      };
-   }
-
-};
-
 auto get_server_op(int argc, char* argv[])
 {
    std::vector<std::string> ips;
-   config cf;
+   listener_cfg cf;
    int conn_retry_interval = 500;
    std::string redis_db = "0";
    std::string log_on_stderr = "no";
@@ -241,7 +214,7 @@ auto get_server_op(int argc, char* argv[])
 
    if (vm.count("help")) {
       std::cout << desc << "\n";
-      return config {true};
+      return listener_cfg {true};
    }
 
    cf.log_on_stderr = log_on_stderr == "yes";
@@ -264,33 +237,11 @@ int main(int argc, char* argv[])
          return 0;
 
       set_fd_limits(500000);
+
       logger logg {argv[0], cf.log_on_stderr};
 
-      std::vector<std::shared_ptr<worker>> workers;
-
-      auto worker_gen = [&cf, i = -1]() mutable
-         { return std::make_shared<worker>(cf.mgr, ++i); };
-
-      std::generate_n( std::back_inserter(workers)
-                     , cf.number_of_workers
-                     , worker_gen);
-
-      auto thread_gen = [](auto o)
-         { return std::thread {[o](){ o->run();}}; };
-
-      std::vector<std::thread> threads;
-      std::transform( std::begin(workers)
-                    , std::end(workers)
-                    , std::back_inserter(threads)
-                    , thread_gen);
-
-      listener lst {{boost::asio::ip::tcp::v4(), cf.port}, workers};
+      listener lst {cf};
       lst.run();
-
-      auto joiner = [](auto& o)
-         { o.join(); };
-
-      std::for_each(std::begin(threads), std::end(threads), joiner);
 
    } catch (std::exception const& e) {
       log(e.what(), loglevel::emerg);

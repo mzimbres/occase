@@ -51,12 +51,17 @@ auto get_server_op(int argc, char* argv[])
    int conn_retry_interval = 500;
    std::string redis_db = "0";
    std::string log_on_stderr = "no";
+   std::string conf_file;
 
    po::options_description desc("Options");
    desc.add_options()
    ("help,h"
    , "Produces help message"
    )
+
+   ("config"
+   , po::value<std::string>(&conf_file)
+   , "The file containing the configuration.")
 
    ("log-on-stderr"
    , po::value<std::string>(&log_on_stderr)->default_value("no")
@@ -218,16 +223,20 @@ auto get_server_op(int argc, char* argv[])
    )
    ;
 
+   po::positional_options_description pos;
+   pos.add("config", -1);
+
    po::variables_map vm;        
    po::store(po::command_line_parser(argc, argv).
-         options(desc).run(), vm);
+         options(desc).positional(pos).run(), vm);
    po::notify(vm);    
 
-   std::ifstream ifs {"menu_chat_server.conf"};
-
-   if (ifs) {
-      po::store(po::parse_config_file(ifs, desc, true), vm);
-      notify(vm);
+   if (!std::empty(conf_file)) {
+      std::ifstream ifs {conf_file};
+      if (ifs) {
+         po::store(po::parse_config_file(ifs, desc, true), vm);
+         notify(vm);
+      }
    }
 
    if (vm.count("help")) {

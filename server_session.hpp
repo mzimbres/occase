@@ -66,7 +66,7 @@ private:
    net::steady_timer timer;
    beast::multi_buffer buffer;
 
-   std::shared_ptr<worker> mgr;
+   worker& worker_;
 
    struct msg_entry {
       std::string msg;
@@ -102,8 +102,7 @@ private:
 
 public:
    explicit
-   server_session( net::ip::tcp::socket socket
-                 , std::shared_ptr<worker> worker_);
+   server_session(net::ip::tcp::socket socket, worker& w);
    ~server_session();
 
    void accept();

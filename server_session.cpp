@@ -10,15 +10,14 @@
 namespace rt
 {
 
-server_session::server_session( net::ip::tcp::socket socket
-                              , std::shared_ptr<worker> worker_)
+server_session::server_session(net::ip::tcp::socket socket, worker& w)
 : ws(std::move(socket))
 , strand(ws.get_executor())
 , timer( ws.get_executor().context()
        , std::chrono::steady_clock::time_point::max())
-, mgr(worker_)
+, worker_(w)
 {
-   ++mgr->get_stats().number_of_sessions;
+   ++worker_.get_stats().number_of_sessions;
 }
 
 server_session::~server_session()
@@ -50,10 +49,10 @@ server_session::~server_session()
       //std::cout << "Session dying with msgs: " << std::size(msgs)
       //          << std::endl;
 
-      mgr->on_session_dtor(std::move(user_id), std::move(msgs));
+      worker_.on_session_dtor(std::move(user_id), std::move(msgs));
    }
 
-   --mgr->get_stats().number_of_sessions;
+   --worker_.get_stats().number_of_sessions;
 }
 
 void server_session::accept()
@@ -82,7 +81,7 @@ void server_session::do_accept()
 
    ws.control_callback(handler0);
 
-   timer.expires_after(mgr->get_timeouts().handshake);
+   timer.expires_after(worker_.get_timeouts().handshake);
 
    auto const handler1 = [p = shared_from_this()](auto ec)
    {
@@ -125,7 +124,7 @@ void server_session::on_accept(boost::system::error_code ec)
    // The cancelling of this timer should happen when either
    // 1. The session is autheticated or a register is performed.
    // 2. The user requests a register.
-   timer.expires_after(mgr->get_timeouts().auth);
+   timer.expires_after(worker_.get_timeouts().auth);
 
    auto const handler = [p = shared_from_this()](auto ec)
    {
@@ -182,7 +181,7 @@ void server_session::do_close()
    // First we set the close frame timeout so that if the peer does
    // not reply with his close frame we do not wait forever. This
    // timer can only be canceled when on_read is called with closed.
-   timer.expires_after(mgr->get_timeouts().close);
+   timer.expires_after(worker_.get_timeouts().close);
 
    auto const handler0 = [p = shared_from_this()](auto ec)
    {
@@ -240,7 +239,7 @@ void server_session::shutdown()
 
 void server_session::do_pong_wait()
 {
-   timer.expires_after(mgr->get_timeouts().pong);
+   timer.expires_after(worker_.get_timeouts().pong);
 
    auto const handler = [p = shared_from_this()](auto ec)
    {
@@ -309,7 +308,7 @@ void server_session::handle_ev(ev_res r)
          // Successful register request which means the ongoing
          // connection timer  has to be canceled.  This is where we
          // have to set the code timeout.
-         auto const n = timer.expires_after(mgr->get_timeouts().code);
+         auto const n = timer.expires_after(worker_.get_timeouts().code);
 
          auto const handler = [p = shared_from_this()](auto ec)
          {
@@ -385,7 +384,7 @@ void server_session::on_read( boost::system::error_code ec
    try {
       auto const msg = beast::buffers_to_string(buffer.data());
       buffer.consume(std::size(buffer));
-      auto const r = mgr->on_message(shared_from_this(), std::move(msg));
+      auto const r = worker_.on_message(shared_from_this(), std::move(msg));
       handle_ev(r);
       do_read();
    } catch (std::exception const& e) {

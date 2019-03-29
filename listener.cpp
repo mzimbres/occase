@@ -12,28 +12,40 @@
 namespace rt
 {
 
+struct arena {
+   net::io_context ioc {1};
+   worker worker_;
+   std::thread thread_;
+
+   arena(server_cf const& cfg, int i)
+   : worker_ {cfg, i, ioc}
+   , thread_ { std::thread {[this](){ run();}} }
+   {}
+
+   void run() noexcept
+   {
+      try {
+         ioc.run();
+      } catch (std::exception const& e) {
+         std::cout << e.what() << std::endl;
+      }
+   }
+};
+
 listener::listener(listener_cfg const& cfg)
 : signals {ioc, SIGINT, SIGTERM}
 , acceptor {ioc, {boost::asio::ip::tcp::v4(), cfg.port}}
 {
-   //acceptor.listen(256);
    auto const* fmt1 = "Binding server to {}";
-   log(fmt::format(fmt1, acceptor.local_endpoint()), loglevel::info);
+   log( fmt::format(fmt1, acceptor.local_endpoint())
+      , loglevel::info);
 
-   auto worker_gen = [&cfg, i = -1]() mutable
-      { return std::make_shared<worker>(cfg.mgr, ++i); };
+   auto arena_gen = [&cfg, i = -1]() mutable
+      { return std::make_shared<arena>(cfg.mgr, ++i); };
 
-   std::generate_n( std::back_inserter(workers)
+   std::generate_n( std::back_inserter(arenas)
                   , cfg.number_of_workers
-                  , worker_gen);
-
-   auto thread_gen = [](auto o)
-      { return std::thread {[o](){ o->run();}}; };
-
-   std::transform( std::begin(workers)
-                 , std::end(workers)
-                 , std::back_inserter(threads)
-                 , thread_gen);
+                  , arena_gen);
 }
 
 void listener::shutdown()
@@ -41,9 +53,9 @@ void listener::shutdown()
    acceptor.cancel();
 
    auto joiner = [](auto& o)
-      { o.join(); };
+      { o->thread_.join(); };
 
-   std::for_each(std::begin(threads), std::end(threads), joiner);
+   std::for_each(std::begin(arenas), std::end(arenas), joiner);
 }
 
 void listener::run()
@@ -67,10 +79,11 @@ void listener::run()
 
 void listener::do_accept()
 {
-   auto const n = next % std::size(workers);
-   acceptor.async_accept( workers[n]->get_io_context()
-                        , [this](auto const& ec, auto socket)
-                          { on_accept(ec, std::move(socket)); });
+   auto handler = [this](auto const& ec, auto socket)
+      { on_accept(ec, std::move(socket)); };
+
+   auto const n = next % std::size(arenas);
+   acceptor.async_accept(arenas[n]->ioc, handler);
 }
 
 void listener::on_accept( boost::system::error_code ec
@@ -86,9 +99,9 @@ void listener::on_accept( boost::system::error_code ec
       return;
    }
 
-   auto const n = next % std::size(workers);
+   auto const n = next % std::size(arenas);
    std::make_shared< server_session
-                   >( std::move(peer), workers[n])->accept();
+                   >(std::move(peer), arenas[n]->worker_)->accept();
    ++next;
 
    do_accept();

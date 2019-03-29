@@ -40,13 +40,14 @@ struct listener_cfg {
 
 };
 
+class arena;
+
 class listener {
 private:
    net::io_context ioc {1};
    net::signal_set signals;
    net::ip::tcp::acceptor acceptor;
-   std::vector<std::shared_ptr<worker>> workers;
-   std::vector<std::thread> threads;
+   std::vector<std::shared_ptr<arena>> arenas;
    long long next = 0;
 
    void do_accept();

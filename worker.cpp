@@ -22,15 +22,16 @@ std::mutex m;
 namespace rt
 {
 
-worker::worker(server_cf cf, int id_)
+worker::worker(server_cf cf, int id_, net::io_context& ioc)
 : id {id_}
 , cf {cf.worker}
+, ioc_ {ioc}
 , signals {ioc, SIGINT, SIGTERM}
 , timeouts {cf.timeouts}
 , db {cf.db, ioc}
 , stats_timer {ioc}
 {
-   net::post(ioc, [this]() {init();});
+   net::post(ioc_, [this]() {init();});
 }
 
 void worker::init()
@@ -628,15 +629,6 @@ void worker::do_stats_logger()
    };
 
    stats_timer.async_wait(handler);
-}
-
-void worker::run() noexcept
-{
-   try {
-      ioc.run();
-   } catch (std::exception const& e) {
-     std::cout << e.what() << std::endl;
-   }
 }
 
 ev_res

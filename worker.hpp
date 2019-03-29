@@ -63,7 +63,7 @@ private:
 
    worker_cf const cf;
 
-   net::io_context ioc {1};
+   net::io_context& ioc_;
    net::signal_set signals;
 
    // Maps a user id (telephone, email, etc.) to the user session.  We
@@ -128,7 +128,7 @@ private:
    void on_db_menu_connect();
 
 public:
-   worker(server_cf cf, int id_);
+   worker(server_cf cf, int id_, net::io_context& ioc);
 
    // When a server session dies, there are many things that must be
    // cleaned up or persisted. This function is responsible for that
@@ -140,8 +140,6 @@ public:
 
    auto const& get_timeouts() const noexcept {return timeouts;}
    auto& get_stats() noexcept {return stats;}
-   auto& get_io_context() noexcept {return ioc;}
-   void run() noexcept;
 };
 
 }

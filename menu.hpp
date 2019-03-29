@@ -339,7 +339,7 @@ void from_json(json const& j, menu_elem& e);
  *
  * Each element of the outermost array will have length one.
  */
-std::vector<std::vector<std::vector<std::vector<int>>>>
+std::vector<pub_code_type>
 channel_codes( std::vector<std::vector<std::vector<int>>> const& codes
              , std::vector<menu_elem> const& menu_elems);
 

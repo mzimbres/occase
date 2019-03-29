@@ -1,6 +1,7 @@
 #include "client_mgr_pub.hpp"
 
 #include "menu.hpp"
+#include "utils.hpp"
 #include "client_session.hpp"
 
 namespace rt
@@ -151,6 +152,87 @@ int client_mgr_pub::send_group_msg(std::shared_ptr<client_type> s) const
 
    pub_item item {-1, op.user, "Not an interesting message."
                  , pub_stack.top()};
+   json j_msg;
+   j_msg["cmd"] = "publish";
+   j_msg["items"] = std::vector<pub_item>{item};
+   s->send_msg(j_msg.dump());
+   return 1;
+}
+
+//________________________________
+
+int test_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
+{
+   auto const j = json::parse(msg);
+
+   auto const cmd = j.at("cmd").get<std::string>();
+   if (cmd == "auth_ack") {
+      auto const res = j.at("result").get<std::string>();
+      if (res != "ok")
+         throw std::runtime_error("test_pub::auth_ack");
+
+      auto const menus = j.at("menus").get<std::vector<menu_elem>>();
+      auto const menu_codes = menu_elems_to_codes(menus);
+      auto const pub_codes = channel_codes(menu_codes, menus);
+
+      assert(!std::empty(pub_codes));
+
+      auto f = [s, this](auto const& o)
+         { pub(o, s); };
+
+      // Sending the publishes without waiting for the acks is the
+      // expected way to use the server. At the moment however nothing
+      // prevents it. The typical way of doing this it to put the
+      // codes on a stack and send the next message as the ack of the
+      // previous arrives.
+      std::for_each( std::begin(pub_codes)
+                   , std::end(pub_codes)
+                   , f);
+
+      msg_counter = ssize(pub_codes);;
+      return 1;
+   }
+
+   if (cmd == "publish_ack") {
+      auto const res = j.at("result").get<std::string>();
+      if (res != "ok")
+         throw std::runtime_error("test_pub::publish_ack");
+
+      auto const post_id = j.at("id").get<int>();
+      std::cout << op.user << " publish_ack " << post_id << std::endl;
+      if (--msg_counter == 0)
+         return -1;
+
+      return 1;
+   }
+
+   throw std::runtime_error("test_pub::on_read4");
+   return -1;
+}
+
+int test_pub::on_handshake(std::shared_ptr<client_type> s)
+{
+   json j;
+   j["cmd"] = "auth";
+   j["from"] = op.user;
+   j["menu_versions"] = std::vector<int> {};
+   auto msg = j.dump();
+   s->send_msg(msg);
+   std::cout << "Sent: " << msg << std::endl;
+   return 1;
+}
+
+int test_pub::on_closed(boost::system::error_code ec)
+{
+   throw std::runtime_error("test_pub::on_closed");
+   return -1;
+};
+
+int test_pub::pub( pub_code_type const& pub_code
+                 , std::shared_ptr<client_type> s) const
+{
+   pub_item item {-1, op.user, "Not an interesting message."
+                 , pub_code};
    json j_msg;
    j_msg["cmd"] = "publish";
    j_msg["items"] = std::vector<pub_item>{item};

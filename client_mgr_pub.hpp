@@ -73,5 +73,36 @@ public:
    auto get_user() const {return op.user;}
 };
 
+struct test_pub_cfg {
+   std::string user;
+};
+
+// This class will be used to publish some messages to the server and
+// exit quickly.
+class test_pub {
+public:
+   using options_type = test_pub_cfg;
+private:
+   using client_type = client_session<test_pub>;
+   using code_type = std::vector<std::vector<std::vector<int>>>;
+
+   options_type op;
+   int msg_counter;
+
+   int pub( pub_code_type const& pub_code
+          , std::shared_ptr<client_type> s) const;
+
+public:
+   test_pub(options_type op_)
+   : op {op_}
+   { }
+
+   int on_read(std::string msg, std::shared_ptr<client_type> s);
+   int on_closed(boost::system::error_code ec);
+   int on_handshake(std::shared_ptr<client_type> s);
+   int on_connect() const noexcept { return 1;}
+   auto get_user() const {return op.user;}
+};
+
 }
 

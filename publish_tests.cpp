@@ -127,6 +127,20 @@ void test_pubsub(client_op const& op)
    std::cout << "Time elapsed: " << t.get_count_now() << "s" << std::endl;
 }
 
+void test_pub_offline(client_op const& op)
+{
+   boost::asio::io_context ioc;
+
+   using client_type = client_session<test_pub>;
+
+   std::cout << "aaaaa." << std::endl;
+   std::make_shared<client_type>( ioc
+                                , op.make_session_cf()
+                                , test_pub_cfg {"Dummy"}
+                                )->run();
+   ioc.run();
+}
+
 int main(int argc, char* argv[])
 {
    try {
@@ -188,6 +202,8 @@ int main(int argc, char* argv[])
          test_pubsub(op);
          std::cout << "=======================> " << i << std::endl;
       }
+
+      test_pub_offline(op);
 
       return 0;
    } catch (std::exception const& e) {

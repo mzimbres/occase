@@ -34,7 +34,6 @@ client_objs += client_mgr_register.o
 client_objs += client_mgr_confirm_code.o
 client_objs += client_mgr_pub.o
 client_objs += client_mgr_gmsg_check.o
-client_objs += client_mgr_user_msg.o
 
 aedis_objs =
 aedis_objs += redis_session.o

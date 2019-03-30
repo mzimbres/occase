@@ -47,7 +47,6 @@ int client_mgr_gmsg_check::on_read( std::string msg
 
       auto const f = [this, s](auto const& e)
       {
-         --to_receive_posts;
          speak_to_publisher(e.from, e.id, s);
       };
 
@@ -67,7 +66,7 @@ int client_mgr_gmsg_check::on_read( std::string msg
    }
 
    if (cmd == "user_msg_server_ack") {
-      if (to_receive_posts == 0) {
+      if (--to_receive_posts == 0) {
          std::cout << "Sub: User " << op.user << " finished." << std::endl;
          return -1; // Done.
       }
@@ -101,8 +100,8 @@ void
 client_mgr_gmsg_check::speak_to_publisher(
       std::string to, long long post_id, std::shared_ptr<client_type> s)
 {
-   //std::cout << "Sub: User " << op.user << " sending to " << to
-   //          << ", post_id: " << post_id << std::endl;
+   std::cout << "Sub: User " << op.user << " sending to " << to
+             << ", post_id: " << post_id << std::endl;
 
    json j;
    j["cmd"] = "user_msg";

@@ -35,7 +35,7 @@ struct client_op {
    int handshake_tm = 3;
    int launch_interval = 100;
    int auth_timeout = 3;
-   int sim_runs = 2;
+   int type = 2;
 
    auto make_session_cf() const
    {
@@ -131,14 +131,29 @@ void test_pub_offline(client_op const& op)
 {
    boost::asio::io_context ioc;
 
-   using client_type = client_session<test_pub>;
+   using client_type1 = client_session<test_pub>;
 
-   std::cout << "aaaaa." << std::endl;
-   std::make_shared<client_type>( ioc
-                                , op.make_session_cf()
-                                , test_pub_cfg {"Dummy"}
-                                )->run();
+   std::cout << "Beginning the offline tests." << std::endl;
+   std::cout << "Starting the publisher." << std::endl;
+   std::make_shared<client_type1>( ioc
+                                 , op.make_session_cf()
+                                 , test_pub_cfg {"Dummy1"}
+                                 )->run();
    ioc.run();
+   ioc.restart();
+
+   std::cout << "Publisher finished." << std::endl;
+   std::cout << "Launching the reader." << std::endl;
+
+   using client_type2 = client_session<client_mgr_gmsg_check>;
+
+   std::make_shared<client_type2>( ioc
+                                 , op.make_session_cf()
+                                 , cmgr_gmsg_check_op {"Dummy2", 1}
+                                 )->run();
+   ioc.run();
+
+   std::cout << "Reader finished." << std::endl;
 }
 
 int main(int argc, char* argv[])
@@ -181,9 +196,9 @@ int main(int argc, char* argv[])
          , po::value<int>(&op.auth_timeout)->default_value(3)
          , "Time after before which the server should giveup witing for auth cmd.")
 
-         ("simulations,r"
-         , po::value<int>(&op.sim_runs)->default_value(2)
-         , "Number of simulation runs."
+         ("type,r"
+         , po::value<int>(&op.type)->default_value(1)
+         , "Which test to run: 1 or 2."
          )
       ;
 
@@ -198,12 +213,13 @@ int main(int argc, char* argv[])
 
       set_fd_limits(500000);
 
-      for (auto i = 0; i < op.sim_runs; ++i) {
+      if (op.type == 1) {
          test_pubsub(op);
-         std::cout << "=======================> " << i << std::endl;
+      } else if (op.type == 2) {
+         test_pub_offline(op);
+      } else {
+         std::cerr << "Invalid run type." << std::endl;
       }
-
-      test_pub_offline(op);
 
       return 0;
    } catch (std::exception const& e) {

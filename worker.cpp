@@ -487,9 +487,12 @@ worker::on_user_subscribe( json const& j
    json resp;
    resp["cmd"] = "subscribe_ack";
    resp["result"] = "ok";
-   resp["count"] = n_channels;
-   resp["items"] = items;
    s->send(resp.dump(), false);
+
+   json j_pub;
+   j_pub["cmd"] = "publish";
+   j_pub["items"] = items;
+   s->send(j_pub.dump(), false);
    return ev_res::subscribe_ok;
 }
 

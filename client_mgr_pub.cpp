@@ -199,7 +199,7 @@ int test_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
          throw std::runtime_error("test_pub::publish_ack");
 
       auto const post_id = j.at("id").get<int>();
-      std::cout << op.user << " publish_ack " << post_id << std::endl;
+      //std::cout << op.user << " publish_ack " << post_id << std::endl;
       if (--msg_counter == 0)
          return -1;
 

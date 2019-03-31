@@ -199,7 +199,7 @@ int test_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
          throw std::runtime_error("test_pub::publish_ack");
 
       auto const post_id = j.at("id").get<int>();
-      //std::cout << op.user << " publish_ack " << post_id << std::endl;
+      post_ids.push_back(post_id);
       if (--msg_counter == 0)
          return -1;
 
@@ -237,6 +237,48 @@ int test_pub::pub( pub_code_type const& pub_code
    j_msg["cmd"] = "publish";
    j_msg["items"] = std::vector<pub_item>{item};
    s->send_msg(j_msg.dump());
+   return 1;
+}
+
+
+//________________________________
+
+int test_msg_pull::on_read(std::string msg, std::shared_ptr<client_type> s)
+{
+   auto const j = json::parse(msg);
+
+   auto const cmd = j.at("cmd").get<std::string>();
+   if (cmd == "auth_ack") {
+      auto const res = j.at("result").get<std::string>();
+      if (res != "ok")
+         throw std::runtime_error("test_msg_pull::auth_ack");
+
+      std::cout << "test_msg_pull::auth_ack: ok." << std::endl;
+      return 1;
+   }
+
+   if (cmd == "user_msg") {
+      auto const post_id = j.at("post_id").get<int>();
+      post_ids.push_back(post_id);
+      //std::cout << "Expecting: " << op.expected_user_msgs << std::endl;
+      if (--op.expected_user_msgs == 0)
+         return -1;
+      return 1;
+   }
+
+   throw std::runtime_error("test_msg_pull::on_read4");
+   return -1;
+}
+
+int test_msg_pull::on_handshake(std::shared_ptr<client_type> s)
+{
+   json j;
+   j["cmd"] = "auth";
+   j["from"] = op.user;
+   j["menu_versions"] = std::vector<int> {};
+   auto msg = j.dump();
+   s->send_msg(msg);
+   std::cout << "Sent: " << msg << std::endl;
    return 1;
 }
 

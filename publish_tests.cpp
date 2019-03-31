@@ -129,20 +129,29 @@ void test_pubsub(client_op const& op)
 
 void test_pub_offline(client_op const& op)
 {
+   std::string const pub_user = "publisher";
    boost::asio::io_context ioc;
 
    using client_type1 = client_session<test_pub>;
 
    std::cout << "Beginning the offline tests." << std::endl;
    std::cout << "Starting the publisher." << std::endl;
-   std::make_shared<client_type1>( ioc
-                                 , op.make_session_cf()
-                                 , test_pub_cfg {"Dummy1"}
-                                 )->run();
+   auto s1 = 
+      std::make_shared<client_type1>( ioc
+                                    , op.make_session_cf()
+                                    , test_pub_cfg {pub_user}
+                                    );
+   s1->run();
    ioc.run();
-   ioc.restart();
-
+   auto post_ids = s1->get_mgr().get_post_ids();
+   std::sort(std::begin(post_ids), std::end(post_ids));
+   auto const n_post_ids = ssize(post_ids);
+   std::cout << "Number of acked posts: " << n_post_ids
+             << std::endl;
    std::cout << "Publisher finished." << std::endl;
+
+   //_____________
+
    std::cout << "Launching the reader." << std::endl;
 
    using client_type2 = client_session<client_mgr_gmsg_check>;
@@ -151,9 +160,34 @@ void test_pub_offline(client_op const& op)
                                  , op.make_session_cf()
                                  , cmgr_gmsg_check_op {"Dummy2", 1}
                                  )->run();
+   ioc.restart();
    ioc.run();
 
    std::cout << "Reader finished." << std::endl;
+
+   //_____________
+
+   std::cout << "Launching user msg pull." << std::endl;
+
+   using client_type3 = client_session<test_msg_pull>;
+
+   auto s3 = 
+      std::make_shared<client_type3>( ioc
+                                    , op.make_session_cf()
+                                    , test_msg_pull_cfg
+                                      {pub_user, n_post_ids}
+                                    );
+   s3->run();
+   ioc.restart();
+   ioc.run();
+   std::cout << "User msg pull finished." << std::endl;
+
+   auto post_ids2 = s3->get_mgr().get_post_ids();
+   std::sort(std::begin(post_ids2), std::end(post_ids2));
+   if (post_ids2 != post_ids)
+      std::cout << "Error" << std::endl;
+   else
+      std::cout << "Success" << std::endl;
 }
 
 int main(int argc, char* argv[])

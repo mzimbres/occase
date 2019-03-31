@@ -88,6 +88,7 @@ private:
 
    options_type op;
    int msg_counter;
+   std::vector<int> post_ids;
 
    int pub( pub_code_type const& pub_code
           , std::shared_ptr<client_type> s) const;
@@ -102,6 +103,38 @@ public:
    int on_handshake(std::shared_ptr<client_type> s);
    int on_connect() const noexcept { return 1;}
    auto get_user() const {return op.user;}
+   auto get_post_ids() const {return post_ids;}
+};
+
+struct test_msg_pull_cfg {
+   std::string user;
+   int expected_user_msgs;
+};
+
+// This class will be used to publish some messages to the server and
+// exit quickly.
+class test_msg_pull {
+public:
+   using options_type = test_msg_pull_cfg;
+private:
+   using client_type = client_session<test_msg_pull>;
+   using code_type = std::vector<std::vector<std::vector<int>>>;
+
+   options_type op;
+   std::vector<int> post_ids;
+
+public:
+   test_msg_pull(options_type op_)
+   : op {op_}
+   { }
+
+   int on_read(std::string msg, std::shared_ptr<client_type> s);
+   int on_closed(boost::system::error_code ec)
+      { throw std::runtime_error("test_msg_pull::on_closed"); return -1; }
+   int on_handshake(std::shared_ptr<client_type> s);
+   int on_connect() const noexcept { return 1;}
+   auto get_user() const {return op.user;}
+   auto get_post_ids() const {return post_ids;}
 };
 
 }

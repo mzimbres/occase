@@ -25,6 +25,7 @@ auto get_server_op(int argc, char* argv[])
    std::string redis_db = "0";
    std::string log_on_stderr = "no";
    std::string conf_file;
+   std::string loglevel;
 
    po::options_description desc("Options");
    desc.add_options()
@@ -102,6 +103,13 @@ auto get_server_op(int argc, char* argv[])
    , po::value<int>(&cfg.worker.channel.max_sub)->default_value(1024)
    , "The maximum number of channels the user is allowed to subscribe to."
      " Remaining channels will be ignored."
+   )
+
+   ( "log-level"
+   , po::value<std::string>(&loglevel)->default_value("notice")
+   , "Control the amount of information that is output in the logs. "
+     " Available options are: emerg, alert, crit, err, warning, notice, "
+     " info, debug."
    )
 
    ( "max-menu-msgs-on-subscribe,u"

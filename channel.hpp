@@ -162,8 +162,7 @@ public:
 
    // Copies all items that are newer than id to inserter.
    template <class Inserter>
-   void retrieve_pub_items( pub_item::id_type id
-                          , Inserter inserter) const
+   void retrieve_pub_items(int id, Inserter inserter) const
    {
       auto const comp = [](auto const& a, auto const& b)
       { return a < b.id; };

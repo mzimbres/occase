@@ -34,5 +34,6 @@ enum class loglevel
 
 void log(std::string const& msg, loglevel ll);
 void log(char const* msg, loglevel ll);
+
 }
 

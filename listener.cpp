@@ -95,7 +95,8 @@ void listener::on_accept( boost::system::error_code ec
          return;
       }
 
-      fail(ec, "accept");
+      auto const* fmt = "listener::on_accept: {0}";
+      log(fmt::format(fmt, ec.message()), loglevel::debug);
       return;
    }
 

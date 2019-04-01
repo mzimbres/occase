@@ -47,7 +47,7 @@ struct pub_queue_item {
 
 class worker {
 private:
-   // This worker id needed to put individual worker log messages
+   // This worker id is needed to put individual worker log messages
    // apart.
    int const id;
 

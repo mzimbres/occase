@@ -14,7 +14,6 @@ namespace rt
 
 worker_session::worker_session(net::ip::tcp::socket socket, worker& w)
 : ws(std::move(socket))
-, strand(ws.get_executor())
 , timer( ws.get_executor().context()
        , std::chrono::steady_clock::time_point::max())
 , worker_(w)
@@ -56,14 +55,6 @@ worker_session::~worker_session()
 
 void worker_session::accept()
 {
-   auto const handler = [p = shared_from_this()]()
-      { p->do_accept(); };
-
-   net::post(net::bind_executor(strand, handler));
-}
-
-void worker_session::do_accept()
-{
    auto const handler0 = [this](auto kind, auto payload)
    {
       if (kind == beast::websocket::frame_type::close) {
@@ -88,7 +79,7 @@ void worker_session::do_accept()
          if (ec == net::error::operation_aborted)
             return;
 
-         auto const* fmt = "worker_session::do_accept: {0}.";
+         auto const* fmt = "worker_session::accept: {0}.";
          log(fmt::format(fmt, ec.message()), loglevel::debug);
          return;
       }
@@ -99,21 +90,19 @@ void worker_session::do_accept()
       p->ws.next_layer().close(ec);
    };
 
-   timer.async_wait(net::bind_executor(strand, handler1));
+   timer.async_wait(handler1);
 
    auto handler2 = [p = shared_from_this()](auto ec)
       { p->on_accept(ec); };
 
-   ws.async_accept(net::bind_executor(strand, handler2));
+   ws.async_accept(handler2);
 }
 
 void worker_session::on_accept(boost::system::error_code ec)
 {
    if (ec) {
       if (ec == net::error::operation_aborted) {
-         // The handshake laste too long and the timer fired. giving
-         // up.
-         //std::cout << "Giving up on handshake." << std::endl;
+         // The handshake lasted too long and the timer fired.
          return;
       }
 
@@ -141,8 +130,7 @@ void worker_session::on_accept(boost::system::error_code ec)
       p->do_close();
    };
 
-   timer.async_wait(net::bind_executor(strand, handler));
-
+   timer.async_wait(handler);
    do_read();
 }
 
@@ -151,7 +139,7 @@ void worker_session::do_read()
    auto handler = [p = shared_from_this()](auto ec, auto n)
       { p->on_read(ec, n); };
 
-   ws.async_read(buffer, net::bind_executor(strand, handler));
+   ws.async_read(buffer, handler);
 }
 
 void worker_session::on_close(boost::system::error_code ec)
@@ -202,14 +190,14 @@ void worker_session::do_close()
       p->ws.next_layer().close(ec);
    };
 
-   timer.async_wait(net::bind_executor(strand, handler0));
+   timer.async_wait(handler0);
 
    //std::cout << "worker_session::do_close()" << std::endl;
    auto const handler = [p = shared_from_this()](auto ec)
       { p->on_close(ec); };
 
    beast::websocket::close_reason reason {};
-   ws.async_close(reason, net::bind_executor(strand, handler));
+   ws.async_close(reason, handler);
 }
 
 void worker_session::send(std::string msg, bool persist)
@@ -237,7 +225,7 @@ void worker_session::shutdown()
    auto const handler = [p = shared_from_this()]()
       { p->do_close(); };
 
-   net::post(net::bind_executor(strand, handler));
+   net::post(handler);
 }
 
 void worker_session::do_pong_wait()
@@ -271,7 +259,7 @@ void worker_session::do_pong_wait()
       p->do_ping();
    };
 
-   timer.async_wait(net::bind_executor(strand, handler));
+   timer.async_wait(handler);
 }
 
 void worker_session::do_ping()
@@ -300,7 +288,7 @@ void worker_session::do_ping()
       p->do_pong_wait();
    };
 
-   ws.async_ping({}, net::bind_executor(strand, handler));
+   ws.async_ping({}, handler);
 }
 
 void worker_session::handle_ev(ev_res r)
@@ -327,7 +315,7 @@ void worker_session::handle_ev(ev_res r)
             p->do_close();
          };
 
-         timer.async_wait(net::bind_executor(strand, handler));
+         timer.async_wait(handler);
 
          // If we get here, it means that there was no ongoing timer.
          // But I do not see any reason for accepting a register command
@@ -435,8 +423,7 @@ void worker_session::do_write(std::string const& msg)
    auto handler = [p = shared_from_this()](auto ec, auto n)
       { p->on_write(ec, n); };
 
-   ws.async_write( net::buffer(msg)
-                 , net::bind_executor(strand, handler));
+   ws.async_write(net::buffer(msg), handler);
 }
 
 std::weak_ptr<proxy_session>

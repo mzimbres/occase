@@ -9,7 +9,6 @@
 #include <boost/beast/websocket.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include <boost/asio/bind_executor.hpp>
-#include <boost/asio/strand.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
 #include "config.hpp"
@@ -45,7 +44,7 @@ struct session_cfg {
 };
 
 struct proxy_session {
-   // We have to use a weak pointer here. A share_ptr does not work.
+   // We have to use a weak pointer here. A share_ptr doen't work.
    // Even when the proxy_session object is explicitly killed. The
    // object is itself killed only after the last weak_ptr is
    // destructed. The shared_ptr will live that long in that case.
@@ -62,7 +61,6 @@ private:
    };
 
    beast::websocket::stream<net::ip::tcp::socket> ws;
-   net::strand<net::io_context::executor_type> strand;
    net::steady_timer timer;
    beast::multi_buffer buffer;
 
@@ -74,7 +72,6 @@ private:
       bool persist;
    };
 
-   // TODO: Make this a priority queue.
    std::deque<msg_entry> msg_queue;
 
    ping_pong pp_state = ping_pong::unset;
@@ -98,7 +95,6 @@ private:
    void do_pong_wait();
    void do_close();
    void do_send(msg_entry entry);
-   void do_accept();
 
 public:
    explicit

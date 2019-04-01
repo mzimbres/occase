@@ -17,7 +17,7 @@ namespace rt
 struct listener_cfg {
    bool help = false;
    bool log_on_stderr = false;
-   server_cf mgr;
+   worker_cfg worker;
    int number_of_workers;
    unsigned short port;
 
@@ -29,7 +29,7 @@ struct listener_cfg {
 
    auto get_timeouts() const noexcept
    {
-      return session_timeouts
+      return session_cfg
       { std::chrono::seconds {auth_timeout}
       , std::chrono::seconds {code_timeout}
       , std::chrono::seconds {handshake_timeout}

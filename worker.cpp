@@ -22,13 +22,14 @@ std::mutex m;
 namespace rt
 {
 
-worker::worker(server_cf cf, int id_, net::io_context& ioc)
+worker::worker(worker_cfg cfg, int id_, net::io_context& ioc)
 : id {id_}
-, cf {cf.worker}
+, cfg {cfg.worker}
+, ch_cfg {cfg.channel}
 , ioc_ {ioc}
 , signals {ioc, SIGINT, SIGTERM}
-, timeouts {cf.timeouts}
-, db {cf.db, ioc, id_}
+, timeouts {cfg.session}
+, db {cfg.db, ioc, id_}
 , stats_timer {ioc}
 {
    net::post(ioc_, [this]() {init();});
@@ -166,7 +167,7 @@ void worker::on_db_unsol_pub(std::string const& msg)
    if (item.id > last_menu_msg_id)
       last_menu_msg_id = item.id;
 
-   g->second.broadcast(item, cf.ch.max_posts);
+   g->second.broadcast(item, ch_cfg.max_posts);
 }
 
 void
@@ -454,18 +455,19 @@ worker::on_user_subscribe( json const& j
       // TODO: Change 0 with the latest id the user has received.
       g->second.retrieve_pub_items(0, std::back_inserter(items));
       g->second.add_member( s->get_proxy_session(true)
-                          , cf.ch.cleanup_rate);
+                          , ch_cfg.cleanup_rate);
       ++n_channels;
    };
 
    // TODO: Update the compiler and use std::for_each_n.
    auto const size = ssize(ch_codes);
-   auto const n = cf.ch.max_sub > size ? size : cf.ch.max_sub;
-   auto const end = std::begin(ch_codes) + n;
-   std::for_each(std::begin(ch_codes), end, func);
+   auto const n = ch_cfg.max_sub > size ? size : ch_cfg.max_sub;
+   std::for_each( std::begin(ch_codes)
+                , std::begin(ch_codes) + n
+                , func);
 
-   if (ssize(items) > cf.max_menu_msg_on_sub) {
-      //auto const d = ssize(items) - cf.max_menu_msg_on_sub;
+   if (ssize(items) > cfg.max_menu_msg_on_sub) {
+      //auto const d = ssize(items) - cfg.max_menu_msg_on_sub;
       //std::cout << "====> " << d << std::endl;
       // Notice here we want to move the most recent elements to the
       // front of the vector.
@@ -473,11 +475,11 @@ worker::on_user_subscribe( json const& j
          { return a.id > b.id; };
 
       std::nth_element( std::begin(items)
-                      , std::begin(items) + cf.max_menu_msg_on_sub
+                      , std::begin(items) + cfg.max_menu_msg_on_sub
                       , std::end(items)
                       , comp);
 
-      items.erase( std::begin(items) + cf.max_menu_msg_on_sub
+      items.erase( std::begin(items) + cfg.max_menu_msg_on_sub
                  , std::end(items));
    }
 

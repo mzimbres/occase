@@ -17,7 +17,7 @@ struct arena {
    worker worker_;
    std::thread thread_;
 
-   arena(server_cf const& cfg, int i)
+   arena(worker_cfg const& cfg, int i)
    : worker_ {cfg, i, ioc}
    , thread_ { std::thread {[this](){ run();}} }
    {}
@@ -41,7 +41,7 @@ listener::listener(listener_cfg const& cfg)
       , loglevel::info);
 
    auto arena_gen = [&cfg, i = -1]() mutable
-      { return std::make_shared<arena>(cfg.mgr, ++i); };
+      { return std::make_shared<arena>(cfg.worker, ++i); };
 
    std::generate_n( std::back_inserter(arenas)
                   , cfg.number_of_workers

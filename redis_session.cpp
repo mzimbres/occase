@@ -19,14 +19,14 @@
 namespace rt::redis
 {
 
-session::session(session_cf cf_, net::io_context& ioc, std::string id_)
+session::session(session_cfg cf_, net::io_context& ioc, std::string id_)
 : id(id_)
-, cf {cf_}
+, cfg {cf_}
 , resolver {ioc} 
 , socket {ioc}
 , timer {ioc, std::chrono::steady_clock::time_point::max()}
 {
-   if (cf.max_pipeline_size < 1)
+   if (cfg.max_pipeline_size < 1)
       throw std::runtime_error("redis::session: Invalid max pipeline size.");
 }
 
@@ -50,13 +50,13 @@ void session::run()
    auto handler = [this](auto ec, auto res)
       { on_resolve(ec, res); };
 
-   resolver.async_resolve(cf.host, cf.port, handler);
+   resolver.async_resolve(cfg.host, cfg.port, handler);
 }
 
 void session::send(std::string msg)
 {
    auto const max_pp_size_reached =
-      pipeline_counter >= cf.max_pipeline_size;
+      pipeline_counter >= cfg.max_pipeline_size;
 
    if (max_pp_size_reached) {
       pipeline_counter = 0;
@@ -140,7 +140,7 @@ void session::on_resp(boost::system::error_code const& ec)
    if (ec) {
       if (ec == net::error::eof) {
          // Redis has cleanly closed the connection. We try a reconnect.
-         timer.expires_after(cf.conn_retry_interval);
+         timer.expires_after(cfg.conn_retry_interval);
 
          auto const handler = [this](auto ec)
          {

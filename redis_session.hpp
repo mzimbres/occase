@@ -22,7 +22,7 @@
 namespace rt::redis
 {
 
-struct session_cf {
+struct session_cfg {
    std::string host;
    std::string port;
 
@@ -46,7 +46,7 @@ public:
 
 private:
    std::string id;
-   session_cf cf;
+   session_cfg cfg;
    net::ip::tcp::resolver resolver;
    net::ip::tcp::socket socket;
    net::steady_timer timer;
@@ -69,7 +69,7 @@ private:
                 , std::size_t n);
 
 public:
-   session(session_cf cf_, net::io_context& ioc, std::string id_);
+   session(session_cfg cf_, net::io_context& ioc, std::string id_);
 
    void set_on_conn_handler(on_conn_handler_type handler)
       { on_conn_handler = std::move(handler);};

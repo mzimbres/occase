@@ -20,17 +20,17 @@
 namespace rt
 {
 
-struct worker_cf {
-   channel_cfg ch;
-   // The maximum number of channels the is allowed to be sent to the
+struct worker_only_cfg {
+   // The maximum number of channels that is allowed to be sent to the
    // user on subscribe.
    int max_menu_msg_on_sub; 
 };
 
-struct server_cf {
+struct worker_cfg {
    redis::config db;
-   session_timeouts timeouts;
-   worker_cf worker;
+   session_cfg session;
+   worker_only_cfg worker;
+   channel_cfg channel;
 };
 
 struct sessions_stats {
@@ -51,7 +51,8 @@ private:
    // apart.
    int const id;
 
-   worker_cf const cf;
+   worker_only_cfg const cfg;
+   channel_cfg const ch_cfg;
 
    net::io_context& ioc_;
    net::signal_set signals;
@@ -65,7 +66,7 @@ private:
    // Maps a channel id to the corresponding channel object.
    std::unordered_map<std::uint64_t, channel> channels;
 
-   session_timeouts const timeouts;
+   session_cfg const timeouts;
    sessions_stats stats;
 
    redis::facade db;
@@ -118,7 +119,7 @@ private:
    void on_db_menu_connect();
 
 public:
-   worker(server_cf cf, int id_, net::io_context& ioc);
+   worker(worker_cfg cfg, int id_, net::io_context& ioc);
 
    // When a server session dies, there are many things that must be
    // cleaned up or persisted. This function is responsible for that

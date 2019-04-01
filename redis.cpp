@@ -7,13 +7,13 @@
 namespace rt::redis
 {
 
-facade::facade(config const& cf, net::io_context& ioc, int wid)
+facade::facade(config const& cfg, net::io_context& ioc, int wid)
 : worker_id {wid}
-, ss_menu_sub {cf.ss_cf, ioc, fmt::format("W{0}/db-menu_sub", wid)}
-, ss_menu_pub {cf.ss_cf, ioc, fmt::format("W{0}/db-menu_pub", wid)}
-, ss_user_sub {cf.ss_cf, ioc, fmt::format("W{0}/db-user_sub", wid)}
-, ss_user_pub {cf.ss_cf, ioc, fmt::format("W{0}/db-user_pub", wid)}
-, cf(cf.cf)
+, ss_menu_sub {cfg.ss_cfg, ioc, fmt::format("W{0}/db-menu_sub", wid)}
+, ss_menu_pub {cfg.ss_cfg, ioc, fmt::format("W{0}/db-menu_pub", wid)}
+, ss_user_sub {cfg.ss_cfg, ioc, fmt::format("W{0}/db-user_sub", wid)}
+, ss_user_pub {cfg.ss_cfg, ioc, fmt::format("W{0}/db-user_pub", wid)}
+, cfg(cfg.cfg)
 , worker_handler([](auto const& data, auto const& req) {})
 {
    // Sets on connection handlers.
@@ -46,7 +46,7 @@ void facade::on_menu_sub_conn()
 {
    auto const* fmt = "W{0}/facade::on_menu_sub_conn: connected.";
    log(fmt::format(fmt, worker_id), loglevel::debug);
-   ss_menu_sub.send(subscribe(cf.menu_channel));
+   ss_menu_sub.send(subscribe(cfg.menu_channel));
 }
 
 void facade::on_menu_pub_conn()
@@ -70,7 +70,7 @@ void facade::on_user_pub_conn()
 
 void facade::async_retrieve_menu()
 {
-   ss_menu_pub.send(get(cf.menu_key));
+   ss_menu_pub.send(get(cfg.menu_key));
    menu_pub_queue.push(request::get_menu);
 }
 
@@ -89,7 +89,7 @@ void facade::on_menu_sub( boost::system::error_code const& ec
       return;
 
    assert(std::size(data) == 3);
-   assert(data[1] == cf.menu_channel);
+   assert(data[1] == cfg.menu_channel);
 
    std::swap(data.front(), data.back());
    data.resize(1);
@@ -174,7 +174,7 @@ facade::on_user_sub( boost::system::error_code const& ec
    assert(data.front() == "message");
    assert(std::size(data) == 3);
 
-   auto const pos = std::size(cf.user_notify_prefix);
+   auto const pos = std::size(cfg.user_notify_prefix);
    auto user_id = data[1].substr(pos);
    assert(!std::empty(user_id));
    retrieve_user_msgs(user_id);
@@ -182,7 +182,7 @@ facade::on_user_sub( boost::system::error_code const& ec
 
 void facade::retrieve_user_msgs(std::string const& user_id)
 {
-   auto const key = cf.msg_prefix + user_id;
+   auto const key = cfg.msg_prefix + user_id;
    auto cmd = multi()
             + lrange(key, 0, -1)
             + del(key)
@@ -198,19 +198,19 @@ void facade::retrieve_user_msgs(std::string const& user_id)
 
 void facade::sub_to_user_msgs(std::string const& id)
 {
-   ss_user_sub.send(subscribe(cf.user_notify_prefix + id));
+   ss_user_sub.send(subscribe(cfg.user_notify_prefix + id));
 }
 
 void facade::unsub_to_user_msgs(std::string const& id)
 {
-   ss_user_sub.send(unsubscribe(cf.user_notify_prefix + id));
+   ss_user_sub.send(unsubscribe(cfg.user_notify_prefix + id));
 }
 
 void facade::pub_menu_msg(std::string const& msg, int id)
 {
    auto cmd = multi()
-            + zadd(cf.menu_msgs_key, id, msg)
-            + publish(cf.menu_channel, msg)
+            + zadd(cfg.menu_msgs_key, id, msg)
+            + publish(cfg.menu_channel, msg)
             + exec();
 
    ss_menu_pub.send(std::move(cmd));
@@ -222,13 +222,13 @@ void facade::pub_menu_msg(std::string const& msg, int id)
 
 void facade::request_pub_id()
 {
-   ss_menu_pub.send(incr(cf.menu_msgs_counter_key));
+   ss_menu_pub.send(incr(cfg.menu_msgs_counter_key));
    menu_pub_queue.push(request::pub_counter);
 }
 
 void facade::retrieve_menu_msgs(int begin)
 {
-   ss_menu_pub.send(zrangebyscore(cf.menu_msgs_key, begin, -1));
+   ss_menu_pub.send(zrangebyscore(cfg.menu_msgs_key, begin, -1));
    menu_pub_queue.push(request::menu_msgs);
 }
 

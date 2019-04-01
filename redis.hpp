@@ -24,7 +24,7 @@ struct req_item {
    std::string user_id;
 };
 
-struct db_cf {
+struct db_cfg {
    // The name of the channel where all *publish* commands will be
    // sent.
    std::string menu_channel;
@@ -65,8 +65,8 @@ struct db_cf {
 };
 
 struct config {
-   session_cf ss_cf;
-   db_cf cf;
+   session_cfg ss_cfg;
+   db_cfg cfg;
 };
 
 // Facade class to manage the communication with redis and hide some
@@ -105,7 +105,7 @@ private:
    // TODO: We need a session to subscribe to changes in the menu.
    // Instead we may also consider using signals to trigger it.
 
-   db_cf const cf;
+   db_cfg const cfg;
 
    msg_handler_type worker_handler;
 
@@ -129,7 +129,7 @@ private:
    void on_user_pub_conn();
 
 public:
-   facade(config const& cf, net::io_context& ioc, int wid);
+   facade(config const& cfg, net::io_context& ioc, int wid);
 
    // Incomming message will complete on this handler with
    // one of the possible codes defined in redis::request.
@@ -163,11 +163,11 @@ public:
    {
       // Should we also impose a maximum length?
 
-      auto const key = cf.msg_prefix + id;
+      auto const key = cfg.msg_prefix + id;
       auto cmd_str = multi()
-                   + incr(cf.user_msgs_counter_key)
+                   + incr(cfg.user_msgs_counter_key)
                    + lpush(key, begin, end)
-                   + expire(key, cf.user_msg_exp_time)
+                   + expire(key, cfg.user_msg_exp_time)
                    + exec();
 
       user_pub_queue.push({request::ignore, {}});

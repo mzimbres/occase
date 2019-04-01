@@ -20,7 +20,7 @@ namespace po = boost::program_options;
 auto get_server_op(int argc, char* argv[])
 {
    std::vector<std::string> ips;
-   listener_cfg cf;
+   listener_cfg cfg;
    int conn_retry_interval = 500;
    std::string redis_db = "0";
    std::string log_on_stderr = "no";
@@ -42,12 +42,12 @@ auto get_server_op(int argc, char* argv[])
    )
 
    ( "port,p"
-   , po::value<unsigned short>(&cf.port)->default_value(8080)
+   , po::value<unsigned short>(&cfg.port)->default_value(8080)
    , "Server listening port."
    )
 
    ( "workers,w"
-   , po::value<int>(&cf.number_of_workers)->default_value(1)
+   , po::value<int>(&cfg.number_of_workers)->default_value(1)
    , "The number of worker threads, each"
      " one consuming one thread and having its own io_context."
      " For example, in a CPU with 8 cores this number should lie"
@@ -56,74 +56,74 @@ auto get_server_op(int argc, char* argv[])
    )
 
    ( "code-timeout,s"
-   , po::value<int>(&cf.code_timeout)->default_value(2)
+   , po::value<int>(&cfg.code_timeout)->default_value(2)
    , "Code confirmation timeout in seconds."
    )
 
    ( "auth-timeout,a"
-   , po::value<int>(&cf.auth_timeout)->default_value(2)
+   , po::value<int>(&cfg.auth_timeout)->default_value(2)
    , "Authetication timeout in seconds. Started after the websocket "
      "handshake completes."
    )
    ( "handshake-timeout,k"
-   , po::value<int>(&cf.handshake_timeout)->default_value(2)
+   , po::value<int>(&cfg.handshake_timeout)->default_value(2)
    , "Handshake timeout in seconds. If the websocket handshake lasts "
      "more than that the socket is shutdown and closed."
    )
 
    ( "pong-timeout,r"
-   , po::value<int>(&cf.pong_timeout)->default_value(2)
+   , po::value<int>(&cfg.pong_timeout)->default_value(2)
    , "Pong timeout in seconds. This is the time the client has to "
      "reply a ping frame sent by the server. If a pong is received "
      "on time a new ping is sent on timer expiration. Otherwise the "
      "connection is closed."
    )
    ( "close-frame-timeout,e"
-   , po::value<int>(&cf.close_frame_timeout)->default_value(2)
+   , po::value<int>(&cfg.close_frame_timeout)->default_value(2)
    , "The time we are willing to wait for an ack to websocket "
      "close frame that has been sent to the client."
    )
 
    ( "channel-cleanup-rate,E"
-   , po::value<int>(&cf.mgr.worker.ch.cleanup_rate)->default_value(128)
+   , po::value<int>(&cfg.worker.channel.cleanup_rate)->default_value(128)
    , "The rate channels will be  cleaned up if"
      " no publish activity is observed. Incremented on every publication"
      " on the channel."
    )
 
    ( "max-msgs-per-channels,T"
-   , po::value<int>(&cf.mgr.worker.ch.max_posts)->default_value(32)
+   , po::value<int>(&cfg.worker.channel.max_posts)->default_value(32)
    , "Max number of messages stored per channel. Posting on a"
      " channel that reached this number of messages will cause old"
      " messages to be removed."
    )
 
    ( "max-channels-subscribe,S"
-   , po::value<int>(&cf.mgr.worker.ch.max_sub)->default_value(1024)
+   , po::value<int>(&cfg.worker.channel.max_sub)->default_value(1024)
    , "The maximum number of channels the user is allowed to subscribe to."
      " Remaining channels will be ignored."
    )
 
    ( "max-menu-msgs-on-subscribe,u"
-   , po::value<int>(&cf.mgr.worker.max_menu_msg_on_sub)->default_value(50)
+   , po::value<int>(&cfg.worker.worker.max_menu_msg_on_sub)->default_value(50)
    , "The maximum number of messages that is allowed to be sent to "
      "the user when he subscribes to his channels."
    )
 
    ( "redis-server-address"
-   , po::value<std::string>(&cf.mgr.db.ss_cf.host)->
+   , po::value<std::string>(&cfg.worker.db.ss_cfg.host)->
        default_value("127.0.0.1")
    , "Address of the redis server."
    )
 
    ( "redis-server-port"
-   , po::value<std::string>(&cf.mgr.db.ss_cf.port)->
+   , po::value<std::string>(&cfg.worker.db.ss_cfg.port)->
        default_value("6379")
    , "Port where redis server is listening."
    )
 
    ( "redis-max-pipeline-size"
-   , po::value<int>(&cf.mgr.db.ss_cf.max_pipeline_size)->
+   , po::value<int>(&cfg.worker.db.ss_cfg.max_pipeline_size)->
        default_value(10000)
    , "The maximum allowed size of pipelined commands in the redis "
      " session."
@@ -135,27 +135,27 @@ auto get_server_op(int argc, char* argv[])
    )
 
    ( "redis-menu-key"
-   , po::value<std::string>(&cf.mgr.db.cf.menu_key)->
+   , po::value<std::string>(&cfg.worker.db.cfg.menu_key)->
         default_value("menu")
    , "Redis key holding the menus in json format."
    )
 
    ( "redis-menu-msgs-counter-key"
-   , po::value<std::string>(&cf.mgr.db.cf.menu_msgs_counter_key)->
+   , po::value<std::string>(&cfg.worker.db.cfg.menu_msgs_counter_key)->
         default_value("menu_msgs_counter")
    , "The name of the key used to store the number of menu messages sent"
      " so far."
    )
 
    ( "redis-user-msgs-counter-key"
-   , po::value<std::string>(&cf.mgr.db.cf.user_msgs_counter_key)->
+   , po::value<std::string>(&cfg.worker.db.cfg.user_msgs_counter_key)->
         default_value("user_msgs_counter")
    , "The name of the key used to store the number of user messages sent"
      " so far."
    )
 
    ( "redis-msg-prefix"
-   , po::value<std::string>(&cf.mgr.db.cf.msg_prefix)->
+   , po::value<std::string>(&cfg.worker.db.cfg.msg_prefix)->
         default_value("msg")
    , "That prefix that will be incorporated in the keys that hold"
      " user messages."
@@ -168,27 +168,27 @@ auto get_server_op(int argc, char* argv[])
    )
 
    ("redis-user-msg-exp_time"
-   , po::value<int>(&cf.mgr.db.cf.user_msg_exp_time)->
+   , po::value<int>(&cfg.worker.db.cfg.user_msg_exp_time)->
         default_value(7 * 24 * 60 * 60)
    , "Expiration time in seconds for redis user message keys."
      " After the time has elapsed the keys will be deleted."
    )
 
    ( "redis-menu-msgs-key"
-   , po::value<std::string>(&cf.mgr.db.cf.menu_msgs_key)->
+   , po::value<std::string>(&cfg.worker.db.cfg.menu_msgs_key)->
         default_value("menu_msgs")
    , "Redis key used to store menu msgs (in a sorted set)."
    )
 
    ( "redis-user-max-offline-msgs"
-   , po::value<int>(&cf.mgr.db.cf.max_offline_msgs)->
+   , po::value<int>(&cfg.worker.db.cfg.max_offline_msgs)->
         default_value(100)
    , "The maximum number of messages a user is allowed to accumulate "
      " (while he is offline)."
    )
 
    ( "redis-menu-channel"
-   , po::value<std::string>(&cf.mgr.db.cf.menu_channel)->
+   , po::value<std::string>(&cfg.worker.db.cfg.menu_channel)->
         default_value("menu_channel")
    , "The name of the redis channel where publish commands "
      "are be broadcasted to all workers connected to this channel. "
@@ -217,30 +217,30 @@ auto get_server_op(int argc, char* argv[])
       return listener_cfg {true};
    }
 
-   cf.log_on_stderr = log_on_stderr == "yes";
+   cfg.log_on_stderr = log_on_stderr == "yes";
 
-   cf.mgr.db.cf.msg_prefix += ":";
-   cf.mgr.db.cf.notify_prefix += redis_db + "__:";
-   cf.mgr.db.cf.user_notify_prefix = cf.mgr.db.cf.notify_prefix
-                                   + cf.mgr.db.cf.msg_prefix;
-   cf.mgr.db.ss_cf.conn_retry_interval =
+   cfg.worker.db.cfg.msg_prefix += ":";
+   cfg.worker.db.cfg.notify_prefix += redis_db + "__:";
+   cfg.worker.db.cfg.user_notify_prefix = cfg.worker.db.cfg.notify_prefix
+                                      + cfg.worker.db.cfg.msg_prefix;
+   cfg.worker.db.ss_cfg.conn_retry_interval =
       std::chrono::milliseconds{conn_retry_interval};
-   cf.mgr.timeouts = cf.get_timeouts();
-   return cf;
+   cfg.worker.session = cfg.get_timeouts();
+   return cfg;
 }
 
 int main(int argc, char* argv[])
 {
    try {
-      auto const cf = get_server_op(argc, argv);
-      if (cf.help)
+      auto const cfg = get_server_op(argc, argv);
+      if (cfg.help)
          return 0;
 
-      logger logg {argv[0], cf.log_on_stderr};
+      logger logg {argv[0], cfg.log_on_stderr};
 
       set_fd_limits(500000);
 
-      listener lst {cf};
+      listener lst {cfg};
       lst.run();
 
    } catch (std::exception const& e) {

@@ -32,10 +32,10 @@ auto const pub_handler = [](auto const& ec, auto const& data)
    std::cout << std::endl;
 };
 
-void pub(session_cf const& cf, int count, char const* channel)
+void pub(session_cfg const& cfg, int count, char const* channel)
 {
    boost::asio::io_context ioc;
-   session pub_session(cf, ioc, "1");
+   session pub_session(cfg, ioc, "1");
    pub_session.set_msg_handler(pub_handler);
    for (auto i = 0; i < count; ++i)
       pub_session.send(publish(channel, std::to_string(i)));
@@ -68,9 +68,9 @@ struct sub_arena {
    session s;
 
    sub_arena( net::io_context& ioc
-            , session_cf const& cf
+            , session_cfg const& cfg
             , std::string channel)
-   : s(cf, ioc, "1")
+   : s(cfg, ioc, "1")
    {
       s.set_msg_handler(sub_on_msg_handler);
 
@@ -82,17 +82,17 @@ struct sub_arena {
    }
 };
 
-void sub(session_cf const& cf, char const* channel)
+void sub(session_cfg const& cfg, char const* channel)
 {
    net::io_context ioc;
-   sub_arena arena(ioc, cf, channel);
+   sub_arena arena(ioc, cfg, channel);
    ioc.run();
 }
 
-void transaction(session_cf const& cf)
+void transaction(session_cfg const& cfg)
 {
    boost::asio::io_context ioc;
-   session ss(cf, ioc, "1");
+   session ss(cfg, ioc, "1");
    ss.set_msg_handler(pub_handler);
 
    auto c1 = multi()
@@ -106,10 +106,10 @@ void transaction(session_cf const& cf)
    ioc.run();
 }
 
-void expire(session_cf const& cf)
+void expire(session_cfg const& cfg)
 {
    boost::asio::io_context ioc;
-   session ss(cf, ioc, "1");
+   session ss(cfg, ioc, "1");
    ss.set_msg_handler(pub_handler);
 
    auto c1 = multi()
@@ -123,10 +123,10 @@ void expire(session_cf const& cf)
    ioc.run();
 }
 
-void zadd(session_cf const& cf)
+void zadd(session_cfg const& cfg)
 {
    boost::asio::io_context ioc;
-   session ss(cf, ioc, "1");
+   session ss(cfg, ioc, "1");
    ss.set_msg_handler(pub_handler);
 
    auto c1 = zadd("foo", 1, "bar1")
@@ -141,10 +141,10 @@ void zadd(session_cf const& cf)
    ioc.run();
 }
 
-void zrangebyscore(session_cf const& cf)
+void zrangebyscore(session_cfg const& cfg)
 {
    boost::asio::io_context ioc;
-   session ss(cf, ioc, "1");
+   session ss(cfg, ioc, "1");
    ss.set_msg_handler(pub_handler);
 
    auto c1 = zrangebyscore("foo", 2, -1);
@@ -155,10 +155,10 @@ void zrangebyscore(session_cf const& cf)
    ioc.run();
 }
 
-void zrange(session_cf const& cf)
+void zrange(session_cfg const& cfg)
 {
    boost::asio::io_context ioc;
-   session ss(cf, ioc, "1");
+   session ss(cfg, ioc, "1");
    ss.set_msg_handler(pub_handler);
 
    auto c1 = zrange("foo", 2, -1);
@@ -169,10 +169,10 @@ void zrange(session_cf const& cf)
    ioc.run();
 }
 
-void lrange(session_cf const& cf)
+void lrange(session_cfg const& cfg)
 {
    boost::asio::io_context ioc;
-   session ss(cf, ioc, "1");
+   session ss(cfg, ioc, "1");
    ss.set_msg_handler(pub_handler);
 
    auto c1 = lrange("foo", 0, -1);
@@ -183,10 +183,10 @@ void lrange(session_cf const& cf)
    ioc.run();
 }
 
-void read_msg_op(session_cf const& cf)
+void read_msg_op(session_cfg const& cfg)
 {
    boost::asio::io_context ioc;
-   session ss(cf, ioc, "1");
+   session ss(cfg, ioc, "1");
    ss.set_msg_handler(pub_handler);
 
    auto c1 = multi()
@@ -205,16 +205,16 @@ int main(int argc, char* argv[])
    try {
       auto test = 0;
       auto count = 0;
-      session_cf cf;
+      session_cfg cfg;
       po::options_description desc("Options");
       desc.add_options()
       ("help,h", "Produces help message")
       ( "port,p"
-      , po::value<std::string>(&cf.port)->default_value("6379")
+      , po::value<std::string>(&cfg.port)->default_value("6379")
       , "Redis server listening port."
       )
       ("host,i"
-      , po::value<std::string>(&cf.host)->default_value("127.0.0.1")
+      , po::value<std::string>(&cfg.host)->default_value("127.0.0.1")
       , "Redis server ip address."
       )
 
@@ -249,47 +249,47 @@ int main(int argc, char* argv[])
       char const* channel = "foo";
 
       if (test == 1) {
-         pub(cf, count, channel);
+         pub(cfg, count, channel);
          return 0;
       }
 
       if (test == 2) {
-         sub(cf, channel);
+         sub(cfg, channel);
          return 0;
       }
 
       if (test == 3) {
-         transaction(cf);
+         transaction(cfg);
          return 0;
       }
 
       if (test == 4) {
-         expire(cf);
+         expire(cfg);
          return 0;
       }
 
       if (test == 5) {
-         zadd(cf);
+         zadd(cfg);
          return 0;
       }
 
       if (test == 6) {
-         zrangebyscore(cf);
+         zrangebyscore(cfg);
          return 0;
       }
 
       if (test == 7) {
-         zrange(cf);
+         zrange(cfg);
          return 0;
       }
 
       if (test == 8) {
-         lrange(cf);
+         lrange(cfg);
          return 0;
       }
 
       if (test == 9) {
-         read_msg_op(cf);
+         read_msg_op(cfg);
          return 0;
       }
 

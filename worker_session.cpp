@@ -5,6 +5,8 @@
 #include <boost/beast/websocket/stream.hpp>
 #include <boost/beast/websocket/rfc6455.hpp>
 
+#include <fmt/format.h>
+
 #include "worker.hpp"
 
 namespace rt
@@ -27,12 +29,12 @@ worker_session::~worker_session()
       // to the user, due to, for example, a disconnection. But we are
       // only interested in the persist messages.
       auto const cond = [](auto const& o)
-         { return o.persist; };
+         { return !o.persist; };
 
       auto const point =
-         std::stable_partition( std::begin(msg_queue)
-                              , std::end(msg_queue)
-                              , cond);
+         std::remove_if( std::begin(msg_queue)
+                       , std::end(msg_queue)
+                       , cond);
 
       auto const d = std::distance(std::begin(msg_queue), point);
       std::vector<std::string> msgs;
@@ -45,9 +47,6 @@ worker_session::~worker_session()
                     , std::make_move_iterator(point)
                     , std::back_inserter(msgs)
                     , transformer);
-
-      //std::cout << "Session dying with msgs: " << std::size(msgs)
-      //          << std::endl;
 
       worker_.on_session_dtor(std::move(user_id), std::move(msgs));
    }
@@ -89,7 +88,8 @@ void worker_session::do_accept()
          if (ec == net::error::operation_aborted)
             return;
 
-         fail(ec, "do_accept_timer");
+         auto const* fmt = "worker_session::do_accept: {0}.";
+         log(fmt::format(fmt, ec.message()), loglevel::debug);
          return;
       }
 
@@ -117,7 +117,8 @@ void worker_session::on_accept(boost::system::error_code ec)
          return;
       }
 
-      fail(ec, "accept");
+      auto const* fmt = "worker_session::on_accept1: {0}.";
+      log(fmt::format(fmt, ec.message()), loglevel::debug);
       return;
    }
 
@@ -126,13 +127,14 @@ void worker_session::on_accept(boost::system::error_code ec)
    // 2. The user requests a register.
    timer.expires_after(worker_.get_timeouts().auth);
 
-   auto const handler = [p = shared_from_this()](auto ec)
+   auto const handler = [p = shared_from_this()](auto const& ec)
    {
       if (ec) {
          if (ec == net::error::operation_aborted)
             return;
 
-         fail(ec, "after_handshake_timer");
+         auto const* fmt = "worker_session::on_accept2: {0}.";
+         log(fmt::format(fmt, ec.message()), loglevel::debug);
          return;
       }
 
@@ -189,7 +191,8 @@ void worker_session::do_close()
          if (ec == net::error::operation_aborted)
             return;
 
-         fail(ec, "on_close"); // TODO: Check what to do here.
+         auto const* fmt = "worker_session::on_close0: {0}.";
+         log(fmt::format(fmt, ec.message()), loglevel::debug);
          return;
       }
 
@@ -250,7 +253,8 @@ void worker_session::do_pong_wait()
             return;
          }
 
-         fail(ec, "pong_wait_handler.");
+         auto const* fmt = "worker_session::do_pong_wait: {0}.";
+         log(fmt::format(fmt, ec.message()), loglevel::debug);
          return;
       }
 
@@ -258,8 +262,6 @@ void worker_session::do_pong_wait()
       if (p->pp_state == ping_pong::ping_sent) {
          // We did not receive the pong. We can shutdown and close the
          // socket.
-         //std::cout << "Peer unresponsive. Shuting down connection."
-         //          << std::endl;
          p->ws.next_layer().shutdown(net::ip::tcp::socket::shutdown_both, ec);
          p->ws.next_layer().close(ec);
          return;
@@ -286,7 +288,8 @@ void worker_session::do_ping()
             return;
          }
 
-         fail(ec, "Ping handler");
+         auto const* fmt = "worker_session::do_ping: {0}.";
+         log(fmt::format(fmt, ec.message()), loglevel::debug);
          return;
       }
 
@@ -310,13 +313,14 @@ void worker_session::handle_ev(ev_res r)
          // have to set the code timeout.
          auto const n = timer.expires_after(worker_.get_timeouts().code);
 
-         auto const handler = [p = shared_from_this()](auto ec)
+         auto const handler = [p = shared_from_this()](auto const& ec)
          {
             if (ec) {
                if (ec == net::error::operation_aborted)
                   return;
 
-               fail(ec, "Code timer"); // TODO: Check what to do here.
+               auto const* fmt = "worker_session::handle_ev: {0}.";
+               log(fmt::format(fmt, ec.message()), loglevel::debug);
                return;
             }
 
@@ -388,7 +392,8 @@ void worker_session::on_read( boost::system::error_code ec
       handle_ev(r);
       do_read();
    } catch (std::exception const& e) {
-      std::cerr << "Exception captured: " << e.what() << std::endl;
+      auto const* fmt = "worker_session::on_read: {0}.";
+      log(fmt::format(fmt, e.what()), loglevel::debug);
       timer.cancel();
       do_close();
    }
@@ -406,8 +411,6 @@ void worker_session::on_write( boost::system::error_code ec
       // nothing to do. Unsent user messages will be returned to the
       // database so that the server can retrieve them next time he
       // reconnects.
-      std::cout << "worker_session::on_write: " << user_id 
-                << " " << ec.message() << std::endl;
       return;
    }
 

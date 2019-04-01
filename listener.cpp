@@ -6,7 +6,7 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
-#include "server_session.hpp"
+#include "worker_session.hpp"
 #include "worker.hpp"
 
 namespace rt
@@ -100,7 +100,7 @@ void listener::on_accept( boost::system::error_code ec
    }
 
    auto const n = next % std::size(arenas);
-   std::make_shared< server_session
+   std::make_shared< worker_session
                    >(std::move(peer), arenas[n]->worker_)->accept();
    ++next;
 

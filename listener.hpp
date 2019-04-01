@@ -9,7 +9,7 @@
 
 #include "config.hpp"
 #include "worker.hpp"
-#include "server_session.hpp"
+#include "worker_session.hpp"
 
 namespace rt
 {

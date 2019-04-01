@@ -8,7 +8,7 @@
 #include <fmt/format.h>
 
 #include "menu.hpp"
-#include "server_session.hpp"
+#include "worker_session.hpp"
 #include "json_utils.hpp"
 
 namespace
@@ -306,7 +306,7 @@ void worker::on_db_pub_counter(std::string const& pub_id_str)
 
 ev_res
 worker::on_user_register( json const& j
-                        , std::shared_ptr<server_session> s)
+                        , std::shared_ptr<worker_session> s)
 {
    auto const from = j.at("from").get<std::string>();
 
@@ -335,7 +335,7 @@ worker::on_user_register( json const& j
 
 ev_res
 worker::on_user_login( json const& j
-                     , std::shared_ptr<server_session> s)
+                     , std::shared_ptr<worker_session> s)
 {
    auto const from = j.at("from").get<std::string>();
 
@@ -392,7 +392,7 @@ worker::on_user_login( json const& j
 
 ev_res
 worker::on_user_code_confirm( json const& j
-                            , std::shared_ptr<server_session> s)
+                            , std::shared_ptr<worker_session> s)
 {
    auto const from = j.at("from").get<std::string>();
    auto const code = j.at("code").get<std::string>();
@@ -427,7 +427,7 @@ worker::on_user_code_confirm( json const& j
 
 ev_res
 worker::on_user_subscribe( json const& j
-                         , std::shared_ptr<server_session> s)
+                         , std::shared_ptr<worker_session> s)
 {
    auto const codes =
       j.at("channels").get<std::vector<std::vector<std::vector<int>>>>();
@@ -499,7 +499,7 @@ worker::on_user_subscribe( json const& j
 }
 
 ev_res
-worker::on_user_publish(json j, std::shared_ptr<server_session> s)
+worker::on_user_publish(json j, std::shared_ptr<worker_session> s)
 {
    // TODO: Remove the restriction below that the items vector have
    // size one.
@@ -568,7 +568,7 @@ void worker::on_session_dtor( std::string const& id
 
 ev_res
 worker::on_user_msg( std::string msg, json const& j
-                   , std::shared_ptr<server_session> s)
+                   , std::shared_ptr<worker_session> s)
 {
    // TODO: Search the sessions map if the user is online and in this
    // node and send him his message directly to avoid overloading the
@@ -638,7 +638,7 @@ void worker::do_stats_logger()
 }
 
 ev_res
-worker::on_message( std::shared_ptr<server_session> s, std::string msg)
+worker::on_message(std::shared_ptr<worker_session> s, std::string msg)
 {
    auto const j = json::parse(msg);
    auto const cmd = j.at("cmd").get<std::string>();

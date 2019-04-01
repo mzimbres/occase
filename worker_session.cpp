@@ -1,4 +1,4 @@
-#include "server_session.hpp"
+#include "worker_session.hpp"
 
 #include <chrono>
 
@@ -10,7 +10,7 @@
 namespace rt
 {
 
-server_session::server_session(net::ip::tcp::socket socket, worker& w)
+worker_session::worker_session(net::ip::tcp::socket socket, worker& w)
 : ws(std::move(socket))
 , strand(ws.get_executor())
 , timer( ws.get_executor().context()
@@ -20,7 +20,7 @@ server_session::server_session(net::ip::tcp::socket socket, worker& w)
    ++worker_.get_stats().number_of_sessions;
 }
 
-server_session::~server_session()
+worker_session::~worker_session()
 {
    if (is_auth()) {
       // We also have to store all messages we weren't able to deliver
@@ -55,7 +55,7 @@ server_session::~server_session()
    --worker_.get_stats().number_of_sessions;
 }
 
-void server_session::accept()
+void worker_session::accept()
 {
    auto const handler = [p = shared_from_this()]()
       { p->do_accept(); };
@@ -63,7 +63,7 @@ void server_session::accept()
    net::post(net::bind_executor(strand, handler));
 }
 
-void server_session::do_accept()
+void worker_session::do_accept()
 {
    auto const handler0 = [this](auto kind, auto payload)
    {
@@ -107,7 +107,7 @@ void server_session::do_accept()
    ws.async_accept(net::bind_executor(strand, handler2));
 }
 
-void server_session::on_accept(boost::system::error_code ec)
+void worker_session::on_accept(boost::system::error_code ec)
 {
    if (ec) {
       if (ec == net::error::operation_aborted) {
@@ -144,7 +144,7 @@ void server_session::on_accept(boost::system::error_code ec)
    do_read();
 }
 
-void server_session::do_read()
+void worker_session::do_read()
 {
    auto handler = [p = shared_from_this()](auto ec, auto n)
       { p->on_read(ec, n); };
@@ -152,13 +152,13 @@ void server_session::do_read()
    ws.async_read(buffer, net::bind_executor(strand, handler));
 }
 
-void server_session::on_close(boost::system::error_code ec)
+void worker_session::on_close(boost::system::error_code ec)
 {
    if (ec) {
       if (ec == net::error::operation_aborted) {
          // This can be caused for example if the client shuts down
          // the socket before receiving (and replying) the close frame
-         //std::cout << "server_session::on_close: aborted." << std::endl;
+         //std::cout << "worker_session::on_close: aborted." << std::endl;
          return;
       }
 
@@ -171,7 +171,7 @@ void server_session::on_close(boost::system::error_code ec)
    // TODO: Set a timeout for the received close.
 }
 
-void server_session::do_close()
+void worker_session::do_close()
 {
    if (closing)
       return;
@@ -201,7 +201,7 @@ void server_session::do_close()
 
    timer.async_wait(net::bind_executor(strand, handler0));
 
-   //std::cout << "server_session::do_close()" << std::endl;
+   //std::cout << "worker_session::do_close()" << std::endl;
    auto const handler = [p = shared_from_this()](auto ec)
       { p->on_close(ec); };
 
@@ -209,7 +209,7 @@ void server_session::do_close()
    ws.async_close(reason, net::bind_executor(strand, handler));
 }
 
-void server_session::send(std::string msg, bool persist)
+void worker_session::send(std::string msg, bool persist)
 {
    auto const is_empty = std::empty(msg_queue);
 
@@ -219,7 +219,7 @@ void server_session::send(std::string msg, bool persist)
       do_write(msg_queue.front().msg);
 }
 
-void server_session::send_menu_msg(std::shared_ptr<std::string> msg)
+void worker_session::send_menu_msg(std::shared_ptr<std::string> msg)
 {
    auto const is_empty = std::empty(msg_queue);
 
@@ -229,7 +229,7 @@ void server_session::send_menu_msg(std::shared_ptr<std::string> msg)
       do_write(*msg_queue.front().menu_msg);
 }
 
-void server_session::shutdown()
+void worker_session::shutdown()
 {
    auto const handler = [p = shared_from_this()]()
       { p->do_close(); };
@@ -237,7 +237,7 @@ void server_session::shutdown()
    net::post(net::bind_executor(strand, handler));
 }
 
-void server_session::do_pong_wait()
+void worker_session::do_pong_wait()
 {
    timer.expires_after(worker_.get_timeouts().pong);
 
@@ -272,7 +272,7 @@ void server_session::do_pong_wait()
    timer.async_wait(net::bind_executor(strand, handler));
 }
 
-void server_session::do_ping()
+void worker_session::do_ping()
 {
    auto const handler = [p = shared_from_this()](auto ec)
    {
@@ -300,7 +300,7 @@ void server_session::do_ping()
    ws.async_ping({}, net::bind_executor(strand, handler));
 }
 
-void server_session::handle_ev(ev_res r)
+void worker_session::handle_ev(ev_res r)
 {
    switch (r) {
       case ev_res::register_ok:
@@ -354,7 +354,7 @@ void server_session::handle_ev(ev_res r)
    }
 }
 
-void server_session::on_read( boost::system::error_code ec
+void worker_session::on_read( boost::system::error_code ec
                             , std::size_t bytes_transferred)
 {
    boost::ignore_unused(bytes_transferred);
@@ -362,7 +362,7 @@ void server_session::on_read( boost::system::error_code ec
    if (ec == beast::websocket::error::closed) {
       // The connection has been gracefully closed. The only possible
       // pending operations now are the timers.
-      //std::cout << "server_session::on_read: socket closed gracefully."
+      //std::cout << "worker_session::on_read: socket closed gracefully."
       //          << std::endl;
       timer.cancel();
 
@@ -394,7 +394,7 @@ void server_session::on_read( boost::system::error_code ec
    }
 }
 
-void server_session::on_write( boost::system::error_code ec
+void worker_session::on_write( boost::system::error_code ec
                              , std::size_t bytes_transferred)
 {
    boost::ignore_unused(bytes_transferred);
@@ -406,7 +406,7 @@ void server_session::on_write( boost::system::error_code ec
       // nothing to do. Unsent user messages will be returned to the
       // database so that the server can retrieve them next time he
       // reconnects.
-      std::cout << "server_session::on_write: " << user_id 
+      std::cout << "worker_session::on_write: " << user_id 
                 << " " << ec.message() << std::endl;
       return;
    }
@@ -425,7 +425,7 @@ void server_session::on_write( boost::system::error_code ec
    }
 }
 
-void server_session::do_write(std::string const& msg)
+void worker_session::do_write(std::string const& msg)
 {
    ws.text(ws.got_text());
 
@@ -437,7 +437,7 @@ void server_session::do_write(std::string const& msg)
 }
 
 std::weak_ptr<proxy_session>
-server_session::get_proxy_session(bool new_session)
+worker_session::get_proxy_session(bool new_session)
 {
    if (!psession) {
       psession = std::make_shared<proxy_session>();

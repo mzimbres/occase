@@ -25,7 +25,7 @@ common_objs += utils.o
 
 server_objs =
 server_objs += worker.o
-server_objs += server_session.o
+server_objs += worker_session.o
 server_objs += listener.o
 server_objs += redis.o
 

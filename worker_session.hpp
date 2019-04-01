@@ -18,7 +18,7 @@ namespace rt
 {
 
 class worker;
-class server_session;
+class worker_session;
 
 enum class ev_res
 { register_ok
@@ -49,11 +49,11 @@ struct proxy_session {
    // Even when the proxy_session object is explicitly killed. The
    // object is itself killed only after the last weak_ptr is
    // destructed. The shared_ptr will live that long in that case.
-   std::weak_ptr<server_session> session;
+   std::weak_ptr<worker_session> session;
 };
 
-class server_session :
-   public std::enable_shared_from_this<server_session> {
+class worker_session :
+   public std::enable_shared_from_this<worker_session> {
 private:
    enum class ping_pong
    { ping_sent
@@ -102,8 +102,8 @@ private:
 
 public:
    explicit
-   server_session(net::ip::tcp::socket socket, worker& w);
-   ~server_session();
+   worker_session(net::ip::tcp::socket socket, worker& w);
+   ~worker_session();
 
    void accept();
 

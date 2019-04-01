@@ -15,7 +15,7 @@
 #include "config.hpp"
 #include "channel.hpp"
 #include "json_utils.hpp"
-#include "server_session.hpp"
+#include "worker_session.hpp"
 
 namespace rt
 {
@@ -40,7 +40,7 @@ struct sessions_stats {
 // We have to store publish items in this queue while we wait for
 // the pub id that were requested from redis.
 struct pub_queue_item {
-   std::weak_ptr<server_session> session;
+   std::weak_ptr<worker_session> session;
    pub_item item;
    std::string user_id;
 };
@@ -60,7 +60,7 @@ private:
    // Maps a user id (telephone, email, etc.) to the user session.  We
    // keep only a weak reference to the session.
    std::unordered_map< std::string
-                     , std::weak_ptr<server_session>
+                     , std::weak_ptr<worker_session>
                      > sessions;
 
    // Maps a channel id to the corresponding channel object.
@@ -88,22 +88,22 @@ private:
    void shutdown(boost::system::error_code const& ec);
 
    ev_res on_user_register( json const& j
-                          , std::shared_ptr<server_session> s);
+                          , std::shared_ptr<worker_session> s);
 
    ev_res on_user_login( json const& j
-                       , std::shared_ptr<server_session> s);
+                       , std::shared_ptr<worker_session> s);
 
    ev_res on_user_code_confirm( json const& j
-                              , std::shared_ptr<server_session> s);
+                              , std::shared_ptr<worker_session> s);
 
    ev_res on_user_subscribe( json const& j
-                           , std::shared_ptr<server_session> s);
+                           , std::shared_ptr<worker_session> s);
 
    ev_res on_user_msg( std::string msg, json const& j
-                     , std::shared_ptr<server_session> s);
+                     , std::shared_ptr<worker_session> s);
 
    ev_res on_user_publish( json j
-                         , std::shared_ptr<server_session> s);
+                         , std::shared_ptr<worker_session> s);
 
    void on_db_user_msgs( std::string const& user_id
                        , std::vector<std::string> const& msgs) const;
@@ -127,7 +127,7 @@ public:
    void on_session_dtor( std::string const& id
                        , std::vector<std::string> msgs);
 
-   ev_res on_message(std::shared_ptr<server_session> s, std::string msg);
+   ev_res on_message(std::shared_ptr<worker_session> s, std::string msg);
 
    auto const& get_timeouts() const noexcept {return timeouts;}
    auto& get_stats() noexcept {return stats;}

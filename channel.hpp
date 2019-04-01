@@ -7,7 +7,7 @@
 #include <algorithm>
 
 #include "menu.hpp"
-#include "server_session.hpp"
+#include "worker_session.hpp"
 #include "json_utils.hpp"
 #include "utils.hpp"
 
@@ -24,7 +24,7 @@ namespace rt
  *       Some channels have high publication rate.
  *
  *    To avoid having to remove sessions from the channel we
- *    introduced the proxy pointers, see server_session for more
+ *    introduced the proxy pointers, see worker_session for more
  *    details. They basically make it possible to expire all
  *    shared_pointers corresponding to a session at once, leaving us
  *    with an expired std::weak_ptr that will be removed the next time

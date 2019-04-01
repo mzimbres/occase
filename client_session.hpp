@@ -330,10 +330,8 @@ void client_session<Mgr>::on_resolve( boost::system::error_code ec
    if (ec)
       return fail(ec, "resolve");
 
-   auto const handler = [p = this->shared_from_this()](auto ec, auto Iterator)
-   {
-      p->on_connect(ec, Iterator);
-   };
+   auto handler = [p = this->shared_from_this()](auto ec, auto Iterator)
+      { p->on_connect(ec, Iterator); };
 
    net::async_connect(ws.next_layer(), results, handler);
 }
@@ -342,9 +340,7 @@ template <class Mgr>
 void client_session<Mgr>::run()
 {
    auto handler = [p = this->shared_from_this()](auto ec, auto res)
-   {
-      p->on_resolve(ec, res);
-   };
+      { p->on_resolve(ec, res); };
 
    // Look up the domain name
    resolver.async_resolve(op.host, op.port, handler);

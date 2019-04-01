@@ -21,17 +21,7 @@ namespace rt
 {
 
 struct worker_cf {
-   // This is the frequency we will be cleaning up the channel if no
-   // publish activity is observed.
-   int ch_cleanup_rate; 
-
-   // Max number of messages stored in the each channel.
-   int ch_max_posts; 
-
-   // The maximum number of channels a user is allowed to subscribe
-   // to. Remaining channels will be ignored.
-   int ch_max_sub; 
-
+   channel_cfg ch;
    // The maximum number of channels the is allowed to be sent to the
    // user on subscribe.
    int max_menu_msg_on_sub; 

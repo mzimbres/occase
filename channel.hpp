@@ -19,15 +19,17 @@ namespace rt
  *    The number of members in a channel is expected be on the
  *    thousands, let us say 50k. The operations performed are
  *
- *    1. Insert sessions very often on the back.
- *    2. Traverse on every publication in the channel. Some channels
- *       have high publication rate.
- *    3. Remove sessions. Not very frequently and perhaps not at all.
- *       The session simply expires and we are left with an expired
- *       std::weak_ptr.
+ *    1. Add sessions very often.
+ *    2. Traverse the sessions on every publication in the channel.
+ *       Some channels have high publication rate.
  *
- *    To deal with 3. we introduced the proxy pointers, see
- *    server_session for more details.
+ *    To avoid having to remove sessions from the channel we
+ *    introduced the proxy pointers, see server_session for more
+ *    details. They basically make it possible to expire all
+ *    shared_pointers corresponding to a session at once, leaving us
+ *    with an expired std::weak_ptr that will be removed the next time
+ *    we traverse the sessions in the channel (which happens on every
+ *    publication).
  *
  *    It is also possible to support remove later by keeping a sorted
  *    list of user_id that we can search as we traverse the vector
@@ -39,9 +41,10 @@ namespace rt
  *    the vector. This is due to the fact that there may be users
  *    joining this channel but nobody publishing on it. In this
  *    situation, the weak pointers will never *get out of scope* and
- *    release the memory they refer to.
+ *    release the memory they refer to. The vector with the session
+ *    will also grow larger and larger in this situation.
  *
- * TODO
+ * THOUGHTS
  *  
  *    - Report channel statistics.
  *    - Since we use a std::vector as the underlying container, the
@@ -50,11 +53,24 @@ namespace rt
  *      size.  This is nice to avoid reallocations very often, but
  *      given that we may have hundreds of thousands of vectors. There
  *      will be too much memory wasted. To deal with that we have to
- *      release memory once a stable number of users has been reached,
- *      letting only a small margin for growth. A std::deque could be
- *      also an option but memory would be more fragmented, which is
- *      not good for traversal.
+ *      release excess memory once a stable number of users has been
+ *      reached, letting only a small margin for growth. A std::deque
+ *      could be also an option but memory would be more fragmented,
+ *      which is not good for traversal.
  */
+
+struct channel_cfg {
+   // The frequency the channel will be cleaned up if no publish
+   // activity is observed.
+   int cleanup_rate; 
+
+   // Max number of messages stored in the each channel.
+   int max_posts; 
+
+   // The maximum number of channels a user is allowed to subscribe
+   // to. Remaining channels will be ignored.
+   int max_sub; 
+};
 
 class channel {
 private:
@@ -134,11 +150,11 @@ public:
       insertions_on_inactivity = 0;
    }
 
-   void add_member( std::weak_ptr<proxy_session> s, int cleanup_freq)
+   void add_member(std::weak_ptr<proxy_session> s, int cleanup_rate)
    {
       members.push_back(s);
 
-      if (++insertions_on_inactivity == cleanup_freq) {
+      if (++insertions_on_inactivity == cleanup_rate) {
          cleanup_traversal([](auto){});
          insertions_on_inactivity = 0;
       }

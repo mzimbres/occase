@@ -166,7 +166,7 @@ void worker::on_db_unsol_pub(std::string const& msg)
    if (item.id > last_menu_msg_id)
       last_menu_msg_id = item.id;
 
-   g->second.broadcast(item, cf.ch_max_posts);
+   g->second.broadcast(item, cf.ch.max_posts);
 }
 
 void
@@ -454,13 +454,13 @@ worker::on_user_subscribe( json const& j
       // TODO: Change 0 with the latest id the user has received.
       g->second.retrieve_pub_items(0, std::back_inserter(items));
       g->second.add_member( s->get_proxy_session(true)
-                          , cf.ch_cleanup_rate);
+                          , cf.ch.cleanup_rate);
       ++n_channels;
    };
 
    // TODO: Update the compiler and use std::for_each_n.
    auto const size = ssize(ch_codes);
-   auto const n = cf.ch_max_sub > size ? size : cf.ch_max_sub;
+   auto const n = cf.ch.max_sub > size ? size : cf.ch.max_sub;
    auto const end = std::begin(ch_codes) + n;
    std::for_each(std::begin(ch_codes), end, func);
 

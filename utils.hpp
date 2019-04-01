@@ -9,7 +9,7 @@ template <class C>
 auto ssize(C const& c)
 {
    auto const size = std::size(c);
-   return static_cast<std::ptrdiff_t>(size);
+   return static_cast<int>(size);
 }
 
 void set_fd_limits(int fds);

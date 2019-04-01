@@ -27,8 +27,7 @@ void set_fd_limits(int fds)
       return;
    }
 
-   auto const* fmt1 =
-      "getrlimit current values (soft, hard): ({0}, {1})";
+   auto const* fmt1 = "getrlimit (soft, hard): ({0}, {1})";
 
    log( fmt::format(fmt1, rl.rlim_cur, rl.rlim_cur)
       , loglevel::info);
@@ -45,7 +44,7 @@ void set_fd_limits(int fds)
    }
 
    auto const* fmt2 =
-      "getrlimit new values (soft, hard): ({0}, {1})";
+      "getrlimit (soft, hard): ({0}, {1})";
 
    log( fmt::format(fmt2, rl.rlim_cur, rl.rlim_cur)
       , loglevel::info);

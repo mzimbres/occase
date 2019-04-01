@@ -236,9 +236,9 @@ int main(int argc, char* argv[])
       if (cf.help)
          return 0;
 
-      set_fd_limits(500000);
-
       logger logg {argv[0], cf.log_on_stderr};
+
+      set_fd_limits(500000);
 
       listener lst {cf};
       lst.run();

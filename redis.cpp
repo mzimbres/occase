@@ -7,11 +7,12 @@
 namespace rt::redis
 {
 
-facade::facade(config const& cf, net::io_context& ioc)
-: ss_menu_sub(cf.ss_cf, ioc, "1")
-, ss_menu_pub(cf.ss_cf, ioc, "2")
-, ss_user_sub(cf.ss_cf, ioc, "3")
-, ss_user_pub(cf.ss_cf, ioc, "4")
+facade::facade(config const& cf, net::io_context& ioc, int wid)
+: worker_id {wid}
+, ss_menu_sub {cf.ss_cf, ioc, fmt::format("W{0}/db-menu_sub", wid)}
+, ss_menu_pub {cf.ss_cf, ioc, fmt::format("W{0}/db-menu_pub", wid)}
+, ss_user_sub {cf.ss_cf, ioc, fmt::format("W{0}/db-user_sub", wid)}
+, ss_user_pub {cf.ss_cf, ioc, fmt::format("W{0}/db-user_pub", wid)}
 , cf(cf.cf)
 , worker_handler([](auto const& data, auto const& req) {})
 {
@@ -43,24 +44,28 @@ facade::facade(config const& cf, net::io_context& ioc)
 
 void facade::on_menu_sub_conn()
 {
-   log("on_menu_sub_conn: connected", loglevel::debug);
+   auto const* fmt = "W{0}/facade::on_menu_sub_conn: connected.";
+   log(fmt::format(fmt, worker_id), loglevel::debug);
    ss_menu_sub.send(subscribe(cf.menu_channel));
 }
 
 void facade::on_menu_pub_conn()
 {
-   log("on_menu_pub_conn: connected", loglevel::debug);
+   auto const* fmt = "W{0}/facade::on_menu_pub_conn: connected.";
+   log(fmt::format(fmt, worker_id), loglevel::debug);
    worker_handler({}, {request::menu_connect, {}});
 }
 
 void facade::on_user_sub_conn()
 {
-   log("on_user_sub_conn: connected", loglevel::debug);
+   auto const* fmt = "W{0}/facade::on_user_sub: connected.";
+   log(fmt::format(fmt, worker_id), loglevel::debug);
 }
 
 void facade::on_user_pub_conn()
 {
-   log("on_user_pub_conn: connected", loglevel::debug);
+   auto const* fmt = "W{0}/facade::on_user_pub: connected.";
+   log(fmt::format(fmt, worker_id), loglevel::debug);
 }
 
 void facade::async_retrieve_menu()
@@ -73,8 +78,9 @@ void facade::on_menu_sub( boost::system::error_code const& ec
                         , std::vector<std::string> data)
 {
    if (ec) {
-      fail(ec,"on_menu_sub");
-      return; // TODO: Add error handling.
+      auto const* fmt = "W{0}/facade::on_menu_sub: {1}.";
+      log(fmt::format(fmt, worker_id, ec.message()), loglevel::debug);
+      return;
    }
 
    assert(!std::empty(data));
@@ -103,7 +109,8 @@ facade::on_menu_pub( boost::system::error_code const& ec
                    , std::vector<std::string> data)
 {
    if (ec) {
-      fail(ec,"on_menu_pub");
+      auto const* fmt = "W{0}/facade::on_menu_pub: {1}.";
+      log(fmt::format(fmt, worker_id, ec.message()), loglevel::debug);
       return;
    }
 
@@ -128,7 +135,8 @@ facade::on_user_pub( boost::system::error_code const& ec
                    , std::vector<std::string> data)
 {
    if (ec) {
-      fail(ec,"on_user_pub");
+      auto const* fmt = "W{0}/facade::on_user_sub: {1}.";
+      log(fmt::format(fmt, worker_id, ec.message()), loglevel::debug);
       return;
    }
 
@@ -155,7 +163,8 @@ facade::on_user_sub( boost::system::error_code const& ec
                    , std::vector<std::string> data)
 {
    if (ec) {
-      fail(ec,"on_user_sub");
+      auto const* fmt = "W{0}/facade::on_user_sub: {1}.";
+      log(fmt::format(fmt, worker_id, ec.message()), loglevel::debug);
       return;
    }
 

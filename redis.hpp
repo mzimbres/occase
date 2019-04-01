@@ -78,6 +78,9 @@ public:
                          , req_item const&)>;
 
 private:
+   // The worker id this facade corresponds to.
+   int worker_id;
+
    // Session used to subscribe to menu messages. No commands should
    // be posted here (with the exception of subscribe and
    // unsubscribe).
@@ -126,7 +129,7 @@ private:
    void on_user_pub_conn();
 
 public:
-   facade(config const& cf, net::io_context& ioc);
+   facade(config const& cf, net::io_context& ioc, int wid);
 
    // Incomming message will complete on this handler with
    // one of the possible codes defined in redis::request.

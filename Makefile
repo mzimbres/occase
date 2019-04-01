@@ -88,7 +88,7 @@ server: % : %.o $(server_objs) $(common_objs) $(aedis_objs)
 menu_dump: % : %.o $(menu_dump_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) -lfmt $(ext_libs)
 
-aedis: % : %.o $(aedis_objs)
+aedis: % : %.o $(aedis_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
 .PHONY: clean

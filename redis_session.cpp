@@ -10,6 +10,9 @@
 #include <boost/asio/bind_executor.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
+#include <fmt/format.h>
+
+#include "utils.hpp"
 #include "config.hpp"
 #include "redis_session.hpp"
 
@@ -30,8 +33,11 @@ session::session(session_cf cf_, net::io_context& ioc, std::string id_)
 void session::on_resolve( boost::system::error_code const& ec
                         , net::ip::tcp::resolver::results_type results)
 {
-   if (ec)
-      return fail(ec, "resolve");
+   if (ec) {
+      auto const* fmt = "{0}/on_resolve: {1}.";
+      log(fmt::format(fmt, id, ec.message()), loglevel::warning);
+      return;
+   }
 
    auto handler = [this](auto ec, auto iter)
       { on_connect(ec, iter); };
@@ -74,12 +80,17 @@ void session::close()
 {
    boost::system::error_code ec;
    socket.shutdown(net::ip::tcp::socket::shutdown_send, ec);
-   //if (ec)
-   //   fail(ec, "redis-close");
+   if (ec) {
+      auto const* fmt = "{0}/close: {1}.";
+      log(fmt::format(fmt, id, ec.message()), loglevel::warning);
+   }
 
+   ec = {};
    socket.close(ec);
-   //if (ec)
-   //   fail(ec, "redis-close");
+   if (ec) {
+      auto const* fmt = "{0}/close: {1}.";
+      log(fmt::format(fmt, id, ec.message()), loglevel::warning);
+   }
 
    timer.cancel();
 }
@@ -141,7 +152,8 @@ void session::on_resp(boost::system::error_code const& ec)
                   return;
                }
 
-               fail(ec, "Redis reconnect handler");
+               auto const* fmt = "{0}/on_resp1: {1}.";
+               log(fmt::format(fmt, id, ec.message()), loglevel::warning);
                return;
             }
 
@@ -161,7 +173,9 @@ void session::on_resp(boost::system::error_code const& ec)
          return;
       }
 
-      return fail(ec, "redis::session: unhandled.");
+      auto const* fmt = "{0}/on_resp2: {1}.";
+      log(fmt::format(fmt, id, ec.message()), loglevel::warning);
+      return;
    }
 
    on_msg_handler(ec, std::move(buffer.res));
@@ -185,7 +199,8 @@ void session::on_resp(boost::system::error_code const& ec)
 void session::on_write(boost::system::error_code ec, std::size_t n)
 {
    if (ec) {
-      fail(ec, "on_write");
+      auto const* fmt = "{0}/on_write: {1}.";
+      log(fmt::format(fmt, id, ec.message()), loglevel::info);
       return;
    }
 }

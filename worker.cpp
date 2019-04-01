@@ -28,7 +28,7 @@ worker::worker(server_cf cf, int id_, net::io_context& ioc)
 , ioc_ {ioc}
 , signals {ioc, SIGINT, SIGTERM}
 , timeouts {cf.timeouts}
-, db {cf.db, ioc}
+, db {cf.db, ioc, id_}
 , stats_timer {ioc}
 {
    net::post(ioc_, [this]() {init();});
@@ -113,18 +113,18 @@ void worker::on_db_menu_msgs(std::vector<std::string> const& msgs)
 
       std::for_each(std::begin(comb_codes), std::end(comb_codes), f);
 
-      auto const* fmt1 = "Worker {0}: {1} channels created.";
+      auto const* fmt1 = "W{0}: {1} channels created.";
       log( fmt::format(fmt1, id, std::size(channels))
          , loglevel::info);
 
       if (i != 0) {
-         auto const* fmt2 = "Worker {0}: {1} already existed.";
+         auto const* fmt2 = "W{0}: {1} already existed.";
          log( fmt::format(fmt2, id, i), loglevel::info);
       }
    }
 
    auto const* fmt3 =
-      "Worker {0}: {1} messages received from the database.";
+      "W{0}: {1} messages received from the database.";
    log(fmt::format(fmt3, id, std::size(msgs)), loglevel::info);
 
    auto loader = [this](auto const& msg)
@@ -592,10 +592,10 @@ void worker::shutdown(boost::system::error_code const& ec)
 {
    // TODO: Verify ec here?
 
-   auto const* fmt1 = "Worker {0}: Shutting down has been requested.";
+   auto const* fmt1 = "W{0}: Shutting down has been requested.";
    log(fmt::format(fmt1, id), loglevel::notice);
 
-   auto const* fmt2 = "Worker {0}: {1} sessions will be closed.";
+   auto const* fmt2 = "W{0}: {1} sessions will be closed.";
    log( fmt::format(fmt2, id, std::size(sessions))
       , loglevel::notice);
 
@@ -619,7 +619,8 @@ void worker::do_stats_logger()
    auto handler = [this](auto ec)
    {
       if (ec) {
-         std::cout << "stats_timer: " << ec.message() << std::endl;
+         auto const* fmt = "W{0}: {1}.";
+         log(fmt::format(fmt, id, ec.message()), loglevel::debug);
          return;
       }
       

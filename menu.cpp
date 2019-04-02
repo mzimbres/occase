@@ -1,5 +1,6 @@
 #include "menu.hpp"
 
+#include <ios>
 #include <stack>
 #include <limits>
 #include <cctype>
@@ -9,7 +10,6 @@
 #include <iterator>
 #include <algorithm>
 #include <exception>
-#include <ios>
 
 #include "json_utils.hpp"
 
@@ -334,76 +334,51 @@ void from_json(json const& j, menu_elem& e)
   e.version = j.at("version").get<int>();
 }
 
-// Stolen from rtcpp.
-template <class Iter>
-auto next_tuple( Iter begin, Iter end
-               , Iter min, Iter max)
+menu_code_type
+make_menu_code( std::vector<int> const& comb
+              , menu_code_type const& channels
+              , std::vector<menu_elem> const& menus)
 {
-    auto j = end - begin - 1;
-    while (begin[j] == max[j]) {
-      begin[j] = min[j];
-      --j;
-    }
-    ++begin[j];
-    
-    return j != 0;
+   menu_code_type foo;
+   for (auto i = 0; i < ssize(channels); ++i) {
+      auto const idx = comb.at(1 + i);
+      foo.push_back(
+         { std::vector<int>(
+            std::begin(channels.at(i).at(idx)),
+            std::begin(channels.at(i).at(idx)) + menus.at(i).depth)
+         });
+   }
+
+   return foo;
 }
 
-std::vector<std::vector<std::vector<std::vector<int>>>>
-channel_codes( std::vector<std::vector<std::vector<int>>> const& channels
+std::vector<menu_code_type>
+channel_codes( menu_code_type const& channels
              , std::vector<menu_elem> const& menus)
 {
-   if (std::empty(channels))
-      return {};
+   std::vector<menu_code_type> ret;
+   auto f = [&](auto const& comb)
+      { ret.push_back(make_menu_code(comb, channels, menus)); };
 
-   for (auto const& o : channels)
-      if (std::empty(o))
-         return {};
+   visit_menu_codes(channels, f);
 
-   // TODO: Make min and max const.
-   std::vector<unsigned> min(1 + std::size(channels), 0);
-   std::vector<unsigned> max(1, min[0] + 1);
-   for (auto const& o : channels)
-      max.push_back(std::size(o) - 1);
-   
-   auto comb = min;
-   std::vector<std::vector<std::vector<std::vector<int>>>> ret;
-   do {
-      std::vector<std::vector<std::vector<int>>> foo;
-      for (unsigned i = 0; i < std::size(channels); ++i) {
-         foo.push_back(
-               { std::vector<int>(
-                     std::begin(channels.at(i).at(comb.at(1 + i))),
-                     std::begin(channels.at(i).at(comb.at(1 + i)))
-                         + menus.at(i).depth)
-               });
-      }
-
-      ret.push_back(std::move(foo));
-   } while (next_tuple( std::begin(comb), std::end(comb)
-                      , std::begin(min), std::begin(max)));
    return ret;
 }
 
-std::uint64_t convert_to_channel_code(
-      std::vector<std::vector<std::vector<int>>> const& codes)
+std::uint64_t
+to_channel_hash_code_s2d2( std::vector<int> const& c1
+                         , std::vector<int> const& c2)
 {
-   if (std::empty(codes))
-      return {};
-
-   assert(std::size(codes.front()) == 1);
-   assert(std::size(codes) == 2);
-
-   assert(std::size(codes.front().front()) == 2);
-   assert(std::size(codes.front().back()) == 2);
+   assert(std::size(c1) == 2);
+   assert(std::size(c2) == 2);
    
    // First menu.
-   std::uint64_t c1a = codes.front().front().front();
-   std::uint64_t c1b = codes.front().front().back();
+   std::uint64_t c1a = c1.front();
+   std::uint64_t c1b = c1.back();
 
    // Second menu.
-   std::uint64_t c2a = codes.back().front().front();
-   std::uint64_t c2b = codes.back().front().back();
+   std::uint64_t c2a = c2.front();
+   std::uint64_t c2b = c2.back();
 
    c1a <<= 48;
    c1b <<= 32;
@@ -413,11 +388,32 @@ std::uint64_t convert_to_channel_code(
    return c1a | c1b | c2a | c2b;
 }
 
-std::vector<std::vector<std::vector<int>>>
+std::uint64_t to_channel_hash_code(menu_code_type const& code)
+{
+   if (std::empty(code))
+      return 0;
+
+   assert(std::size(code.front()) == 1);
+
+   auto const size = std::size(code);
+   switch (size) {
+   case 2:
+   {
+      assert(std::size(code) == 2);
+      return to_channel_hash_code_s2d2( code.front().front()
+                                      , code.back().front());
+   }
+   }
+
+   assert(false);
+   return 0;
+}
+
+menu_code_type
 menu_elems_to_codes(std::vector<menu_elem> const& elems)
 {
    // First we collect the codes from each menu at the desired depth.
-   std::vector<std::vector<std::vector<int>>> hash_codes;
+   menu_code_type hash_codes;
    for (auto const& elem : elems) {
       menu m {elem.data};
       if (std::empty(m))
@@ -442,9 +438,12 @@ menu_elems_to_codes(std::vector<menu_elem> const& elems)
 std::vector<int>
 read_versions(std::vector<menu_elem> const& elems)
 {
+   auto make_version = [](auto const& e)
+      { return e.version; };
+
    std::vector<int> vs;
-   for (auto const& e : elems)
-      vs.push_back(e.version);
+   std::transform( std::begin(elems), std::end(elems)
+                 , std::back_inserter(vs), make_version);
 
    return vs;
 }

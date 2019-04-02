@@ -228,7 +228,7 @@ int test_pub::on_closed(boost::system::error_code ec)
    return -1;
 };
 
-int test_pub::pub( pub_code_type const& pub_code
+int test_pub::pub( menu_code_type const& pub_code
                  , std::shared_ptr<client_type> s) const
 {
    pub_item item {-1, op.user, "Not an interesting message."

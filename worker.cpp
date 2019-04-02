@@ -98,7 +98,7 @@ void worker::on_db_menu_msgs(std::vector<std::string> const& msgs)
       auto const arrays = channel_codes(menu_codes, menus);
 
       auto converter = [this](auto const& o)
-         { return convert_to_channel_code(o);};
+         { return to_channel_hash_code(o);};
 
       std::vector<std::uint64_t> comb_codes;
       std::transform( std::begin(arrays), std::end(arrays)
@@ -138,7 +138,7 @@ void worker::on_db_unsol_pub(std::string const& msg)
 {
    auto const j = json::parse(msg);
    auto item = j.get<pub_item>();
-   auto const code = convert_to_channel_code(item.to);
+   auto const code = to_channel_hash_code(item.to);
    auto const g = channels.find(code);
    if (g == std::end(channels)) {
       // This can happen if the subscription to the menu channel
@@ -436,7 +436,7 @@ worker::on_user_subscribe( json const& j
    std::vector<std::uint64_t> ch_codes;
 
    auto const converter = [this](auto const& o)
-      { return convert_to_channel_code(o);};
+      { return to_channel_hash_code(o);};
 
    std::transform( std::begin(arrays), std::end(arrays)
                  , std::back_inserter(ch_codes)
@@ -467,8 +467,6 @@ worker::on_user_subscribe( json const& j
                 , func);
 
    if (ssize(items) > cfg.max_menu_msg_on_sub) {
-      //auto const d = ssize(items) - cfg.max_menu_msg_on_sub;
-      //std::cout << "====> " << d << std::endl;
       // Notice here we want to move the most recent elements to the
       // front of the vector.
       auto comp = [](auto const& a, auto const& b)
@@ -514,7 +512,7 @@ worker::on_user_publish(json j, std::shared_ptr<worker_session> s)
 
    // The channel code has the form [[1, 2], [2, 3, 4], [1, 2]]
    // where each array in the outermost array refers to one menu.
-   auto const code = convert_to_channel_code(items.front().to);
+   auto const code = to_channel_hash_code(items.front().to);
 
    auto const g = channels.find(code);
    if (g == std::end(channels) || std::size(items) != 1) {

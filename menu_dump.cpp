@@ -146,7 +146,7 @@ int impl(menu_op const& op)
       auto const hash_codes = menu_elems_to_codes(elems);
       auto const channels = channel_codes(hash_codes, elems);
       for (auto const& c : channels)
-         std::cout << convert_to_channel_code(c) << std::endl;
+         std::cout << to_channel_hash_code(c) << std::endl;
 
       return 0;
    }

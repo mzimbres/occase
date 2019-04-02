@@ -90,7 +90,7 @@ private:
    int msg_counter;
    std::vector<int> post_ids;
 
-   int pub( pub_code_type const& pub_code
+   int pub( menu_code_type const& pub_code
           , std::shared_ptr<client_type> s) const;
 
 public:

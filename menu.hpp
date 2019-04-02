@@ -7,6 +7,7 @@
 #include <limits>
 #include <cstdint>
 
+#include "utils.hpp"
 #include "json_utils.hpp"
 
 namespace rt
@@ -296,6 +297,48 @@ struct menu_elem {
    int version = 0;
 };
 
+// Stolen from rtcpp.
+template <class Iter, class Iter1>
+auto next_tuple( Iter begin, Iter end
+               , Iter1 min, Iter1 max)
+{
+    auto j = end - begin - 1;
+    while (begin[j] == max[j]) {
+      begin[j] = min[j];
+      --j;
+    }
+    ++begin[j];
+    
+    return j != 0;
+}
+
+template <class F>
+void visit_menu_codes(menu_code_type const& channels, F f)
+{
+   if (std::empty(channels))
+      return;
+
+   auto empty = [](auto const& o)
+      { return std::empty(o); };
+
+   auto const b =
+      std::none_of(std::begin(channels), std::end(channels), empty);
+   
+   if (!b)
+      return;
+
+   std::vector<int> min(1 + ssize(channels), 0);
+   std::vector<int> max(1, min.front() + 1);
+   for (auto const& o : channels)
+      max.push_back(ssize(o) - 1);
+   
+   auto comb = min;
+   do {
+      f(comb);
+   } while (next_tuple( std::begin(comb), std::end(comb)
+                      , std::begin(min), std::begin(max)));
+}
+
 void to_json(json& j, menu_elem const& e);
 void from_json(json const& j, menu_elem& e);
 
@@ -321,7 +364,7 @@ void from_json(json const& j, menu_elem& e);
  *
  *    [Sao Paulo, Atibaia, Vila Santista]
  *    [Sao Paulo, Atibaia, Centro]
- *    [Sao Paulo, Compinas, Barao Geraldo]
+ *    [Sao Paulo, Campinas, Barao Geraldo]
  *    ...
  *
  * These arrays in turn are grouped in the outer most array where each
@@ -339,8 +382,8 @@ void from_json(json const& j, menu_elem& e);
  *
  * Each element of the outermost array will have length one.
  */
-std::vector<pub_code_type>
-channel_codes( std::vector<std::vector<std::vector<int>>> const& codes
+std::vector<menu_code_type>
+channel_codes( menu_code_type const& codes
              , std::vector<menu_elem> const& menu_elems);
 
 /* This function will hash a channel code in the form
@@ -358,12 +401,12 @@ channel_codes( std::vector<std::vector<std::vector<int>>> const& codes
  *
  */
 
-std::uint64_t convert_to_channel_code(pub_code_type const& codes);
+std::uint64_t to_channel_hash_code(menu_code_type const& codes);
 
 /* This function will convert a vector of menu_elem in the structure
  * that is input for channel_codes decribed above.
  */
-std::vector<std::vector<std::vector<int>>>
+menu_code_type
 menu_elems_to_codes(std::vector<menu_elem> const& elems);
 
 std::vector<int>

@@ -313,7 +313,10 @@ auto next_tuple( Iter begin, Iter end
 }
 
 template <class F>
-void visit_menu_codes(menu_code_type const& channels, F f)
+void
+visit_menu_codes( menu_code_type const& channels
+                , F f
+                , int max_tuples = std::numeric_limits<int>::max())
 {
    if (std::empty(channels))
       return;
@@ -333,10 +336,12 @@ void visit_menu_codes(menu_code_type const& channels, F f)
       max.push_back(ssize(o) - 1);
    
    auto comb = min;
+   bool r = false;
    do {
       f(comb);
-   } while (next_tuple( std::begin(comb), std::end(comb)
-                      , std::begin(min), std::begin(max)));
+      r = next_tuple( std::begin(comb), std::end(comb)
+                    , std::begin(min), std::begin(max));
+   } while (r && --max_tuples != 0);
 }
 
 void to_json(json& j, menu_elem const& e);
@@ -386,6 +391,10 @@ std::vector<menu_code_type>
 channel_codes( menu_code_type const& codes
              , std::vector<menu_elem> const& menu_elems);
 
+std::uint64_t
+to_channel_hash_code_s2d2( std::vector<int> const& c1
+                         , std::vector<int> const& c2);
+
 /* This function will hash a channel code in the form
  *
  *   __menu_1__    __menu_2__    __menu_3__         
@@ -400,8 +409,19 @@ channel_codes( menu_code_type const& codes
  * TODO: Check code validity on every call to this function.
  *
  */
-
 std::uint64_t to_channel_hash_code(menu_code_type const& codes);
+
+/*
+ * Similar to the version above, but the input menu codes may have an
+ * arbitrary size and the tuple element as of comb is used to generate
+ * the hash code. This function is more general the the version above
+ * but it requires the user to have the comb vector or construct one.
+ *
+ * At the moment only for depth 2 and menus with size 2.
+ */
+std::uint64_t
+to_channel_hash_code2( menu_code_type const& codes
+                     , std::vector<int> const& comb);
 
 /* This function will convert a vector of menu_elem in the structure
  * that is input for channel_codes decribed above.

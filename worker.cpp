@@ -95,24 +95,17 @@ void worker::on_db_menu_msgs(std::vector<std::string> const& msgs)
    // TODO: Move this to the get_menu event.
    if (std::empty(channels)) {
       auto const menu_codes = menu_elems_to_codes(menus);
-      auto const arrays = channel_codes(menu_codes, menus);
-
-      auto converter = [this](auto const& o)
-         { return to_channel_hash_code(o);};
-
-      std::vector<std::uint64_t> comb_codes;
-      std::transform( std::begin(arrays), std::end(arrays)
-                    , std::back_inserter(comb_codes)
-                    , converter);
 
       int i = 0;
-      auto f = [&i, this](auto const& o)
+      auto f = [&, this](auto const& comb)
       {
-         if (!channels.insert({o, {}}).second)
+         auto const hash_code =
+            to_channel_hash_code2(menu_codes, comb);
+         if (!channels.insert({hash_code, {}}).second)
             ++i;
       };
 
-      std::for_each(std::begin(comb_codes), std::end(comb_codes), f);
+      visit_menu_codes(menu_codes, f);
 
       auto const* fmt1 = "W{0}: {1} channels created.";
       log( fmt::format(fmt1, id, std::size(channels))
@@ -429,25 +422,17 @@ ev_res
 worker::on_user_subscribe( json const& j
                          , std::shared_ptr<worker_session> s)
 {
-   auto const codes =
-      j.at("channels").get<std::vector<std::vector<std::vector<int>>>>();
-
-   auto const arrays = channel_codes(codes, menus);
-   std::vector<std::uint64_t> ch_codes;
-
-   auto const converter = [this](auto const& o)
-      { return to_channel_hash_code(o);};
-
-   std::transform( std::begin(arrays), std::end(arrays)
-                 , std::back_inserter(ch_codes)
-                 , converter);
+   auto const menu_codes =
+      j.at("channels").get<menu_code_type>();
 
    auto n_channels = 0;
    std::vector<pub_item> items;
 
-   auto func = [&, this](auto const& o)
+   // Works only for two menus with depth 2.
+   auto f = [&, this](auto const& comb)
    {
-      auto const g = channels.find(o);
+      auto const hash_code = to_channel_hash_code2(menu_codes, comb);
+      auto const g = channels.find(hash_code);
       assert(g != std::end(channels));
       if (g == std::end(channels))
          return;
@@ -459,16 +444,9 @@ worker::on_user_subscribe( json const& j
       ++n_channels;
    };
 
-   // TODO: Update the compiler and use std::for_each_n.
-   auto const size = ssize(ch_codes);
-   auto const n = ch_cfg.max_sub > size ? size : ch_cfg.max_sub;
-   std::for_each( std::begin(ch_codes)
-                , std::begin(ch_codes) + n
-                , func);
+   visit_menu_codes(menu_codes, f, ch_cfg.max_sub);
 
    if (ssize(items) > cfg.max_menu_msg_on_sub) {
-      // Notice here we want to move the most recent elements to the
-      // front of the vector.
       auto comp = [](auto const& a, auto const& b)
          { return a.id > b.id; };
 
@@ -480,9 +458,6 @@ worker::on_user_subscribe( json const& j
       items.erase( std::begin(items) + cfg.max_menu_msg_on_sub
                  , std::end(items));
    }
-
-   //std::cout << "Size of retrieved items: "
-   //          << std::size(items) << std::endl;
 
    json resp;
    resp["cmd"] = "subscribe_ack";
@@ -510,7 +485,7 @@ worker::on_user_publish(json j, std::shared_ptr<worker_session> s)
    // bugs. Also, the session at this point has been authenticated and
    // can be thrusted.
 
-   // The channel code has the form [[1, 2], [2, 3, 4], [1, 2]]
+   // The channel code has the form [[[1, 2]], [[2, 3, 4]], [[1, 2]]]
    // where each array in the outermost array refers to one menu.
    auto const code = to_channel_hash_code(items.front().to);
 

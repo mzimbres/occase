@@ -593,7 +593,9 @@ void worker::do_stats_logger()
    auto handler = [this](auto ec)
    {
       if (ec) {
-         log(loglevel::debug, "W{0}: {1}.", id, ec.message());
+         log( loglevel::debug
+            , "W{0}/worker::do_stats_logger: {1}."
+            , id, ec.message());
          return;
       }
       

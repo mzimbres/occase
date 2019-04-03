@@ -18,10 +18,7 @@ sleep 3
 
 #./reg_users_tests -u $users -g $launch_interval
 
-./publish_tests --publishers 300 \
-                --listeners 20 \
-                --type 1 \
-                --handshake-timeout 3
+./publish_tests --publishers 300 --listeners 20 --type 1
 
 kill -9 $server_pid
 

@@ -231,8 +231,10 @@ auto get_server_op(int argc, char* argv[])
    cfg.worker.db.cfg.notify_prefix += redis_db + "__:";
    cfg.worker.db.cfg.user_notify_prefix = cfg.worker.db.cfg.notify_prefix
                                       + cfg.worker.db.cfg.msg_prefix;
+
    cfg.worker.db.ss_cfg.conn_retry_interval =
-      std::chrono::milliseconds{conn_retry_interval};
+      std::chrono::milliseconds {conn_retry_interval};
+
    cfg.worker.session = cfg.get_timeouts();
    return cfg;
 }

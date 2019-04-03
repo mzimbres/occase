@@ -75,26 +75,22 @@ void session::send(std::string msg)
    }
 
    if (is_empty && socket.is_open())
-      net::async_write( socket, net::buffer(msg_queue.front())
-                      , [this](auto ec, auto n) {on_write(ec, n);});
+      do_write();
 }
 
 void session::close()
 {
    boost::system::error_code ec;
    socket.shutdown(net::ip::tcp::socket::shutdown_send, ec);
+
    if (ec) {
-      log( loglevel::warning
-         , "{0}/close: {1}."
-         , id, ec.message());
+      log(loglevel::warning, "{0}/close: {1}.", id, ec.message());
    }
 
    ec = {};
    socket.close(ec);
    if (ec) {
-      log( loglevel::warning
-         , "{0}/close: {1}."
-         , id, ec.message());
+      log(loglevel::warning, "{0}/close: {1}.", id, ec.message());
    }
 
    timer.cancel();
@@ -110,6 +106,14 @@ void session::start_reading_resp()
    async_read_resp(socket, &buffer, handler);
 }
 
+void session::do_write()
+{
+   auto handler = [this](auto ec, auto n)
+      { on_write(ec, n); };
+
+   net::async_write(socket, net::buffer(msg_queue.front()), handler);
+}
+
 void session::on_connect( boost::system::error_code const& ec
                         , net::ip::tcp::endpoint const& endpoint)
 {
@@ -119,16 +123,17 @@ void session::on_connect( boost::system::error_code const& ec
       return;
    }
 
+   log(loglevel::debug, "{0}/on_connect: Success.", id);
+
    start_reading_resp();
 
    // Consumes any messages that have been eventually posted while the
    // connection was not established.
    if (!std::empty(msg_queue)) {
-      auto handler = [this](auto ec, auto n)
-         { on_write(ec, n); };
-
-      net::async_write( socket, net::buffer(msg_queue.front())
-                      , handler);
+      log( loglevel::debug
+         , "{0}/on_connect: Number of messages {1}."
+         , id, std::size(msg_queue));
+      do_write();
    }
 
    // Calls user callback to inform a successfull connect to redis.
@@ -140,49 +145,65 @@ void session::on_connect( boost::system::error_code const& ec
    on_conn_handler();
 }
 
+void session::on_conn_closed(boost::system::error_code ec)
+{
+   if (ec) {
+      if (ec == net::error::operation_aborted) {
+         // The timer has been canceled. Probably somebody
+         // shutting down the application while we are trying to
+         // reconnect.
+         return;
+      }
+
+      log( loglevel::warning, "{0}/on_conn_closed: {1}."
+         , id, ec.message());
+
+      return;
+   }
+
+   // Given that the peer has shutdown the connection (I think)
+   // we do not need to call shutdown.
+   //socket.shutdown(net::ip::tcp::socket::shutdown_both, ec);
+   socket.close(ec);
+
+   // Instead of simply trying to reconnect I will run the
+   // resolver again. This will be changes when sentinel
+   // support is implemented.
+   run();
+}
+
 void session::on_resp(boost::system::error_code const& ec)
 {
    if (ec) {
-      if (ec == net::error::eof) {
-         // Redis has cleanly closed the connection. We try a reconnect.
+      log(loglevel::warning, "{0}/on_resp1: {1}.", id, ec.message());
+      auto const b1 = ec == net::error::eof;
+      auto const b2 = ec == net::error::connection_reset;
+      if (b1 || b2) {
+         // Redis has cleanly closed the connection, we try to
+         // reconnect.
          timer.expires_after(cfg.conn_retry_interval);
 
-         auto const handler = [this](auto ec)
-         {
-            if (ec) {
-               if (ec == net::error::operation_aborted) {
-                  // The timer has been canceled. Probably somebody
-                  // shutting down the application while we are trying to
-                  // reconnect.
-                  return;
-               }
-
-               log( loglevel::warning
-                  , "{0}/on_resp1: {1}."
-                  , id, ec.message());
-
-               return;
-            }
-
-            // Given that the peer has shutdown the connection (I think)
-            // we do not need to call shutdown.
-            //socket.shutdown(net::ip::tcp::socket::shutdown_both, ec);
-            socket.close(ec);
-            assert(!socket.is_open());
-
-            // Instead of simply trying to reconnect I will run the
-            // resolver again.
-            std::cout << "Trying to reconnect." << std::endl;
-            run();
-         };
+         auto const handler = [this](auto const& ec)
+            { on_conn_closed(ec); };
 
          timer.async_wait(handler);
          return;
       }
 
+      if (ec == net::error::operation_aborted) {
+         // The operation has been canceled, this can happen in only
+         // one way
+         //
+         // 1. There has been a request from the worker to close the
+         //    connection and leave. In this case we should NOT try to
+         //    reconnect. We have nothing to do.
+         return;
+      }
+
       log( loglevel::warning
-         , "{0}/on_resp2: {1}."
+         , "{0}/on_resp2: Unhandled error '{1}'."
          , id, ec.message());
+
       return;
    }
 
@@ -195,13 +216,8 @@ void session::on_resp(boost::system::error_code const& ec)
 
    msg_queue.pop();
 
-   if (std::empty(msg_queue))
-      return;
-
-   auto handler = [this](auto ec, auto n)
-      { on_write(ec, n); };
-
-   net::async_write(socket, net::buffer(msg_queue.front()), handler);
+   if (!std::empty(msg_queue))
+      do_write();
 }
 
 void session::on_write(boost::system::error_code ec, std::size_t n)

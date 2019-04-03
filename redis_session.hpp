@@ -67,6 +67,8 @@ private:
    void on_resp(boost::system::error_code const& ec);
    void on_write( boost::system::error_code ec
                 , std::size_t n);
+   void do_write();
+   void on_conn_closed(boost::system::error_code ec);
 
 public:
    session(session_cfg cf_, net::io_context& ioc, std::string id_);

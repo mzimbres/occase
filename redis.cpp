@@ -44,34 +44,20 @@ facade::facade(config const& cfg, net::io_context& ioc, int wid)
 
 void facade::on_menu_sub_conn()
 {
-   log( loglevel::debug
-      , "W{0}/facade::on_menu_sub_conn: connected."
-      , worker_id);
-
    ss_menu_sub.send(subscribe(cfg.menu_channel));
 }
 
 void facade::on_menu_pub_conn()
 {
-   log( loglevel::debug
-      , "W{0}/facade::on_menu_pub_conn: connected."
-      , worker_id);
-
    worker_handler({}, {request::menu_connect, {}});
 }
 
 void facade::on_user_sub_conn()
 {
-   log( loglevel::debug
-      , "W{0}/facade::on_user_sub: connected."
-      , worker_id);
 }
 
 void facade::on_user_pub_conn()
 {
-   log( loglevel::debug
-      , "W{0}/facade::on_user_pub: connected."
-      , worker_id);
 }
 
 void facade::async_retrieve_menu()
@@ -241,6 +227,10 @@ void facade::request_pub_id()
 
 void facade::retrieve_menu_msgs(int begin)
 {
+   log( loglevel::debug
+      , "W{0}/facade::retrieve_menu_msgs({1})."
+      , worker_id, begin);
+
    ss_menu_pub.send(zrangebyscore(cfg.menu_msgs_key, begin, -1));
    menu_pub_queue.push(request::menu_msgs);
 }

@@ -34,8 +34,10 @@ void session::on_resolve( boost::system::error_code const& ec
                         , net::ip::tcp::resolver::results_type results)
 {
    if (ec) {
-      auto const* fmt = "{0}/on_resolve: {1}.";
-      log(fmt::format(fmt, id, ec.message()), loglevel::warning);
+      log( loglevel::warning
+         , "{0}/on_resolve: {1}."
+         , id, ec.message());
+
       return;
    }
 
@@ -81,15 +83,17 @@ void session::close()
    boost::system::error_code ec;
    socket.shutdown(net::ip::tcp::socket::shutdown_send, ec);
    if (ec) {
-      auto const* fmt = "{0}/close: {1}.";
-      log(fmt::format(fmt, id, ec.message()), loglevel::warning);
+      log( loglevel::warning
+         , "{0}/close: {1}."
+         , id, ec.message());
    }
 
    ec = {};
    socket.close(ec);
    if (ec) {
-      auto const* fmt = "{0}/close: {1}.";
-      log(fmt::format(fmt, id, ec.message()), loglevel::warning);
+      log( loglevel::warning
+         , "{0}/close: {1}."
+         , id, ec.message());
    }
 
    timer.cancel();
@@ -152,8 +156,10 @@ void session::on_resp(boost::system::error_code const& ec)
                   return;
                }
 
-               auto const* fmt = "{0}/on_resp1: {1}.";
-               log(fmt::format(fmt, id, ec.message()), loglevel::warning);
+               log( loglevel::warning
+                  , "{0}/on_resp1: {1}."
+                  , id, ec.message());
+
                return;
             }
 
@@ -173,8 +179,9 @@ void session::on_resp(boost::system::error_code const& ec)
          return;
       }
 
-      auto const* fmt = "{0}/on_resp2: {1}.";
-      log(fmt::format(fmt, id, ec.message()), loglevel::warning);
+      log( loglevel::warning
+         , "{0}/on_resp2: {1}."
+         , id, ec.message());
       return;
    }
 
@@ -199,8 +206,8 @@ void session::on_resp(boost::system::error_code const& ec)
 void session::on_write(boost::system::error_code ec, std::size_t n)
 {
    if (ec) {
-      auto const* fmt = "{0}/on_write: {1}.";
-      log(fmt::format(fmt, id, ec.message()), loglevel::info);
+      log( loglevel::info, "{0}/on_write: {1}."
+         , id, ec.message());
       return;
    }
 }

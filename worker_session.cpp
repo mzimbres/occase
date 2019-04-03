@@ -79,8 +79,10 @@ void worker_session::accept()
          if (ec == net::error::operation_aborted)
             return;
 
-         auto const* fmt = "worker_session::accept: {0}.";
-         log(fmt::format(fmt, ec.message()), loglevel::debug);
+         log( loglevel::debug
+            , "worker_session::accept: {0}."
+            , ec.message());
+
          return;
       }
 
@@ -106,8 +108,9 @@ void worker_session::on_accept(boost::system::error_code ec)
          return;
       }
 
-      auto const* fmt = "worker_session::on_accept1: {0}.";
-      log(fmt::format(fmt, ec.message()), loglevel::debug);
+      log( loglevel::debug
+         , "worker_session::on_accept1: {0}."
+         , ec.message());
       return;
    }
 
@@ -122,8 +125,10 @@ void worker_session::on_accept(boost::system::error_code ec)
          if (ec == net::error::operation_aborted)
             return;
 
-         auto const* fmt = "worker_session::on_accept2: {0}.";
-         log(fmt::format(fmt, ec.message()), loglevel::debug);
+         log( loglevel::debug
+            , "worker_session::on_accept2: {0}."
+            , ec.message());
+
          return;
       }
 
@@ -179,8 +184,10 @@ void worker_session::do_close()
          if (ec == net::error::operation_aborted)
             return;
 
-         auto const* fmt = "worker_session::on_close0: {0}.";
-         log(fmt::format(fmt, ec.message()), loglevel::debug);
+         log( loglevel::debug
+            , "worker_session::on_close0: {0}."
+            , ec.message());
+
          return;
       }
 
@@ -241,8 +248,10 @@ void worker_session::do_pong_wait()
             return;
          }
 
-         auto const* fmt = "worker_session::do_pong_wait: {0}.";
-         log(fmt::format(fmt, ec.message()), loglevel::debug);
+         log( loglevel::debug
+            , "worker_session::do_pong_wait: {0}."
+            , ec.message());
+
          return;
       }
 
@@ -276,8 +285,10 @@ void worker_session::do_ping()
             return;
          }
 
-         auto const* fmt = "worker_session::do_ping: {0}.";
-         log(fmt::format(fmt, ec.message()), loglevel::debug);
+         log( loglevel::debug
+            , "worker_session::do_ping: {0}."
+            , ec.message());
+
          return;
       }
 
@@ -307,8 +318,9 @@ void worker_session::handle_ev(ev_res r)
                if (ec == net::error::operation_aborted)
                   return;
 
-               auto const* fmt = "worker_session::handle_ev: {0}.";
-               log(fmt::format(fmt, ec.message()), loglevel::debug);
+               log( loglevel::debug, "worker_session::handle_ev: {0}."
+                  , ec.message());
+
                return;
             }
 
@@ -380,8 +392,10 @@ void worker_session::on_read( boost::system::error_code ec
       handle_ev(r);
       do_read();
    } catch (std::exception const& e) {
-      auto const* fmt = "worker_session::on_read: {0}.";
-      log(fmt::format(fmt, e.what()), loglevel::debug);
+      log( loglevel::debug
+         , "worker_session::on_read: {0}."
+         , e.what());
+
       timer.cancel();
       do_close();
    }

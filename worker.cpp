@@ -107,19 +107,16 @@ void worker::on_db_menu_msgs(std::vector<std::string> const& msgs)
 
       visit_menu_codes(menu_codes, f);
 
-      auto const* fmt1 = "W{0}: {1} channels created.";
-      log( fmt::format(fmt1, id, std::size(channels))
-         , loglevel::info);
+      log( loglevel::info, "W{0}: {1} channels created."
+         , id, std::size(channels));
 
-      if (i != 0) {
-         auto const* fmt2 = "W{0}: {1} already existed.";
-         log( fmt::format(fmt2, id, i), loglevel::info);
-      }
+      if (i != 0)
+         log(loglevel::info, "W{0}: {1} already existed.", id, i);
    }
 
-   auto const* fmt3 =
-      "W{0}: {1} messages received from the database.";
-   log(fmt::format(fmt3, id, std::size(msgs)), loglevel::info);
+   log( loglevel::info
+      , "W{0}: {1} messages received from the database."
+      , id, std::size(msgs));
 
    auto loader = [this](auto const& msg)
       { on_db_unsol_pub(msg); };
@@ -567,12 +564,13 @@ void worker::shutdown(boost::system::error_code const& ec)
 {
    // TODO: Verify ec here?
 
-   auto const* fmt1 = "W{0}: Shutting down has been requested.";
-   log(fmt::format(fmt1, id), loglevel::notice);
+   log( loglevel::notice
+      , "W{0}: Shutting down has been requested."
+      , id);
 
-   auto const* fmt2 = "W{0}: {1} sessions will be closed.";
-   log( fmt::format(fmt2, id, std::size(sessions))
-      , loglevel::notice);
+   log( loglevel::notice
+      , "W{0}: {1} sessions will be closed."
+      , id, std::size(sessions));
 
    auto f = [](auto o)
    {
@@ -594,8 +592,7 @@ void worker::do_stats_logger()
    auto handler = [this](auto ec)
    {
       if (ec) {
-         auto const* fmt = "W{0}: {1}.";
-         log(fmt::format(fmt, id, ec.message()), loglevel::debug);
+         log(loglevel::debug, "W{0}: {1}.", id, ec.message());
          return;
       }
       

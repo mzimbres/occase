@@ -252,7 +252,7 @@ int main(int argc, char* argv[])
       lst.run();
 
    } catch (std::exception const& e) {
-      log(e.what(), loglevel::emerg);
+      log(loglevel::emerg, e.what());
       return 1;
    }
 

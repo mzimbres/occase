@@ -36,9 +36,9 @@ listener::listener(listener_cfg const& cfg)
 : signals {ioc, SIGINT, SIGTERM}
 , acceptor {ioc, {boost::asio::ip::tcp::v4(), cfg.port}}
 {
-   auto const* fmt1 = "Binding server to {}";
-   log( fmt::format(fmt1, acceptor.local_endpoint())
-      , loglevel::info);
+   log( loglevel::info
+      , "Binding server to {}"
+      , acceptor.local_endpoint());
 
    auto arena_gen = [&cfg, i = -1]() mutable
       { return std::make_shared<arena>(cfg.worker, ++i); };
@@ -63,7 +63,7 @@ void listener::run()
    auto const handler = [this](auto ec, auto n)
    {
       // TODO: Verify ec here.
-      log("Beginning the shutdown operation.", loglevel::info);
+      log(loglevel::info, "Beginning the shutdown operation.");
       shutdown();
    };
 
@@ -91,12 +91,14 @@ void listener::on_accept( boost::system::error_code ec
 {
    if (ec) {
       if (ec == net::error::operation_aborted) {
-         log("Stopping accepting connections", loglevel::info);
+         log(loglevel::info, "Stopping accepting connections");
          return;
       }
 
-      auto const* fmt = "listener::on_accept: {0}";
-      log(fmt::format(fmt, ec.message()), loglevel::debug);
+      log( loglevel::debug
+         , "listener::on_accept: {0}"
+         , ec.message());
+
       return;
    }
 

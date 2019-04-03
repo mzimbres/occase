@@ -25,8 +25,10 @@ enum class loglevel
 , debug
 };
 
+void log_upto(std::string const& ll);
+
 inline
-int convert_to_prio(loglevel ll)
+int to_syslog_prio(loglevel ll)
 {
    switch (ll)
    {
@@ -46,10 +48,15 @@ int convert_to_prio(loglevel ll)
    }
 }
 
+namespace global {extern loglevel logfilter;}
+
 template <class... Args>
 void log(loglevel ll, char const* fmt, Args const& ... args)
 {
-   auto const prio = convert_to_prio(ll);
+   if (ll > global::logfilter)
+      return;
+
+   auto const prio = to_syslog_prio(ll);
    syslog(prio, fmt::format(fmt, args...).data());
 }
 

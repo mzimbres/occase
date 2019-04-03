@@ -106,7 +106,7 @@ auto get_server_op(int argc, char* argv[])
    )
 
    ( "log-level"
-   , po::value<std::string>(&loglevel)->default_value("notice")
+   , po::value<std::string>(&cfg.loglevel)->default_value("notice")
    , "Control the amount of information that is output in the logs. "
      " Available options are: emerg, alert, crit, err, warning, notice, "
      " info, debug."
@@ -245,6 +245,8 @@ int main(int argc, char* argv[])
          return 0;
 
       logger logg {argv[0], cfg.log_on_stderr};
+
+      log_upto(cfg.loglevel);
 
       set_fd_limits(500000);
 

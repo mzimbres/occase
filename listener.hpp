@@ -27,6 +27,8 @@ struct listener_cfg {
    int pong_timeout;
    int close_frame_timeout;
 
+   std::string loglevel;
+
    auto get_timeouts() const noexcept
    {
       return session_cfg

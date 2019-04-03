@@ -10,8 +10,8 @@
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
 
+#include "logger.hpp"
 #include "listener.hpp"
-#include "utils.hpp"
 
 using namespace rt;
 

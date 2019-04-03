@@ -6,8 +6,9 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
-#include "worker_session.hpp"
+#include "logger.hpp"
 #include "worker.hpp"
+#include "worker_session.hpp"
 
 namespace rt
 {

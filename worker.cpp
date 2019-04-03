@@ -8,6 +8,7 @@
 #include <fmt/format.h>
 
 #include "menu.hpp"
+#include "logger.hpp"
 #include "worker_session.hpp"
 #include "json_utils.hpp"
 

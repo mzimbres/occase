@@ -2,7 +2,7 @@
 
 #include <fmt/format.h>
 
-#include "utils.hpp"
+#include "logger.hpp"
 
 namespace rt::redis
 {

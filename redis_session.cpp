@@ -1,3 +1,5 @@
+#include "redis_session.hpp"
+
 #include <deque>
 #include <cstdio>
 #include <cstdlib>
@@ -12,9 +14,8 @@
 
 #include <fmt/format.h>
 
-#include "utils.hpp"
+#include "logger.hpp"
 #include "config.hpp"
-#include "redis_session.hpp"
 
 namespace rt::redis
 {

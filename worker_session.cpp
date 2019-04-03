@@ -7,6 +7,7 @@
 
 #include <fmt/format.h>
 
+#include "logger.hpp"
 #include "worker.hpp"
 
 namespace rt

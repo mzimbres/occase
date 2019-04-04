@@ -45,6 +45,7 @@ facade::facade(config const& cfg, net::io_context& ioc, int wid)
 void facade::on_menu_sub_conn()
 {
    ss_menu_sub.send(subscribe(cfg.menu_channel));
+   ss_menu_sub.send(subscribe(cfg.notify_prefix + cfg.menu_key));
 }
 
 void facade::on_menu_pub_conn()
@@ -83,11 +84,24 @@ void facade::on_menu_sub( boost::system::error_code const& ec
       return;
 
    assert(std::size(data) == 3);
-   assert(data[1] == cfg.menu_channel);
 
-   std::swap(data.front(), data.back());
-   data.resize(1);
-   worker_handler(data , {request::unsol_publish, {}});
+   if (data[1] == cfg.menu_channel) {
+      // This is a menu message.
+      std::swap(data.front(), data.back());
+      data.resize(1);
+      worker_handler(data , {request::unsol_publish, {}});
+      return;
+   }
+
+   // TODO: Cache this value to avoid generating it all the time we
+   // get here. We get here however only on menu updates.
+   auto const key = cfg.notify_prefix + cfg.menu_key;
+   if (data[1] == key) {
+      // A menu update has been received.
+      ss_menu_pub.send(get(cfg.menu_key));
+      menu_pub_queue.push(request::get_menu);
+      return;
+   }
 }
 
 void facade::run()

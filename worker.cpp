@@ -90,23 +90,26 @@ void worker::create_channels(std::vector<menu_elem> const& menus_)
 {
    auto const menu_codes = menu_elems_to_codes(menus_);
 
-   int i = 0;
+   int created = 0;
+   int existed = 0;
    auto f = [&, this](auto const& comb)
    {
       auto const hash_code =
          to_channel_hash_code2(menu_codes, comb);
 
-      if (!channels.insert({hash_code, {}}).second)
-         ++i;
+      if (channels.insert({hash_code, {}}).second)
+         ++created;
+      else
+         ++existed;
    };
 
    visit_menu_codes(menu_codes, f);
 
-   log( loglevel::info, "W{0}: {1} channels created."
-      , id, std::size(channels));
+   if (created != 0)
+      log(loglevel::info, "W{0}: {1} channels created.", id, created);
 
-   if (i != 0)
-      log(loglevel::info, "W{0}: {1} already existed.", id, i);
+   if (existed != 0)
+      log(loglevel::info, "W{0}: {1} already existed.", id, existed);
 }
 
 void worker::on_db_menu_msgs(std::vector<std::string> const& msgs)
@@ -372,6 +375,8 @@ worker::on_user_login( json const& j
 
    auto const user_versions =
       j.at("menu_versions").get<std::vector<int>>();
+
+   // TODO: Cache this value.
    auto const server_versions = read_versions(menus);
 
    auto const b =

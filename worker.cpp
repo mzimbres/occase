@@ -55,19 +55,21 @@ void worker::init()
 void worker::on_db_get_menu(std::string const& data)
 {
    auto const j_menu = json::parse(data);
+   auto const is_empty = std::empty(menus);
+   menus = j_menu.at("menus").get<std::vector<menu_elem>>();
 
-   if (std::empty(menus)) {
+   if (is_empty) {
       // The menus were empty. This happens only when the server is
-      // started. We just save the menu and retrieve menu messages
+      // started. We have to save the menu and retrieve menu messages
       // from the database. It is important to not create the channels
-      // here since if we do it and we are alredy subscribed to the
-      // menu channel we will begin to receive messages and send to
-      // the users. Since these messages will be more recent, they
-      // will update their last message counter. Then if they
+      // here since if we did not retrieve the messages from the
+      // database yet and we are already subscribed to the
+      // menu channel, therefore we will begin to receive messages and
+      // send to the users. Since these messages will be more recent,
+      // they will update their last message counter. Then if they
       // disconnect and connect again the old messages will not be
       // sent to them anymore. This is a very unlikely situation since
       // the retrieval of messages should be fast.
-      menus = j_menu.at("menus").get<std::vector<menu_elem>>();
 
       // We may wish to check whether the menu received above is valid
       // before we proceed with the retrieval of the menu messages.
@@ -79,7 +81,32 @@ void worker::on_db_get_menu(std::string const& data)
 
    // The menus is not empty which means we have received an updated
    // menu. We only have to create the additional channels.
-   // TODO: Create the aditional channels.
+   // In this case we have not need of retrieving messages from the
+   // database so we can create the additional channels here.
+   create_channels(menus);
+}
+
+void worker::create_channels(std::vector<menu_elem> const& menus_)
+{
+   auto const menu_codes = menu_elems_to_codes(menus_);
+
+   int i = 0;
+   auto f = [&, this](auto const& comb)
+   {
+      auto const hash_code =
+         to_channel_hash_code2(menu_codes, comb);
+
+      if (!channels.insert({hash_code, {}}).second)
+         ++i;
+   };
+
+   visit_menu_codes(menu_codes, f);
+
+   log( loglevel::info, "W{0}: {1} channels created."
+      , id, std::size(channels));
+
+   if (i != 0)
+      log(loglevel::info, "W{0}: {1} already existed.", id, i);
 }
 
 void worker::on_db_menu_msgs(std::vector<std::string> const& msgs)
@@ -93,27 +120,8 @@ void worker::on_db_menu_msgs(std::vector<std::string> const& msgs)
    //
    // 2. Fill the channels with the menu messages.
 
-   // TODO: Move this to the get_menu event.
-   if (std::empty(channels)) {
-      auto const menu_codes = menu_elems_to_codes(menus);
-
-      int i = 0;
-      auto f = [&, this](auto const& comb)
-      {
-         auto const hash_code =
-            to_channel_hash_code2(menu_codes, comb);
-         if (!channels.insert({hash_code, {}}).second)
-            ++i;
-      };
-
-      visit_menu_codes(menu_codes, f);
-
-      log( loglevel::info, "W{0}: {1} channels created."
-         , id, std::size(channels));
-
-      if (i != 0)
-         log(loglevel::info, "W{0}: {1} already existed.", id, i);
-   }
+   if (std::empty(channels))
+      create_channels(menus);
 
    log( loglevel::info
       , "W{0}: {1} messages received from the database."

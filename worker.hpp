@@ -118,6 +118,8 @@ private:
    void on_db_menu_msgs(std::vector<std::string> const& msgs);
    void on_db_menu_connect();
 
+   void create_channels(std::vector<menu_elem> const& menus);
+
 public:
    worker(worker_cfg cfg, int id_, net::io_context& ioc);
 

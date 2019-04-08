@@ -369,8 +369,8 @@ std::uint64_t
 to_channel_hash_code_s2d2( std::vector<int> const& c1
                          , std::vector<int> const& c2)
 {
-   assert(std::size(c1) == 2);
-   assert(std::size(c2) == 2);
+   assert(std::size(c1) >= 2);
+   assert(std::size(c2) >= 2);
    
    // First menu.
    std::uint64_t c1a = c1.front();

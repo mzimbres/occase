@@ -1,0 +1,46 @@
+To send the menu to redis.
+
+   $ ./menu_dump -o 6 menus/cidades_small:2:1 menus/fipe_veiculos.txt:2:1 | redis-cli -x set menu
+
+To test it is necessary to send smaller menus
+
+   $ redis-cli flushall
+   $ ./menu_dump -o 6 menus/cidades_small:2:1 menus/cidades_small:2:1 | redis-cli -x set menu
+
+For useful information about the may number of file descriptors
+read haproxy
+
+   haproxy/doc/management.txt
+
+For per process limit (see /proc/sys/fs/file-nr)
+
+   $ sudo sysctl fs.nr_open
+
+For the system wide limit (see /proc/sys/fs/file-max)
+
+   $ sudo sysctl fs.file-max
+
+These values can be changed by means of the sysctl comand.
+
+Current available.
+
+$ cat /proc/sys/fs/file-nr
+
+Change /etc/security/limits.conf. Add for example.
+
+*                soft    nofile          2000000
+*                hard    nofile          2000000
+
+To see the maximum in the current session
+
+ulimit -Sn # Shows soft limit
+ulimit -Hn # shows hard limit
+
+To set a value.
+ulimit -Sn value
+
+Ephemeral ports file
+
+/proc/sys/net/ipv4/ip_local_port_range
+
+

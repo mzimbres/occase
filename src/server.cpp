@@ -42,12 +42,12 @@ auto get_server_op(int argc, char* argv[])
    , "Instructs syslog to write the messages on stderr as well."
    )
 
-   ( "port,p"
+   ( "port"
    , po::value<unsigned short>(&cfg.port)->default_value(8080)
    , "Server listening port."
    )
 
-   ( "workers,w"
+   ( "workers"
    , po::value<int>(&cfg.number_of_workers)->default_value(1)
    , "The number of worker threads, each"
      " one consuming one thread and having its own io_context."
@@ -56,50 +56,50 @@ auto get_server_op(int argc, char* argv[])
      " each thread has it own non-shared data structure."
    )
 
-   ( "code-timeout,s"
+   ( "code-timeout"
    , po::value<int>(&cfg.code_timeout)->default_value(2)
    , "Code confirmation timeout in seconds."
    )
 
-   ( "auth-timeout,a"
+   ( "auth-timeout"
    , po::value<int>(&cfg.auth_timeout)->default_value(2)
    , "Authetication timeout in seconds. Started after the websocket "
      "handshake completes."
    )
-   ( "handshake-timeout,k"
+   ( "handshake-timeout"
    , po::value<int>(&cfg.handshake_timeout)->default_value(2)
    , "Handshake timeout in seconds. If the websocket handshake lasts "
      "more than that the socket is shutdown and closed."
    )
 
-   ( "pong-timeout,r"
+   ( "pong-timeout"
    , po::value<int>(&cfg.pong_timeout)->default_value(2)
    , "Pong timeout in seconds. This is the time the client has to "
      "reply a ping frame sent by the server. If a pong is received "
      "on time a new ping is sent on timer expiration. Otherwise the "
      "connection is closed."
    )
-   ( "close-frame-timeout,e"
+   ( "close-frame-timeout"
    , po::value<int>(&cfg.close_frame_timeout)->default_value(2)
    , "The time we are willing to wait for an ack to websocket "
      "close frame that has been sent to the client."
    )
 
-   ( "channel-cleanup-rate,E"
+   ( "channel-cleanup-rate"
    , po::value<int>(&cfg.worker.channel.cleanup_rate)->default_value(128)
    , "The rate channels will be  cleaned up if"
      " no publish activity is observed. Incremented on every publication"
      " on the channel."
    )
 
-   ( "max-msgs-per-channels,T"
+   ( "max-msgs-per-channels"
    , po::value<int>(&cfg.worker.channel.max_posts)->default_value(32)
    , "Max number of messages stored per channel. Posting on a"
      " channel that reached this number of messages will cause old"
      " messages to be removed."
    )
 
-   ( "max-channels-subscribe,S"
+   ( "max-channels-subscribe"
    , po::value<int>(&cfg.worker.channel.max_sub)->default_value(1024)
    , "The maximum number of channels the user is allowed to subscribe to."
      " Remaining channels will be ignored."
@@ -112,7 +112,7 @@ auto get_server_op(int argc, char* argv[])
      " info, debug."
    )
 
-   ( "max-menu-msgs-on-subscribe,u"
+   ( "max-menu-msgs-on-subscribe"
    , po::value<int>(&cfg.worker.worker.max_menu_msg_on_sub)->default_value(50)
    , "The maximum number of messages that is allowed to be sent to "
      "the user when he subscribes to his channels."

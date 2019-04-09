@@ -1,0 +1,62 @@
+Introduction
+------------
+
+The best way to understand what the *menu chat* is all about is to
+play with it for a while. It is composed of two parts
+
+  1. The backend server, refered to as the menu-chat-server.
+  2. The app, refered to as the menu-chat-app.
+
+The databased used by the chat server is redis. A typical deployment
+looks like
+                                                                    
+                                                                    
+         App1     App2    App3     App4    App5     App6          
+           \       /        \       /        \       /            
+            \     /          \     /          \     /             
+             \   /            \   /            \   /              
+              \ /              \ /              \ /               
+            Server1          Server2          Server3             
+                \               |               /                 
+                 \              |              /                  
+                  \             |             /                   
+                   \__________Redis__________/                    
+
+
+Each of the servers are directly exposed to the public internet.
+There is one main reasons for why no proxy servers are expected to
+used to intermediate the connection between the apps and the servers
+
+  1. The servers and the apps communicate via websocket and the
+     connection is expected to last for a long time.
+
+  2. Each server is expected to deal with many hundreds of thousends
+     of simultaneous connections.
+
+In such an arrangement is would be easy to saturate any proxy server
+and load balancer (unless using a load balancer ar ip level, which may
+be expensive). The system has no single point of failure and is meant
+to be easy and cheap to operate and deploy.
+
+App
+---
+
+Since we have no proxies or load balancers the apps will stablish a
+websocket connection directly with the menu-chat-servers. There are
+basicaly two kinds of messages that are exchanged between the server
+and the apps
+
+  1. Posts
+  2. Chat messages.
+
+Servers
+-------
+
+The servers, whose C++ code is contained in this repository, are fully
+event driven and follow the share-nothing, one io_context per code
+model to make efficient use of hardware resources. Client connections
+are distrubuted among the io_contexts in a round-robin fashion.
+
+Redis
+-----
+

@@ -16,6 +16,7 @@
 #include "channel.hpp"
 #include "json_utils.hpp"
 #include "worker_session.hpp"
+#include "stats_server.hpp"
 
 namespace rt
 {
@@ -70,6 +71,9 @@ private:
    sessions_stats stats;
 
    redis::facade db;
+
+   // The statistics http server.
+   stats_server stats_server_;
 
    std::vector<menu_elem> menus;
 

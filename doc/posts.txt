@@ -1,8 +1,8 @@
 A *post* is the central idea behind the menu-chat. A post carries the
-information about an item in a menu entry. A menu is composed of menu
-entries. Let us take as an example a menu that has two menu items,
-where the first contains the information about location and the second
-about car models
+information about an item in a menu entry. A menu is composed of one
+or more menu entries. Let us take as an example a menu that has two
+menu items, where the first contains the information about location
+and the second about car models
 
    Location (menu1)        | Car (menu2)
                            |                                                                     
@@ -45,14 +45,14 @@ World                      | Car
 Some important things to notice
 
    1. The menu1 and menu2 are refered to as menu entries. A deployment
-      can use as many menu items as one likes, though there are
+      can use as many menu entries as it likes, though there are
       technical difficults as the number of menu items and their sizes
       grow.
 
    2. The *Location* menu entry has depth 4 whereas the menu *cars*
-   has depth 6. We refer however to the menu item depth minus one as
-   the root of the three is always one and not used in the app or the
-   server.
+      has depth 6. We refer however to the menu item depth minus one
+      as the root of the three is always one and not used in the app
+      or the server.
 
 Codes
 -----
@@ -78,5 +78,15 @@ The post is fully determined by the codes
 
    [0, 0, 1] and [1, 1, 0, 1, 0, 0]
 
-Filters
+When an app receives these codes it can reconstruct the information to
+present it to the user. A post also contains additional information
+which we will discuss later.
+
+To receive the posts an app has to subscribe to the channel the user
+is interested in. So let us talk about channels.
+
+Channels
+--------
+
+When a server reads the menu it will create the channels.
 

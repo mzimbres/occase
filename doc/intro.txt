@@ -24,8 +24,9 @@ looks like
 
 
 Each of the servers are directly exposed to the public internet.
-There is one main reasons for why no proxy servers are expected to
-used to intermediate the connection between the apps and the servers
+There is one main reasons for why no proxy servers or load balancers
+are expected to used to intermediate the connection between the apps
+and the servers
 
   1. The servers and the apps communicate via websocket and the
      connection is expected to last for a long time.
@@ -33,10 +34,12 @@ used to intermediate the connection between the apps and the servers
   2. Each server is expected to deal with many hundreds of thousends
      of simultaneous connections.
 
+  3. Avoid a single point of failure.
+
 In such an arrangement is would be easy to saturate any proxy server
-and load balancer (unless using a load balancer ar ip level, which may
-be expensive). The system has no single point of failure and is meant
-to be easy and cheap to operate and deploy.
+and/or load balancer (unless using a load balancer at ip level, which
+may be expensive). The system has no single point of failure and is
+meant to be easy and cheap to operate and deploy.
 
 App
 ---
@@ -56,6 +59,12 @@ The servers, whose C++ code is contained in this repository, are fully
 event driven and follow the share-nothing, one io_context per code
 model to make efficient use of hardware resources. Client connections
 are distrubuted among the io_contexts in a round-robin fashion.
+
+One may ask why let the websocket connections in 1. last for a long
+time instead of close it as soon as there is no more messages to be
+sent to the app. The answer to this has to do with the realtime nature
+of the application. Everytime an app connects to the server it will
+subscribe to the post channels that is an expensive operation.
 
 Redis
 -----

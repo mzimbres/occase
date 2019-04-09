@@ -1,17 +1,15 @@
 #include "stats_server.hpp"
 
-#include <boost/beast/core.hpp>
-#include <boost/beast/http.hpp>
-#include <boost/beast/version.hpp>
-#include <boost/asio.hpp>
 #include <chrono>
 #include <cstdlib>
-#include <ctime>
 #include <iostream>
 #include <memory>
 #include <string>
 
 #include "config.hpp"
+#include "logger.hpp"
+
+namespace rt {
 
 class http_session
    : public std::enable_shared_from_this<http_session>
@@ -30,6 +28,7 @@ public:
     }
 
 private:
+    int id_;
     tcp::socket socket_;
     boost::beast::flat_buffer buffer_{8192};
     http::request<http::dynamic_body> request_;
@@ -140,45 +139,54 @@ private:
     }
 };
 
-void http_server(tcp::acceptor& acceptor, tcp::socket& socket)
-{
-   auto handler = [&](boost::beast::error_code ec)
-   {
-      if (ec) {
-         if (ec == net::error::operation_aborted) {
-            //log(loglevel::info, "Stopping accepting connections");
-            return;
-         }
-
-         //log( loglevel::debug
-         //   , "listener::on_accept: {0}"
-         //   , ec.message());
-
-         //return;
-      } else {
-         std::make_shared<http_session>(std::move(socket))->start();
-      }
-
-      http_server(acceptor, socket);
-   };
-
-   acceptor.async_accept(socket, handler);
-}
-
-stats_server::stats_server( char const* addr, unsigned short port
+stats_server::stats_server( std::string const& addr
+                          , std::string const& port
+                          , int id
                           , net::io_context& ioc)
-: acceptor_ {ioc, {net::ip::make_address(addr), port}}
+: id_ {id}
+, acceptor_ {ioc, { net::ip::make_address(addr)
+                  , static_cast<unsigned short>(std::stoi(port) + id)}}
 , socket_ {ioc}
 {
    run();
 }
 
+void stats_server::on_accept(beast::error_code const& ec)
+{
+   if (ec) {
+      if (ec == net::error::operation_aborted) {
+         log( loglevel::info
+            , "W{0}/stats: Stopping accepting connections"
+            , id_);
+         return;
+      }
+
+      log( loglevel::debug, "W{0}/stats: on_accept: {1}"
+         , ec.message(), id_);
+   } else {
+      std::make_shared<http_session>(std::move(socket_))->start();
+   }
+
+   do_accept();
+}
+
+void stats_server::do_accept()
+{
+   auto handler = [this](beast::error_code const& ec)
+      { on_accept(ec); };
+
+   acceptor_.async_accept(socket_, handler);
+}
+
 void stats_server::run()
 {
-   http_server(acceptor_, socket_);
+   do_accept();
 }
 
 void stats_server::shutdown()
 {
    acceptor_.cancel();
 }
+
+}
+

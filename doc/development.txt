@@ -43,4 +43,5 @@ Ephemeral ports file
 
 /proc/sys/net/ipv4/ip_local_port_range
 
+wget -O - 127.0.0.1:9090/count 2> /dev/null
 

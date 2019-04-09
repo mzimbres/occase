@@ -31,7 +31,7 @@ worker::worker(worker_cfg cfg, int id_, net::io_context& ioc)
 , signals {ioc, SIGINT, SIGTERM}
 , timeouts {cfg.session}
 , db {cfg.db, ioc, id_}
-, stats_server_ {"127.0.0.1", 9090 + id_, ioc}
+, stats_server_ {"127.0.0.1", "9090", id, ioc}
 , stats_timer {ioc}
 {
    net::post(ioc_, [this]() {init();});

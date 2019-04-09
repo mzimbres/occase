@@ -96,17 +96,13 @@ void listener::on_accept( boost::system::error_code ec
          return;
       }
 
-      log( loglevel::debug
-         , "listener::on_accept: {0}"
-         , ec.message());
-
-      return;
+      log( loglevel::debug, "listener::on_accept: {0}", ec.message());
+   } else {
+      auto const n = next % std::size(arenas);
+      std::make_shared< worker_session
+                      >(std::move(peer), arenas[n]->worker_)->accept();
+      ++next;
    }
-
-   auto const n = next % std::size(arenas);
-   std::make_shared< worker_session
-                   >(std::move(peer), arenas[n]->worker_)->accept();
-   ++next;
 
    do_accept();
 }

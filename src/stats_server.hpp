@@ -8,5 +8,6 @@ struct stats_server {
                , net::io_context& ioc);
 
    void run();
+   void shutdown();
 };
 

@@ -597,6 +597,7 @@ void worker::shutdown(boost::system::error_code const& ec)
 
    db.disconnect();
 
+   stats_server_.shutdown();
    stats_timer.cancel();
 }
 

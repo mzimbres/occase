@@ -369,16 +369,25 @@ std::uint64_t
 to_channel_hash_code_s2d2( std::vector<int> const& c1
                          , std::vector<int> const& c2)
 {
-   assert(std::size(c1) >= 2);
-   assert(std::size(c2) >= 2);
+   constexpr auto depth = 2;
+
+   assert(std::size(c1) >= depth);
+   assert(std::size(c2) >= depth);
    
    // First menu.
-   std::uint64_t c1a = c1.front();
-   std::uint64_t c1b = c1.back();
+   std::uint64_t c1a = c1.at(0);
+   std::uint64_t c1b = c1.at(1);
 
    // Second menu.
-   std::uint64_t c2a = c2.front();
-   std::uint64_t c2b = c2.back();
+   std::uint64_t c2a = c2.at(0);
+   std::uint64_t c2b = c2.at(1);
+
+   //std::cout << "====> ["
+   //          << c1a << ", "
+   //          << c1b << "] ["
+   //          << c2a << ", "
+   //          << c2b << "]"
+   //          << std::endl;
 
    c1a <<= 48;
    c1b <<= 32;
@@ -401,8 +410,8 @@ to_channel_hash_code(menu_code_type const& code)
    case 2:
    {
       assert(std::size(code) == 2);
-      return to_channel_hash_code_s2d2( code.front().front()
-                                      , code.back().front());
+      return to_channel_hash_code_s2d2( code.at(0).at(0)
+                                      , code.at(1).at(0));
    }
    }
 

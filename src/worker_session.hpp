@@ -126,7 +126,7 @@ public:
    auto is_waiting_auth() const noexcept
       { return std::empty(user_id) && std::empty(code);};
 
-   std::weak_ptr<proxy_session> get_proxy_session(bool new_session);
+   std::weak_ptr<proxy_session> get_proxy_session(bool make_new_session);
 };
 
 }

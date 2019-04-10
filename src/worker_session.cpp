@@ -442,12 +442,10 @@ void worker_session::do_write(std::string const& msg)
 }
 
 std::weak_ptr<proxy_session>
-worker_session::get_proxy_session(bool new_session)
+worker_session::get_proxy_session(bool make_new_session)
 {
-   if (!psession) {
+   if (!psession || make_new_session) {
       psession = std::make_shared<proxy_session>();
-      psession->session = shared_from_this();
-   } else if (new_session) {
       psession->session = shared_from_this();
    }
 

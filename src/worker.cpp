@@ -440,6 +440,8 @@ worker::on_user_subscribe( json const& j
    auto n_channels = 0;
    std::vector<pub_item> items;
 
+   auto psession = s->get_proxy_session(true);
+
    // Works only for two menus with depth 2.
    auto f = [&, this](auto const& comb)
    {
@@ -451,8 +453,7 @@ worker::on_user_subscribe( json const& j
 
       // TODO: Change 0 with the latest id the user has received.
       g->second.retrieve_pub_items(0, std::back_inserter(items));
-      g->second.add_member( s->get_proxy_session(true)
-                          , ch_cfg.cleanup_rate);
+      g->second.add_member(psession, ch_cfg.cleanup_rate);
       ++n_channels;
    };
 
@@ -499,11 +500,11 @@ worker::on_user_publish(json j, std::shared_ptr<worker_session> s)
 
    // The channel code has the form [[[1, 2]], [[2, 3, 4]], [[1, 2]]]
    // where each array in the outermost array refers to one menu.
-   auto const code = to_channel_hash_code(items.front().to);
+   auto const hash_code = to_channel_hash_code(items.front().to);
 
-   auto const g = channels.find(code);
+   auto const g = channels.find(hash_code);
    if (g == std::end(channels) || std::size(items) != 1) {
-      std::cout << code << std::endl;
+      std::cout << hash_code << std::endl;
       // This is a non-existing channel. Perhaps the json command was
       // sent with the wrong information signaling a logic error in
       // the app. Sending a fail ack back to the app is useful to

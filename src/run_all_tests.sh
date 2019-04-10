@@ -5,7 +5,7 @@
 
 redis-cli flushall
 ./menu_dump -o 4 menus/cidades_small2:2:1 menus/cidades_small2:2:1 | redis-cli -x set menu
-./server menu_chat_server.conf > /dev/null 2>&1 &
+./server test.conf > /dev/null 2>&1 &
 server_pid=$!
 
 # Gives some time for the server to start before we begin to run the
@@ -27,7 +27,7 @@ kill -9 $server_pid
 
 redis-cli flushall
 ./menu_dump -o 4 menus/cidades_small:2:1 menus/cidades_small:2:1 | redis-cli -x set menu
-./server menu_chat_server.conf > /dev/null 2>&1 &
+./server test.conf > /dev/null 2>&1 &
 server_pid=$!
 
 # Gives some time for the server to start before we begin to run the

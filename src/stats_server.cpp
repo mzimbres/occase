@@ -33,7 +33,7 @@ private:
     boost::beast::flat_buffer buffer_{8192};
     http::request<http::dynamic_body> request_;
     http::response<http::dynamic_body> response_;
-    boost::asio::basic_waitable_timer<std::chrono::steady_clock> deadline_;
+    net::steady_timer deadline_;
 
     void read_request()
     {
@@ -79,29 +79,10 @@ private:
 
     void create_response()
     {
-        if (request_.target() == "/count") {
-            response_.set(http::field::content_type, "text/html");
+        if (request_.target() == "/stats") {
+            response_.set(http::field::content_type, "text/csv");
             boost::beast::ostream(response_.body())
-                << "<html>\n"
-                <<  "<head><title>Request count</title></head>\n"
-                <<  "<body>\n"
-                <<  "<h1>Request count</h1>\n"
-                <<  "<p>There have been "
-                <<  10
-                <<  " requests so far.</p>\n"
-                <<  "</body>\n"
-                <<  "</html>\n";
-        } else if(request_.target() == "/time") {
-            response_.set(http::field::content_type, "text/html");
-            boost::beast::ostream(response_.body())
-                <<  "<html>\n"
-                <<  "<head><title>Current time</title></head>\n"
-                <<  "<body>\n"
-                <<  "<h1>Current time</h1>\n"
-                <<  "<p>The current time is "
-                <<  " seconds since the epoch.</p>\n"
-                <<  "</body>\n"
-                <<  "</html>\n";
+                << "1;2;3\n";
         } else {
             response_.result(http::status::not_found);
             response_.set(http::field::content_type, "text/plain");

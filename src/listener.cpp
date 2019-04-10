@@ -13,15 +13,40 @@
 namespace rt
 {
 
+// TODO: Make this support shared_from_this()
 struct arena {
    net::io_context ioc {1};
+   net::signal_set signals_;
    worker worker_;
+   stats_server stats_server_;
    std::thread thread_;
 
    arena(worker_cfg const& cfg, int i)
-   : worker_ {cfg, i, ioc}
+   : signals_ {ioc, SIGINT, SIGTERM}
+   , worker_ {cfg, i, ioc}
+   , stats_server_ {"127.0.0.1", "9090", i, ioc}
    , thread_ { std::thread {[this](){ run();}} }
-   {}
+   {
+      auto handler = [this](auto const& ec, auto n)
+      {
+         if (ec == net::error::operation_aborted) {
+            // No signal occurred, the handler was canceled. We just
+            // leave.
+            return;
+         }
+
+         // A signal occurred, we have to handle it.
+         worker_.shutdown(ec);
+         stats_server_.shutdown();
+      };
+
+      signals_.async_wait(handler);
+   }
+
+   ~arena()
+   {
+      thread_.join();
+   }
 
    void run() noexcept
    {
@@ -49,14 +74,17 @@ listener::listener(listener_cfg const& cfg)
                   , arena_gen);
 }
 
-void listener::shutdown()
+void listener::on_signal()
 {
    acceptor.cancel();
 
-   auto joiner = [](auto& o)
-      { o->thread_.join(); };
+   // The arenas have their individual signal handlers so we do not
+   // have to call them here explicitly.
 
-   std::for_each(std::begin(arenas), std::end(arenas), joiner);
+   //auto joiner = [](auto o)
+   //   { o->shutdown({}); };
+
+   //std::for_each(std::begin(arenas), std::end(arenas), joiner);
 }
 
 void listener::run()
@@ -65,7 +93,7 @@ void listener::run()
    {
       // TODO: Verify ec here.
       log(loglevel::info, "Beginning the shutdown operation.");
-      shutdown();
+      on_signal();
    };
 
    signals.async_wait(handler);

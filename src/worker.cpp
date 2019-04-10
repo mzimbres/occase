@@ -28,10 +28,8 @@ worker::worker(worker_cfg cfg, int id_, net::io_context& ioc)
 , cfg {cfg.worker}
 , ch_cfg {cfg.channel}
 , ioc_ {ioc}
-, signals {ioc, SIGINT, SIGTERM}
 , timeouts {cfg.session}
 , db {cfg.db, ioc, id_}
-, stats_server_ {"127.0.0.1", "9090", id, ioc}
 , stats_timer {ioc}
 {
    net::post(ioc_, [this]() {init();});
@@ -39,11 +37,6 @@ worker::worker(worker_cfg cfg, int id_, net::io_context& ioc)
 
 void worker::init()
 {
-   auto sig_handler = [this](auto const& ec, auto n)
-      { shutdown(ec); };
-
-   signals.async_wait(sig_handler);
-
    do_stats_logger();
 
    auto handler = [this](auto const& data, auto const& req)
@@ -598,7 +591,6 @@ void worker::shutdown(boost::system::error_code const& ec)
 
    db.disconnect();
 
-   stats_server_.shutdown();
    stats_timer.cancel();
 }
 

@@ -56,7 +56,6 @@ private:
    channel_cfg const ch_cfg;
 
    net::io_context& ioc_;
-   net::signal_set signals;
 
    // Maps a user id (telephone, email, etc.) to the user session.  We
    // keep only a weak reference to the session.
@@ -72,9 +71,6 @@ private:
 
    redis::facade db;
 
-   // The statistics http server.
-   stats_server stats_server_;
-
    std::vector<menu_elem> menus;
 
    net::steady_timer stats_timer;
@@ -88,8 +84,6 @@ private:
    void do_stats_logger();
 
    void init();
-
-   void shutdown(boost::system::error_code const& ec);
 
    ev_res on_user_register( json const& j
                           , std::shared_ptr<worker_session> s);
@@ -137,6 +131,7 @@ public:
 
    auto const& get_timeouts() const noexcept {return timeouts;}
    auto& get_stats() noexcept {return stats;}
+   void shutdown(boost::system::error_code const& ec);
 };
 
 }

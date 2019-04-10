@@ -59,7 +59,7 @@ private:
 public:
    listener(listener_cfg const& cg);
    void run();
-   void shutdown();
+   void on_signal();
 };
 
 }

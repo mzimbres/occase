@@ -8,32 +8,20 @@
 
 #include "config.hpp"
 #include "logger.hpp"
+#include "worker.hpp"
 
 namespace rt {
 
 class http_session
    : public std::enable_shared_from_this<http_session>
 {
-public:
-    http_session(tcp::socket socket)
-    : socket_ {std::move(socket)}
-    , deadline_ { socket_.get_executor().context()
-                , std::chrono::seconds(60)}
-    { }
-
-    void start()
-    {
-        read_request();
-        check_deadline();
-    }
-
 private:
-    int id_;
     tcp::socket socket_;
     boost::beast::flat_buffer buffer_{8192};
     http::request<http::dynamic_body> request_;
     http::response<http::dynamic_body> response_;
     net::steady_timer deadline_;
+    worker const& worker_;
 
     void read_request()
     {
@@ -82,7 +70,14 @@ private:
         if (request_.target() == "/stats") {
             response_.set(http::field::content_type, "text/csv");
             boost::beast::ostream(response_.body())
-                << "1;2;3\n";
+                << worker_.get_ws_stats().number_of_sessions
+                << ";"
+                << worker_.get_pub_queue_size()
+                << ";"
+                << worker_.get_db().get_menu_pub_queue_size()
+                << ";"
+                << worker_.get_db().get_user_pub_queue_size()
+                << "\n";
         } else {
             response_.result(http::status::not_found);
             response_.set(http::field::content_type, "text/plain");
@@ -118,16 +113,31 @@ private:
 
         deadline_.async_wait(handler);
     }
+
+public:
+    http_session(tcp::socket socket, worker const& w)
+    : socket_ {std::move(socket)}
+    , deadline_ { socket_.get_executor().context()
+                , std::chrono::seconds(60)}
+    , worker_ {w}
+    { }
+
+    void start()
+    {
+        read_request();
+        check_deadline();
+    }
+
 };
 
-stats_server::stats_server( std::string const& addr
-                          , std::string const& port
-                          , int id
+stats_server::stats_server( stats_server_cfg const& cfg
+                          , worker const& w
+                          , int i
                           , net::io_context& ioc)
-: id_ {id}
-, acceptor_ {ioc, { net::ip::make_address(addr)
-                  , static_cast<unsigned short>(std::stoi(port) + id)}}
+: acceptor_ {ioc, { net::ip::tcp::v4()
+                  , static_cast<unsigned short>(std::stoi(cfg.port) + i)}}
 , socket_ {ioc}
+, worker_ {w}
 {
    run();
 }
@@ -138,14 +148,15 @@ void stats_server::on_accept(beast::error_code const& ec)
       if (ec == net::error::operation_aborted) {
          log( loglevel::info
             , "W{0}/stats: Stopping accepting connections"
-            , id_);
+            , worker_.get_id());
          return;
       }
 
       log( loglevel::debug, "W{0}/stats: on_accept: {1}"
-         , ec.message(), id_);
+         , ec.message(), worker_.get_id());
    } else {
-      std::make_shared<http_session>(std::move(socket_))->start();
+      std::make_shared<http_session>( std::move(socket_)
+                                    , worker_)->start();
    }
 
    do_accept();

@@ -9,6 +9,7 @@
 #include "logger.hpp"
 #include "worker.hpp"
 #include "worker_session.hpp"
+#include "stats_server.hpp"
 
 namespace rt
 {
@@ -21,10 +22,10 @@ struct arena {
    stats_server stats_server_;
    std::thread thread_;
 
-   arena(worker_cfg const& cfg, int i)
+   arena(listener_cfg const& cfg, int i)
    : signals_ {ioc, SIGINT, SIGTERM}
-   , worker_ {cfg, i, ioc}
-   , stats_server_ {"127.0.0.1", "9090", i, ioc}
+   , worker_ {cfg.worker, i, ioc}
+   , stats_server_ {cfg.stats, worker_, i, ioc}
    , thread_ { std::thread {[this](){ run();}} }
    {
       auto handler = [this](auto const& ec, auto n)
@@ -60,14 +61,14 @@ struct arena {
 
 listener::listener(listener_cfg const& cfg)
 : signals {ioc, SIGINT, SIGTERM}
-, acceptor {ioc, {boost::asio::ip::tcp::v4(), cfg.port}}
+, acceptor {ioc, {net::ip::tcp::v4(), cfg.port}}
 {
    log( loglevel::info
       , "Binding server to {}"
       , acceptor.local_endpoint());
 
    auto arena_gen = [&cfg, i = -1]() mutable
-      { return std::make_shared<arena>(cfg.worker, ++i); };
+      { return std::make_shared<arena>(cfg, ++i); };
 
    std::generate_n( std::back_inserter(arenas)
                   , cfg.number_of_workers

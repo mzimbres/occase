@@ -9,6 +9,7 @@
 
 #include "config.hpp"
 #include "worker.hpp"
+#include "stats_server.hpp"
 #include "worker_session.hpp"
 
 namespace rt
@@ -18,6 +19,7 @@ struct listener_cfg {
    bool help = false;
    bool log_on_stderr = false;
    worker_cfg worker;
+   stats_server_cfg stats;
    int number_of_workers;
    unsigned short port;
 

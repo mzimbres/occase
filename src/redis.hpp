@@ -205,6 +205,12 @@ public:
 
    // Closes the connections to redis.
    void disconnect();
+
+   auto get_menu_pub_queue_size() const noexcept
+      { return std::size(menu_pub_queue);}
+
+   auto get_user_pub_queue_size() const noexcept
+      { return std::size(user_pub_queue);}
 };
 
 }

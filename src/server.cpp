@@ -47,6 +47,11 @@ auto get_server_op(int argc, char* argv[])
    , "Server listening port."
    )
 
+   ( "stats-server-base-port"
+   , po::value<std::string>(&cfg.stats.port)->default_value("9090")
+   , "The statistics server base port. Each worker will have its own."
+   )
+
    ( "workers"
    , po::value<int>(&cfg.number_of_workers)->default_value(1)
    , "The number of worker threads, each"

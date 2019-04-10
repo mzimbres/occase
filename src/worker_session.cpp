@@ -19,7 +19,7 @@ worker_session::worker_session(net::ip::tcp::socket socket, worker& w)
        , std::chrono::steady_clock::time_point::max())
 , worker_(w)
 {
-   ++worker_.get_stats().number_of_sessions;
+   ++worker_.get_ws_stats().number_of_sessions;
 }
 
 worker_session::~worker_session()
@@ -51,7 +51,7 @@ worker_session::~worker_session()
       worker_.on_session_dtor(std::move(user_id), std::move(msgs));
    }
 
-   --worker_.get_stats().number_of_sessions;
+   --worker_.get_ws_stats().number_of_sessions;
 }
 
 void worker_session::accept()

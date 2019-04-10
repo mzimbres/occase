@@ -1,7 +1,5 @@
 #include "worker.hpp"
 
-#include <mutex>
-#include <chrono>
 #include <iterator>
 #include <algorithm>
 
@@ -11,14 +9,6 @@
 #include "logger.hpp"
 #include "worker_session.hpp"
 #include "json_utils.hpp"
-
-namespace
-{
- 
-// TODO: Remove this global once there is a solution to the logger.
-std::mutex m;
-
-}
 
 namespace rt
 {
@@ -30,15 +20,12 @@ worker::worker(worker_cfg cfg, int id_, net::io_context& ioc)
 , ioc_ {ioc}
 , timeouts {cfg.session}
 , db {cfg.db, ioc, id_}
-, stats_timer {ioc}
 {
    net::post(ioc_, [this]() {init();});
 }
 
 void worker::init()
 {
-   do_stats_logger();
-
    auto handler = [this](auto const& data, auto const& req)
       { on_db_msg_handler(data, req); };
 
@@ -590,32 +577,6 @@ void worker::shutdown(boost::system::error_code const& ec)
    std::for_each(std::begin(sessions), std::end(sessions), f);
 
    db.disconnect();
-
-   stats_timer.cancel();
-}
-
-void worker::do_stats_logger()
-{
-   stats_timer.expires_after(std::chrono::seconds{1});
-
-   auto handler = [this](auto ec)
-   {
-      if (ec) {
-         log( loglevel::debug
-            , "W{0}/worker::do_stats_logger: {1}."
-            , id, ec.message());
-         return;
-      }
-      
-      std::lock_guard mut(m);
-      std::cout << "Stats: " << stats.number_of_sessions
-                << " " << std::size(pub_wait_queue)
-                << std::endl;
-
-      do_stats_logger();
-   };
-
-   stats_timer.async_wait(handler);
 }
 
 ev_res

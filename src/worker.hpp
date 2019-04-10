@@ -16,7 +16,6 @@
 #include "channel.hpp"
 #include "json_utils.hpp"
 #include "worker_session.hpp"
-#include "stats_server.hpp"
 
 namespace rt
 {
@@ -73,15 +72,11 @@ private:
 
    std::vector<menu_elem> menus;
 
-   net::steady_timer stats_timer;
-
    // Queue of user posts waiting for an id that has been requested
    // from redis.
    std::queue<pub_queue_item> pub_wait_queue;
 
    int last_menu_msg_id = 0;
-
-   void do_stats_logger();
 
    void init();
 
@@ -129,9 +124,19 @@ public:
 
    ev_res on_message(std::shared_ptr<worker_session> s, std::string msg);
 
-   auto const& get_timeouts() const noexcept {return timeouts;}
-   auto& get_stats() noexcept {return stats;}
+   auto get_pub_queue_size() const noexcept
+      { return std::size(pub_wait_queue);}
+   auto const& get_timeouts() const noexcept
+      { return timeouts;}
+   auto& get_ws_stats() noexcept
+      { return stats;}
+   auto const& get_ws_stats() const noexcept
+      { return stats; }
    void shutdown(boost::system::error_code const& ec);
+   auto get_id() const noexcept
+      { return id;}
+   auto const& get_db() const noexcept
+      { return db;}
 };
 
 }

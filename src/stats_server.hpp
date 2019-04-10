@@ -1,20 +1,29 @@
+#pragma once
+
 #include "config.hpp"
 
-namespace rt {
+namespace rt
+{
+
+class worker;
+
+struct stats_server_cfg {
+   std::string port;
+};
 
 class stats_server {
 private:
-   int id_;
    tcp::acceptor acceptor_;
    tcp::socket socket_;
+   worker const& worker_;
 
    void do_accept();
    void on_accept(beast::error_code const& ec);
 
 public:
-   stats_server( std::string const& addr
-               , std::string const& port
-               , int id
+   stats_server( stats_server_cfg const& cfg
+               , worker const& w
+               , int i
                , net::io_context& ioc);
 
    void run();

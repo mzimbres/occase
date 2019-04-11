@@ -26,6 +26,9 @@ struct session_cfg {
    std::string host;
    std::string port;
 
+   // A list of redis sentinels e.g. ip1:port1 ip2:port2 ...
+   std::vector<std::string> sentinels;
+
    std::chrono::milliseconds conn_retry_interval {500};
 
    // We have to restrict the length of the pipeline to not block

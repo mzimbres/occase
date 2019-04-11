@@ -213,6 +213,12 @@ int main(int argc, char* argv[])
       , po::value<std::string>(&cfg.port)->default_value("6379")
       , "Redis server listening port."
       )
+
+      ( "redis-sentinels"
+      , po::value<std::vector<std::string>>(&cfg.sentinels)
+      , "A list of sentinel addresses in the form ip1:port1 ip2:port2."
+      )
+
       ("host,i"
       , po::value<std::string>(&cfg.host)->default_value("127.0.0.1")
       , "Redis server ip address."

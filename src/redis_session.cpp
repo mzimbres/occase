@@ -20,25 +20,25 @@
 namespace rt::redis
 {
 
-session::session(session_cfg cf_, net::io_context& ioc, std::string id_)
+session::session(session_cfg cfg_, net::io_context& ioc, std::string id_)
 : id(id_)
-, cfg {cf_}
+, cfg {cfg_}
 , resolver {ioc} 
 , socket {ioc}
 , timer {ioc, std::chrono::steady_clock::time_point::max()}
 {
    if (cfg.max_pipeline_size < 1)
       throw std::runtime_error("redis::session: Invalid max pipeline size.");
+
+   if (std::empty(cfg_.sentinels))
+      throw std::runtime_error("redis::session: No sentinels provided.");
 }
 
 void session::on_resolve( boost::system::error_code const& ec
                         , net::ip::tcp::resolver::results_type results)
 {
    if (ec) {
-      log( loglevel::warning
-         , "{0}/on_resolve: {1}."
-         , id, ec.message());
-
+      log(loglevel::warning, "{0}/on_resolve: {1}.", id, ec.message());
       return;
    }
 
@@ -48,8 +48,23 @@ void session::on_resolve( boost::system::error_code const& ec
    net::async_connect(socket, results, handler);
 }
 
+// Splits a string in the form ip:port in two strings.
+std::pair<std::string, std::string> split(std::string data)
+{
+   auto const pos = data.find_first_of(':');
+   if (pos == std::string::npos)
+      return {};
+
+   if (1 + pos == std::size(data))
+      return {};
+
+   return {data.substr(0, pos), data.substr(pos + 1)};
+}
+
 void session::run()
 {
+   auto addr = split(cfg.sentinels.front());
+   std::cout << addr.first << " -- " << addr.second << std::endl;
    auto handler = [this](auto ec, auto res)
       { on_resolve(ec, res); };
 
@@ -118,8 +133,6 @@ void session::on_connect( boost::system::error_code const& ec
                         , net::ip::tcp::endpoint const& endpoint)
 {
    if (ec) {
-      // TODO: Traverse all endpoints if this one is not available. If
-      // none is available should we continue?
       return;
    }
 
@@ -137,7 +150,7 @@ void session::on_connect( boost::system::error_code const& ec
    }
 
    // Calls user callback to inform a successfull connect to redis.
-   // It may wish to start sending some command.
+   // It may wish to start sending some commands.
    //
    // Since this callback may call the send member function on this
    // object, we have to call it AFTER the write operation above,

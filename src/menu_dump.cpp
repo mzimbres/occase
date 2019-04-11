@@ -190,11 +190,6 @@ int impl(menu_op const& op)
    if (op.validate)
       std::cout << "Validate: " << check_leaf_min_depths(m, op.depth)
                 << std::endl;
-
-   //std::cout << std::endl;
-   //std::cout << "Menu max depth:      " << m.get_max_depth() << std::endl;
-   //std::cout << "Menu original size:  " << std::size(menu_str) << std::endl;
-   //std::cout << "Menu converted size: " << std::size(str) << std::endl;
    return 0;
 }
 

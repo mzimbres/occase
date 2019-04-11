@@ -93,8 +93,6 @@ void facade::on_menu_sub( boost::system::error_code const& ec
       return;
    }
 
-   // TODO: Cache this value to avoid generating it all the time we
-   // get here. We get here however only on menu updates.
    auto const key = cfg.notify_prefix + cfg.menu_key;
    if (data[1] == key) {
       // A menu update has been received.

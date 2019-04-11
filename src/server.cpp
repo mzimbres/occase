@@ -135,6 +135,11 @@ auto get_server_op(int argc, char* argv[])
    , "Address of the redis server."
    )
 
+   ( "redis-sentinels"
+   , po::value<std::vector<std::string>>(&cfg.worker.db.ss_cfg.sentinels)
+   , "A list of sentinel addresses in the form ip1:port1 ip2:port2."
+   )
+
    ( "redis-server-port"
    , po::value<std::string>(&cfg.worker.db.ss_cfg.port)->
        default_value("6379")

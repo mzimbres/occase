@@ -26,6 +26,7 @@ auto get_server_op(int argc, char* argv[])
    std::string log_on_stderr = "no";
    std::string conf_file;
    std::string loglevel;
+   std::string daemonize;
 
    po::options_description desc("Options");
    desc.add_options()
@@ -40,6 +41,11 @@ auto get_server_op(int argc, char* argv[])
    ("log-on-stderr"
    , po::value<std::string>(&log_on_stderr)->default_value("no")
    , "Instructs syslog to write the messages on stderr as well."
+   )
+
+   ("daemonize"
+   , po::value<std::string>(&daemonize)->default_value("no")
+   , "Runs the server in the backgroud as daemon process."
    )
 
    ( "port"
@@ -231,6 +237,7 @@ auto get_server_op(int argc, char* argv[])
    }
 
    cfg.log_on_stderr = log_on_stderr == "yes";
+   cfg.daemonize = daemonize == "yes";
 
    cfg.worker.db.cfg.msg_prefix += ":";
    cfg.worker.db.cfg.notify_prefix += redis_db + "__:";
@@ -251,9 +258,12 @@ int main(int argc, char* argv[])
       if (cfg.help)
          return 0;
 
-      logger logg {argv[0], cfg.log_on_stderr};
+      if (cfg.daemonize)
+         daemonize();
 
+      logger logg {argv[0], cfg.log_on_stderr};
       log_upto(cfg.loglevel);
+      pidfile_mgr pidfile_mgr_;
 
       set_fd_limits(500000);
 

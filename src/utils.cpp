@@ -1,11 +1,16 @@
 #include "utils.hpp"
 
-#include <iostream>
+#include <fstream>
 #include <cassert>
+#include <iostream>
 
 #include <errno.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include <string.h>
 
 #include "logger.hpp"
@@ -44,6 +49,44 @@ void set_fd_limits(int fds)
    log( loglevel::info
       , "getrlimit (soft, hard): ({0}, {1})"
       , rl.rlim_cur, rl.rlim_cur);
+}
+
+pidfile_mgr::pidfile_mgr()
+{
+   FILE *fp = fopen(pidfile.data(), "w");
+   if (fp) {
+      log(loglevel::info, "Creating pid file {0}", pidfile);
+      fprintf(fp,"%d\n",(int) getpid());
+      fclose(fp);
+   } else {
+      log(loglevel::info, "Unable to create pidfile");
+   }
+}
+
+pidfile_mgr::~pidfile_mgr()
+{
+   if (unlink(pidfile.data()) == 0) {
+      log( loglevel::info
+         , "Pid file has been successfully removed: {0}"
+         , pidfile);
+   }
+}
+
+void daemonize()
+{
+   if (fork() != 0)
+      exit(0);
+
+   setsid();
+
+   int fd;
+   if ((fd = open("/dev/null", O_RDWR, 0)) != -1) {
+      dup2(fd, STDIN_FILENO);
+      dup2(fd, STDOUT_FILENO);
+      dup2(fd, STDERR_FILENO);
+      if (fd > STDERR_FILENO)
+         close(fd);
+   }
 }
 
 } // rt

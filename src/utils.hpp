@@ -4,8 +4,6 @@
 
 #include <fmt/format.h>
 
-#include <syslog.h>
-
 namespace rt
 {
 
@@ -17,6 +15,15 @@ auto ssize(C const& c)
 }
 
 void set_fd_limits(int fds);
+
+// Creates and removes the pid file using RAII.
+struct pidfile_mgr {
+   std::string const pidfile {"/var/run/menu_chat_server.pid"};
+   pidfile_mgr();
+   ~pidfile_mgr();
+};
+
+void daemonize();
 
 }
 

@@ -18,6 +18,7 @@ namespace rt
 struct listener_cfg {
    bool help = false;
    bool log_on_stderr = false;
+   bool daemonize = false;
    worker_cfg worker;
    stats_server_cfg stats;
    int number_of_workers;

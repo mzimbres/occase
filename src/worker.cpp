@@ -556,10 +556,8 @@ worker::on_user_msg( std::string msg, json const& j
    return ev_res::user_msg_ok;
 }
 
-void worker::shutdown(boost::system::error_code const& ec)
+void worker::shutdown()
 {
-   // TODO: Verify ec here?
-
    log( loglevel::notice
       , "W{0}: Shutting down has been requested."
       , id);

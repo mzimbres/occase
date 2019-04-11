@@ -14,8 +14,8 @@
 namespace rt
 {
 
-// TODO: Make this support shared_from_this()
 struct arena {
+   int id_;
    net::io_context ioc {1};
    net::signal_set signals_;
    worker worker_;
@@ -23,25 +23,40 @@ struct arena {
    std::thread thread_;
 
    arena(listener_cfg const& cfg, int i)
-   : signals_ {ioc, SIGINT, SIGTERM}
+   : id_ {i}
+   , signals_ {ioc, SIGINT, SIGTERM}
    , worker_ {cfg.worker, i, ioc}
    , stats_server_ {cfg.stats, worker_, i, ioc}
    , thread_ { std::thread {[this](){ run();}} }
    {
       auto handler = [this](auto const& ec, auto n)
-      {
+         { on_signal(ec, n); };
+
+      signals_.async_wait(handler);
+   }
+
+   void on_signal(boost::system::error_code const& ec, int n)
+   {
+      if (ec) {
          if (ec == net::error::operation_aborted) {
             // No signal occurred, the handler was canceled. We just
             // leave.
             return;
          }
 
-         // A signal occurred, we have to handle it.
-         worker_.shutdown(ec);
-         stats_server_.shutdown();
-      };
+         log( loglevel::crit
+            , "W{0}/arena::on_signal: Unhandled error '{1}'"
+            , id_, ec.message());
 
-      signals_.async_wait(handler);
+         return;
+      }
+
+      log( loglevel::notice
+         , "W{0}/arena::on_signal: Signal {1} has been captured."
+         , id_, n);
+
+      worker_.shutdown();
+      stats_server_.shutdown();
    }
 
    ~arena()
@@ -54,7 +69,8 @@ struct arena {
       try {
          ioc.run();
       } catch (std::exception const& e) {
-         std::cout << e.what() << std::endl;
+         log( loglevel::notice
+            , "W{0}/arena::run: {1}", id_, e.what());
       }
    }
 };
@@ -63,8 +79,7 @@ listener::listener(listener_cfg const& cfg)
 : signals {ioc, SIGINT, SIGTERM}
 , acceptor {ioc, {net::ip::tcp::v4(), cfg.port}}
 {
-   log( loglevel::info
-      , "Binding server to {}"
+   log( loglevel::info, "Binding server to {}"
       , acceptor.local_endpoint());
 
    auto arena_gen = [&cfg, i = -1]() mutable
@@ -75,27 +90,34 @@ listener::listener(listener_cfg const& cfg)
                   , arena_gen);
 }
 
-void listener::on_signal()
+void listener::on_signal(boost::system::error_code const& ec, int n)
 {
+   if (ec) {
+      if (ec == net::error::operation_aborted) {
+         // No signal occurred, the handler was canceled. We just
+         // leave.
+         return;
+      }
+
+      log( loglevel::crit
+         , "listener::on_signal: Unhandled error '{0}'"
+         , ec.message());
+
+      return;
+   }
+
+   log( loglevel::notice
+      , "Signal {0} has been captured. "
+        " Stopping listening for new connections"
+      , n);
+
    acceptor.cancel();
-
-   // The arenas have their individual signal handlers so we do not
-   // have to call them here explicitly.
-
-   //auto joiner = [](auto o)
-   //   { o->shutdown({}); };
-
-   //std::for_each(std::begin(arenas), std::end(arenas), joiner);
 }
 
 void listener::run()
 {
-   auto const handler = [this](auto ec, auto n)
-   {
-      // TODO: Verify ec here.
-      log(loglevel::info, "Beginning the shutdown operation.");
-      on_signal();
-   };
+   auto const handler = [this](auto const& ec, auto n)
+      { on_signal(ec, n); };
 
    signals.async_wait(handler);
 

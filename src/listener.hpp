@@ -62,7 +62,7 @@ private:
 public:
    listener(listener_cfg const& cg);
    void run();
-   void on_signal();
+   void on_signal(boost::system::error_code const& ec, int n);
 };
 
 }

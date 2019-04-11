@@ -271,10 +271,12 @@ int main(int argc, char* argv[])
       lst.run();
 
    } catch (std::exception const& e) {
-      log(loglevel::emerg, e.what());
+      log(loglevel::notice, e.what());
+      log(loglevel::notice, "Exiting with status 1 ...");
       return 1;
    }
 
+   log(loglevel::notice, "Exiting with status 0 ...");
    return 0;
 }
 

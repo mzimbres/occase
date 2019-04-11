@@ -132,7 +132,7 @@ public:
       { return stats;}
    auto const& get_ws_stats() const noexcept
       { return stats; }
-   void shutdown(boost::system::error_code const& ec);
+   void shutdown();
    auto get_id() const noexcept
       { return id;}
    auto const& get_db() const noexcept

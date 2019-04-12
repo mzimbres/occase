@@ -26,8 +26,8 @@ worker::worker(worker_cfg cfg, int id_, net::io_context& ioc)
 
 void worker::init()
 {
-   auto handler = [this](auto const& data, auto const& req)
-      { on_db_msg_handler(data, req); };
+   auto handler = [this](auto data, auto const& req)
+      { on_db_event(std::move(data), req); };
 
    db.set_on_msg_handler(handler);
    db.run();
@@ -40,17 +40,23 @@ void worker::on_db_get_menu(std::string const& data)
    menus = j_menu.at("menus").get<std::vector<menu_elem>>();
 
    if (is_empty) {
-      // The menus were empty. This happens only when the server is
-      // started. We have to save the menu and retrieve menu messages
-      // from the database. It is important to not create the channels
-      // here since if we did not retrieve the messages from the
-      // database yet and we are already subscribed to the
-      // menu channel, therefore we will begin to receive messages and
-      // send to the users. Since these messages will be more recent,
-      // they will update their last message counter. Then if they
-      // disconnect and connect again the old messages will not be
-      // sent to them anymore. This is a very unlikely situation since
-      // the retrieval of messages should be fast.
+      // The menus vector was empty. This happens only when the server
+      // is started. We have to save the menu and retrieve the menu
+      // messages from the database. It is important that the channels
+      // are not created now since we did not retrieve the messages
+      // from the database yet but we are already subscribed to the
+      // menu channel.
+      //
+      // That means we will begin to receive messages and send them to
+      // the users. Since these messages will be more recent then the
+      // ones we are about to retrieve from the database, they will
+      // update their last message counter. Then if they disconnect
+      // and connect again the old messages will never be sent to
+      // them. This is a very unlikely situation since the retrieval
+      // of messages is fast.
+      //
+      // The channel creation will be delegated to the
+      // *retrieve_menu_msgs* handler.
 
       // We may wish to check whether the menu received above is valid
       // before we proceed with the retrieval of the menu messages.
@@ -60,10 +66,11 @@ void worker::on_db_get_menu(std::string const& data)
       return;
    }
 
-   // The menus is not empty which means we have received an updated
-   // menu. We only have to create the additional channels.
-   // In this case we have not need of retrieving messages from the
-   // database so we can create the additional channels here.
+   // The menus is not empty which means we have received a new menu
+   // and whould update the old. We only have to create the additional
+   // channels and there is no need to retrieve messages from the
+   // database. The new menu may contain additional channels that
+   // should be created here.
    create_channels(menus);
 }
 
@@ -71,12 +78,11 @@ void worker::create_channels(std::vector<menu_elem> const& menus_)
 {
    auto const menu_codes = menu_elems_to_codes(menus_);
 
-   int created = 0;
-   int existed = 0;
+   auto created = 0;
+   auto existed = 0;
    auto f = [&, this](auto const& comb)
    {
-      auto const hash_code =
-         to_channel_hash_code2(menu_codes, comb);
+      auto const hash_code = to_channel_hash_code2(menu_codes, comb);
 
       if (channels.insert({hash_code, {}}).second)
          ++created;
@@ -97,10 +103,12 @@ void worker::on_db_menu_msgs(std::vector<std::string> const& msgs)
 {
    // This function has two roles.
    //
-   // 1. Create the channels if they do not already exist. If they do
-   //    exist a connection to the database that has been restablished
-   //    and we requested all messages that we may have missed while
-   //    we were offline.
+   // 1. Create the channels if they do not already exist. This
+   //    happens only when the server is started and the menu is
+   //    retrieved for the first time. If the channels arealdy exist,
+   //    that means a connection to the database that has been
+   //    restablished and we requested all messages that we may have
+   //    missed while we were offline.
    //
    // 2. Fill the channels with the menu messages.
 
@@ -112,12 +120,12 @@ void worker::on_db_menu_msgs(std::vector<std::string> const& msgs)
       , id, std::size(msgs));
 
    auto loader = [this](auto const& msg)
-      { on_db_unsol_pub(msg); };
+      { on_db_menu_msg(msg); };
 
    std::for_each(std::begin(msgs), std::end(msgs), loader);
 }
 
-void worker::on_db_unsol_pub(std::string const& msg)
+void worker::on_db_menu_msg(std::string const& msg)
 {
    auto const j = json::parse(msg);
    auto item = j.get<pub_item>();
@@ -131,22 +139,6 @@ void worker::on_db_unsol_pub(std::string const& msg)
       return;
    }
 
-   // The comment below does not apply anymore. It came out on the try
-   // to user key notifications to deal with menu messages.
-   //
-   // This condition can be triggered for example if the retrieval and
-   // processing of menu messages do not complete before the next
-   // notification arrives. It can also happens in very concurrent
-   // uses that we get holes in the indices, for example
-   //
-   // Worker 1: gets counter 300
-   // Worker 2: gets counter 301
-   // Worker 1: zadd
-   // Worker 3: gets counter 302
-   // Worker 3: zadd
-   // Worker 1: zrange <=== it will see 300 302 (missing the 301)
-   // Worker 2: zadd
-
    if (item.id > last_menu_msg_id)
       last_menu_msg_id = item.id;
 
@@ -154,24 +146,26 @@ void worker::on_db_unsol_pub(std::string const& msg)
 }
 
 void
-worker::on_db_user_msgs( std::string const& user_id
-                       , std::vector<std::string> const& msgs) const
+worker::on_db_chat_msg( std::string const& user_id
+                      , std::vector<std::string> msgs)
 {
    auto const match = sessions.find(user_id);
    if (match == std::end(sessions)) {
-      // TODO: The user went offline. We have to enqueue the
-      // message again. Rethink this.
+      // The user went offline. We have to enqueue the message again.
+      // This is difficult to test since the retrieval of messages
+      // from the database is pretty fast.
+      //
+      // It is also such a rare situation that I won't care about
+      // optimizing it by using move iterators.
+      db.store_user_msg( user_id
+                       , std::make_move_iterator(std::begin(msgs))
+                       , std::make_move_iterator(std::end(msgs)));
       return;
    }
 
    if (auto s = match->second.lock()) {
-      // TODO: Vectorize the user messages so that it is possible to
-      // call send only once.
       auto f = [s](auto o)
-      {
-         assert(!std::empty(o));
-         s->send(std::move(o), true);
-      };
+         { s->send(std::move(o), true); };
 
       std::for_each( std::make_move_iterator(std::begin(msgs))
                    , std::make_move_iterator(std::end(msgs))
@@ -186,13 +180,13 @@ worker::on_db_user_msgs( std::string const& user_id
 }
 
 void
-worker::on_db_msg_handler( std::vector<std::string> const& data
-                         , redis::req_item const& req)
+worker::on_db_event( std::vector<std::string> data
+                   , redis::req_item const& req)
 {
    switch (req.req)
    {
       case redis::request::unsol_user_msgs:
-         on_db_user_msgs(req.user_id, data);
+         on_db_chat_msg(req.user_id, std::move(data));
          break;
 
       case redis::request::get_menu:
@@ -219,7 +213,7 @@ worker::on_db_msg_handler( std::vector<std::string> const& data
 
       case redis::request::unsol_publish:
          assert(std::size(data) == 1);
-         on_db_unsol_pub(data.back());
+         on_db_menu_msg(data.back());
          break;
 
       default:
@@ -240,7 +234,6 @@ void worker::on_db_menu_connect()
 
    if (std::empty(menus)) {
       db.async_retrieve_menu();
-      return;
    } else {
       db.retrieve_menu_msgs(1 + last_menu_msg_id);
    }
@@ -267,10 +260,10 @@ void worker::on_db_pub_counter(std::string const& pub_id_str)
    ack["cmd"] = "publish_ack";
    ack["result"] = "ok";
    ack["id"] = pub_wait_queue.front().item.id;
-   auto const ack_str = ack.dump();
+   auto ack_str = ack.dump();
 
    if (auto s = pub_wait_queue.front().session.lock()) {
-      s->send(ack_str, true);
+      s->send(std::move(ack_str), true);
       return;
    }
 
@@ -347,8 +340,8 @@ worker::on_user_login( json const& j
    s->promote();
    assert(s->is_auth());
 
-   db.sub_to_user_msgs(s->get_id());
-   db.retrieve_user_msgs(s->get_id());
+   db.subscribe_to_chat_msgs(s->get_id());
+   db.retrieve_chat_msgs(s->get_id());
 
    json resp;
    resp["cmd"] = "auth_ack";
@@ -357,15 +350,14 @@ worker::on_user_login( json const& j
    auto const user_versions =
       j.at("menu_versions").get<std::vector<int>>();
 
-   // TODO: Cache this value.
+   // Cache this value?
    auto const server_versions = read_versions(menus);
 
    auto const b =
       std::lexicographical_compare( std::begin(user_versions)
                                   , std::end(user_versions)
                                   , std::begin(server_versions)
-                                  , std::end(server_versions)
-                                  );
+                                  , std::end(server_versions));
 
    if (b)
       resp["menus"] = menus;
@@ -401,7 +393,7 @@ worker::on_user_code_confirm( json const& j
    // which means we did something wrong in the register command.
    assert(new_user.second);
 
-   db.sub_to_user_msgs(s->get_id());
+   db.subscribe_to_chat_msgs(s->get_id());
 
    json resp;
    resp["cmd"] = "code_confirmation_ack";
@@ -484,7 +476,6 @@ worker::on_user_publish(json j, std::shared_ptr<worker_session> s)
 
    auto const g = channels.find(hash_code);
    if (g == std::end(channels) || std::size(items) != 1) {
-      std::cout << hash_code << std::endl;
       // This is a non-existing channel. Perhaps the json command was
       // sent with the wrong information signaling a logic error in
       // the app. Sending a fail ack back to the app is useful to
@@ -522,8 +513,8 @@ void worker::on_session_dtor( std::string const& id
       return;
    }
 
-   sessions.erase(match); // We do not need the return value.
-   db.unsub_to_user_msgs(id);
+   sessions.erase(match);
+   db.unsubscribe_to_chat_msgs(id);
 
    if (!std::empty(msgs)) {
       db.store_user_msg( std::move(id)
@@ -533,7 +524,7 @@ void worker::on_session_dtor( std::string const& id
 }
 
 ev_res
-worker::on_user_msg( std::string msg, json const& j
+worker::on_chat_msg( std::string msg, json const& j
                    , std::shared_ptr<worker_session> s)
 {
    // TODO: Search the sessions map if the user is online and in this
@@ -553,7 +544,7 @@ worker::on_user_msg( std::string msg, json const& j
    ack["cmd"] = "user_msg_server_ack";
    ack["result"] = "ok";
    s->send(ack.dump(), false);
-   return ev_res::user_msg_ok;
+   return ev_res::chat_msg_ok;
 }
 
 void worker::shutdown()
@@ -608,7 +599,7 @@ worker::on_message(std::shared_ptr<worker_session> s, std::string msg)
          return on_user_publish(std::move(j), s);
 
       if (cmd == "user_msg")
-         return on_user_msg(std::move(msg), j, s);
+         return on_chat_msg(std::move(msg), j, s);
 
       return ev_res::unknown;
    }

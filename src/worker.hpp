@@ -92,20 +92,20 @@ private:
    ev_res on_user_subscribe( json const& j
                            , std::shared_ptr<worker_session> s);
 
-   ev_res on_user_msg( std::string msg, json const& j
+   ev_res on_chat_msg( std::string msg, json const& j
                      , std::shared_ptr<worker_session> s);
 
    ev_res on_user_publish( json j
                          , std::shared_ptr<worker_session> s);
 
-   void on_db_user_msgs( std::string const& user_id
-                       , std::vector<std::string> const& msgs) const;
-
    // Handlers for events we receive from the database.
+   void on_db_chat_msg( std::string const& user_id
+                      , std::vector<std::string> msgs);
+
    void on_db_get_menu(std::string const& data);
-   void on_db_unsol_pub(std::string const& data);
-   void on_db_msg_handler( std::vector<std::string> const& resp
-                         , redis::req_item const& cmd);
+   void on_db_menu_msg(std::string const& data);
+   void on_db_event( std::vector<std::string> resp
+                   , redis::req_item const& cmd);
    void on_db_pub_counter(std::string const& data);
    void on_db_publish();
    void on_db_menu_msgs(std::vector<std::string> const& msgs);

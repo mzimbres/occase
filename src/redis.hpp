@@ -74,8 +74,7 @@ struct config {
 class facade {
 public:
    using msg_handler_type =
-      std::function<void ( std::vector<std::string> const&
-                         , req_item const&)>;
+      std::function<void (std::vector<std::string>, req_item const&)>;
 
 private:
    // The worker id this facade corresponds to.
@@ -150,11 +149,11 @@ public:
    // 
    //    redis::request::unsol_user_msgs
    //
-   void sub_to_user_msgs(std::string const& user_id);
+   void subscribe_to_chat_msgs(std::string const& user_id);
 
    // Usubscribe to the notifications to the key. On completion it
    // passes no event to the worker.
-   void unsub_to_user_msgs(std::string const& user_id);
+   void unsubscribe_to_chat_msgs(std::string const& user_id);
 
    // Used to asynchronously store messages on redis. On completion it
    // passes no event to the worker.
@@ -201,7 +200,7 @@ public:
    //
    //    redis::request::unsol_user_msgs
    //
-   void retrieve_user_msgs(std::string const& user_id);
+   void retrieve_chat_msgs(std::string const& user_id);
 
    // Closes the connections to redis.
    void disconnect();

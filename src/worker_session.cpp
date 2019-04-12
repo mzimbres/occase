@@ -210,6 +210,7 @@ void worker_session::do_close()
 
 void worker_session::send(std::string msg, bool persist)
 {
+   assert(!std::empty(msg));
    auto const is_empty = std::empty(msg_queue);
 
    msg_queue.push_back({std::move(msg), {}, persist});

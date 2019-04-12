@@ -30,7 +30,7 @@ enum class ev_res
 , subscribe_fail
 , publish_ok
 , publish_fail
-, user_msg_ok
+, chat_msg_ok
 , user_msg_fail
 , unknown
 };

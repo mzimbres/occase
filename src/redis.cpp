@@ -89,7 +89,7 @@ void facade::on_menu_sub( boost::system::error_code const& ec
       // This is a menu message.
       std::swap(data.front(), data.back());
       data.resize(1);
-      worker_handler(data , {request::unsol_publish, {}});
+      worker_handler(std::move(data) , {request::unsol_publish, {}});
       return;
    }
 
@@ -134,7 +134,7 @@ facade::on_menu_pub( boost::system::error_code const& ec
       return;
    }
 
-   worker_handler(data, {menu_pub_queue.front(), {}});
+   worker_handler(std::move(data), {menu_pub_queue.front(), {}});
    menu_pub_queue.pop();
 }
 
@@ -161,7 +161,7 @@ facade::on_user_pub( boost::system::error_code const& ec
       req_item const item { request::unsol_user_msgs
                           , std::move(user_pub_queue.front().user_id)};
 
-      worker_handler(data, item);
+      worker_handler(std::move(data), item);
    }
 
    user_pub_queue.pop();
@@ -188,10 +188,10 @@ facade::on_user_sub( boost::system::error_code const& ec
    auto const pos = std::size(cfg.user_notify_prefix);
    auto user_id = data[1].substr(pos);
    assert(!std::empty(user_id));
-   retrieve_user_msgs(user_id);
+   retrieve_chat_msgs(user_id);
 }
 
-void facade::retrieve_user_msgs(std::string const& user_id)
+void facade::retrieve_chat_msgs(std::string const& user_id)
 {
    auto const key = cfg.msg_prefix + user_id;
    auto cmd = multi()
@@ -207,12 +207,12 @@ void facade::retrieve_user_msgs(std::string const& user_id)
    user_pub_queue.push({request::ignore, {}});
 }
 
-void facade::sub_to_user_msgs(std::string const& id)
+void facade::subscribe_to_chat_msgs(std::string const& id)
 {
    ss_user_sub.send(subscribe(cfg.user_notify_prefix + id));
 }
 
-void facade::unsub_to_user_msgs(std::string const& id)
+void facade::unsubscribe_to_chat_msgs(std::string const& id)
 {
    ss_user_sub.send(unsubscribe(cfg.user_notify_prefix + id));
 }

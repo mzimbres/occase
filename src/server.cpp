@@ -67,11 +67,6 @@ auto get_server_op(int argc, char* argv[])
      " each thread has it own non-shared data structure."
    )
 
-   ( "code-timeout"
-   , po::value<int>(&cfg.code_timeout)->default_value(2)
-   , "Code confirmation timeout in seconds."
-   )
-
    ( "auth-timeout"
    , po::value<int>(&cfg.auth_timeout)->default_value(2)
    , "Authetication timeout in seconds. Started after the websocket "

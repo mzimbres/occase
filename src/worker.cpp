@@ -282,35 +282,6 @@ void worker::on_db_pub_counter(std::string const& pub_id_str)
 }
 
 ev_res
-worker::on_user_register( json const& j
-                        , std::shared_ptr<worker_session> s)
-{
-   auto const from = j.at("from").get<std::string>();
-
-   // TODO: Replace this with a query to the database.
-   if (sessions.find(from) != std::end(sessions)) {
-      // The user already exists in the system.
-      json resp;
-      resp["cmd"] = "register_ack";
-      resp["result"] = "fail";
-      s->send(resp.dump(), false);
-      return ev_res::register_fail;
-   }
-
-   s->set_id(from);
-
-   // TODO: Use a random number generator with six digits.
-   s->set_code("8347");
-
-   json resp;
-   resp["cmd"] = "register_ack";
-   resp["result"] = "ok";
-   resp["menus"] = menus;
-   s->send(resp.dump(), false);
-   return ev_res::register_ok;
-}
-
-ev_res
 worker::on_user_login( json const& j
                      , std::shared_ptr<worker_session> s)
 {
@@ -338,7 +309,6 @@ worker::on_user_login( json const& j
    //}
 
    s->set_id(from);
-   s->promote();
    assert(s->is_auth());
 
    db.subscribe_to_chat_msgs(s->get_id());
@@ -366,41 +336,6 @@ worker::on_user_login( json const& j
    s->send(resp.dump(), false);
 
    return ev_res::login_ok;
-}
-
-ev_res
-worker::on_user_code_confirm( json const& j
-                            , std::shared_ptr<worker_session> s)
-{
-   auto const from = j.at("from").get<std::string>();
-   auto const code = j.at("code").get<std::string>();
-
-   if (code != s->get_code()) {
-      json resp;
-      resp["cmd"] = "code_confirmation_ack";
-      resp["result"] = "fail";
-      s->send(resp.dump(), false);
-      return ev_res::code_confirmation_fail;
-   }
-
-   s->promote();
-
-   // Inserts the user in the system.
-   assert(!std::empty(s->get_id()));
-   auto const new_user = sessions.insert({from, s});
-   assert(s->is_auth());
-
-   // This would be odd. The entry already exists on the index map
-   // which means we did something wrong in the register command.
-   assert(new_user.second);
-
-   db.subscribe_to_chat_msgs(s->get_id());
-
-   json resp;
-   resp["cmd"] = "code_confirmation_ack";
-   resp["result"] = "ok";
-   s->send(resp.dump(), false);
-   return ev_res::code_confirmation_ok;
 }
 
 ev_res
@@ -576,23 +511,6 @@ worker::on_message(std::shared_ptr<worker_session> s, std::string msg)
    auto const j = json::parse(msg);
    auto const cmd = j.at("cmd").get<std::string>();
 
-   if (s->is_waiting_auth()) {
-      if (cmd == "register")
-         return on_user_register(j, s);
-
-      if (cmd == "auth")
-         return on_user_login(j, s);
-
-      return ev_res::unknown;
-   }
-
-   if (s->is_waiting_code()) {
-      if (cmd == "code_confirmation")
-         return on_user_code_confirm(j, s);
-
-      return ev_res::unknown;
-   }
-
    if (s->is_auth()) {
       if (cmd == "subscribe")
          return on_user_subscribe(j, s);
@@ -602,8 +520,9 @@ worker::on_message(std::shared_ptr<worker_session> s, std::string msg)
 
       if (cmd == "user_msg")
          return on_chat_msg(std::move(msg), j, s);
-
-      return ev_res::unknown;
+   } else {
+      if (cmd == "auth")
+         return on_user_login(j, s);
    }
 
    return ev_res::unknown;

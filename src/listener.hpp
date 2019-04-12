@@ -25,7 +25,6 @@ struct listener_cfg {
    unsigned short port;
 
    int auth_timeout;
-   int code_timeout;
    int handshake_timeout;
    int pong_timeout;
    int close_frame_timeout;
@@ -36,7 +35,6 @@ struct listener_cfg {
    {
       return session_cfg
       { std::chrono::seconds {auth_timeout}
-      , std::chrono::seconds {code_timeout}
       , std::chrono::seconds {handshake_timeout}
       , std::chrono::seconds {pong_timeout}
       , std::chrono::seconds {close_frame_timeout}

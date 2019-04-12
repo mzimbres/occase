@@ -80,14 +80,8 @@ private:
 
    void init();
 
-   ev_res on_user_register( json const& j
-                          , std::shared_ptr<worker_session> s);
-
    ev_res on_user_login( json const& j
                        , std::shared_ptr<worker_session> s);
-
-   ev_res on_user_code_confirm( json const& j
-                              , std::shared_ptr<worker_session> s);
 
    ev_res on_user_subscribe( json const& j
                            , std::shared_ptr<worker_session> s);

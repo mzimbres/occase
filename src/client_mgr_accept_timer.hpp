@@ -14,7 +14,7 @@ class client_session;
 // Tests if the server drops a session that does not proceed with
 // authentication.
 // TODO: Add a timer here after which we should emit an error if the
-// server do not drop the connection.
+// server does not drop the connection.
 
 struct cmgr_handshake_op {
    std::string user;

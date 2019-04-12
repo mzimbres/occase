@@ -20,24 +20,19 @@ class worker;
 class worker_session;
 
 enum class ev_res
-{ register_ok
-, register_fail
-, login_ok
+{ login_ok
 , login_fail
-, code_confirmation_ok
-, code_confirmation_fail
 , subscribe_ok
 , subscribe_fail
 , publish_ok
 , publish_fail
 , chat_msg_ok
-, user_msg_fail
+, chat_msg_fail
 , unknown
 };
 
 struct session_cfg {
    std::chrono::seconds auth {2};
-   std::chrono::seconds code {2};
    std::chrono::seconds handshake {2};
    std::chrono::seconds pong {2};
    std::chrono::seconds close {2};
@@ -80,7 +75,6 @@ private:
    std::shared_ptr<proxy_session> psession;
 
    std::string user_id;
-   std::string code;
 
    void do_read();
    void do_write(std::string const& msg);
@@ -109,22 +103,12 @@ public:
    void send_menu_msg(std::shared_ptr<std::string> msg);
    void shutdown();
 
-   void promote()
-      { code.clear(); }
-   void set_code(std::string code_)
-      { code = std::move(code_);}
-   auto const& get_code() const
-      { return code; }
    void set_id(std::string id)
       { user_id = std::move(id); };
    auto const& get_id() const noexcept
       { return user_id;}
-   auto is_waiting_code() const noexcept
-      { return !std::empty(user_id) && !std::empty(code);};
    auto is_auth() const noexcept
-      { return !std::empty(user_id) && std::empty(code);};
-   auto is_waiting_auth() const noexcept
-      { return std::empty(user_id) && std::empty(code);};
+      { return !std::empty(user_id);};
 
    std::weak_ptr<proxy_session> get_proxy_session(bool make_new_session);
 };

@@ -7,7 +7,7 @@ ext_libs += $(boost_lib_dir)/libboost_program_options.a
 
 DEBUG    = -g -ggdb3
 LDFLAGS  = -lpthread -lfmt
-CPPFLAGS = -I. -I$(boost_inc_dir) -std=c++17 $(DEBUG) -Wall # -Werror
+CPPFLAGS = -I. -I$(boost_inc_dir) -std=c++17 $(DEBUG) -Wall# -Werror
 
 DIST_NAME = sellit
 
@@ -17,7 +17,6 @@ exes += server
 exes += menu_dump
 exes += aedis
 exes += read_only_tests
-exes += reg_users_tests
 exes += simulation
 
 common_objs += menu.o
@@ -32,8 +31,6 @@ server_objs += redis.o
 server_objs += stats_server.o
 
 client_objs =
-client_objs += client_mgr_register.o
-client_objs += client_mgr_confirm_code.o
 client_objs += client_mgr_pub.o
 client_objs += client_mgr_gmsg_check.o
 
@@ -79,9 +76,6 @@ publish_tests: % : %.o $(client_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
 read_only_tests: % : %.o $(client_objs) $(common_objs)
-	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
-
-reg_users_tests: % : %.o $(client_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
 server: % : %.o $(server_objs) $(common_objs) $(aedis_objs)

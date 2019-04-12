@@ -17,7 +17,6 @@
 #include "utils.hpp"
 #include "config.hpp"
 #include "menu.hpp"
-#include "client_mgr_confirm_code.hpp"
 #include "client_mgr_pub.hpp"
 #include "client_mgr_gmsg_check.hpp"
 #include "client_session.hpp"

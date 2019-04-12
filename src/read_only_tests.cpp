@@ -16,9 +16,7 @@
 
 #include "config.hpp"
 #include "menu.hpp"
-#include "client_mgr_confirm_code.hpp"
 #include "client_session.hpp"
-#include "client_mgr_register.hpp"
 #include "session_launcher.hpp"
 #include "client_mgr_accept_timer.hpp"
 
@@ -63,63 +61,6 @@ struct options {
       , {"After handshake test launch:   "}
       };
    }
-
-   auto make_code_tm_laucher_op1() const
-   {
-      return launcher_cf
-      { initial_user
-      , initial_user + users_size
-      , std::chrono::milliseconds {launch_interval}
-      , {"Register test with ret = -1:      "}};
-   }
-
-   auto make_code_tm_laucher_op2() const
-   {
-      return launcher_cf
-      { initial_user
-      , initial_user + users_size
-      , std::chrono::milliseconds {launch_interval}
-      , {"Register test with ret = -2:      "}};
-   }
-
-   auto make_code_tm_laucher_op3() const
-   {
-      return launcher_cf
-      { initial_user
-      , initial_user + users_size
-      , std::chrono::milliseconds {launch_interval}
-      , {"Register test with ret = -3:      "}};
-   }
-
-   auto make_wrong_code_cf1() const
-   {
-      return launcher_cf
-      { initial_user + 3 * users_size
-      , initial_user + 4 * users_size
-      , std::chrono::milliseconds {launch_interval}
-      , {"Wrong code test with ret = -1:  "}
-      };
-   }
-
-   auto make_wrong_code_cf2() const
-   {
-      return launcher_cf
-      { initial_user + 4 * users_size
-      , initial_user + 5 * users_size
-      , std::chrono::milliseconds {launch_interval}
-      , {"Wrong code test with ret = -2:  "}
-      };
-   }
-
-   auto make_wrong_code_cf3() const
-   {
-      return launcher_cf
-      { initial_user + 5 * users_size
-      , initial_user + 6 * users_size
-      , std::chrono::milliseconds {launch_interval}
-      , {"Wrong code test with ret = -3:  "}
-      };
-   }
 };
 
 void read_only_tests(options const& op)
@@ -139,70 +80,6 @@ void read_only_tests(options const& op)
                     , op.make_session_cf()
                     , op.make_after_handshake_laucher_op()
                     )->run({});
-
-   std::make_shared< session_launcher<client_mgr_register>
-                   >( ioc
-                    , cmgr_register_cf { "" , "ok" , -1}
-                    , op.make_session_cf()
-                    , op.make_code_tm_laucher_op1()
-                    )->run({});
-
-   std::make_shared< session_launcher<client_mgr_register>
-                   >( ioc
-                    , cmgr_register_cf { "" , "ok" , -2}
-                    , op.make_session_cf()
-                    , op.make_code_tm_laucher_op2()
-                    )->run({});
-
-   std::make_shared< session_launcher<client_mgr_register>
-                   >( ioc
-                    , cmgr_register_cf { "" , "ok" , -3}
-                    , op.make_session_cf()
-                    , op.make_code_tm_laucher_op3()
-                    )->run({});
-
-   std::make_shared< session_launcher<client_mgr_code>
-                   >( ioc
-                    , cmgr_code_op {"", "fail", "8r47", -1}
-                    , op.make_session_cf()
-                    , op.make_wrong_code_cf1()
-                    )->run({});
-
-   std::make_shared< session_launcher<client_mgr_code>
-                   >( ioc
-                    , cmgr_code_op {"", "fail", "8r47", -2}
-                    , op.make_session_cf()
-                    , op.make_wrong_code_cf2()
-                    )->run({});
-
-   std::make_shared< session_launcher<client_mgr_code>
-                   >( ioc
-                    , cmgr_code_op {"", "fail", "8r47", -3}
-                    , op.make_session_cf()
-                    , op.make_wrong_code_cf3()
-                    )->run({});
-
-   json j1;
-   j1["cmd"] = "logrn";
-   j1["from"] = "aaaa";
-
-   json j2;
-   j2["crd"] = "register";
-   j2["from"] = "bbbb";
-
-   json j3;
-   j3["crd"] = "register";
-   j3["Teal"] = "cccc";
-
-   std::vector<std::string> cmds
-   { {j1.dump()} , {j2.dump()} , {j3.dump()} };
-
-   // Sends commands with typos and expects the server to not crash!
-   for (auto const& cmd : cmds)
-      std::make_shared<client_session<client_mgr_register_typo>
-                      >( ioc
-                       , op.make_session_cf()
-                       , cmd)->run();
 
    ioc.run();
 }

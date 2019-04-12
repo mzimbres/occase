@@ -307,49 +307,12 @@ void worker_session::do_ping()
 void worker_session::handle_ev(ev_res r)
 {
    switch (r) {
-      case ev_res::register_ok:
-      {
-         // Successful register request which means the ongoing
-         // connection timer  has to be canceled.  This is where we
-         // have to set the code timeout.
-         auto const n = timer.expires_after(worker_.get_timeouts().code);
-
-         auto const handler = [p = shared_from_this()](auto const& ec)
-         {
-            if (ec) {
-               if (ec == net::error::operation_aborted)
-                  return;
-
-               log( loglevel::debug, "worker_session::handle_ev: {0}."
-                  , ec.message());
-
-               return;
-            }
-
-            p->do_close();
-         };
-
-         timer.async_wait(handler);
-
-         // If we get here, it means that there was no ongoing timer.
-         // But I do not see any reason for accepting a register command
-         // on an stablished session, this is a logic error.
-         assert(n > 0);
-      }
-      break;
-      case ev_res::code_confirmation_ok:
-      {
-         do_ping();
-      }
-      break;
       case ev_res::login_ok:
       {
          do_ping();
       }
       break;
-      case ev_res::register_fail:
       case ev_res::login_fail:
-      case ev_res::code_confirmation_fail:
       {
          timer.cancel();
          do_close();

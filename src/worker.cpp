@@ -82,7 +82,8 @@ void worker::create_channels(std::vector<menu_elem> const& menus_)
    auto existed = 0;
    auto f = [&, this](auto const& comb)
    {
-      auto const hash_code = to_hash_code2(menu_codes, std::cbegin(comb));
+      auto const hash_code =
+         to_hash_code_impl(menu_codes, std::cbegin(comb));
 
       if (channels.insert({hash_code, {}}).second)
          ++created;
@@ -417,7 +418,8 @@ worker::on_user_subscribe( json const& j
    // Works only for two menus with depth 2.
    auto f = [&, this](auto const& comb)
    {
-      auto const hash_code = to_hash_code2(menu_codes, std::cbegin(comb));
+      auto const hash_code =
+         to_hash_code_impl(menu_codes, std::cbegin(comb));
       auto const g = channels.find(hash_code);
       assert(g != std::end(channels));
       if (g == std::end(channels))

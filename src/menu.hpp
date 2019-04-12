@@ -403,34 +403,31 @@ to_channel_hash_code_s2d2( std::vector<int> const& c1
  *
  * to an 64 bits integer which will be used for hashing. Each menu
  * configuration requires its own hashing function. This version is
- * suitable for two menus where both have filter depth 2.
- *
- * TODO: Move this function to some other header.
- * TODO: Check code validity on every call to this function.
- *
- */
-std::uint64_t to_hash_code(menu_code_type const& codes);
-
-/*
- * Similar to the version above, but the input menu codes may have an
- * arbitrary size and the tuple element as of comb is used to generate
- * the hash code. This function is more general the the version above
- * but it requires the user to have the comb vector or construct one.
- *
- * At the moment only for depth 2 and menus with size 2.
+ * suitable for two menus where both have filter depth 2 and has to be
+ * extended for other sizes.
  */
 template <class RandomAccessIterator>
 inline std::uint64_t
-to_hash_code2( menu_code_type const& codes
-             , RandomAccessIterator comb)
+to_hash_code_impl( menu_code_type const& code
+                 , RandomAccessIterator comb)
 {
-   auto const idx1 = comb[1];
-   auto const idx2 = comb[2];
+   auto const size = std::size(code);
+   switch (size) {
+   case 2: return to_channel_hash_code_s2d2( code.at(0).at(comb[1])
+                                           , code.at(1).at(comb[2]));
+   }
 
-   return to_channel_hash_code_s2d2( codes.at(0).at(idx1)
-                                   , codes.at(1).at(idx2));
+   assert(false);
+   return 0;
 }
 
+inline
+std::uint64_t to_hash_code(menu_code_type const& code)
+{
+   // Support menu with size up to 5.
+   std::array<int, 6> comb {0, 0, 0, 0, 0, 0};
+   return to_hash_code_impl(code, std::cbegin(comb));
+}
 
 /* This function will convert a vector of menu_elem in the structure
  * that is input for channel_codes decribed above.

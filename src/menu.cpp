@@ -371,8 +371,11 @@ to_channel_hash_code_s2d2( std::vector<int> const& c1
 {
    constexpr auto depth = 2;
 
-   assert(std::size(c1) >= depth);
-   assert(std::size(c2) >= depth);
+   if (std::size(c1) < depth)
+      return 0;
+
+   if (std::size(c2) < depth)
+      return 0;
    
    // First menu.
    std::uint64_t c1a = c1.at(0);
@@ -382,40 +385,12 @@ to_channel_hash_code_s2d2( std::vector<int> const& c1
    std::uint64_t c2a = c2.at(0);
    std::uint64_t c2b = c2.at(1);
 
-   //std::cout << "====> ["
-   //          << c1a << ", "
-   //          << c1b << "] ["
-   //          << c2a << ", "
-   //          << c2b << "]"
-   //          << std::endl;
-
    c1a <<= 48;
    c1b <<= 32;
    c2a <<= 16;
    // c2b is already in the correct position.
 
    return c1a | c1b | c2a | c2b;
-}
-
-std::uint64_t
-to_hash_code(menu_code_type const& code)
-{
-   if (std::empty(code))
-      return 0;
-
-   // For each menu entry we expect only one code. Nothing bad would
-   // happen if more are provided, but it may be an error that I want
-   // to catch as soon as possible.
-   assert(std::size(code.front()) == 1);
-
-   auto const size = std::size(code);
-   switch (size) {
-   case 2: return to_channel_hash_code_s2d2( code.at(0).at(0)
-                                           , code.at(1).at(0));
-   }
-
-   assert(false);
-   return 0;
 }
 
 menu_code_type

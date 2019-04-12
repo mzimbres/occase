@@ -128,7 +128,7 @@ void worker::on_db_menu_msgs(std::vector<std::string> const& msgs)
 void worker::on_db_menu_msg(std::string const& msg)
 {
    auto const j = json::parse(msg);
-   auto item = j.get<pub_item>();
+   auto item = j.get<post>();
    auto const code = to_channel_hash_code(item.to);
    auto const g = channels.find(code);
    if (g == std::end(channels)) {
@@ -410,7 +410,7 @@ worker::on_user_subscribe( json const& j
       j.at("channels").get<menu_code_type>();
 
    auto n_channels = 0;
-   std::vector<pub_item> items;
+   std::vector<post> items;
 
    auto psession = s->get_proxy_session(true);
 
@@ -461,7 +461,7 @@ worker::on_user_publish(json j, std::shared_ptr<worker_session> s)
 {
    // TODO: Remove the restriction below that the items vector have
    // size one.
-   auto items = j.at("items").get<std::vector<pub_item>>();
+   auto items = j.at("items").get<std::vector<post>>();
 
    // Before we request a new pub id, we have to check that the post
    // is valid and will not be refused later. This prevents the pub

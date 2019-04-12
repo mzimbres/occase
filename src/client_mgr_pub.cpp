@@ -55,7 +55,7 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
 
    if (cmd == "publish") {
       // We are only interested in our own publishes at the moment.
-      auto items = j.at("items").get<std::vector<pub_item>>();
+      auto items = j.at("items").get<std::vector<post>>();
 
       auto cond = [this](auto const& e)
          { return e.from != op.user; };
@@ -150,11 +150,11 @@ int client_mgr_pub::send_group_msg(std::shared_ptr<client_type> s) const
    //std::cout << "Pub: Stack size: " << std::size(pub_stack)
    //          << std::endl;
 
-   pub_item item {-1, op.user, "Not an interesting message."
+   post item {-1, op.user, "Not an interesting message."
                  , pub_stack.top()};
    json j_msg;
    j_msg["cmd"] = "publish";
-   j_msg["items"] = std::vector<pub_item>{item};
+   j_msg["items"] = std::vector<post>{item};
    s->send_msg(j_msg.dump());
    return 1;
 }
@@ -231,11 +231,11 @@ int test_pub::on_closed(boost::system::error_code ec)
 int test_pub::pub( menu_code_type const& pub_code
                  , std::shared_ptr<client_type> s) const
 {
-   pub_item item {-1, op.user, "Not an interesting message."
+   post item {-1, op.user, "Not an interesting message."
                  , pub_code};
    json j_msg;
    j_msg["cmd"] = "publish";
-   j_msg["items"] = std::vector<pub_item>{item};
+   j_msg["items"] = std::vector<post>{item};
    s->send_msg(j_msg.dump());
    return 1;
 }

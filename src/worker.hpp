@@ -41,7 +41,7 @@ struct sessions_stats {
 // the pub id that were requested from redis.
 struct pub_queue_item {
    std::weak_ptr<worker_session> session;
-   pub_item item;
+   post item;
    std::string user_id;
 };
 

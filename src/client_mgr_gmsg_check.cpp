@@ -43,7 +43,7 @@ int client_mgr_gmsg_check::on_read( std::string msg
    }
 
    if (cmd == "publish") {
-      auto items = j.at("items").get<std::vector<pub_item>>();
+      auto items = j.at("items").get<std::vector<post>>();
 
       auto const f = [this, s](auto const& e)
       {

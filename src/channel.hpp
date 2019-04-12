@@ -80,7 +80,7 @@ private:
    // For long living servers we need a limit on how big the number of
    // publish items can grow. For that it is more convenient to use a
    // deque.
-   std::deque<pub_item> items;
+   std::deque<post> items;
 
    template <class F>
    auto cleanup_traversal(F f)
@@ -112,7 +112,7 @@ private:
       return n - begin + 1;
    }
 
-   void store_item(pub_item item, int max_posts)
+   void store_item(post item, int max_posts)
    {
       // We have to ensure this vector stays ordered according to
       // publish ids. Most of the time there will be no problem, but
@@ -133,11 +133,11 @@ private:
    }
 
 public:
-   void broadcast(pub_item item, int max_posts)
+   void broadcast(post item, int max_posts)
    {
       json j_pub;
       j_pub["cmd"] = "publish";
-      j_pub["items"] = std::vector<pub_item>{item};
+      j_pub["items"] = std::vector<post>{item};
 
       auto msg = std::make_shared<std::string>(j_pub.dump());
       store_item(std::move(item), max_posts);

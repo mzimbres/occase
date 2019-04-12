@@ -11,27 +11,27 @@ using menu_code_type = std::vector<std::vector<std::vector<int>>>;
 namespace rt
 {
 
-struct pub_item {
+struct post {
    int id;
    std::string from;
    std::string msg;
    menu_code_type to;
 
    friend
-   auto operator<(pub_item const& a, pub_item const& b) noexcept
+   auto operator<(post const& a, post const& b) noexcept
    {
       return a.id < b.id;
    }
 };
 
 inline
-void to_json(json& j, pub_item const& e)
+void to_json(json& j, post const& e)
 {
    j = json{{"id", e.id}, {"from", e.from}, {"msg", e.msg}, {"to", e.to}};
 }
 
 inline
-void from_json(json const& j, pub_item& e)
+void from_json(json const& j, post& e)
 {
   e.id = j.at("id").get<int>();
   e.from = j.at("from").get<std::string>();

@@ -409,7 +409,7 @@ to_channel_hash_code_s2d2( std::vector<int> const& c1
  * TODO: Check code validity on every call to this function.
  *
  */
-std::uint64_t to_channel_hash_code(menu_code_type const& codes);
+std::uint64_t to_hash_code(menu_code_type const& codes);
 
 /*
  * Similar to the version above, but the input menu codes may have an
@@ -419,9 +419,18 @@ std::uint64_t to_channel_hash_code(menu_code_type const& codes);
  *
  * At the moment only for depth 2 and menus with size 2.
  */
-std::uint64_t
-to_channel_hash_code2( menu_code_type const& codes
-                     , std::vector<int> const& comb);
+template <class RandomAccessIterator>
+inline std::uint64_t
+to_hash_code2( menu_code_type const& codes
+             , RandomAccessIterator comb)
+{
+   auto const idx1 = comb[1];
+   auto const idx2 = comb[2];
+
+   return to_channel_hash_code_s2d2( codes.at(0).at(idx1)
+                                   , codes.at(1).at(idx2));
+}
+
 
 /* This function will convert a vector of menu_elem in the structure
  * that is input for channel_codes decribed above.

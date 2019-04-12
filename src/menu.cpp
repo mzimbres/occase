@@ -398,36 +398,24 @@ to_channel_hash_code_s2d2( std::vector<int> const& c1
 }
 
 std::uint64_t
-to_channel_hash_code(menu_code_type const& code)
+to_hash_code(menu_code_type const& code)
 {
    if (std::empty(code))
       return 0;
 
+   // For each menu entry we expect only one code. Nothing bad would
+   // happen if more are provided, but it may be an error that I want
+   // to catch as soon as possible.
    assert(std::size(code.front()) == 1);
 
    auto const size = std::size(code);
    switch (size) {
-   case 2:
-   {
-      assert(std::size(code) == 2);
-      return to_channel_hash_code_s2d2( code.at(0).at(0)
-                                      , code.at(1).at(0));
-   }
+   case 2: return to_channel_hash_code_s2d2( code.at(0).at(0)
+                                           , code.at(1).at(0));
    }
 
    assert(false);
    return 0;
-}
-
-std::uint64_t
-to_channel_hash_code2( menu_code_type const& codes
-                     , std::vector<int> const& comb)
-{
-   auto const idx1 = comb.at(1);
-   auto const idx2 = comb.at(2);
-
-   return to_channel_hash_code_s2d2( codes.at(0).at(idx1)
-                                   , codes.at(1).at(idx2));
 }
 
 menu_code_type

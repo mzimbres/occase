@@ -82,7 +82,7 @@ void worker::create_channels(std::vector<menu_elem> const& menus_)
    auto existed = 0;
    auto f = [&, this](auto const& comb)
    {
-      auto const hash_code = to_channel_hash_code2(menu_codes, comb);
+      auto const hash_code = to_hash_code2(menu_codes, std::cbegin(comb));
 
       if (channels.insert({hash_code, {}}).second)
          ++created;
@@ -129,7 +129,7 @@ void worker::on_db_menu_msg(std::string const& msg)
 {
    auto const j = json::parse(msg);
    auto item = j.get<post>();
-   auto const code = to_channel_hash_code(item.to);
+   auto const code = to_hash_code(item.to);
    auto const g = channels.find(code);
    if (g == std::end(channels)) {
       // This can happen if the subscription to the menu channel
@@ -417,7 +417,7 @@ worker::on_user_subscribe( json const& j
    // Works only for two menus with depth 2.
    auto f = [&, this](auto const& comb)
    {
-      auto const hash_code = to_channel_hash_code2(menu_codes, comb);
+      auto const hash_code = to_hash_code2(menu_codes, std::cbegin(comb));
       auto const g = channels.find(hash_code);
       assert(g != std::end(channels));
       if (g == std::end(channels))
@@ -472,7 +472,7 @@ worker::on_user_publish(json j, std::shared_ptr<worker_session> s)
 
    // The channel code has the form [[[1, 2]], [[2, 3, 4]], [[1, 2]]]
    // where each array in the outermost array refers to one menu.
-   auto const hash_code = to_channel_hash_code(items.front().to);
+   auto const hash_code = to_hash_code(items.front().to);
 
    auto const g = channels.find(hash_code);
    if (g == std::end(channels) || std::size(items) != 1) {

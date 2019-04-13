@@ -25,7 +25,6 @@ auto get_server_op(int argc, char* argv[])
    std::string redis_db = "0";
    std::string log_on_stderr = "no";
    std::string conf_file;
-   std::string loglevel;
    std::string daemonize;
 
    po::options_description desc("Options");
@@ -46,6 +45,11 @@ auto get_server_op(int argc, char* argv[])
    ("daemonize"
    , po::value<std::string>(&daemonize)->default_value("no")
    , "Runs the server in the backgroud as daemon process."
+   )
+
+   ("pidfile"
+   , po::value<std::string>(&cfg.pidfile)
+   , "The pidfile."
    )
 
    ( "port"
@@ -268,7 +272,7 @@ int main(int argc, char* argv[])
 
       logger logg {argv[0], cfg.log_on_stderr};
       log_upto(cfg.loglevel);
-      pidfile_mgr pidfile_mgr_;
+      pidfile_mgr pidfile_mgr_ {cfg.pidfile};
 
       set_fd_limits(500000);
 

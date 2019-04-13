@@ -51,11 +51,12 @@ void set_fd_limits(int fds)
       , rl.rlim_cur, rl.rlim_cur);
 }
 
-pidfile_mgr::pidfile_mgr()
+pidfile_mgr::pidfile_mgr(std::string const& pidfile)
+: pidfile_ {pidfile}
 {
-   FILE *fp = fopen(pidfile.data(), "w");
+   FILE *fp = fopen(pidfile_.data(), "w");
    if (fp) {
-      log(loglevel::info, "Creating pid file {0}", pidfile);
+      log(loglevel::info, "Creating pid file {0}", pidfile_);
       fprintf(fp,"%d\n",(int) getpid());
       fclose(fp);
    } else {
@@ -65,10 +66,10 @@ pidfile_mgr::pidfile_mgr()
 
 pidfile_mgr::~pidfile_mgr()
 {
-   if (unlink(pidfile.data()) == 0) {
+   if (unlink(pidfile_.data()) == 0) {
       log( loglevel::info
          , "Pid file has been successfully removed: {0}"
-         , pidfile);
+         , pidfile_);
    }
 }
 

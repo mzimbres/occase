@@ -23,6 +23,7 @@ struct listener_cfg {
    stats_server_cfg stats;
    int number_of_workers;
    unsigned short port;
+   std::string pidfile;
 
    int login_timeout;
    int handshake_timeout;

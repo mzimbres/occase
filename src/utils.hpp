@@ -17,9 +17,12 @@ auto ssize(C const& c)
 void set_fd_limits(int fds);
 
 // Creates and removes the pid file using RAII.
-struct pidfile_mgr {
-   std::string const pidfile {"/var/run/menu_chat_server.pid"};
-   pidfile_mgr();
+class pidfile_mgr {
+private:
+   std::string pidfile_;
+
+public:
+   pidfile_mgr(std::string const& pidfile);
    ~pidfile_mgr();
 };
 

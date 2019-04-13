@@ -227,10 +227,16 @@ void facade::pub_menu_msg(std::string const& msg, int id)
    menu_pub_queue.push(request::publish);
 }
 
-void facade::request_pub_id()
+void facade::request_post_id()
 {
-   ss_menu_pub.send(incr(cfg.menu_msgs_counter_key));
-   menu_pub_queue.push(request::pub_counter);
+   ss_menu_pub.send(incr(cfg.post_id_key));
+   menu_pub_queue.push(request::post_id);
+}
+
+void facade::request_user_id()
+{
+   ss_chat_pub.send(incr(cfg.user_id_key));
+   menu_pub_queue.push(request::user_id);
 }
 
 void facade::retrieve_menu_msgs(int begin)

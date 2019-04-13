@@ -159,11 +159,16 @@ auto get_server_op(int argc, char* argv[])
    , "Redis key holding the menus in json format."
    )
 
-   ( "redis-menu-msgs-counter-key"
-   , po::value<std::string>(&cfg.worker.db.cfg.menu_msgs_counter_key)->
-        default_value("menu_msgs_counter")
-   , "The name of the key used to store the number of menu messages sent"
-     " so far."
+   ( "redis-post-id-key"
+   , po::value<std::string>(&cfg.worker.db.cfg.post_id_key)->
+        default_value("post_id")
+   , "The Key used to store post ids."
+   )
+
+   ( "redis-user-id-key"
+   , po::value<std::string>(&cfg.worker.db.cfg.user_id_key)->
+        default_value("user_id")
+   , "The Key used to store the user ids."
    )
 
    ( "redis-user-msgs-counter-key"

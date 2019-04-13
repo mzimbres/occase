@@ -195,9 +195,9 @@ worker::on_db_event( std::vector<std::string> data
          on_db_get_menu(data.back());
          break;
 
-      case redis::request::pub_counter:
+      case redis::request::post_id:
          assert(std::size(data) == 1);
-         on_db_pub_counter(data.back());
+         on_db_post_id(data.back());
          break;
 
       case redis::request::publish:
@@ -244,12 +244,12 @@ void worker::on_db_publish()
 {
    pub_wait_queue.pop();
    if (!std::empty(pub_wait_queue))
-      db.request_pub_id();
+      db.request_post_id();
 }
 
-void worker::on_db_pub_counter(std::string const& pub_id_str)
+void worker::on_db_post_id(std::string const& post_id_str)
 {
-   auto const pub_id = std::stoi(pub_id_str);
+   auto const pub_id = std::stoi(post_id_str);
    pub_wait_queue.front().item.id = pub_id;
    json const j_item = pub_wait_queue.front().item;
    db.pub_menu_msg(j_item.dump(), pub_id);
@@ -431,7 +431,7 @@ worker::on_user_publish(json j, std::shared_ptr<worker_session> s)
    pub_wait_queue.push({s, std::move(items.front()), items.front().from});
 
    if (is_empty)
-      db.request_pub_id();
+      db.request_post_id();
 
    return ev_res::publish_ok;
 }

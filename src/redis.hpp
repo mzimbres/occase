@@ -12,7 +12,8 @@ enum class request
 , chat_messages
 , ignore
 , publish
-, pub_counter
+, post_id
+, user_id
 , get_user_msg
 , menu_connect
 , menu_msgs
@@ -53,7 +54,7 @@ struct db_cfg {
 
    // The key used to store the menu message id. Each post gets an id
    // by increasing the last id by one.
-   std::string menu_msgs_counter_key;
+   std::string post_id_key;
 
    // Chat messsage counter. It is used only to count the number of
    // messages sent so far.
@@ -61,7 +62,7 @@ struct db_cfg {
 
    // User registration id counter key. When an app connects to the
    // server for the first time it will get an id.
-   std::string user_reg_id_counter;
+   std::string user_id_key;
 
    // Expiration time for user message keys. Keys will be deleted on
    // expiration and all chat messages that have not been retrieved
@@ -190,9 +191,9 @@ public:
    // Requests a new post id from redis by increasing the last one.
    // Completes with
    //
-   //    redis::request::pub_counter
+   //    redis::request::post_id
    //
-   void request_pub_id();
+   void request_post_id();
 
    // Retrieves menu messages whose ids are greater than or equal
    // to begin. Completes with the event
@@ -206,6 +207,13 @@ public:
    //    redis::request::chat_messages
    //
    void retrieve_chat_msgs(std::string const& user_id);
+   //
+   // Requests a new user id from redis by increasing the last one.
+   // Completes with
+   //
+   //    redis::request::user_id
+   //
+   void request_user_id();
 
    // Closes all stablished connections with redis.
    void disconnect();

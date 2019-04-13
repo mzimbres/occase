@@ -100,7 +100,7 @@ private:
    void on_db_menu_msg(std::string const& data);
    void on_db_event( std::vector<std::string> resp
                    , redis::req_item const& cmd);
-   void on_db_pub_counter(std::string const& data);
+   void on_db_post_id(std::string const& data);
    void on_db_publish();
    void on_db_menu_msgs(std::vector<std::string> const& msgs);
    void on_db_menu_connect();

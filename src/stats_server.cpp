@@ -76,7 +76,7 @@ private:
                 << ";"
                 << worker_.get_db().get_menu_pub_queue_size()
                 << ";"
-                << worker_.get_db().get_user_pub_queue_size()
+                << worker_.get_db().get_chat_pub_queue_size()
                 << "\n";
         } else {
             response_.result(http::status::not_found);

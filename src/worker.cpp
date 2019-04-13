@@ -158,7 +158,7 @@ worker::on_db_chat_msg( std::string const& user_id
       //
       // It is also such a rare situation that I won't care about
       // optimizing it by using move iterators.
-      db.store_user_msg( user_id
+      db.store_chat_msg( user_id
                        , std::make_move_iterator(std::begin(msgs))
                        , std::make_move_iterator(std::end(msgs)));
       return;
@@ -186,7 +186,7 @@ worker::on_db_event( std::vector<std::string> data
 {
    switch (req.req)
    {
-      case redis::request::unsol_user_msgs:
+      case redis::request::chat_messages:
          on_db_chat_msg(req.user_id, std::move(data));
          break;
 
@@ -234,7 +234,7 @@ void worker::on_db_menu_connect()
    //    messages that may have arrived while we were offline.
 
    if (std::empty(menus)) {
-      db.async_retrieve_menu();
+      db.retrieve_menu();
    } else {
       db.retrieve_menu_msgs(1 + last_menu_msg_id);
    }
@@ -276,7 +276,7 @@ void worker::on_db_pub_counter(std::string const& pub_id_str)
 
    std::initializer_list<std::string> param = {ack_str};
 
-   db.store_user_msg( std::move(pub_wait_queue.front().user_id)
+   db.store_chat_msg( std::move(pub_wait_queue.front().user_id)
                     , std::make_move_iterator(std::begin(param))
                     , std::make_move_iterator(std::end(param)));
 }
@@ -454,7 +454,7 @@ void worker::on_session_dtor( std::string const& id
    db.unsubscribe_to_chat_msgs(id);
 
    if (!std::empty(msgs)) {
-      db.store_user_msg( std::move(id)
+      db.store_chat_msg( std::move(id)
                        , std::make_move_iterator(std::begin(msgs))
                        , std::make_move_iterator(std::end(msgs)));
    }
@@ -473,7 +473,7 @@ worker::on_chat_msg( std::string msg, json const& j
 
    std::initializer_list<std::string> param = {msg};
 
-   db.store_user_msg( std::move(to)
+   db.store_chat_msg( std::move(to)
                     , std::make_move_iterator(std::begin(param))
                     , std::make_move_iterator(std::end(param)));
 

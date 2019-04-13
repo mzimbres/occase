@@ -167,7 +167,7 @@ auto get_server_op(int argc, char* argv[])
    )
 
    ( "redis-user-msgs-counter-key"
-   , po::value<std::string>(&cfg.worker.db.cfg.user_msgs_counter_key)->
+   , po::value<std::string>(&cfg.worker.db.cfg.chat_msgs_counter_key)->
         default_value("user_msgs_counter")
    , "The name of the key used to store the number of user messages sent"
      " so far."
@@ -187,7 +187,7 @@ auto get_server_op(int argc, char* argv[])
    )
 
    ("redis-user-msg-exp_time"
-   , po::value<int>(&cfg.worker.db.cfg.user_msg_exp_time)->
+   , po::value<int>(&cfg.worker.db.cfg.chat_msg_exp_time)->
         default_value(7 * 24 * 60 * 60)
    , "Expiration time in seconds for redis user message keys."
      " After the time has elapsed the keys will be deleted."
@@ -207,7 +207,7 @@ auto get_server_op(int argc, char* argv[])
    )
 
    ( "redis-menu-channel"
-   , po::value<std::string>(&cfg.worker.db.cfg.menu_channel)->
+   , po::value<std::string>(&cfg.worker.db.cfg.menu_channel_key)->
         default_value("menu_channel")
    , "The name of the redis channel where publish commands "
      "are be broadcasted to all workers connected to this channel. "

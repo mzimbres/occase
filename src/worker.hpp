@@ -74,23 +74,24 @@ private:
 
    // Queue of user posts waiting for an id that has been requested
    // from redis.
-   std::queue<pub_queue_item> pub_wait_queue;
+   std::queue<pub_queue_item> post_queue;
 
    int last_menu_msg_id = 0;
 
    void init();
+   void create_channels(std::vector<menu_elem> const& menus);
 
-   ev_res on_user_login( json const& j
-                       , std::shared_ptr<worker_session> s);
+   ev_res on_app_login( json const& j
+                      , std::shared_ptr<worker_session> s);
 
-   ev_res on_user_subscribe( json const& j
-                           , std::shared_ptr<worker_session> s);
+   ev_res on_app_subscribe( json const& j
+                          , std::shared_ptr<worker_session> s);
 
-   ev_res on_chat_msg( std::string msg, json const& j
-                     , std::shared_ptr<worker_session> s);
-
-   ev_res on_user_publish( json j
+   ev_res on_app_chat_msg( std::string msg, json const& j
                          , std::shared_ptr<worker_session> s);
+
+   ev_res on_app_publish( json j
+                        , std::shared_ptr<worker_session> s);
 
    // Handlers for events we receive from the database.
    void on_db_chat_msg( std::string const& user_id
@@ -105,8 +106,6 @@ private:
    void on_db_menu_msgs(std::vector<std::string> const& msgs);
    void on_db_menu_connect();
 
-   void create_channels(std::vector<menu_elem> const& menus);
-
 public:
    worker(worker_cfg cfg, int id_, net::io_context& ioc);
 
@@ -119,7 +118,7 @@ public:
    ev_res on_message(std::shared_ptr<worker_session> s, std::string msg);
 
    auto get_pub_queue_size() const noexcept
-      { return std::size(pub_wait_queue);}
+      { return std::size(post_queue);}
    auto const& get_timeouts() const noexcept
       { return timeouts;}
    auto& get_ws_stats() noexcept

@@ -116,8 +116,7 @@ void worker::on_db_menu_msgs(std::vector<std::string> const& msgs)
    if (std::empty(channels))
       create_channels(menus);
 
-   log( loglevel::info
-      , "W{0}: {1} messages received from the database."
+   log( loglevel::info, "W{0}: {1} messages received from the database."
       , id, std::size(msgs));
 
    auto loader = [this](auto const& msg)
@@ -129,9 +128,9 @@ void worker::on_db_menu_msgs(std::vector<std::string> const& msgs)
 void worker::on_db_menu_msg(std::string const& msg)
 {
    auto const j = json::parse(msg);
-   auto item = j.get<post>();
-   auto const code = to_hash_code(item.to);
-   auto const g = channels.find(code);
+   auto const item = j.get<post>();
+   auto const hash_code = to_hash_code(item.to);
+   auto const g = channels.find(hash_code);
    if (g == std::end(channels)) {
       // This can happen if the subscription to the menu channel
       // happens before we receive the menu and generate the channels.
@@ -155,9 +154,6 @@ worker::on_db_chat_msg( std::string const& user_id
       // The user went offline. We have to enqueue the message again.
       // This is difficult to test since the retrieval of messages
       // from the database is pretty fast.
-      //
-      // It is also such a rare situation that I won't care about
-      // optimizing it by using move iterators.
       db.store_chat_msg( user_id
                        , std::make_move_iterator(std::begin(msgs))
                        , std::make_move_iterator(std::end(msgs)));
@@ -242,28 +238,28 @@ void worker::on_db_menu_connect()
 
 void worker::on_db_publish()
 {
-   pub_wait_queue.pop();
-   if (!std::empty(pub_wait_queue))
+   post_queue.pop();
+   if (!std::empty(post_queue))
       db.request_post_id();
 }
 
 void worker::on_db_post_id(std::string const& post_id_str)
 {
-   auto const pub_id = std::stoi(post_id_str);
-   pub_wait_queue.front().item.id = pub_id;
-   json const j_item = pub_wait_queue.front().item;
-   db.pub_menu_msg(j_item.dump(), pub_id);
+   auto const post_id = std::stoi(post_id_str);
+   post_queue.front().item.id = post_id;
+   json const j_item = post_queue.front().item;
+   db.pub_menu_msg(j_item.dump(), post_id);
 
    // It is important that the publisher receives this message before
    // any user sends him a user message about the post. He needs a
-   // pub_id to know to which post the user refers to.
+   // post_id to know to which post the user refers to.
    json ack;
    ack["cmd"] = "publish_ack";
    ack["result"] = "ok";
-   ack["id"] = pub_wait_queue.front().item.id;
+   ack["id"] = post_queue.front().item.id;
    auto ack_str = ack.dump();
 
-   if (auto s = pub_wait_queue.front().session.lock()) {
+   if (auto s = post_queue.front().session.lock()) {
       s->send(std::move(ack_str), true);
       return;
    }
@@ -276,14 +272,14 @@ void worker::on_db_post_id(std::string const& post_id_str)
 
    std::initializer_list<std::string> param = {ack_str};
 
-   db.store_chat_msg( std::move(pub_wait_queue.front().user_id)
+   db.store_chat_msg( std::move(post_queue.front().user_id)
                     , std::make_move_iterator(std::begin(param))
                     , std::make_move_iterator(std::end(param)));
 }
 
 ev_res
-worker::on_user_login( json const& j
-                     , std::shared_ptr<worker_session> s)
+worker::on_app_login( json const& j
+                    , std::shared_ptr<worker_session> s)
 {
    auto const from = j.at("from").get<std::string>();
 
@@ -309,7 +305,6 @@ worker::on_user_login( json const& j
    //}
 
    s->set_id(from);
-   assert(s->is_auth());
 
    db.subscribe_to_chat_msgs(s->get_id());
    db.retrieve_chat_msgs(s->get_id());
@@ -339,8 +334,8 @@ worker::on_user_login( json const& j
 }
 
 ev_res
-worker::on_user_subscribe( json const& j
-                         , std::shared_ptr<worker_session> s)
+worker::on_app_subscribe( json const& j
+                        , std::shared_ptr<worker_session> s)
 {
    auto const menu_codes =
       j.at("channels").get<menu_code_type>();
@@ -350,7 +345,6 @@ worker::on_user_subscribe( json const& j
 
    auto psession = s->get_proxy_session(true);
 
-   // Works only for two menus with depth 2.
    auto f = [&, this](auto const& comb)
    {
       auto const hash_code =
@@ -394,7 +388,7 @@ worker::on_user_subscribe( json const& j
 }
 
 ev_res
-worker::on_user_publish(json j, std::shared_ptr<worker_session> s)
+worker::on_app_publish(json j, std::shared_ptr<worker_session> s)
 {
    // TODO: Remove the restriction below that the items vector have
    // size one.
@@ -426,9 +420,9 @@ worker::on_user_publish(json j, std::shared_ptr<worker_session> s)
       return ev_res::publish_fail;
    }
 
-   auto const is_empty = std::empty(pub_wait_queue);
+   auto const is_empty = std::empty(post_queue);
 
-   pub_wait_queue.push({s, std::move(items.front()), items.front().from});
+   post_queue.push({s, std::move(items.front()), items.front().from});
 
    if (is_empty)
       db.request_post_id();
@@ -461,13 +455,13 @@ void worker::on_session_dtor( std::string const& id
 }
 
 ev_res
-worker::on_chat_msg( std::string msg, json const& j
-                   , std::shared_ptr<worker_session> s)
+worker::on_app_chat_msg( std::string msg, json const& j
+                       , std::shared_ptr<worker_session> s)
 {
-   // TODO: Search the sessions map if the user is online and in this
-   // node and send him his message directly to avoid overloading the
-   // redis server. This would be a big optimization in the case of
-   // small number of nodes.
+   // Consider searching the sessions map if the user in this worker
+   // and send him his message directly to avoid overloading the redis
+   // server. This would be a big optimization in the case of small
+   // number of workers.
 
    auto to = j.at("to").get<std::string>();
 
@@ -486,12 +480,10 @@ worker::on_chat_msg( std::string msg, json const& j
 
 void worker::shutdown()
 {
-   log( loglevel::notice
-      , "W{0}: Shutting down has been requested."
+   log( loglevel::notice, "W{0}: Shutting down has been requested."
       , id);
 
-   log( loglevel::notice
-      , "W{0}: {1} sessions will be closed."
+   log( loglevel::notice, "W{0}: {1} sessions will be closed."
       , id, std::size(sessions));
 
    auto f = [](auto o)
@@ -513,16 +505,16 @@ worker::on_message(std::shared_ptr<worker_session> s, std::string msg)
 
    if (s->is_auth()) {
       if (cmd == "subscribe")
-         return on_user_subscribe(j, s);
+         return on_app_subscribe(j, s);
 
       if (cmd == "publish")
-         return on_user_publish(std::move(j), s);
+         return on_app_publish(std::move(j), s);
 
       if (cmd == "user_msg")
-         return on_chat_msg(std::move(msg), j, s);
+         return on_app_chat_msg(std::move(msg), j, s);
    } else {
       if (cmd == "auth")
-         return on_user_login(j, s);
+         return on_app_login(j, s);
    }
 
    return ev_res::unknown;

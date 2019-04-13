@@ -23,7 +23,7 @@ namespace rt
 struct worker_only_cfg {
    // The maximum number of channels that is allowed to be sent to the
    // user on subscribe.
-   int max_menu_msg_on_sub; 
+   int max_posts_on_sub; 
 };
 
 struct worker_cfg {
@@ -39,7 +39,7 @@ struct sessions_stats {
 
 // We have to store publish items in this queue while we wait for
 // the pub id that were requested from redis.
-struct pub_queue_item {
+struct post_queue_item {
    std::weak_ptr<worker_session> session;
    post item;
    std::string user_id;
@@ -74,9 +74,9 @@ private:
 
    // Queue of user posts waiting for an id that has been requested
    // from redis.
-   std::queue<pub_queue_item> post_queue;
+   std::queue<post_queue_item> post_queue;
 
-   int last_menu_msg_id = 0;
+   int last_post_id = 0;
 
    void init();
    void create_channels(std::vector<menu_elem> const& menus);
@@ -97,13 +97,13 @@ private:
    void on_db_chat_msg( std::string const& user_id
                       , std::vector<std::string> msgs);
 
-   void on_db_get_menu(std::string const& data);
-   void on_db_menu_msg(std::string const& data);
+   void on_db_menu(std::string const& data);
+   void on_db_post(std::string const& data);
+   void on_db_posts(std::vector<std::string> const& msgs);
    void on_db_event( std::vector<std::string> resp
                    , redis::req_item const& cmd);
    void on_db_post_id(std::string const& data);
    void on_db_publish();
-   void on_db_menu_msgs(std::vector<std::string> const& msgs);
    void on_db_menu_connect();
 
 public:
@@ -117,7 +117,7 @@ public:
 
    ev_res on_message(std::shared_ptr<worker_session> s, std::string msg);
 
-   auto get_pub_queue_size() const noexcept
+   auto get_post_queue_size() const noexcept
       { return std::size(post_queue);}
    auto const& get_timeouts() const noexcept
       { return timeouts;}

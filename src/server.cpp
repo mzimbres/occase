@@ -118,8 +118,8 @@ auto get_server_op(int argc, char* argv[])
      " info, debug."
    )
 
-   ( "max-menu-msgs-on-subscribe"
-   , po::value<int>(&cfg.worker.worker.max_menu_msg_on_sub)->default_value(50)
+   ( "max-posts-on-subscribe"
+   , po::value<int>(&cfg.worker.worker.max_posts_on_sub)->default_value(50)
    , "The maximum number of messages that is allowed to be sent to "
      "the user when he subscribes to his channels."
    )
@@ -178,8 +178,8 @@ auto get_server_op(int argc, char* argv[])
      " so far."
    )
 
-   ( "redis-msg-prefix"
-   , po::value<std::string>(&cfg.worker.db.cfg.msg_prefix)->
+   ( "redis-chat-msg-prefix"
+   , po::value<std::string>(&cfg.worker.db.cfg.chat_msg_prefix)->
         default_value("msg")
    , "That prefix that will be incorporated in the keys that hold"
      " user messages."
@@ -198,17 +198,17 @@ auto get_server_op(int argc, char* argv[])
      " After the time has elapsed the keys will be deleted."
    )
 
-   ( "redis-menu-msgs-key"
-   , po::value<std::string>(&cfg.worker.db.cfg.menu_msgs_key)->
-        default_value("menu_msgs")
-   , "Redis key used to store menu msgs (in a sorted set)."
+   ( "redis-posts-key"
+   , po::value<std::string>(&cfg.worker.db.cfg.posts_key)->
+        default_value("posts")
+   , "Redis key used to store posts (in a sorted set)."
    )
 
-   ( "redis-user-max-offline-msgs"
-   , po::value<int>(&cfg.worker.db.cfg.max_offline_msgs)->
+   ( "redis-offline-chat-msgs"
+   , po::value<int>(&cfg.worker.db.cfg.max_offline_chat_msgs)->
         default_value(100)
    , "The maximum number of messages a user is allowed to accumulate "
-     " (while he is offline)."
+     " (when he is offline)."
    )
 
    ( "redis-menu-channel"
@@ -244,10 +244,10 @@ auto get_server_op(int argc, char* argv[])
    cfg.log_on_stderr = log_on_stderr == "yes";
    cfg.daemonize = daemonize == "yes";
 
-   cfg.worker.db.cfg.msg_prefix += ":";
+   cfg.worker.db.cfg.chat_msg_prefix += ":";
    cfg.worker.db.cfg.notify_prefix += redis_db + "__:";
    cfg.worker.db.cfg.user_notify_prefix = cfg.worker.db.cfg.notify_prefix
-                                      + cfg.worker.db.cfg.msg_prefix;
+                                      + cfg.worker.db.cfg.chat_msg_prefix;
 
    cfg.worker.db.ss_cfg.conn_retry_interval =
       std::chrono::milliseconds {conn_retry_interval};

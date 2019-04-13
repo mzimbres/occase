@@ -64,7 +64,7 @@ void facade::on_chat_pub_conn()
 void facade::retrieve_menu()
 {
    ss_menu_pub.send(get(cfg.menu_key));
-   menu_pub_queue.push(request::get_menu);
+   menu_pub_queue.push(request::menu);
 }
 
 void facade::on_menu_sub( boost::system::error_code const& ec
@@ -96,7 +96,7 @@ void facade::on_menu_sub( boost::system::error_code const& ec
    if (data[1] == key) {
       // A menu update has been received.
       ss_menu_pub.send(get(cfg.menu_key));
-      menu_pub_queue.push(request::get_menu);
+      menu_pub_queue.push(request::menu);
       return;
    }
 }
@@ -120,7 +120,7 @@ facade::on_menu_pub( boost::system::error_code const& ec
       return;
    }
 
-   if (menu_pub_queue.front() != request::menu_msgs) {
+   if (menu_pub_queue.front() != request::posts) {
       assert(!std::empty(data));
    }
 
@@ -154,7 +154,7 @@ facade::on_user_pub( boost::system::error_code const& ec
    // This session is not subscribed to any unsolicited message.
    assert(!std::empty(chat_pub_queue));
 
-   if (chat_pub_queue.front().req == request::get_user_msg) {
+   if (chat_pub_queue.front().req == request::get_chat_msgs) {
       req_item const item { request::chat_messages
                           , std::move(chat_pub_queue.front().user_id)};
 
@@ -189,7 +189,7 @@ facade::on_user_sub( boost::system::error_code const& ec
 
 void facade::retrieve_chat_msgs(std::string const& user_id)
 {
-   auto const key = cfg.msg_prefix + user_id;
+   auto const key = cfg.chat_msg_prefix + user_id;
    auto cmd = multi()
             + lrange(key, 0, -1)
             + del(key)
@@ -199,7 +199,7 @@ void facade::retrieve_chat_msgs(std::string const& user_id)
    chat_pub_queue.push({request::ignore, {}});
    chat_pub_queue.push({request::ignore, {}});
    chat_pub_queue.push({request::ignore, {}});
-   chat_pub_queue.push({request::get_user_msg, user_id});
+   chat_pub_queue.push({request::get_chat_msgs, user_id});
    chat_pub_queue.push({request::ignore, {}});
 }
 
@@ -213,10 +213,10 @@ void facade::unsubscribe_to_chat_msgs(std::string const& id)
    ss_chat_sub.send(unsubscribe(cfg.user_notify_prefix + id));
 }
 
-void facade::pub_menu_msg(std::string const& msg, int id)
+void facade::post(std::string const& msg, int id)
 {
    auto cmd = multi()
-            + zadd(cfg.menu_msgs_key, id, msg)
+            + zadd(cfg.posts_key, id, msg)
             + publish(cfg.menu_channel_key, msg)
             + exec();
 
@@ -224,7 +224,7 @@ void facade::pub_menu_msg(std::string const& msg, int id)
    menu_pub_queue.push(request::ignore);
    menu_pub_queue.push(request::ignore);
    menu_pub_queue.push(request::ignore);
-   menu_pub_queue.push(request::publish);
+   menu_pub_queue.push(request::post);
 }
 
 void facade::request_post_id()
@@ -239,13 +239,13 @@ void facade::request_user_id()
    menu_pub_queue.push(request::user_id);
 }
 
-void facade::retrieve_menu_msgs(int begin)
+void facade::retrieve_posts(int begin)
 {
-   log( loglevel::debug, "W{0}/facade::retrieve_menu_msgs({1})."
+   log( loglevel::debug, "W{0}/facade::retrieve_posts({1})."
       , worker_id, begin);
 
-   ss_menu_pub.send(zrangebyscore(cfg.menu_msgs_key, begin, -1));
-   menu_pub_queue.push(request::menu_msgs);
+   ss_menu_pub.send(zrangebyscore(cfg.posts_key, begin, -1));
+   menu_pub_queue.push(request::posts);
 }
 
 void facade::disconnect()

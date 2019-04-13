@@ -8,15 +8,15 @@ namespace rt::redis
 {
 
 enum class request
-{ get_menu
+{ menu
 , chat_messages
 , ignore
-, publish
+, post
+, posts
 , post_id
 , user_id
-, get_user_msg
+, get_chat_msgs
 , menu_connect
-, menu_msgs
 , unsol_publish
 };
 
@@ -32,13 +32,13 @@ struct db_cfg {
    // Key in redis holding the menu in json format.
    std::string menu_key;
 
-   // The key used to store menu_msgs in redis.
-   std::string menu_msgs_key;
+   // The key used to store posts in redis.
+   std::string posts_key;
 
-   // The prefix of user message keys. The complete key will be a
+   // The prefix of chat message keys. The complete key will be a
    // composition of this prefix and the user id separate by a ":"
    // e.g. msg:mzimbres@gmail.com.
-   std::string msg_prefix;
+   std::string chat_msg_prefix;
 
    // Redis keyspace notification prefix. When a key is touched redis
    // sendd us a notification. This is how a worker gets notified that
@@ -71,7 +71,7 @@ struct db_cfg {
 
    // The maximum number of chat messages a user is allowed to
    // accumulate on the server (when he is offline).
-   int max_offline_msgs {100};
+   int max_offline_chat_msgs {100};
 };
 
 struct config {
@@ -143,7 +143,7 @@ public:
    void run();
 
    // Retrieves the menu asynchronously. The callback will complete
-   // with redis::request::get_menu.
+   // with redis::request::menu.
    void retrieve_menu();
 
    // Instructs redis to notify us upon any change to the given
@@ -165,7 +165,7 @@ public:
    template <class Iter>
    void store_chat_msg(std::string id, Iter begin, Iter end)
    {
-      auto const key = cfg.msg_prefix + id;
+      auto const key = cfg.chat_msg_prefix + id;
       auto cmd_str = multi()
                    + incr(cfg.chat_msgs_counter_key)
                    + lpush(key, begin, end)
@@ -184,9 +184,9 @@ public:
    // Publishes the message on a redis channel where it is broadcasted
    // to all workers. Completes with
    //
-   //    redis::request::publish
+   //    redis::request::post
    //
-   void pub_menu_msg(std::string const& msg, int id);
+   void post(std::string const& msg, int id);
 
    // Requests a new post id from redis by increasing the last one.
    // Completes with
@@ -198,9 +198,9 @@ public:
    // Retrieves menu messages whose ids are greater than or equal
    // to begin. Completes with the event
    //
-   //    redis::request::menu_msgs
+   //    redis::request::posts
    //
-   void retrieve_menu_msgs(int begin);
+   void retrieve_posts(int begin);
 
    // Retrieves user messages. Completes with the event
    //
@@ -218,10 +218,10 @@ public:
    // Closes all stablished connections with redis.
    void disconnect();
 
-   auto get_menu_pub_queue_size() const noexcept
+   auto get_post_queue_size() const noexcept
       { return std::size(menu_pub_queue);}
 
-   auto get_chat_pub_queue_size() const noexcept
+   auto get_chat_queue_size() const noexcept
       { return std::size(chat_pub_queue);}
 };
 

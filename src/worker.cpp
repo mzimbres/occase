@@ -33,7 +33,7 @@ void worker::init()
    db.run();
 }
 
-void worker::on_db_get_menu(std::string const& data)
+void worker::on_db_menu(std::string const& data)
 {
    auto const j_menu = json::parse(data);
    auto const is_empty = std::empty(menus);
@@ -56,13 +56,13 @@ void worker::on_db_get_menu(std::string const& data)
       // of messages is fast.
       //
       // The channel creation will be delegated to the
-      // *retrieve_menu_msgs* handler.
+      // *retrieve_posts* handler.
 
       // We may wish to check whether the menu received above is valid
       // before we proceed with the retrieval of the menu messages.
       // For example check if the menus have the correct number of
       // elements and the correct depth for each element.
-      db.retrieve_menu_msgs(0);
+      db.retrieve_posts(0);
       return;
    }
 
@@ -100,7 +100,7 @@ void worker::create_channels(std::vector<menu_elem> const& menus_)
       log(loglevel::info, "W{0}: {1} already existed.", id, existed);
 }
 
-void worker::on_db_menu_msgs(std::vector<std::string> const& msgs)
+void worker::on_db_posts(std::vector<std::string> const& msgs)
 {
    // This function has two roles.
    //
@@ -120,12 +120,12 @@ void worker::on_db_menu_msgs(std::vector<std::string> const& msgs)
       , id, std::size(msgs));
 
    auto loader = [this](auto const& msg)
-      { on_db_menu_msg(msg); };
+      { on_db_post(msg); };
 
    std::for_each(std::begin(msgs), std::end(msgs), loader);
 }
 
-void worker::on_db_menu_msg(std::string const& msg)
+void worker::on_db_post(std::string const& msg)
 {
    auto const j = json::parse(msg);
    auto const item = j.get<post>();
@@ -139,8 +139,8 @@ void worker::on_db_menu_msg(std::string const& msg)
       return;
    }
 
-   if (item.id > last_menu_msg_id)
-      last_menu_msg_id = item.id;
+   if (item.id > last_post_id)
+      last_post_id = item.id;
 
    g->second.broadcast(item, ch_cfg.max_posts);
 }
@@ -186,9 +186,9 @@ worker::on_db_event( std::vector<std::string> data
          on_db_chat_msg(req.user_id, std::move(data));
          break;
 
-      case redis::request::get_menu:
+      case redis::request::menu:
          assert(std::size(data) == 1);
-         on_db_get_menu(data.back());
+         on_db_menu(data.back());
          break;
 
       case redis::request::post_id:
@@ -196,7 +196,7 @@ worker::on_db_event( std::vector<std::string> data
          on_db_post_id(data.back());
          break;
 
-      case redis::request::publish:
+      case redis::request::post:
          on_db_publish();
          break;
 
@@ -204,13 +204,13 @@ worker::on_db_event( std::vector<std::string> data
          on_db_menu_connect();
          break;
 
-      case redis::request::menu_msgs:
-         on_db_menu_msgs(data);
+      case redis::request::posts:
+         on_db_posts(data);
          break;
 
       case redis::request::unsol_publish:
          assert(std::size(data) == 1);
-         on_db_menu_msg(data.back());
+         on_db_post(data.back());
          break;
 
       default:
@@ -232,7 +232,7 @@ void worker::on_db_menu_connect()
    if (std::empty(menus)) {
       db.retrieve_menu();
    } else {
-      db.retrieve_menu_msgs(1 + last_menu_msg_id);
+      db.retrieve_posts(1 + last_post_id);
    }
 }
 
@@ -248,7 +248,7 @@ void worker::on_db_post_id(std::string const& post_id_str)
    auto const post_id = std::stoi(post_id_str);
    post_queue.front().item.id = post_id;
    json const j_item = post_queue.front().item;
-   db.pub_menu_msg(j_item.dump(), post_id);
+   db.post(j_item.dump(), post_id);
 
    // It is important that the publisher receives this message before
    // any user sends him a user message about the post. He needs a
@@ -362,16 +362,16 @@ worker::on_app_subscribe( json const& j
 
    visit_menu_codes(menu_codes, f, ch_cfg.max_sub);
 
-   if (ssize(items) > cfg.max_menu_msg_on_sub) {
+   if (ssize(items) > cfg.max_posts_on_sub) {
       auto comp = [](auto const& a, auto const& b)
          { return a.id > b.id; };
 
       std::nth_element( std::begin(items)
-                      , std::begin(items) + cfg.max_menu_msg_on_sub
+                      , std::begin(items) + cfg.max_posts_on_sub
                       , std::end(items)
                       , comp);
 
-      items.erase( std::begin(items) + cfg.max_menu_msg_on_sub
+      items.erase( std::begin(items) + cfg.max_posts_on_sub
                  , std::end(items));
    }
 

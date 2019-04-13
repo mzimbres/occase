@@ -24,7 +24,7 @@ worker_session::worker_session(net::ip::tcp::socket socket, worker& w)
 
 worker_session::~worker_session()
 {
-   if (is_auth()) {
+   if (is_logged_in()) {
       // We also have to store all messages we weren't able to deliver
       // to the user, due to, for example, a disconnection. But we are
       // only interested in the persist messages.
@@ -118,7 +118,7 @@ void worker_session::on_accept(boost::system::error_code ec)
    // The cancelling of this timer should happen when either
    // 1. The session is autheticated or a register is performed.
    // 2. The user requests a register.
-   timer.expires_after(worker_.get_timeouts().auth);
+   timer.expires_after(worker_.get_timeouts().login);
 
    auto const handler = [p = shared_from_this()](auto const& ec)
    {

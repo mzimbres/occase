@@ -12,10 +12,10 @@ int client_mgr_gmsg_check::on_read( std::string msg
    auto const j = json::parse(msg);
 
    auto const cmd = j.at("cmd").get<std::string>();
-   if (cmd == "auth_ack") {
+   if (cmd == "login_ack") {
       auto const res = j.at("result").get<std::string>();
       if (res != "ok")
-         throw std::runtime_error("client_mgr_gmsg_check::auth_ack");
+         throw std::runtime_error("client_mgr_gmsg_check::login_ack");
 
       menus = j.at("menus").get<std::vector<menu_elem>>();
       auto const menu_codes = menu_elems_to_codes(menus);
@@ -82,7 +82,7 @@ int client_mgr_gmsg_check::on_read( std::string msg
 int client_mgr_gmsg_check::on_handshake(std::shared_ptr<client_type> s)
 {
    json j;
-   j["cmd"] = "auth";
+   j["cmd"] = "login";
    j["from"] = op.user;
    j["menu_versions"] = std::vector<int> {};
    s->send_msg(j.dump());

@@ -32,7 +32,7 @@ enum class ev_res
 };
 
 struct session_cfg {
-   std::chrono::seconds auth {2};
+   std::chrono::seconds login {2};
    std::chrono::seconds handshake {2};
    std::chrono::seconds pong {2};
    std::chrono::seconds close {2};
@@ -107,7 +107,7 @@ public:
       { user_id = std::move(id); };
    auto const& get_id() const noexcept
       { return user_id;}
-   auto is_auth() const noexcept
+   auto is_logged_in() const noexcept
       { return !std::empty(user_id);};
 
    std::weak_ptr<proxy_session> get_proxy_session(bool make_new_session);

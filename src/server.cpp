@@ -67,9 +67,9 @@ auto get_server_op(int argc, char* argv[])
      " each thread has it own non-shared data structure."
    )
 
-   ( "auth-timeout"
-   , po::value<int>(&cfg.auth_timeout)->default_value(2)
-   , "Authetication timeout in seconds. Started after the websocket "
+   ( "login-timeout"
+   , po::value<int>(&cfg.login_timeout)->default_value(2)
+   , "Login timeout in seconds. Started after the websocket "
      "handshake completes."
    )
    ( "handshake-timeout"

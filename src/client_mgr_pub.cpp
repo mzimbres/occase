@@ -12,10 +12,10 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
    auto const j = json::parse(msg);
 
    auto const cmd = j.at("cmd").get<std::string>();
-   if (cmd == "auth_ack") {
+   if (cmd == "login_ack") {
       auto const res = j.at("result").get<std::string>();
       if (res != "ok")
-         throw std::runtime_error("client_mgr_pub::auth_ack");
+         throw std::runtime_error("client_mgr_pub::login_ack");
 
       auto const menus = j.at("menus").get<std::vector<menu_elem>>();
       auto const menu_codes = menu_elems_to_codes(menus);
@@ -131,7 +131,7 @@ int client_mgr_pub::handle_msg(std::shared_ptr<client_type> s)
 int client_mgr_pub::on_handshake(std::shared_ptr<client_type> s)
 {
    json j;
-   j["cmd"] = "auth";
+   j["cmd"] = "login";
    j["from"] = op.user;
    j["menu_versions"] = std::vector<int> {};
    s->send_msg(j.dump());
@@ -166,10 +166,10 @@ int test_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
    auto const j = json::parse(msg);
 
    auto const cmd = j.at("cmd").get<std::string>();
-   if (cmd == "auth_ack") {
+   if (cmd == "login_ack") {
       auto const res = j.at("result").get<std::string>();
       if (res != "ok")
-         throw std::runtime_error("test_pub::auth_ack");
+         throw std::runtime_error("test_pub::login_ack");
 
       auto const menus = j.at("menus").get<std::vector<menu_elem>>();
       auto const menu_codes = menu_elems_to_codes(menus);
@@ -213,7 +213,7 @@ int test_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
 int test_pub::on_handshake(std::shared_ptr<client_type> s)
 {
    json j;
-   j["cmd"] = "auth";
+   j["cmd"] = "login";
    j["from"] = op.user;
    j["menu_versions"] = std::vector<int> {};
    auto msg = j.dump();
@@ -248,12 +248,12 @@ int test_msg_pull::on_read(std::string msg, std::shared_ptr<client_type> s)
    auto const j = json::parse(msg);
 
    auto const cmd = j.at("cmd").get<std::string>();
-   if (cmd == "auth_ack") {
+   if (cmd == "login_ack") {
       auto const res = j.at("result").get<std::string>();
       if (res != "ok")
-         throw std::runtime_error("test_msg_pull::auth_ack");
+         throw std::runtime_error("test_msg_pull::login_ack");
 
-      std::cout << "test_msg_pull::auth_ack: ok." << std::endl;
+      std::cout << "test_msg_pull::login_ack: ok." << std::endl;
       return 1;
    }
 
@@ -273,7 +273,7 @@ int test_msg_pull::on_read(std::string msg, std::shared_ptr<client_type> s)
 int test_msg_pull::on_handshake(std::shared_ptr<client_type> s)
 {
    json j;
-   j["cmd"] = "auth";
+   j["cmd"] = "login";
    j["from"] = op.user;
    j["menu_versions"] = std::vector<int> {};
    auto msg = j.dump();

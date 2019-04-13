@@ -24,7 +24,7 @@ struct listener_cfg {
    int number_of_workers;
    unsigned short port;
 
-   int auth_timeout;
+   int login_timeout;
    int handshake_timeout;
    int pong_timeout;
    int close_frame_timeout;
@@ -34,13 +34,12 @@ struct listener_cfg {
    auto get_timeouts() const noexcept
    {
       return session_cfg
-      { std::chrono::seconds {auth_timeout}
+      { std::chrono::seconds {login_timeout}
       , std::chrono::seconds {handshake_timeout}
       , std::chrono::seconds {pong_timeout}
       , std::chrono::seconds {close_frame_timeout}
       };
    }
-
 };
 
 class arena;

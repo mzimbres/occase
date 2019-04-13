@@ -288,7 +288,7 @@ worker::on_app_login( json const& j
       // The user is already logged on the system. We do not allow
       // this yet.
       json resp;
-      resp["cmd"] = "auth_ack";
+      resp["cmd"] = "login_ack";
       resp["result"] = "fail";
       s->send(resp.dump(), false);
       return ev_res::login_fail;
@@ -298,7 +298,7 @@ worker::on_app_login( json const& j
    //if (from != s->get_id()) {
    //   // Incorrect id.
    //   json resp;
-   //   resp["cmd"] = "auth_ack";
+   //   resp["cmd"] = "login_ack";
    //   resp["result"] = "fail";
    //   s->send(resp.dump());
    //   return ev_res::login_fail;
@@ -310,7 +310,7 @@ worker::on_app_login( json const& j
    db.retrieve_chat_msgs(s->get_id());
 
    json resp;
-   resp["cmd"] = "auth_ack";
+   resp["cmd"] = "login_ack";
    resp["result"] = "ok";
 
    auto const user_versions =
@@ -503,7 +503,7 @@ worker::on_message(std::shared_ptr<worker_session> s, std::string msg)
    auto const j = json::parse(msg);
    auto const cmd = j.at("cmd").get<std::string>();
 
-   if (s->is_auth()) {
+   if (s->is_logged_in()) {
       if (cmd == "subscribe")
          return on_app_subscribe(j, s);
 
@@ -513,7 +513,7 @@ worker::on_message(std::shared_ptr<worker_session> s, std::string msg)
       if (cmd == "user_msg")
          return on_app_chat_msg(std::move(msg), j, s);
    } else {
-      if (cmd == "auth")
+      if (cmd == "login")
          return on_app_login(j, s);
    }
 

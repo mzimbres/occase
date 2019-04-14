@@ -19,6 +19,7 @@
 #include "client_session.hpp"
 #include "session_launcher.hpp"
 #include "client_mgr_accept_timer.hpp"
+#include "client_mgr_pub.hpp"
 
 using namespace rt;
 
@@ -46,8 +47,8 @@ struct options {
 
    auto make_handshake_laucher_op() const
    {
-      return launcher_cf
-      { 0, handshake_tm_test_size
+      return launcher_cfg
+      { std::vector<login>{static_cast<std::size_t>(handshake_tm_test_size)}
       , std::chrono::milliseconds {launch_interval}
       , {"Handshake test launch:         "}
       };
@@ -55,8 +56,8 @@ struct options {
 
    auto make_after_handshake_laucher_op() const
    {
-      return launcher_cf
-      { 0, handshake_tm_test_size
+      return launcher_cfg
+      { std::vector<login>{static_cast<std::size_t>(handshake_tm_test_size)}
       , std::chrono::milliseconds {launch_interval}
       , {"After handshake test launch:   "}
       };

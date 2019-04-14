@@ -4,6 +4,7 @@
 
 #include "json_utils.hpp"
 #include "config.hpp"
+#include "client_session.hpp"
 
 namespace rt
 {
@@ -17,7 +18,7 @@ class client_session;
 // server does not drop the connection.
 
 struct cmgr_handshake_op {
-   std::string user;
+   login user;
 };
 
 struct cmgr_handshake_tm {
@@ -34,8 +35,8 @@ struct cmgr_handshake_tm {
       { throw std::runtime_error("Error."); return 1; }
    auto on_connect() const noexcept
       { return -1; }
-   auto get_user() const noexcept
-      {return "Dummy";}
+   auto get_login() const noexcept
+      {return login {};}
 };
 
 class client_mgr_accept_timer {
@@ -55,8 +56,8 @@ public:
       { return -1;}
    auto on_connect() const noexcept
       { return 1;}
-   auto get_user() const noexcept
-      {return "aaaaaa";}
+   auto get_login() const noexcept
+      {return login {};}
 };
 
 }

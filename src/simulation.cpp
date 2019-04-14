@@ -34,7 +34,7 @@ struct client_op {
    int launch_interval = 100;
    int auth_timeout = 3;
 
-   auto make_session_cf() const
+   auto make_session_cfg() const
    {
       return client_session_cf
       { {host} 
@@ -44,35 +44,26 @@ struct client_op {
       };
    }
 
-   auto make_pub_cf() const
+   auto make_client_cfg(std::vector<login> logins) const
    {
-      return launcher_cf
-      { 0, listen_users
-      , std::chrono::milliseconds {launch_interval}
-      , {""}
-      };
-   }
-
-   auto make_gmsg_check_cf() const
-   {
-      return launcher_cf
-      { 0, listen_users
+      return launcher_cfg
+      { logins
       , std::chrono::milliseconds {launch_interval}
       , {""}
       };
    }
 };
 
-void launch_sessions(client_op const& op)
+void launch_sessions(client_op const& op, std::vector<login> logins)
 {
    boost::asio::io_context ioc;
 
    auto const s =
       std::make_shared< session_launcher<client_mgr_gmsg_check>
                       >( ioc
-                       , cmgr_gmsg_check_op {"", 100}
-                       , op.make_session_cf()
-                       , op.make_gmsg_check_cf()
+                       , cmgr_gmsg_check_op {{}, 100}
+                       , op.make_session_cfg()
+                       , op.make_client_cfg(logins)
                        );
    
    s->run({});
@@ -126,7 +117,8 @@ int main(int argc, char* argv[])
 
       set_fd_limits(500000);
 
-      launch_sessions(op);
+      auto logins = test_reg(op.make_session_cfg(), op.listen_users);
+      launch_sessions(op, std::move(logins));
 
       return 0;
    } catch (std::exception const& e) {

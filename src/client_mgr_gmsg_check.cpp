@@ -83,7 +83,7 @@ int client_mgr_gmsg_check::on_handshake(std::shared_ptr<client_type> s)
 {
    json j;
    j["cmd"] = "login";
-   j["from"] = op.user;
+   j["from"] = op.user.id;
    j["menu_versions"] = std::vector<int> {};
    s->send_msg(j.dump());
    //std::cout << "Sending " << j.dump() << std::endl;
@@ -105,7 +105,7 @@ client_mgr_gmsg_check::speak_to_publisher(
 
    json j;
    j["cmd"] = "user_msg";
-   j["from"] = op.user;
+   j["from"] = op.user.id;
    j["to"] = to;
    j["msg"] = "Tenho interesse nesse carro, podemos conversar?";
    j["post_id"] = post_id;

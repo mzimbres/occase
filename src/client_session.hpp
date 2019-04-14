@@ -7,6 +7,7 @@
 #include <vector>
 #include <chrono>
 #include <memory>
+#include <ostream>
 #include <sstream>
 #include <functional>
 
@@ -21,6 +22,18 @@
 
 namespace rt
 {
+
+struct login {
+   std::string id;
+   std::string pwd;
+};
+
+inline
+std::ostream& operator<<(std::ostream& os, login o)
+{
+   os << o.id << ":" << o.pwd;
+   return os;
+}
 
 struct client_session_cf {
    std::string host;
@@ -110,7 +123,7 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
       }
 
       if (ec == net::error::operation_aborted) {
-         std::cout << "Leaving on read 3: " << mgr.get_user()
+         std::cout << "Leaving on read 3: " << mgr.get_login()
                    << std::endl;
          timer.cancel();
          return;

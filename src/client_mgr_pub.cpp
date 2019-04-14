@@ -3,6 +3,7 @@
 #include "menu.hpp"
 #include "utils.hpp"
 #include "client_session.hpp"
+#include "session_launcher.hpp"
 
 namespace rt
 {
@@ -58,7 +59,7 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
       auto items = j.at("items").get<std::vector<post>>();
 
       auto cond = [this](auto const& e)
-         { return e.from != op.user; };
+         { return e.from != op.user.id; };
 
       items.erase( std::remove_if( std::begin(items), std::end(items)
                                  , cond)
@@ -88,7 +89,7 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
       // This test is to make sure the server is not sending us a
       // message meant to some other user.
       auto const to = j.at("to").get<std::string>();
-      if (to != op.user)
+      if (to != op.user.id)
          throw std::runtime_error("client_mgr_pub::on_read5");
 
       auto const post_id2 = j.at("post_id").get<int>();
@@ -132,7 +133,7 @@ int client_mgr_pub::on_handshake(std::shared_ptr<client_type> s)
 {
    json j;
    j["cmd"] = "login";
-   j["from"] = op.user;
+   j["from"] = op.user.id;
    j["menu_versions"] = std::vector<int> {};
    s->send_msg(j.dump());
    //std::cout << "Sending " << j.dump() << std::endl;
@@ -150,7 +151,7 @@ int client_mgr_pub::send_group_msg(std::shared_ptr<client_type> s) const
    //std::cout << "Pub: Stack size: " << std::size(pub_stack)
    //          << std::endl;
 
-   post item {-1, op.user, "Not an interesting message."
+   post item {-1, op.user.id, "Not an interesting message."
                  , pub_stack.top()};
    json j_msg;
    j_msg["cmd"] = "publish";
@@ -214,7 +215,7 @@ int test_pub::on_handshake(std::shared_ptr<client_type> s)
 {
    json j;
    j["cmd"] = "login";
-   j["from"] = op.user;
+   j["from"] = op.user.id;
    j["menu_versions"] = std::vector<int> {};
    auto msg = j.dump();
    s->send_msg(msg);
@@ -231,7 +232,7 @@ int test_pub::on_closed(boost::system::error_code ec)
 int test_pub::pub( menu_code_type const& pub_code
                  , std::shared_ptr<client_type> s) const
 {
-   post item {-1, op.user, "Not an interesting message."
+   post item {-1, op.user.id, "Not an interesting message."
                  , pub_code};
    json j_msg;
    j_msg["cmd"] = "publish";
@@ -274,7 +275,7 @@ int test_msg_pull::on_handshake(std::shared_ptr<client_type> s)
 {
    json j;
    j["cmd"] = "login";
-   j["from"] = op.user;
+   j["from"] = op.user.id;
    j["menu_versions"] = std::vector<int> {};
    auto msg = j.dump();
    s->send_msg(msg);
@@ -294,8 +295,9 @@ int test_register::on_read(std::string msg, std::shared_ptr<client_type> s)
       if (res != "ok")
          throw std::runtime_error("test_register::login_ack");
 
-      op.user = j.at("id").get<std::string>();
-      pwd = j.at("password").get<std::string>();
+      op.user.id = j.at("id").get<std::string>();
+      op.user.pwd = j.at("password").get<std::string>();
+      std::cout << "Registered: " << op.user << std::endl;
       return -1;
    }
 
@@ -309,8 +311,39 @@ int test_register::on_handshake(std::shared_ptr<client_type> s)
    j["cmd"] = "register";
    auto msg = j.dump();
    s->send_msg(msg);
-   std::cout << "Sent: " << msg << std::endl;
    return 1;
+}
+
+std::vector<login> test_reg(client_session_cf const& cfg, int n)
+{
+   boost::asio::io_context ioc;
+
+   using client_type = test_register;
+
+   std::vector<login> logins {static_cast<std::size_t>(n)};
+   launcher_cfg lcfg { logins, std::chrono::milliseconds {100}
+                     , "Registration launching finished."};
+
+   auto launcher =
+      std::make_shared< session_launcher<client_type>
+                      >( ioc
+                       , test_register_cfg {}
+                       , cfg
+                       , lcfg);
+   
+   launcher->run({});
+   ioc.run();
+
+   auto const sessions = launcher->get_sessions();
+
+   auto f = [](auto session)
+      { return session->get_mgr().get_login(); };
+
+   logins.clear();
+   std::transform( std::cbegin(sessions), std::cend(sessions)
+                 , std::back_inserter(logins), f);
+
+   return logins;
 }
 
 }

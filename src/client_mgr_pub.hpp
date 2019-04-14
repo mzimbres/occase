@@ -10,6 +10,7 @@
 
 #include "config.hpp"
 #include "json_utils.hpp"
+#include "client_session.hpp"
 
 /* This class is meant to perform the following test
  *
@@ -37,7 +38,7 @@ template <class Mgr>
 class client_session;
 
 struct cmgr_sim_op {
-   std::string user;
+   login user;
    int n_listeners;
 };
 
@@ -70,11 +71,11 @@ public:
    int on_closed(boost::system::error_code ec);
    int on_handshake(std::shared_ptr<client_type> s);
    int on_connect() const noexcept { return 1;}
-   auto get_user() const {return op.user;}
+   auto const& get_login() const noexcept {return op.user;}
 };
 
 struct test_pub_cfg {
-   std::string user;
+   login user;
 };
 
 // This class will be used to publish some messages to the server and
@@ -102,12 +103,12 @@ public:
    int on_closed(boost::system::error_code ec);
    int on_handshake(std::shared_ptr<client_type> s);
    int on_connect() const noexcept { return 1;}
-   auto get_user() const {return op.user;}
+   auto const& get_login() const noexcept {return op.user;}
    auto get_post_ids() const {return post_ids;}
 };
 
 struct test_msg_pull_cfg {
-   std::string user;
+   login user;
    int expected_user_msgs;
 };
 
@@ -133,12 +134,12 @@ public:
       { throw std::runtime_error("test_msg_pull::on_closed"); return -1; }
    int on_handshake(std::shared_ptr<client_type> s);
    int on_connect() const noexcept { return 1;}
-   auto get_user() const {return op.user;}
+   auto const& get_login() const noexcept {return op.user;}
    auto get_post_ids() const {return post_ids;}
 };
 
 struct test_register_cfg {
-   std::string user;
+   login user;
 };
 
 // This class will be used to register some users.
@@ -162,9 +163,10 @@ public:
       { throw std::runtime_error("test_register::on_closed"); return -1; }
    int on_handshake(std::shared_ptr<client_type> s);
    int on_connect() const noexcept { return 1;}
-   auto const& get_user() const noexcept {return op.user;}
-   auto const& get_pwd() const noexcept {return pwd;}
+   auto const& get_login() const noexcept {return op.user;}
 };
+
+std::vector<login> test_reg(client_session_cf const& cfg, int n);
 
 }
 

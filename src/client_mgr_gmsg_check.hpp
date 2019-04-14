@@ -9,6 +9,7 @@
 #include "menu.hpp"
 #include "config.hpp"
 #include "json_utils.hpp"
+#include "client_session.hpp"
 
 namespace rt
 {
@@ -23,7 +24,7 @@ template <class Mgr>
 class client_session;
 
 struct cmgr_gmsg_check_op {
-   std::string user;
+   login user;
    int n_publishers;
 };
 
@@ -50,7 +51,7 @@ public:
    int on_closed(boost::system::error_code ec);
    int on_handshake(std::shared_ptr<client_type> s);
    int on_connect() const noexcept { return 1;}
-   auto get_user() const {return op.user;}
+   auto const& get_login() const noexcept {return op.user;}
 };
 
 }

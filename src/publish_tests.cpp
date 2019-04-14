@@ -46,19 +46,19 @@ struct client_op {
       };
    }
 
-   auto make_pub_cf() const
+   auto make_pub_cfg(std::vector<login> logins) const
    {
-      return launcher_cf
-      { 0, n_publishers
+      return launcher_cfg
+      { logins
       , std::chrono::milliseconds {launch_interval}
       , {""}
       };
    }
 
-   auto make_gmsg_check_cf() const
+   auto make_sub_cfg(std::vector<login> logins) const
    {
-      return launcher_cf
-      { n_publishers, n_publishers + n_listeners
+      return launcher_cfg
+      { logins
       , std::chrono::milliseconds {launch_interval}
       , {""}
       };
@@ -84,7 +84,9 @@ public:
   ~timer() { }
 };
 
-void test_pubsub(client_op const& op)
+void test_pubsub( client_op const& op
+                , std::vector<login> pub_logins
+                , std::vector<login> sub_logins)
 {
    boost::asio::io_context ioc;
    timer t;
@@ -95,14 +97,14 @@ void test_pubsub(client_op const& op)
       t.start();
    };
 
-   auto const next = [&ioc, &op, ts]()
+   auto const next = [&pub_logins, &ioc, &op, ts]()
    {
       std::cout << "Starting launching pub." << std::endl;
       auto const s2 = std::make_shared< session_launcher<client_mgr_pub>
                       >( ioc
-                       , cmgr_sim_op {"Dummy", op.n_listeners}
+                       , cmgr_sim_op {{}, op.n_listeners}
                        , op.make_session_cf()
-                       , op.make_pub_cf()
+                       , op.make_pub_cfg(pub_logins)
                        );
 
       s2->set_on_end(ts);
@@ -112,9 +114,9 @@ void test_pubsub(client_op const& op)
    std::cout << "Starting launching checkers." << std::endl;
    auto const s = std::make_shared< session_launcher<client_mgr_gmsg_check>
                    >( ioc
-                    , cmgr_gmsg_check_op {"", op.n_publishers}
+                    , cmgr_gmsg_check_op {{}, op.n_publishers}
                     , op.make_session_cf()
-                    , op.make_gmsg_check_cf()
+                    , op.make_sub_cfg(sub_logins)
                     );
    
    // When finished launching the listeners we begin to launch the
@@ -126,20 +128,20 @@ void test_pubsub(client_op const& op)
    std::cout << "Time elapsed: " << t.get_count_now() << "s" << std::endl;
 }
 
-void test_pub_offline(client_op const& op)
+void test_pub_offline(client_op const& op, login login1, login login2)
 {
-   std::string const pub_user = "publisher";
    boost::asio::io_context ioc;
 
    using client_type1 = client_session<test_pub>;
 
+   std::cout << "__________________________________________"
+             << std::endl;
    std::cout << "Beginning the offline tests." << std::endl;
-   std::cout << "Starting the publisher." << std::endl;
+   std::cout << "Starting the publisher " << login1 << std::endl;
    auto s1 = 
       std::make_shared<client_type1>( ioc
                                     , op.make_session_cf()
-                                    , test_pub_cfg {pub_user}
-                                    );
+                                    , test_pub_cfg {login1});
    s1->run();
    ioc.run();
    auto post_ids = s1->get_mgr().get_post_ids();
@@ -151,13 +153,13 @@ void test_pub_offline(client_op const& op)
 
    //_____________
 
-   std::cout << "Launching the reader." << std::endl;
+   std::cout << "Starting the reader " << login2 << std::endl;
 
    using client_type2 = client_session<client_mgr_gmsg_check>;
 
    std::make_shared<client_type2>( ioc
                                  , op.make_session_cf()
-                                 , cmgr_gmsg_check_op {"Dummy2", 1}
+                                 , cmgr_gmsg_check_op {login2, 1}
                                  )->run();
    ioc.restart();
    ioc.run();
@@ -166,20 +168,19 @@ void test_pub_offline(client_op const& op)
 
    //_____________
 
-   std::cout << "Launching user msg pull." << std::endl;
-
    using client_type3 = client_session<test_msg_pull>;
 
+   std::cout << "Starting the publisher " << login1 << std::endl;
    auto s3 = 
       std::make_shared<client_type3>( ioc
                                     , op.make_session_cf()
                                     , test_msg_pull_cfg
-                                      {pub_user, n_post_ids}
+                                      {login1, n_post_ids}
                                     );
    s3->run();
    ioc.restart();
    ioc.run();
-   std::cout << "User msg pull finished." << std::endl;
+   std::cout << "Publisher finished." << std::endl;
 
    auto post_ids2 = s3->get_mgr().get_post_ids();
    std::sort(std::begin(post_ids2), std::end(post_ids2));
@@ -187,45 +188,6 @@ void test_pub_offline(client_op const& op)
       std::cout << "Error" << std::endl;
    else
       std::cout << "Success" << std::endl;
-}
-
-struct login {
-   std::string id;
-   std::string pwd;
-};
-
-void test_reg(client_op const& op)
-{
-   boost::asio::io_context ioc;
-
-   using client_type = test_register;
-
-   launcher_cf lcfg {0, 300, std::chrono::milliseconds {100}, ""};
-
-   auto launcher =
-      std::make_shared< session_launcher<client_type>
-                      >( ioc
-                       , test_register_cfg {}
-                       , op.make_session_cf()
-                       , lcfg);
-   
-   launcher->run({});
-   ioc.run();
-
-   auto const sessions = launcher->get_sessions();
-
-   auto f = [](auto session)
-   {
-      return login { session->get_mgr().get_user()
-                   , session->get_mgr().get_pwd()};
-   };
-
-   std::vector<login> logins;
-   std::transform( std::cbegin(sessions), std::cend(sessions)
-                 , std::back_inserter(logins), f);
-
-   for (auto const& login : logins)
-      std::cout << "Login: " << login.id << "/" << login.pwd << std::endl;
 }
 
 int main(int argc, char* argv[])
@@ -270,7 +232,7 @@ int main(int argc, char* argv[])
 
          ("type,r"
          , po::value<int>(&op.type)->default_value(1)
-         , "Which test to run: 1, 2 or 3."
+         , "Which test to run: 1, 2."
          )
       ;
 
@@ -286,11 +248,13 @@ int main(int argc, char* argv[])
       set_fd_limits(500000);
 
       if (op.type == 1) {
-         test_pubsub(op);
+         auto pub_logins = test_reg(op.make_session_cf(), op.n_publishers);
+         auto sub_logins = test_reg(op.make_session_cf(), op.n_listeners);
+         test_pubsub(op, std::move(pub_logins), std::move(sub_logins));
       } else if (op.type == 2) {
-         test_pub_offline(op);
-      } else if (op.type == 3) {
-         test_reg(op);
+         auto login1 = test_reg(op.make_session_cf(), op.n_publishers);
+         auto login2 = test_reg(op.make_session_cf(), op.n_listeners);
+         test_pub_offline(op, login1.front(), login2.front());
       } else {
          std::cerr << "Invalid run type." << std::endl;
       }

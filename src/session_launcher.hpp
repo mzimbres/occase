@@ -45,6 +45,7 @@ private:
    launcher_cf lcf;
    boost::asio::steady_timer timer;
    std::function<void(void)> call = [](){};
+   std::vector<std::shared_ptr<client_type>> sessions;
  
 public:
    session_launcher( boost::asio::io_context& ioc_
@@ -80,9 +81,10 @@ public:
 
       mgr_cf.user = to_str(lcf.begin);
 
-      std::make_shared<client_type>( ioc
-                                   , session_cf
-                                   , mgr_cf)->run();
+      auto session = 
+         std::make_shared<client_type>(ioc, session_cf, mgr_cf);
+      sessions.push_back(session);
+      session->run();
 
       timer.expires_after(lcf.launch_interval);
 
@@ -91,6 +93,11 @@ public:
 
       timer.async_wait(handler);
       ++lcf.begin;
+   }
+
+   std::vector<std::shared_ptr<client_type>> get_sessions() const
+   {
+      return sessions;
    }
 };
 

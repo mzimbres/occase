@@ -189,22 +189,43 @@ void test_pub_offline(client_op const& op)
       std::cout << "Success" << std::endl;
 }
 
+struct login {
+   std::string id;
+   std::string pwd;
+};
+
 void test_reg(client_op const& op)
 {
    boost::asio::io_context ioc;
 
-   using client_type1 = client_session<test_register>;
+   using client_type = test_register;
 
-   auto s1 = 
-      std::make_shared<client_type1>( ioc
-                                    , op.make_session_cf()
-                                    , test_register_cfg {""});
-   s1->run();
+   launcher_cf lcfg {0, 300, std::chrono::milliseconds {100}, ""};
+
+   auto launcher =
+      std::make_shared< session_launcher<client_type>
+                      >( ioc
+                       , test_register_cfg {}
+                       , op.make_session_cf()
+                       , lcfg);
+   
+   launcher->run({});
    ioc.run();
-   auto const id = s1->get_mgr().get_user();
-   auto const pwd = s1->get_mgr().get_pwd();
 
-   std::cout << "Login: " << id << "/" << pwd << std::endl;
+   auto const sessions = launcher->get_sessions();
+
+   auto f = [](auto session)
+   {
+      return login { session->get_mgr().get_user()
+                   , session->get_mgr().get_pwd()};
+   };
+
+   std::vector<login> logins;
+   std::transform( std::cbegin(sessions), std::cend(sessions)
+                 , std::back_inserter(logins), f);
+
+   for (auto const& login : logins)
+      std::cout << "Login: " << login.id << "/" << login.pwd << std::endl;
 }
 
 int main(int argc, char* argv[])

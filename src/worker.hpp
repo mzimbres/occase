@@ -5,6 +5,8 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <random>
+#include <numeric>
 #include <unordered_map>
 
 #include <boost/asio.hpp>
@@ -19,6 +21,17 @@
 
 namespace rt
 {
+
+class pwd_gen {
+private:
+   std::mt19937 gen;
+   std::uniform_int_distribution<int> dist;
+
+public:
+   pwd_gen();
+
+   std::string operator()(int size);
+};
 
 struct worker_only_cfg {
    // The maximum number of channels that is allowed to be sent to the
@@ -52,6 +65,9 @@ struct reg_queue_item {
 
 class worker {
 private:
+   // The size of the passwords sent to the app.
+   static const auto pwd_size = 10;
+
    // This worker id is needed to put individual worker log messages
    // apart.
    int const id;
@@ -86,6 +102,7 @@ private:
    std::queue<reg_queue_item> reg_queue;
 
    int last_post_id = 0;
+   pwd_gen pwdgen;
 
    void init();
    void create_channels(std::vector<menu_elem> const& menus);

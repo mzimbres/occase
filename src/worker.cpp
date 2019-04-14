@@ -10,8 +10,28 @@
 #include "worker_session.hpp"
 #include "json_utils.hpp"
 
+namespace {
+char const pwdchars[] =
+   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!%&/?#";
+}
+
 namespace rt
 {
+
+pwd_gen::pwd_gen()
+: gen {std::random_device{}()}
+, dist {0, sizeof pwdchars - 2}
+{}
+
+std::string pwd_gen::operator()(int pwd_size)
+{
+   std::string pwd;
+   for (auto i = 0; i < pwd_size; ++i) {
+      pwd.push_back(pwdchars[dist(gen)]);
+   }
+
+   return pwd;
+}
 
 worker::worker(worker_cfg cfg, int id_, net::io_context& ioc)
 : id {id_}
@@ -149,7 +169,7 @@ void worker::on_db_user_id(std::string const& id)
 {
    assert(!std::empty(reg_queue));
    if (auto session = reg_queue.front().session.lock()) {
-      reg_queue.front().pwd = "jdjdjdjdj"; // TODO: Use a random value.
+      reg_queue.front().pwd = pwdgen(pwd_size);
       db.register_user(id, reg_queue.front().pwd);
       session->set_id(id);
    } else {

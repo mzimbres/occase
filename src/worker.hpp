@@ -45,6 +45,11 @@ struct post_queue_item {
    std::string user_id;
 };
 
+struct reg_queue_item {
+   std::weak_ptr<worker_session> session;
+   std::string pwd;
+};
+
 class worker {
 private:
    // This worker id is needed to put individual worker log messages
@@ -76,6 +81,10 @@ private:
    // from redis.
    std::queue<post_queue_item> post_queue;
 
+   // Queue with sessions waiting for a user ids that are retrieved
+   // from redis.
+   std::queue<reg_queue_item> reg_queue;
+
    int last_post_id = 0;
 
    void init();
@@ -83,6 +92,9 @@ private:
 
    ev_res on_app_login( json const& j
                       , std::shared_ptr<worker_session> s);
+
+   ev_res on_app_register( json const& j
+                         , std::shared_ptr<worker_session> s);
 
    ev_res on_app_subscribe( json const& j
                           , std::shared_ptr<worker_session> s);
@@ -105,6 +117,8 @@ private:
    void on_db_post_id(std::string const& data);
    void on_db_publish();
    void on_db_menu_connect();
+   void on_db_user_id(std::string const& msg);
+   void on_db_register();
 
 public:
    worker(worker_cfg cfg, int id_, net::io_context& ioc);

@@ -175,7 +175,7 @@ auto get_server_op(int argc, char* argv[])
    , "The Key used to store the user ids."
    )
 
-   ( "redis-user-msgs-counter-key"
+   ( "redis-chat-msgs-counter-key"
    , po::value<std::string>(&cfg.worker.db.cfg.chat_msgs_counter_key)->
         default_value("user_msgs_counter")
    , "The name of the key used to store the number of user messages sent"

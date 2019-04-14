@@ -145,6 +145,45 @@ void worker::on_db_post(std::string const& msg)
    g->second.broadcast(item, ch_cfg.max_posts);
 }
 
+void worker::on_db_user_id(std::string const& id)
+{
+   assert(!std::empty(reg_queue));
+   if (auto session = reg_queue.front().session.lock()) {
+      reg_queue.front().pwd = "jdjdjdjdj"; // TODO: Use a random value.
+      db.register_user(id, reg_queue.front().pwd);
+      session->set_id(id);
+   } else {
+      // The user is not online anymore. The requested id is lost.
+      // Very unlikely to happen since the communication with redis is
+      // very fast.
+      reg_queue.pop();
+   }
+}
+
+void worker::on_db_register()
+{
+   assert(!std::empty(reg_queue));
+   if (auto session = reg_queue.front().session.lock()) {
+      auto const& id = session->get_id();
+      auto const new_user = sessions.insert({id, session});
+
+      // It would be a bug if this id were already in the map since we
+      // have just registered it.
+      assert(new_user.second);
+
+      json resp;
+      resp["cmd"] = "register_ack";
+      resp["result"] = "ok";
+      resp["id"] = id;
+      resp["password"] = reg_queue.front().pwd;
+      session->send(resp.dump(), false);
+   } else {
+      // The user is not online anymore. The requested id is lost.
+   }
+
+   reg_queue.pop();
+}
+
 void
 worker::on_db_chat_msg( std::string const& user_id
                       , std::vector<std::string> msgs)
@@ -211,6 +250,15 @@ worker::on_db_event( std::vector<std::string> data
       case redis::request::unsol_publish:
          assert(std::size(data) == 1);
          on_db_post(data.back());
+         break;
+
+      case redis::request::user_id:
+         assert(std::size(data) == 1);
+         on_db_user_id(data.back());
+         break;
+
+      case redis::request::register_user:
+         on_db_register();
          break;
 
       default:
@@ -334,6 +382,15 @@ worker::on_app_login( json const& j
 }
 
 ev_res
+worker::on_app_register( json const& j
+                       , std::shared_ptr<worker_session> s)
+{
+   reg_queue.push({s, {}});
+   db.request_user_id();
+   return ev_res::register_ok;
+}
+
+ev_res
 worker::on_app_subscribe( json const& j
                         , std::shared_ptr<worker_session> s)
 {
@@ -439,8 +496,9 @@ void worker::on_session_dtor( std::string const& id
    auto const match = sessions.find(id);
    if (match == std::end(sessions)) {
       // This is a bug, all autheticated sessions should be in the
-      // sessions map.
-      assert(false);
+      // sessions map. Only sessions that failed to register with
+      // trigger this condition.
+      assert(std::empty(id));
       return;
    }
 
@@ -515,6 +573,9 @@ worker::on_message(std::shared_ptr<worker_session> s, std::string msg)
    } else {
       if (cmd == "login")
          return on_app_login(j, s);
+
+      if (cmd == "register")
+         return on_app_register(j, s);
    }
 
    return ev_res::unknown;

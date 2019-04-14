@@ -189,6 +189,24 @@ void test_pub_offline(client_op const& op)
       std::cout << "Success" << std::endl;
 }
 
+void test_reg(client_op const& op)
+{
+   boost::asio::io_context ioc;
+
+   using client_type1 = client_session<test_register>;
+
+   auto s1 = 
+      std::make_shared<client_type1>( ioc
+                                    , op.make_session_cf()
+                                    , test_register_cfg {""});
+   s1->run();
+   ioc.run();
+   auto const id = s1->get_mgr().get_user();
+   auto const pwd = s1->get_mgr().get_pwd();
+
+   std::cout << "Login: " << id << "/" << pwd << std::endl;
+}
+
 int main(int argc, char* argv[])
 {
    try {
@@ -231,7 +249,7 @@ int main(int argc, char* argv[])
 
          ("type,r"
          , po::value<int>(&op.type)->default_value(1)
-         , "Which test to run: 1 or 2."
+         , "Which test to run: 1, 2 or 3."
          )
       ;
 
@@ -250,6 +268,8 @@ int main(int argc, char* argv[])
          test_pubsub(op);
       } else if (op.type == 2) {
          test_pub_offline(op);
+      } else if (op.type == 3) {
+         test_reg(op);
       } else {
          std::cerr << "Invalid run type." << std::endl;
       }

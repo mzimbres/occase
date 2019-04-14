@@ -20,7 +20,9 @@ class worker;
 class worker_session;
 
 enum class ev_res
-{ login_ok
+{ register_ok
+, register_fail
+, login_ok
 , login_fail
 , subscribe_ok
 , subscribe_fail

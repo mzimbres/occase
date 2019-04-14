@@ -171,6 +171,15 @@ auto set(std::string const& key, std::string const& value)
 }
 
 inline
+auto hset( std::string const& key
+         , std::string const& field
+         , std::string const& value)
+{
+   auto par = {key, field, value};
+   return resp_assemble("HSET", std::begin(par), std::end(par));
+}
+
+inline
 auto expire(std::string const& key, int secs)
 {
    auto par = {key, std::to_string(secs)};

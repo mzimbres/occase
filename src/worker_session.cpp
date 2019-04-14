@@ -308,10 +308,12 @@ void worker_session::handle_ev(ev_res r)
 {
    switch (r) {
       case ev_res::login_ok:
+      case ev_res::register_ok:
       {
          do_ping();
       }
       break;
+      case ev_res::register_fail:
       case ev_res::login_fail:
       {
          timer.cancel();

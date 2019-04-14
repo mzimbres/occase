@@ -15,6 +15,7 @@ enum class request
 , posts
 , post_id
 , user_id
+, register_user
 , get_chat_msgs
 , menu_connect
 , unsol_publish
@@ -214,6 +215,11 @@ public:
    //    redis::request::user_id
    //
    void request_user_id();
+
+   // Register a user in the database. Completes with
+   //
+   //    redis::request::register_user
+   void register_user(std::string const& user, std::string const& pwd);
 
    // Closes all stablished connections with redis.
    void disconnect();

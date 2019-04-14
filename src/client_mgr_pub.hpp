@@ -137,5 +137,34 @@ public:
    auto get_post_ids() const {return post_ids;}
 };
 
+struct test_register_cfg {
+   std::string user;
+};
+
+// This class will be used to register some users.
+class test_register {
+public:
+   using options_type = test_register_cfg;
+private:
+   using client_type = client_session<test_register>;
+   using code_type = std::vector<std::vector<std::vector<int>>>;
+
+   options_type op;
+   std::string pwd;
+
+public:
+   test_register(options_type op_)
+   : op {op_}
+   { }
+
+   int on_read(std::string msg, std::shared_ptr<client_type> s);
+   int on_closed(boost::system::error_code ec)
+      { throw std::runtime_error("test_register::on_closed"); return -1; }
+   int on_handshake(std::shared_ptr<client_type> s);
+   int on_connect() const noexcept { return 1;}
+   auto const& get_user() const noexcept {return op.user;}
+   auto const& get_pwd() const noexcept {return pwd;}
+};
+
 }
 

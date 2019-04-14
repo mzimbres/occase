@@ -282,5 +282,36 @@ int test_msg_pull::on_handshake(std::shared_ptr<client_type> s)
    return 1;
 }
 
+//________________________________
+
+int test_register::on_read(std::string msg, std::shared_ptr<client_type> s)
+{
+   auto const j = json::parse(msg);
+
+   auto const cmd = j.at("cmd").get<std::string>();
+   if (cmd == "register_ack") {
+      auto const res = j.at("result").get<std::string>();
+      if (res != "ok")
+         throw std::runtime_error("test_register::login_ack");
+
+      op.user = j.at("id").get<std::string>();
+      pwd = j.at("password").get<std::string>();
+      return -1;
+   }
+
+   throw std::runtime_error("test_register::on_read2");
+   return -1;
+}
+
+int test_register::on_handshake(std::shared_ptr<client_type> s)
+{
+   json j;
+   j["cmd"] = "register";
+   auto msg = j.dump();
+   s->send_msg(msg);
+   std::cout << "Sent: " << msg << std::endl;
+   return 1;
+}
+
 }
 

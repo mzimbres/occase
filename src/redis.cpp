@@ -235,8 +235,14 @@ void facade::request_post_id()
 
 void facade::request_user_id()
 {
-   ss_chat_pub.send(incr(cfg.user_id_key));
+   ss_menu_pub.send(incr(cfg.user_id_key));
    menu_pub_queue.push(request::user_id);
+}
+
+void facade::register_user(std::string const& user, std::string const& pwd)
+{
+   ss_menu_pub.send(hset(user, "password", pwd));
+   menu_pub_queue.push(request::register_user);
 }
 
 void facade::retrieve_posts(int begin)

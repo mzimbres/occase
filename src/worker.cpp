@@ -185,6 +185,7 @@ void worker::on_db_register()
    assert(!std::empty(reg_queue));
    if (auto session = reg_queue.front().session.lock()) {
       auto const& id = session->get_id();
+      db.subscribe_to_chat_msgs(id);
       auto const new_user = sessions.insert({id, session});
 
       // It would be a bug if this id were already in the map since we
@@ -196,6 +197,7 @@ void worker::on_db_register()
       resp["result"] = "ok";
       resp["id"] = id;
       resp["password"] = reg_queue.front().pwd;
+      resp["menus"] = menus;
       session->send(resp.dump(), false);
    } else {
       // The user is not online anymore. The requested id is lost.
@@ -349,10 +351,11 @@ ev_res
 worker::on_app_login( json const& j
                     , std::shared_ptr<worker_session> s)
 {
-   auto const from = j.at("from").get<std::string>();
+   auto const user = j.at("user").get<std::string>();
+   auto const pwd = j.at("password").get<std::string>();
 
-   auto const new_user = sessions.insert({from, s});
-   if (!new_user.second) {
+   auto const res = sessions.insert({user, s});
+   if (!res.second) {
       // The user is already logged on the system. We do not allow
       // this yet.
       json resp;
@@ -363,7 +366,7 @@ worker::on_app_login( json const& j
    }
 
    // TODO: Query the database to validate the session.
-   //if (from != s->get_id()) {
+   //if (user != s->get_id()) {
    //   // Incorrect id.
    //   json resp;
    //   resp["cmd"] = "login_ack";
@@ -372,7 +375,7 @@ worker::on_app_login( json const& j
    //   return ev_res::login_fail;
    //}
 
-   s->set_id(from);
+   s->set_id(user);
 
    db.subscribe_to_chat_msgs(s->get_id());
    db.retrieve_chat_msgs(s->get_id());

@@ -84,7 +84,8 @@ int replier::on_handshake(std::shared_ptr<client_type> s)
 {
    json j;
    j["cmd"] = "login";
-   j["from"] = op.user.id;
+   j["user"] = op.user.id;
+   j["password"] = op.user.pwd;
    j["menu_versions"] = std::vector<int> {};
    s->send_msg(j.dump());
    //std::cout << "Sending " << j.dump() << std::endl;
@@ -243,7 +244,8 @@ int publisher::on_handshake(std::shared_ptr<client_type> s)
 {
    json j;
    j["cmd"] = "login";
-   j["from"] = op.user.id;
+   j["user"] = op.user.id;
+   j["password"] = op.user.pwd;
    j["menu_versions"] = std::vector<int> {};
    s->send_msg(j.dump());
    //std::cout << "Sending " << j.dump() << std::endl;
@@ -325,7 +327,8 @@ int publisher2::on_handshake(std::shared_ptr<client_type> s)
 {
    json j;
    j["cmd"] = "login";
-   j["from"] = op.user.id;
+   j["user"] = op.user.id;
+   j["password"] = op.user.pwd;
    j["menu_versions"] = std::vector<int> {};
    auto msg = j.dump();
    s->send_msg(msg);
@@ -385,7 +388,8 @@ int msg_pull::on_handshake(std::shared_ptr<client_type> s)
 {
    json j;
    j["cmd"] = "login";
-   j["from"] = op.user.id;
+   j["user"] = op.user.id;
+   j["password"] = op.user.pwd;
    j["menu_versions"] = std::vector<int> {};
    auto msg = j.dump();
    s->send_msg(msg);

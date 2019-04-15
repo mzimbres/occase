@@ -22,6 +22,7 @@
 #include "session_launcher.hpp"
 
 using namespace rt;
+using namespace rt::cli;
 
 namespace po = boost::program_options;
 
@@ -29,7 +30,7 @@ struct options {
    std::string host {"127.0.0.1"};
    std::string port {"8080"};
    int n_publishers = 10;
-   int n_listeners = 10;
+   int n_repliers = 10;
    int handshake_tm = 3;
    int launch_interval = 100;
    int auth_timeout = 3;
@@ -37,7 +38,7 @@ struct options {
 
    auto make_session_cf() const
    {
-      return client_session_cf
+      return session_shell_cfg
       { {host} 
       , {port}
       , std::chrono::seconds {handshake_tm}
@@ -117,9 +118,9 @@ void test_online( options const& op
    auto const next = [&pub_logins, &ioc, &op, ts]()
    {
       std::cout << "Starting launching pub." << std::endl;
-      auto const s2 = std::make_shared< session_launcher<client_mgr_pub>
+      auto const s2 = std::make_shared< session_launcher<publisher>
                       >( ioc
-                       , cmgr_sim_op {{}, op.n_listeners}
+                       , publisher_cfg {{}, op.n_repliers}
                        , op.make_session_cf()
                        , op.make_pub_cfg(pub_logins)
                        );
@@ -129,9 +130,9 @@ void test_online( options const& op
    };
 
    std::cout << "Starting launching checkers." << std::endl;
-   auto const s = std::make_shared< session_launcher<client_mgr_gmsg_check>
+   auto const s = std::make_shared< session_launcher<replier>
                    >( ioc
-                    , cmgr_gmsg_check_op {{}, op.n_publishers}
+                    , replier_cfg {{}, op.n_publishers}
                     , op.make_session_cf()
                     , op.make_sub_cfg(sub_logins)
                     );
@@ -149,7 +150,7 @@ void test_offline(options const& op, login login1, login login2)
 {
    boost::asio::io_context ioc;
 
-   using client_type1 = client_session<test_pub>;
+   using client_type1 = session_shell<publisher2>;
 
    std::cout << "__________________________________________"
              << std::endl;
@@ -158,7 +159,7 @@ void test_offline(options const& op, login login1, login login2)
    auto s1 = 
       std::make_shared<client_type1>( ioc
                                     , op.make_session_cf()
-                                    , test_pub_cfg {login1});
+                                    , publisher2_cfg {login1});
    s1->run();
    ioc.run();
    auto post_ids = s1->get_mgr().get_post_ids();
@@ -172,11 +173,11 @@ void test_offline(options const& op, login login1, login login2)
 
    std::cout << "Starting the reader " << login2 << std::endl;
 
-   using client_type2 = client_session<client_mgr_gmsg_check>;
+   using client_type2 = session_shell<replier>;
 
    std::make_shared<client_type2>( ioc
                                  , op.make_session_cf()
-                                 , cmgr_gmsg_check_op {login2, 1}
+                                 , replier_cfg {login2, 1}
                                  )->run();
    ioc.restart();
    ioc.run();
@@ -185,13 +186,13 @@ void test_offline(options const& op, login login1, login login2)
 
    //_____________
 
-   using client_type3 = client_session<test_msg_pull>;
+   using client_type3 = session_shell<msg_pull>;
 
    std::cout << "Starting the publisher " << login1 << std::endl;
    auto s3 = 
       std::make_shared<client_type3>( ioc
                                     , op.make_session_cf()
-                                    , test_msg_pull_cfg
+                                    , msg_pull_cfg
                                       {login1, n_post_ids}
                                     );
    s3->run();
@@ -211,16 +212,16 @@ void read_only_tests(options const& op)
 {
    boost::asio::io_context ioc;
 
-   std::make_shared< session_launcher<cmgr_handshake_tm>
+   std::make_shared< session_launcher<handshake_tm>
                    >( ioc
-                    , cmgr_handshake_op {}
+                    , handshake_tm_cfg {}
                     , op.make_session_cf()
                     , op.make_handshake_laucher_op()
                     )->run({});
 
-   std::make_shared< session_launcher<client_mgr_accept_timer>
+   std::make_shared< session_launcher<no_handshake_tm>
                    >( ioc
-                    , cmgr_handshake_op {}
+                    , handshake_tm_cfg {}
                     , op.make_session_cf()
                     , op.make_after_handshake_laucher_op()
                     )->run({});
@@ -249,7 +250,7 @@ int main(int argc, char* argv[])
          , "Number of publishers.")
 
          ("listeners,c"
-         , po::value<int>(&op.n_listeners)->default_value(10)
+         , po::value<int>(&op.n_repliers)->default_value(10)
          , "Number of listeners.")
 
          ("launch-interval,g"
@@ -283,12 +284,12 @@ int main(int argc, char* argv[])
 
       if (op.test == 1) {
          auto pub_logins = test_reg(op.make_session_cf(), op.n_publishers);
-         auto sub_logins = test_reg(op.make_session_cf(), op.n_listeners);
+         auto sub_logins = test_reg(op.make_session_cf(), op.n_repliers);
          test_online(op, std::move(pub_logins), std::move(sub_logins));
          std::cout << "Online tests: Ok." << std::endl;
       } else if (op.test == 2) {
          auto login1 = test_reg(op.make_session_cf(), op.n_publishers);
-         auto login2 = test_reg(op.make_session_cf(), op.n_listeners);
+         auto login2 = test_reg(op.make_session_cf(), op.n_repliers);
          test_offline(op, login1.front(), login2.front());
          std::cout << "Offline tests: Ok." << std::endl;
       } else if (op.test == 3) {

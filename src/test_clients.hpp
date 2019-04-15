@@ -14,25 +14,23 @@
 #include "json_utils.hpp"
 #include "client_session.hpp"
 
-namespace rt
+namespace rt::cli
 {
 
 template <class Mgr>
-class client_session;
+class session_shell;
 
 // Tests if the server drops a session that does not proceed with
 // authentication.
-// TODO: Add a timer here after which we should emit an error if the
-// server does not drop the connection.
 
-struct cmgr_handshake_op {
+struct handshake_tm_cfg {
    login user;
 };
 
-struct cmgr_handshake_tm {
-   using client_type = client_session<cmgr_handshake_tm>;
-   using options_type = cmgr_handshake_op;
-   cmgr_handshake_tm(cmgr_handshake_op) noexcept { }
+struct handshake_tm {
+   using client_type = session_shell<handshake_tm>;
+   using options_type = handshake_tm_cfg;
+   handshake_tm(handshake_tm_cfg) noexcept { }
    auto on_read(std::string msg, std::shared_ptr<client_type> s) const 
       { throw std::runtime_error("Error."); return 1; }
    auto on_closed(boost::system::error_code ec) const 
@@ -47,13 +45,13 @@ struct cmgr_handshake_tm {
       {return login {};}
 };
 
-class client_mgr_accept_timer {
+class no_handshake_tm {
 private:
-   using client_type = client_session<client_mgr_accept_timer>;
+   using client_type = session_shell<no_handshake_tm>;
 
 public:
-   using options_type = cmgr_handshake_op;
-   client_mgr_accept_timer(cmgr_handshake_op) noexcept { }
+   using options_type = handshake_tm_cfg;
+   no_handshake_tm(handshake_tm_cfg) noexcept { }
    auto on_read(std::string msg, std::shared_ptr<client_type> s)
       { throw std::runtime_error("accept_timer::on_read"); return -1; }
    auto on_closed(boost::system::error_code ec) const noexcept
@@ -74,28 +72,28 @@ public:
  * messages.
  */
 
-struct cmgr_gmsg_check_op {
+struct replier_cfg {
    login user;
    int n_publishers;
 };
 
-class client_mgr_gmsg_check {
+class replier {
 public:
-   using options_type = cmgr_gmsg_check_op;
+   using options_type = replier_cfg;
 
 private:
-   using client_type = client_session<client_mgr_gmsg_check>;
+   using client_type = session_shell<replier>;
 
    options_type op;
 
    int to_receive_posts;
    std::vector<menu_elem> menus;
 
-   void speak_to_publisher( std::string user, long long id
-                          , std::shared_ptr<client_type> s);
+   void talk_to( std::string user, long long id
+               , std::shared_ptr<client_type> s);
 
 public:
-   client_mgr_gmsg_check(options_type op_)
+   replier(options_type op_)
    : op(op_) { }
 
    int on_read(std::string msg, std::shared_ptr<client_type> s);
@@ -124,16 +122,16 @@ public:
  * frame.
  */
 
-struct cmgr_sim_op {
+struct publisher_cfg {
    login user;
-   int n_listeners;
+   int n_repliers;
 };
 
-class client_mgr_pub {
+class publisher {
 public:
-   using options_type = cmgr_sim_op;
+   using options_type = publisher_cfg;
 private:
-   using client_type = client_session<client_mgr_pub>;
+   using client_type = session_shell<publisher>;
    using code_type = std::vector<std::vector<std::vector<int>>>;
 
    options_type op;
@@ -149,9 +147,9 @@ private:
    int handle_msg(std::shared_ptr<client_type> s);
 
 public:
-   client_mgr_pub(options_type op_)
+   publisher(options_type op_)
    : op {op_}
-   , user_msg_counter {op.n_listeners}
+   , user_msg_counter {op.n_repliers}
    { }
 
    int on_read(std::string msg, std::shared_ptr<client_type> s);
@@ -161,17 +159,17 @@ public:
    auto const& get_login() const noexcept {return op.user;}
 };
 
-struct test_pub_cfg {
+struct publisher2_cfg {
    login user;
 };
 
 // This class will be used to publish some messages to the server and
 // exit quickly.
-class test_pub {
+class publisher2 {
 public:
-   using options_type = test_pub_cfg;
+   using options_type = publisher2_cfg;
 private:
-   using client_type = client_session<test_pub>;
+   using client_type = session_shell<publisher2>;
    using code_type = std::vector<std::vector<std::vector<int>>>;
 
    options_type op;
@@ -182,7 +180,7 @@ private:
           , std::shared_ptr<client_type> s) const;
 
 public:
-   test_pub(options_type op_)
+   publisher2(options_type op_)
    : op {op_}
    { }
 
@@ -194,66 +192,66 @@ public:
    auto get_post_ids() const {return post_ids;}
 };
 
-struct test_msg_pull_cfg {
+struct msg_pull_cfg {
    login user;
    int expected_user_msgs;
 };
 
 // This class will be used to publish some messages to the server and
 // exit quickly.
-class test_msg_pull {
+class msg_pull {
 public:
-   using options_type = test_msg_pull_cfg;
+   using options_type = msg_pull_cfg;
 private:
-   using client_type = client_session<test_msg_pull>;
+   using client_type = session_shell<msg_pull>;
    using code_type = std::vector<std::vector<std::vector<int>>>;
 
    options_type op;
    std::vector<int> post_ids;
 
 public:
-   test_msg_pull(options_type op_)
+   msg_pull(options_type op_)
    : op {op_}
    { }
 
    int on_read(std::string msg, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec)
-      { throw std::runtime_error("test_msg_pull::on_closed"); return -1; }
+      { throw std::runtime_error("msg_pull::on_closed"); return -1; }
    int on_handshake(std::shared_ptr<client_type> s);
    int on_connect() const noexcept { return 1;}
    auto const& get_login() const noexcept {return op.user;}
    auto get_post_ids() const {return post_ids;}
 };
 
-struct test_register_cfg {
+struct register_cfg {
    login user;
 };
 
 // This class will be used to register some users.
-class test_register {
+class register1 {
 public:
-   using options_type = test_register_cfg;
+   using options_type = register_cfg;
 private:
-   using client_type = client_session<test_register>;
+   using client_type = session_shell<register1>;
    using code_type = std::vector<std::vector<std::vector<int>>>;
 
    options_type op;
    std::string pwd;
 
 public:
-   test_register(options_type op_)
+   register1(options_type op_)
    : op {op_}
    { }
 
    int on_read(std::string msg, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec)
-      { throw std::runtime_error("test_register::on_closed"); return -1; }
+      { throw std::runtime_error("register1::on_closed"); return -1; }
    int on_handshake(std::shared_ptr<client_type> s);
    int on_connect() const noexcept { return 1;}
    auto const& get_login() const noexcept {return op.user;}
 };
 
-std::vector<login> test_reg(client_session_cf const& cfg, int n);
+std::vector<login> test_reg(session_shell_cfg const& cfg, int n);
 
 }
 

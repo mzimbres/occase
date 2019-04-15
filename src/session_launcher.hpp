@@ -20,7 +20,7 @@
  * or other sessions.
  */
 
-namespace rt
+namespace rt::cli
 {
 
 struct launcher_cfg {
@@ -35,12 +35,12 @@ class session_launcher :
 public:
    using mgr_type = T;
    using mgr_cfg_type = typename mgr_type::options_type;
-   using client_type = client_session<mgr_type>;
+   using client_type = session_shell<mgr_type>;
 
 private:
    boost::asio::io_context& ioc;
    mgr_cfg_type mgr_cfg;
-   client_session_cf session_cf;
+   session_shell_cfg session_cf;
    launcher_cfg cfg;
    boost::asio::steady_timer timer;
    std::function<void(void)> call = [](){};
@@ -50,7 +50,7 @@ private:
 public:
    session_launcher( boost::asio::io_context& ioc_
                    , mgr_cfg_type mgr_op_
-                   , client_session_cf ccf_
+                   , session_shell_cfg ccf_
                    , launcher_cfg lop_)
    : ioc(ioc_)
    , mgr_cfg(mgr_op_)

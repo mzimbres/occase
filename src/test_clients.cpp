@@ -4,11 +4,11 @@
 #include "client_session.hpp"
 #include "session_launcher.hpp"
 
-namespace rt
+namespace rt::cli
 {
 
-int client_mgr_gmsg_check::on_read( std::string msg
-                                  , std::shared_ptr<client_type> s)
+int replier::on_read( std::string msg
+                    , std::shared_ptr<client_type> s)
 {
    auto const j = json::parse(msg);
 
@@ -16,7 +16,7 @@ int client_mgr_gmsg_check::on_read( std::string msg
    if (cmd == "login_ack") {
       auto const res = j.at("result").get<std::string>();
       if (res != "ok")
-         throw std::runtime_error("client_mgr_gmsg_check::login_ack");
+         throw std::runtime_error("replier::login_ack");
 
       menus = j.at("menus").get<std::vector<menu_elem>>();
       auto const menu_codes = menu_elems_to_codes(menus);
@@ -38,7 +38,7 @@ int client_mgr_gmsg_check::on_read( std::string msg
    if (cmd == "subscribe_ack") {
       auto const res = j.at("result").get<std::string>();
       if (res != "ok")
-         throw std::runtime_error("client_mgr_gmsg_check::subscribe_ack");
+         throw std::runtime_error("replier::subscribe_ack");
 
       return 1;
    }
@@ -48,7 +48,7 @@ int client_mgr_gmsg_check::on_read( std::string msg
 
       auto const f = [this, s](auto const& e)
       {
-         speak_to_publisher(e.from, e.id, s);
+         talk_to(e.from, e.id, s);
       };
 
       std::for_each(std::begin(items), std::end(items), f);
@@ -62,7 +62,7 @@ int client_mgr_gmsg_check::on_read( std::string msg
       std::cout << msg << std::endl;
       auto const post_id = j.at("post_id").get<long long>();
       auto const from = j.at("from").get<std::string>();
-      speak_to_publisher(from, post_id, s);
+      talk_to(from, post_id, s);
       return 1;
    }
 
@@ -76,11 +76,11 @@ int client_mgr_gmsg_check::on_read( std::string msg
    }
 
    std::cout << j << std::endl;
-   throw std::runtime_error("client_mgr_gmsg_check::inexistent");
+   throw std::runtime_error("replier::inexistent");
    return -1;
 }
 
-int client_mgr_gmsg_check::on_handshake(std::shared_ptr<client_type> s)
+int replier::on_handshake(std::shared_ptr<client_type> s)
 {
    json j;
    j["cmd"] = "login";
@@ -91,15 +91,16 @@ int client_mgr_gmsg_check::on_handshake(std::shared_ptr<client_type> s)
    return 1;
 }
 
-int client_mgr_gmsg_check::on_closed(boost::system::error_code ec)
+int replier::on_closed(boost::system::error_code ec)
 {
-   throw std::runtime_error("client_mgr_gmsg_check::on_closed");
+   throw std::runtime_error("replier::on_closed");
    return -1;
 };
 
 void
-client_mgr_gmsg_check::speak_to_publisher(
-      std::string to, long long post_id, std::shared_ptr<client_type> s)
+replier::talk_to( std::string to
+                , long long post_id
+                , std::shared_ptr<client_type> s)
 {
    //std::cout << "Sub: User " << op.user << " sending to " << to
    //          << ", post_id: " << post_id << std::endl;
@@ -117,7 +118,7 @@ client_mgr_gmsg_check::speak_to_publisher(
 
 //_______________
 
-int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
+int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
 {
    auto const j = json::parse(msg);
 
@@ -125,7 +126,7 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
    if (cmd == "login_ack") {
       auto const res = j.at("result").get<std::string>();
       if (res != "ok")
-         throw std::runtime_error("client_mgr_pub::login_ack");
+         throw std::runtime_error("publisher::login_ack");
 
       auto const menus = j.at("menus").get<std::vector<menu_elem>>();
       auto const menu_codes = menu_elems_to_codes(menus);
@@ -148,7 +149,7 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
    if (cmd == "subscribe_ack") {
       auto const res = j.at("result").get<std::string>();
       if (res != "ok")
-         throw std::runtime_error("client_mgr_pub::subscribe_ack");
+         throw std::runtime_error("publisher::subscribe_ack");
 
       return send_group_msg(s);
    }
@@ -156,7 +157,7 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
    if (cmd == "publish_ack") {
       auto const res = j.at("result").get<std::string>();
       if (res != "ok")
-         throw std::runtime_error("client_mgr_pub::publish_ack");
+         throw std::runtime_error("publisher::publish_ack");
 
       post_id = j.at("id").get<int>();
       //std::cout << op.user << " publish_ack " << post_id << std::endl;
@@ -180,14 +181,14 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
 
       if (std::size(items) != 1) {
          std::cout << std::size(items) << " " << msg << std::endl;
-         throw std::runtime_error("client_mgr_pub::publish1");
+         throw std::runtime_error("publisher::publish1");
       }
 
       // Since we send only one publish at time items should contain
       // only one item now.
 
       if (post_id != items.front().id)
-         throw std::runtime_error("client_mgr_pub::publish2");
+         throw std::runtime_error("publisher::publish2");
 
       //std::cout << op.user << " publish echo " << post_id << std::endl;
       server_echo = true;
@@ -199,13 +200,13 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
       // message meant to some other user.
       auto const to = j.at("to").get<std::string>();
       if (to != op.user.id)
-         throw std::runtime_error("client_mgr_pub::on_read5");
+         throw std::runtime_error("publisher::on_read5");
 
       auto const post_id2 = j.at("post_id").get<int>();
       if (post_id != post_id2) {
          std::cout << op.user << " " << post_id << " != " << post_id2 << " " << msg
                    << std::endl;
-         throw std::runtime_error("client_mgr_pub::on_read6");
+         throw std::runtime_error("publisher::on_read6");
       }
 
       //std::cout << op.user << " user_msg " << post_id << " "
@@ -214,11 +215,11 @@ int client_mgr_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
       return handle_msg(s);
    }
 
-   throw std::runtime_error("client_mgr_pub::on_read4");
+   throw std::runtime_error("publisher::on_read4");
    return -1;
 }
 
-int client_mgr_pub::handle_msg(std::shared_ptr<client_type> s)
+int publisher::handle_msg(std::shared_ptr<client_type> s)
 {
    if (server_echo && post_id != -1 && user_msg_counter == 0) {
       pub_stack.pop();
@@ -229,7 +230,7 @@ int client_mgr_pub::handle_msg(std::shared_ptr<client_type> s)
 
       server_echo = false;
       post_id = -1;
-      user_msg_counter = op.n_listeners;
+      user_msg_counter = op.n_repliers;
       //std::cout << "=====> " << op.user << " " << post_id
       //          << " " << user_msg_counter <<  std::endl;
       return send_group_msg(s);
@@ -238,7 +239,7 @@ int client_mgr_pub::handle_msg(std::shared_ptr<client_type> s)
    return 1;
 }
 
-int client_mgr_pub::on_handshake(std::shared_ptr<client_type> s)
+int publisher::on_handshake(std::shared_ptr<client_type> s)
 {
    json j;
    j["cmd"] = "login";
@@ -249,13 +250,13 @@ int client_mgr_pub::on_handshake(std::shared_ptr<client_type> s)
    return 1;
 }
 
-int client_mgr_pub::on_closed(boost::system::error_code ec)
+int publisher::on_closed(boost::system::error_code ec)
 {
-   throw std::runtime_error("client_mgr_pub::on_closed");
+   throw std::runtime_error("publisher::on_closed");
    return -1;
 };
 
-int client_mgr_pub::send_group_msg(std::shared_ptr<client_type> s) const
+int publisher::send_group_msg(std::shared_ptr<client_type> s) const
 {
    //std::cout << "Pub: Stack size: " << std::size(pub_stack)
    //          << std::endl;
@@ -271,7 +272,7 @@ int client_mgr_pub::send_group_msg(std::shared_ptr<client_type> s) const
 
 //________________________________
 
-int test_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
+int publisher2::on_read(std::string msg, std::shared_ptr<client_type> s)
 {
    auto const j = json::parse(msg);
 
@@ -279,7 +280,7 @@ int test_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
    if (cmd == "login_ack") {
       auto const res = j.at("result").get<std::string>();
       if (res != "ok")
-         throw std::runtime_error("test_pub::login_ack");
+         throw std::runtime_error("publisher2::login_ack");
 
       auto const menus = j.at("menus").get<std::vector<menu_elem>>();
       auto const menu_codes = menu_elems_to_codes(menus);
@@ -306,7 +307,7 @@ int test_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
    if (cmd == "publish_ack") {
       auto const res = j.at("result").get<std::string>();
       if (res != "ok")
-         throw std::runtime_error("test_pub::publish_ack");
+         throw std::runtime_error("publisher2::publish_ack");
 
       auto const post_id = j.at("id").get<int>();
       post_ids.push_back(post_id);
@@ -316,11 +317,11 @@ int test_pub::on_read(std::string msg, std::shared_ptr<client_type> s)
       return 1;
    }
 
-   throw std::runtime_error("test_pub::on_read4");
+   throw std::runtime_error("publisher2::on_read4");
    return -1;
 }
 
-int test_pub::on_handshake(std::shared_ptr<client_type> s)
+int publisher2::on_handshake(std::shared_ptr<client_type> s)
 {
    json j;
    j["cmd"] = "login";
@@ -332,13 +333,13 @@ int test_pub::on_handshake(std::shared_ptr<client_type> s)
    return 1;
 }
 
-int test_pub::on_closed(boost::system::error_code ec)
+int publisher2::on_closed(boost::system::error_code ec)
 {
-   throw std::runtime_error("test_pub::on_closed");
+   throw std::runtime_error("publisher2::on_closed");
    return -1;
 };
 
-int test_pub::pub( menu_code_type const& pub_code
+int publisher2::pub( menu_code_type const& pub_code
                  , std::shared_ptr<client_type> s) const
 {
    post item {-1, op.user.id, "Not an interesting message."
@@ -353,7 +354,7 @@ int test_pub::pub( menu_code_type const& pub_code
 
 //________________________________
 
-int test_msg_pull::on_read(std::string msg, std::shared_ptr<client_type> s)
+int msg_pull::on_read(std::string msg, std::shared_ptr<client_type> s)
 {
    auto const j = json::parse(msg);
 
@@ -361,9 +362,9 @@ int test_msg_pull::on_read(std::string msg, std::shared_ptr<client_type> s)
    if (cmd == "login_ack") {
       auto const res = j.at("result").get<std::string>();
       if (res != "ok")
-         throw std::runtime_error("test_msg_pull::login_ack");
+         throw std::runtime_error("msg_pull::login_ack");
 
-      std::cout << "test_msg_pull::login_ack: ok." << std::endl;
+      std::cout << "msg_pull::login_ack: ok." << std::endl;
       return 1;
    }
 
@@ -376,11 +377,11 @@ int test_msg_pull::on_read(std::string msg, std::shared_ptr<client_type> s)
       return 1;
    }
 
-   throw std::runtime_error("test_msg_pull::on_read4");
+   throw std::runtime_error("msg_pull::on_read4");
    return -1;
 }
 
-int test_msg_pull::on_handshake(std::shared_ptr<client_type> s)
+int msg_pull::on_handshake(std::shared_ptr<client_type> s)
 {
    json j;
    j["cmd"] = "login";
@@ -394,7 +395,7 @@ int test_msg_pull::on_handshake(std::shared_ptr<client_type> s)
 
 //________________________________
 
-int test_register::on_read(std::string msg, std::shared_ptr<client_type> s)
+int register1::on_read(std::string msg, std::shared_ptr<client_type> s)
 {
    auto const j = json::parse(msg);
 
@@ -402,7 +403,7 @@ int test_register::on_read(std::string msg, std::shared_ptr<client_type> s)
    if (cmd == "register_ack") {
       auto const res = j.at("result").get<std::string>();
       if (res != "ok")
-         throw std::runtime_error("test_register::login_ack");
+         throw std::runtime_error("register1::login_ack");
 
       op.user.id = j.at("id").get<std::string>();
       op.user.pwd = j.at("password").get<std::string>();
@@ -410,11 +411,11 @@ int test_register::on_read(std::string msg, std::shared_ptr<client_type> s)
       return -1;
    }
 
-   throw std::runtime_error("test_register::on_read2");
+   throw std::runtime_error("register1::on_read2");
    return -1;
 }
 
-int test_register::on_handshake(std::shared_ptr<client_type> s)
+int register1::on_handshake(std::shared_ptr<client_type> s)
 {
    json j;
    j["cmd"] = "register";
@@ -423,11 +424,11 @@ int test_register::on_handshake(std::shared_ptr<client_type> s)
    return 1;
 }
 
-std::vector<login> test_reg(client_session_cf const& cfg, int n)
+std::vector<login> test_reg(session_shell_cfg const& cfg, int n)
 {
    boost::asio::io_context ioc;
 
-   using client_type = test_register;
+   using client_type = register1;
 
    std::vector<login> logins {static_cast<std::size_t>(n)};
    launcher_cfg lcfg { logins, std::chrono::milliseconds {100}
@@ -436,7 +437,7 @@ std::vector<login> test_reg(client_session_cf const& cfg, int n)
    auto launcher =
       std::make_shared< session_launcher<client_type>
                       >( ioc
-                       , test_register_cfg {}
+                       , register_cfg {}
                        , cfg
                        , lcfg);
    

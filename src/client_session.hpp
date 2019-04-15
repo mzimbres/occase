@@ -20,7 +20,7 @@
 #include "config.hpp"
 #include "json_utils.hpp"
 
-namespace rt
+namespace rt::cli
 {
 
 struct login {
@@ -35,7 +35,7 @@ std::ostream& operator<<(std::ostream& os, login o)
    return os;
 }
 
-struct client_session_cf {
+struct session_shell_cfg {
    std::string host;
    std::string port;
    std::chrono::seconds handshake_timeout;
@@ -43,15 +43,15 @@ struct client_session_cf {
 };
 
 template <class Mgr>
-class client_session :
-   public std::enable_shared_from_this<client_session<Mgr>> {
+class session_shell :
+   public std::enable_shared_from_this<session_shell<Mgr>> {
 private:
    net::ip::tcp::resolver resolver;
    net::steady_timer timer;
    beast::websocket::stream<net::ip::tcp::socket> ws;
    beast::multi_buffer buffer;
    std::string text;
-   client_session_cf op;
+   session_shell_cfg op;
    std::queue<std::string> msg_queue;
    bool closing = false;
    std::string receive_buffer;
@@ -75,11 +75,11 @@ private:
 public:
    using mgr_op_type = typename Mgr::options_type;
    explicit
-   client_session( net::io_context& ioc
-                 , client_session_cf op_
+   session_shell( net::io_context& ioc
+                 , session_shell_cfg op_
                  , mgr_op_type const& m);
 
-   ~client_session()
+   ~session_shell()
    {
       //std::cout << "Session in destruction." << std::endl;
    }
@@ -90,8 +90,8 @@ public:
 };
 
 template <class Mgr>
-client_session<Mgr>::client_session( net::io_context& ioc
-                                   , client_session_cf op_
+session_shell<Mgr>::session_shell( net::io_context& ioc
+                                   , session_shell_cfg op_
                                    , mgr_op_type const& m)
 : resolver(ioc)
 , timer(ioc)
@@ -101,7 +101,7 @@ client_session<Mgr>::client_session( net::io_context& ioc
 { }
 
 template <class Mgr>
-void client_session<Mgr>::on_read( boost::system::error_code ec
+void session_shell<Mgr>::on_read( boost::system::error_code ec
                                  , std::size_t bytes_transferred)
 {
    boost::ignore_unused(bytes_transferred);
@@ -135,7 +135,7 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
 
    auto const str = beast::buffers_to_string(buffer.data());
    if (std::empty(str))
-      throw std::runtime_error("client_session::on_read: msg empty.");
+      throw std::runtime_error("session_shell::on_read: msg empty.");
 
    buffer.consume(std::size(buffer));
 
@@ -165,7 +165,7 @@ void client_session<Mgr>::on_read( boost::system::error_code ec
 }
 
 template <class Mgr>
-void client_session<Mgr>::send_msg(std::string msg)
+void session_shell<Mgr>::send_msg(std::string msg)
 {
    auto is_empty = std::empty(msg_queue);
    msg_queue.push(std::move(msg));
@@ -175,7 +175,7 @@ void client_session<Mgr>::send_msg(std::string msg)
 }
 
 template <class Mgr>
-void client_session<Mgr>::do_write()
+void session_shell<Mgr>::do_write()
 {
    //std::cout << "Sending: " << msg << std::endl;
    auto handler = [p = this->shared_from_this()](auto ec, auto res)
@@ -187,7 +187,7 @@ void client_session<Mgr>::do_write()
 }
 
 template <class Mgr>
-void client_session<Mgr>::do_close()
+void session_shell<Mgr>::do_close()
 {
    if (closing)
       return;
@@ -204,7 +204,7 @@ void client_session<Mgr>::do_close()
 }
 
 template <class Mgr>
-void client_session<Mgr>::on_close(boost::system::error_code ec)
+void session_shell<Mgr>::on_close(boost::system::error_code ec)
 {
    if (ec)
       fail(ec, "close");
@@ -214,7 +214,7 @@ void client_session<Mgr>::on_close(boost::system::error_code ec)
 
 template <class Mgr>
 void
-client_session<Mgr>::on_connect( boost::system::error_code ec
+session_shell<Mgr>::on_connect( boost::system::error_code ec
                                , net::ip::tcp::endpoint const&)
 {
    if (ec)
@@ -239,7 +239,7 @@ client_session<Mgr>::on_connect( boost::system::error_code ec
                return;
             }
          }
-         throw std::runtime_error("client_session<Mgr>::on_timer: fail.");
+         throw std::runtime_error("session_shell<Mgr>::on_timer: fail.");
       };
 
       timer.async_wait(handler);
@@ -272,7 +272,7 @@ client_session<Mgr>::on_connect( boost::system::error_code ec
 }
 
 template <class Mgr>
-void client_session<Mgr>::on_handshake(boost::system::error_code ec)
+void session_shell<Mgr>::on_handshake(boost::system::error_code ec)
 {
    //std::cout << "on_handshake" << std::endl;
    if (ec)
@@ -303,14 +303,14 @@ void client_session<Mgr>::on_handshake(boost::system::error_code ec)
          }
       }
 
-      throw std::runtime_error("client_session<Mgr>::on_handshake: fail.");
+      throw std::runtime_error("session_shell<Mgr>::on_handshake: fail.");
    };
 
    timer.async_wait(handler);
 }
 
 template <class Mgr>
-void client_session<Mgr>::do_read()
+void session_shell<Mgr>::do_read()
 {
    auto handler = [p = this->shared_from_this()](auto ec, auto res)
    { 
@@ -321,7 +321,7 @@ void client_session<Mgr>::do_read()
 }
 
 template <class Mgr>
-void client_session<Mgr>::on_write( boost::system::error_code ec
+void session_shell<Mgr>::on_write( boost::system::error_code ec
                                   , std::size_t bytes_transferred)
 {
    boost::ignore_unused(bytes_transferred);
@@ -337,7 +337,7 @@ void client_session<Mgr>::on_write( boost::system::error_code ec
 }
 
 template <class Mgr>
-void client_session<Mgr>::on_resolve( boost::system::error_code ec
+void session_shell<Mgr>::on_resolve( boost::system::error_code ec
                                     , net::ip::tcp::resolver::results_type results)
 {
    if (ec)
@@ -350,7 +350,7 @@ void client_session<Mgr>::on_resolve( boost::system::error_code ec
 }
 
 template <class Mgr>
-void client_session<Mgr>::run()
+void session_shell<Mgr>::run()
 {
    auto handler = [p = this->shared_from_this()](auto ec, auto res)
       { p->on_resolve(ec, res); };

@@ -22,6 +22,7 @@
 #include "session_launcher.hpp"
 
 using namespace rt;
+using namespace rt::cli;
 
 namespace po = boost::program_options;
 
@@ -35,7 +36,7 @@ struct client_op {
 
    auto make_session_cfg() const
    {
-      return client_session_cf
+      return session_shell_cfg
       { {host} 
       , {port}
       , std::chrono::seconds {handshake_tm}
@@ -58,9 +59,9 @@ void launch_sessions(client_op const& op, std::vector<login> logins)
    boost::asio::io_context ioc;
 
    auto const s =
-      std::make_shared< session_launcher<client_mgr_gmsg_check>
+      std::make_shared< session_launcher<replier>
                       >( ioc
-                       , cmgr_gmsg_check_op {{}, 100}
+                       , replier_cfg {{}, 100}
                        , op.make_session_cfg()
                        , op.make_client_cfg(logins)
                        );

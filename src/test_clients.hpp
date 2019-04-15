@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include <set>
 #include <stack>
 #include <vector>
@@ -8,9 +9,101 @@
 #include <utility>
 #include <stdexcept>
 
+#include "menu.hpp"
 #include "config.hpp"
 #include "json_utils.hpp"
 #include "client_session.hpp"
+
+namespace rt
+{
+
+template <class Mgr>
+class client_session;
+
+// Tests if the server drops a session that does not proceed with
+// authentication.
+// TODO: Add a timer here after which we should emit an error if the
+// server does not drop the connection.
+
+struct cmgr_handshake_op {
+   login user;
+};
+
+struct cmgr_handshake_tm {
+   using client_type = client_session<cmgr_handshake_tm>;
+   using options_type = cmgr_handshake_op;
+   cmgr_handshake_tm(cmgr_handshake_op) noexcept { }
+   auto on_read(std::string msg, std::shared_ptr<client_type> s) const 
+      { throw std::runtime_error("Error."); return 1; }
+   auto on_closed(boost::system::error_code ec) const 
+      { throw std::runtime_error("Error."); return 1; }
+   auto on_write(std::shared_ptr<client_type> s) const
+      { throw std::runtime_error("Error."); return 1; }
+   auto on_handshake(std::shared_ptr<client_type> s) const 
+      { throw std::runtime_error("Error."); return 1; }
+   auto on_connect() const noexcept
+      { return -1; }
+   auto get_login() const noexcept
+      {return login {};}
+};
+
+class client_mgr_accept_timer {
+private:
+   using client_type = client_session<client_mgr_accept_timer>;
+
+public:
+   using options_type = cmgr_handshake_op;
+   client_mgr_accept_timer(cmgr_handshake_op) noexcept { }
+   auto on_read(std::string msg, std::shared_ptr<client_type> s)
+      { throw std::runtime_error("accept_timer::on_read"); return -1; }
+   auto on_closed(boost::system::error_code ec) const noexcept
+      { return -1; }
+   auto on_write(std::shared_ptr<client_type> s)
+      { throw std::runtime_error("accept_timer::on_write"); return 1; }
+   auto on_handshake(std::shared_ptr<client_type> s)
+      { return -1;}
+   auto on_connect() const noexcept
+      { return 1;}
+   auto get_login() const noexcept
+      {return login {};}
+};
+
+/*
+ * This test client will hang on the channels and send the publisher a
+ * user_msg. It will exit after receiving a pre-calculated number of
+ * messages.
+ */
+
+struct cmgr_gmsg_check_op {
+   login user;
+   int n_publishers;
+};
+
+class client_mgr_gmsg_check {
+public:
+   using options_type = cmgr_gmsg_check_op;
+
+private:
+   using client_type = client_session<client_mgr_gmsg_check>;
+
+   options_type op;
+
+   int to_receive_posts;
+   std::vector<menu_elem> menus;
+
+   void speak_to_publisher( std::string user, long long id
+                          , std::shared_ptr<client_type> s);
+
+public:
+   client_mgr_gmsg_check(options_type op_)
+   : op(op_) { }
+
+   int on_read(std::string msg, std::shared_ptr<client_type> s);
+   int on_closed(boost::system::error_code ec);
+   int on_handshake(std::shared_ptr<client_type> s);
+   int on_connect() const noexcept { return 1;}
+   auto const& get_login() const noexcept {return op.user;}
+};
 
 /* This class is meant to perform the following test
  *
@@ -30,12 +123,6 @@
  * however why they are lasting so long as we sent a clean wensocket
  * frame.
  */
-
-namespace rt
-{
-
-template <class Mgr>
-class client_session;
 
 struct cmgr_sim_op {
    login user;
@@ -169,4 +256,5 @@ public:
 std::vector<login> test_reg(client_session_cf const& cfg, int n);
 
 }
+
 

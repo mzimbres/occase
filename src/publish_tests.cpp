@@ -17,11 +17,9 @@
 #include "utils.hpp"
 #include "config.hpp"
 #include "menu.hpp"
-#include "client_mgr_pub.hpp"
-#include "client_mgr_gmsg_check.hpp"
+#include "test_clients.hpp"
 #include "client_session.hpp"
 #include "session_launcher.hpp"
-#include "client_mgr_accept_timer.hpp"
 
 using namespace rt;
 
@@ -103,7 +101,7 @@ public:
   ~timer() { }
 };
 
-void test_pubsub( options const& op
+void test_online( options const& op
                 , std::vector<login> pub_logins
                 , std::vector<login> sub_logins)
 {
@@ -147,7 +145,7 @@ void test_pubsub( options const& op
    std::cout << "Time elapsed: " << t.get_count_now() << "s" << std::endl;
 }
 
-void test_pub_offline(options const& op, login login1, login login2)
+void test_offline(options const& op, login login1, login login2)
 {
    boost::asio::io_context ioc;
 
@@ -286,12 +284,12 @@ int main(int argc, char* argv[])
       if (op.test == 1) {
          auto pub_logins = test_reg(op.make_session_cf(), op.n_publishers);
          auto sub_logins = test_reg(op.make_session_cf(), op.n_listeners);
-         test_pubsub(op, std::move(pub_logins), std::move(sub_logins));
+         test_online(op, std::move(pub_logins), std::move(sub_logins));
          std::cout << "Online tests: Ok." << std::endl;
       } else if (op.test == 2) {
          auto login1 = test_reg(op.make_session_cf(), op.n_publishers);
          auto login2 = test_reg(op.make_session_cf(), op.n_listeners);
-         test_pub_offline(op, login1.front(), login2.front());
+         test_offline(op, login1.front(), login2.front());
          std::cout << "Offline tests: Ok." << std::endl;
       } else if (op.test == 3) {
          read_only_tests(op);

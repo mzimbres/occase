@@ -30,8 +30,7 @@ server_objs += redis.o
 server_objs += stats_server.o
 
 client_objs =
-client_objs += client_mgr_pub.o
-client_objs += client_mgr_gmsg_check.o
+client_objs += test_clients.o
 
 aedis_objs =
 aedis_objs += redis_session.o
@@ -53,10 +52,9 @@ srcs += $(lib_objs:.o=.cpp)
 srcs += $(lib_objs:.o=.hpp)
 srcs += $(addsuffix .cpp, $(exes))
 srcs += config.hpp
-srcs += client_session.hpp
+srcs += test_client.hpp
 srcs += session_launcher.hpp
 srcs += async_read_resp.hpp
-srcs += client_mgr_accept_timer.hpp
 srcs += acceptor_arena.hpp
 
 aux = Makefile

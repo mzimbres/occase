@@ -16,7 +16,6 @@ exes += publish_tests
 exes += server
 exes += menu_dump
 exes += aedis
-exes += read_only_tests
 exes += simulation
 
 common_objs += menu.o
@@ -73,9 +72,6 @@ simulation: % : %.o $(client_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
 publish_tests: % : %.o $(client_objs) $(common_objs)
-	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
-
-read_only_tests: % : %.o $(client_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
 server: % : %.o $(server_objs) $(common_objs) $(aedis_objs)

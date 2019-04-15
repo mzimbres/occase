@@ -64,7 +64,7 @@ public:
    ~session_launcher()
    {
       if (!std::empty(cfg.final_msg))
-         std::cout << cfg.final_msg << std::endl;
+         std::cout << "Finished launching: " << cfg.final_msg << std::endl;
    }
 
    void run(boost::system::error_code ec)

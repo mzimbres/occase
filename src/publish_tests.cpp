@@ -21,12 +21,13 @@
 #include "client_mgr_gmsg_check.hpp"
 #include "client_session.hpp"
 #include "session_launcher.hpp"
+#include "client_mgr_accept_timer.hpp"
 
 using namespace rt;
 
 namespace po = boost::program_options;
 
-struct client_op {
+struct options {
    std::string host {"127.0.0.1"};
    std::string port {"8080"};
    int n_publishers = 10;
@@ -34,7 +35,7 @@ struct client_op {
    int handshake_tm = 3;
    int launch_interval = 100;
    int auth_timeout = 3;
-   int type = 2;
+   int test = 2;
 
    auto make_session_cf() const
    {
@@ -51,7 +52,7 @@ struct client_op {
       return launcher_cfg
       { logins
       , std::chrono::milliseconds {launch_interval}
-      , {""}
+      , {"Publisher"}
       };
    }
 
@@ -60,7 +61,25 @@ struct client_op {
       return launcher_cfg
       { logins
       , std::chrono::milliseconds {launch_interval}
-      , {""}
+      , {"Replier"}
+      };
+   }
+
+   auto make_handshake_laucher_op() const
+   {
+      return launcher_cfg
+      { std::vector<login>{300}
+      , std::chrono::milliseconds {launch_interval}
+      , {"Handshake test"}
+      };
+   }
+
+   auto make_after_handshake_laucher_op() const
+   {
+      return launcher_cfg
+      { std::vector<login>{300}
+      , std::chrono::milliseconds {launch_interval}
+      , {"After handshake test."}
       };
    }
 };
@@ -84,7 +103,7 @@ public:
   ~timer() { }
 };
 
-void test_pubsub( client_op const& op
+void test_pubsub( options const& op
                 , std::vector<login> pub_logins
                 , std::vector<login> sub_logins)
 {
@@ -128,7 +147,7 @@ void test_pubsub( client_op const& op
    std::cout << "Time elapsed: " << t.get_count_now() << "s" << std::endl;
 }
 
-void test_pub_offline(client_op const& op, login login1, login login2)
+void test_pub_offline(options const& op, login login1, login login2)
 {
    boost::asio::io_context ioc;
 
@@ -190,36 +209,54 @@ void test_pub_offline(client_op const& op, login login1, login login2)
       std::cout << "Success" << std::endl;
 }
 
+void read_only_tests(options const& op)
+{
+   boost::asio::io_context ioc;
+
+   std::make_shared< session_launcher<cmgr_handshake_tm>
+                   >( ioc
+                    , cmgr_handshake_op {}
+                    , op.make_session_cf()
+                    , op.make_handshake_laucher_op()
+                    )->run({});
+
+   std::make_shared< session_launcher<client_mgr_accept_timer>
+                   >( ioc
+                    , cmgr_handshake_op {}
+                    , op.make_session_cf()
+                    , op.make_after_handshake_laucher_op()
+                    )->run({});
+
+   ioc.run();
+}
+
 int main(int argc, char* argv[])
 {
    try {
-      client_op op;
+      options op;
       po::options_description desc("Options");
       desc.add_options()
-         ("help,h", "Program used to test publish and subscribe.")
+         ("help,h", "Produces the help message.")
+
          ( "port,p"
          , po::value<std::string>(&op.port)->default_value("8080")
-         , "Server port."
-         )
+         , "Server port.")
+
          ("ip,d"
          , po::value<std::string>(&op.host)->default_value("127.0.0.1")
-         , "Server ip address."
-         )
+         , "Server ip address.")
 
          ("publishers,u"
          , po::value<int>(&op.n_publishers)->default_value(2)
-         , "Number of publishers."
-         )
+         , "Number of publishers.")
 
          ("listeners,c"
          , po::value<int>(&op.n_listeners)->default_value(10)
-         , "Number of listeners."
-         )
+         , "Number of listeners.")
 
          ("launch-interval,g"
          , po::value<int>(&op.launch_interval)->default_value(100)
-         , "Interval used to launch test clients."
-         )
+         , "Interval used to launch test clients.")
 
          ("handshake-timeout,k"
          , po::value<int>(&op.handshake_tm)->default_value(3)
@@ -230,10 +267,9 @@ int main(int argc, char* argv[])
          , po::value<int>(&op.auth_timeout)->default_value(3)
          , "Time after before which the server should giveup witing for auth cmd.")
 
-         ("type,r"
-         , po::value<int>(&op.type)->default_value(1)
-         , "Which test to run: 1, 2."
-         )
+         ("test,r"
+         , po::value<int>(&op.test)->default_value(1)
+         , "Which test to run: 1, 2, 3.")
       ;
 
       po::variables_map vm;        
@@ -247,22 +283,28 @@ int main(int argc, char* argv[])
 
       set_fd_limits(500000);
 
-      if (op.type == 1) {
+      if (op.test == 1) {
          auto pub_logins = test_reg(op.make_session_cf(), op.n_publishers);
          auto sub_logins = test_reg(op.make_session_cf(), op.n_listeners);
          test_pubsub(op, std::move(pub_logins), std::move(sub_logins));
-      } else if (op.type == 2) {
+         std::cout << "Online tests: Ok." << std::endl;
+      } else if (op.test == 2) {
          auto login1 = test_reg(op.make_session_cf(), op.n_publishers);
          auto login2 = test_reg(op.make_session_cf(), op.n_listeners);
          test_pub_offline(op, login1.front(), login2.front());
+         std::cout << "Offline tests: Ok." << std::endl;
+      } else if (op.test == 3) {
+         read_only_tests(op);
+         std::cout << "Read only tests: Ok." << std::endl;
       } else {
-         std::cerr << "Invalid run type." << std::endl;
+         std::cerr << "Invalid test." << std::endl;
       }
 
-      return 0;
    } catch (std::exception const& e) {
       std::cerr << "Error: " << e.what() << std::endl;
       return EXIT_FAILURE;
    }
+
+   return 0;
 }
 

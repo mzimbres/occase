@@ -52,10 +52,9 @@ srcs += $(lib_objs:.o=.cpp)
 srcs += $(lib_objs:.o=.hpp)
 srcs += $(addsuffix .cpp, $(exes))
 srcs += config.hpp
-srcs += test_client.hpp
+srcs += test_clients.hpp
 srcs += session_launcher.hpp
 srcs += async_read_resp.hpp
-srcs += acceptor_arena.hpp
 
 aux = Makefile
 

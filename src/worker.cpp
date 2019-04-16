@@ -6,39 +6,20 @@
 #include <fmt/format.h>
 
 #include "menu.hpp"
+#include "utils.hpp"
 #include "logger.hpp"
 #include "worker_session.hpp"
 #include "json_utils.hpp"
 
-namespace {
-char const pwdchars[] =
-   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!%&/?#";
-}
-
 namespace rt
 {
 
-pwd_gen::pwd_gen()
-: gen {std::random_device{}()}
-, dist {0, sizeof pwdchars - 2}
-{}
-
-std::string pwd_gen::operator()(int pwd_size)
-{
-   std::string pwd;
-   for (auto i = 0; i < pwd_size; ++i) {
-      pwd.push_back(pwdchars[dist(gen)]);
-   }
-
-   return pwd;
-}
-
 worker::worker(worker_cfg cfg, int id_, net::io_context& ioc)
-: id {id_}
+: ioc_ {ioc}
+, id {id_}
 , cfg {cfg.worker}
 , ch_cfg {cfg.channel}
-, ioc_ {ioc}
-, timeouts {cfg.session}
+, ws_ss_timeouts_ {cfg.timeouts}
 , db {cfg.db, ioc, id_}
 {
    net::post(ioc_, [this]() {init();});
@@ -56,11 +37,11 @@ void worker::init()
 void worker::on_db_menu(std::string const& data)
 {
    auto const j_menu = json::parse(data);
-   auto const is_empty = std::empty(menus);
-   menus = j_menu.at("menus").get<std::vector<menu_elem>>();
+   auto const is_empty = std::empty(menu);
+   menu = j_menu.at("menus").get<std::vector<menu_elem>>();
 
    if (is_empty) {
-      // The menus vector was empty. This happens only when the server
+      // The menu vector was empty. This happens only when the server
       // is started. We have to save the menu and retrieve the menu
       // messages from the database. It is important that the channels
       // are not created now since we did not retrieve the messages
@@ -80,18 +61,18 @@ void worker::on_db_menu(std::string const& data)
 
       // We may wish to check whether the menu received above is valid
       // before we proceed with the retrieval of the menu messages.
-      // For example check if the menus have the correct number of
+      // For example check if the menu have the correct number of
       // elements and the correct depth for each element.
       db.retrieve_posts(0);
       return;
    }
 
-   // The menus is not empty which means we have received a new menu
+   // The menu is not empty which means we have received a new menu
    // and whould update the old. We only have to create the additional
    // channels and there is no need to retrieve messages from the
    // database. The new menu may contain additional channels that
    // should be created here.
-   create_channels(menus);
+   create_channels(menu);
 }
 
 void worker::create_channels(std::vector<menu_elem> const& menus_)
@@ -134,7 +115,7 @@ void worker::on_db_posts(std::vector<std::string> const& msgs)
    // 2. Fill the channels with the menu messages.
 
    if (std::empty(channels))
-      create_channels(menus);
+      create_channels(menu);
 
    log( loglevel::info, "W{0}: {1} messages received from the database."
       , id, std::size(msgs));
@@ -197,7 +178,7 @@ void worker::on_db_register()
       resp["result"] = "ok";
       resp["id"] = id;
       resp["password"] = reg_queue.front().pwd;
-      resp["menus"] = menus;
+      resp["menus"] = menu;
       session->send(resp.dump(), false);
    } else {
       // The user is not online anymore. The requested id is lost.
@@ -299,7 +280,7 @@ void worker::on_db_menu_connect()
    //    restablished. In this case we have to retrieve all the
    //    messages that may have arrived while we were offline.
 
-   if (std::empty(menus)) {
+   if (std::empty(menu)) {
       db.retrieve_menu();
    } else {
       db.retrieve_posts(1 + last_post_id);
@@ -354,16 +335,7 @@ worker::on_app_login( json const& j
    auto const user = j.at("user").get<std::string>();
    auto const pwd = j.at("password").get<std::string>();
 
-   auto const res = sessions.insert({user, s});
-   if (!res.second) {
-      // The user is already logged on the system. We do not allow
-      // this yet.
-      json resp;
-      resp["cmd"] = "login_ack";
-      resp["result"] = "fail";
-      s->send(resp.dump(), false);
-      return ev_res::login_fail;
-   }
+   assert(!sessions.insert({user, s}).second);
 
    // TODO: Query the database to validate the session.
    //if (user != s->get_id()) {
@@ -388,7 +360,7 @@ worker::on_app_login( json const& j
       j.at("menu_versions").get<std::vector<int>>();
 
    // Cache this value?
-   auto const server_versions = read_versions(menus);
+   auto const server_versions = read_versions(menu);
 
    auto const b =
       std::lexicographical_compare( std::begin(user_versions)
@@ -397,7 +369,7 @@ worker::on_app_login( json const& j
                                   , std::end(server_versions));
 
    if (b)
-      resp["menus"] = menus;
+      resp["menus"] = menu;
 
    s->send(resp.dump(), false);
 

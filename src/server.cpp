@@ -256,7 +256,7 @@ auto get_server_op(int argc, char* argv[])
    cfg.worker.db.ss_cfg.conn_retry_interval =
       std::chrono::milliseconds {conn_retry_interval};
 
-   cfg.worker.session = cfg.get_timeouts();
+   cfg.worker.timeouts = cfg.get_timeouts();
    return cfg;
 }
 

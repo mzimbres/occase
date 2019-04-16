@@ -1,5 +1,7 @@
 #pragma once
 
+#include <random>
+#include <string>
 #include <iterator>
 
 #include <fmt/format.h>
@@ -27,6 +29,17 @@ public:
 };
 
 void daemonize();
+
+class pwd_gen {
+private:
+   std::mt19937 gen;
+   std::uniform_int_distribution<int> dist;
+
+public:
+   pwd_gen();
+
+   std::string operator()(int size);
+};
 
 }
 

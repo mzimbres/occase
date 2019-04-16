@@ -33,7 +33,7 @@ enum class ev_res
 , unknown
 };
 
-struct session_cfg {
+struct ws_ss_timeouts {
    std::chrono::seconds login {2};
    std::chrono::seconds handshake {2};
    std::chrono::seconds pong {2};

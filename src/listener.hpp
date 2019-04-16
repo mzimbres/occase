@@ -34,7 +34,7 @@ struct listener_cfg {
 
    auto get_timeouts() const noexcept
    {
-      return session_cfg
+      return ws_ss_timeouts
       { std::chrono::seconds {login_timeout}
       , std::chrono::seconds {handshake_timeout}
       , std::chrono::seconds {pong_timeout}

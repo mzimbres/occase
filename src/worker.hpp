@@ -5,7 +5,6 @@
 #include <vector>
 #include <memory>
 #include <string>
-#include <random>
 #include <numeric>
 #include <unordered_map>
 
@@ -22,17 +21,6 @@
 namespace rt
 {
 
-class pwd_gen {
-private:
-   std::mt19937 gen;
-   std::uniform_int_distribution<int> dist;
-
-public:
-   pwd_gen();
-
-   std::string operator()(int size);
-};
-
 struct worker_only_cfg {
    // The maximum number of channels that is allowed to be sent to the
    // user on subscribe.
@@ -41,12 +29,12 @@ struct worker_only_cfg {
 
 struct worker_cfg {
    redis::config db;
-   session_cfg session;
+   ws_ss_timeouts timeouts;
    worker_only_cfg worker;
    channel_cfg channel;
 };
 
-struct sessions_stats {
+struct ws_ss_stats {
    int number_of_sessions {0};
 };
 
@@ -65,33 +53,34 @@ struct reg_queue_item {
 
 class worker {
 private:
+   net::io_context& ioc_;
+
    // The size of the passwords sent to the app.
    static const auto pwd_size = 10;
 
-   // This worker id is needed to put individual worker log messages
-   // apart.
+   // This worker id.
    int const id;
 
    worker_only_cfg const cfg;
+
+   // There are hundreds of thousends of channels typically, so we
+   // store the configuration only once here.
    channel_cfg const ch_cfg;
 
-   net::io_context& ioc_;
+   ws_ss_timeouts const ws_ss_timeouts_;
+   ws_ss_stats ws_ss_stats_;
 
-   // Maps a user id (telephone, email, etc.) to the user session.  We
-   // keep only a weak reference to the session.
+   // Maps a user id in to a websocket session.
    std::unordered_map< std::string
                      , std::weak_ptr<worker_session>
                      > sessions;
 
-   // Maps a channel id to the corresponding channel object.
+   // Maps a channel hash code into its corresponding channel object.
    std::unordered_map<std::uint64_t, channel> channels;
-
-   session_cfg const timeouts;
-   sessions_stats stats;
 
    redis::facade db;
 
-   std::vector<menu_elem> menus;
+   std::vector<menu_elem> menu;
 
    // Queue of user posts waiting for an id that has been requested
    // from redis.
@@ -105,7 +94,7 @@ private:
    pwd_gen pwdgen;
 
    void init();
-   void create_channels(std::vector<menu_elem> const& menus);
+   void create_channels(std::vector<menu_elem> const& menu);
 
    ev_res on_app_login( json const& j
                       , std::shared_ptr<worker_session> s);
@@ -151,11 +140,11 @@ public:
    auto get_post_queue_size() const noexcept
       { return std::size(post_queue);}
    auto const& get_timeouts() const noexcept
-      { return timeouts;}
+      { return ws_ss_timeouts_;}
    auto& get_ws_stats() noexcept
-      { return stats;}
+      { return ws_ss_stats_;}
    auto const& get_ws_stats() const noexcept
-      { return stats; }
+      { return ws_ss_stats_; }
    void shutdown();
    auto get_id() const noexcept
       { return id;}

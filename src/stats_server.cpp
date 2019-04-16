@@ -74,6 +74,10 @@ private:
                 << ";"
                 << worker_.get_post_queue_size()
                 << ";"
+                << worker_.get_reg_queue_size()
+                << ";"
+                << worker_.get_login_queue_size()
+                << ";"
                 << worker_.get_db().get_post_queue_size()
                 << ";"
                 << worker_.get_db().get_chat_queue_size()

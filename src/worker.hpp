@@ -51,6 +51,12 @@ struct reg_queue_item {
    std::string pwd;
 };
 
+struct login_queue_item {
+   std::weak_ptr<worker_session> session;
+   std::string pwd;
+   bool send_menu;
+};
+
 class worker {
 private:
    net::io_context& ioc_;
@@ -90,6 +96,9 @@ private:
    // from redis.
    std::queue<reg_queue_item> reg_queue;
 
+   // Queue of users waiting to be checked for login.
+   std::queue<login_queue_item> login_queue;
+
    int last_post_id = 0;
    pwd_gen pwdgen;
 
@@ -125,6 +134,7 @@ private:
    void on_db_menu_connect();
    void on_db_user_id(std::string const& msg);
    void on_db_register();
+   void on_db_user_data(std::vector<std::string> const& data);
 
 public:
    worker(worker_cfg cfg, int id_, net::io_context& ioc);
@@ -139,6 +149,10 @@ public:
 
    auto get_post_queue_size() const noexcept
       { return std::size(post_queue);}
+   auto get_reg_queue_size() const noexcept
+      { return std::size(reg_queue);}
+   auto get_login_queue_size() const noexcept
+      { return std::size(login_queue);}
    auto const& get_timeouts() const noexcept
       { return ws_ss_timeouts_;}
    auto& get_ws_stats() noexcept

@@ -149,6 +149,7 @@ void worker::on_db_post(std::string const& msg)
 void worker::on_db_user_id(std::string const& id)
 {
    assert(!std::empty(reg_queue));
+
    if (auto session = reg_queue.front().session.lock()) {
       reg_queue.front().pwd = pwdgen(pwd_size);
       db.register_user(id, reg_queue.front().pwd);
@@ -159,6 +160,43 @@ void worker::on_db_user_id(std::string const& id)
       // very fast.
       reg_queue.pop();
    }
+}
+
+void worker::on_db_user_data(std::vector<std::string> const& data)
+{
+   assert(!std::empty(login_queue));
+
+   if (auto s = login_queue.front().session.lock()) {
+      if (data.back() != login_queue.front().pwd) {
+         // Incorrect pwd.
+         json resp;
+         resp["cmd"] = "login_ack";
+         resp["result"] = "fail";
+         s->send(resp.dump(), false);
+         s->shutdown();
+      } else {
+         // We do not expect the insertion to fail, at the moment
+         // however I do not see a reason to treat error.
+         sessions.insert({s->get_id(), s});
+
+         db.subscribe_to_chat_msgs(s->get_id());
+         db.retrieve_chat_msgs(s->get_id());
+
+         json resp;
+         resp["cmd"] = "login_ack";
+         resp["result"] = "ok";
+         if (login_queue.front().send_menu)
+            resp["menus"] = menu;
+
+         s->send(resp.dump(), false);
+      }
+   } else {
+      // The user is not online anymore. The requested id is lost.
+      // Very unlikely to happen since the communication with redis is
+      // very fast.
+   }
+
+   login_queue.pop();
 }
 
 void worker::on_db_register()
@@ -252,7 +290,7 @@ worker::on_db_event( std::vector<std::string> data
          break;
 
       case redis::request::user_data:
-         std::cout << data.back() << std::endl;
+         on_db_user_data(data);
          break;
 
       case redis::request::register_user:
@@ -337,29 +375,7 @@ worker::on_app_login( json const& j
                     , std::shared_ptr<worker_session> s)
 {
    auto const user = j.at("user").get<std::string>();
-   auto const pwd = j.at("password").get<std::string>();
-
-   assert(sessions.insert({user, s}).second);
-
-   // TODO: Query the database to validate the session.
-   //if (user != s->get_id()) {
-   //   // Incorrect id.
-   //   json resp;
-   //   resp["cmd"] = "login_ack";
-   //   resp["result"] = "fail";
-   //   s->send(resp.dump());
-   //   return ev_res::login_fail;
-   //}
-
    s->set_id(user);
-
-   db.retrieve_user_data(s->get_id());
-   db.subscribe_to_chat_msgs(s->get_id());
-   db.retrieve_chat_msgs(s->get_id());
-
-   json resp;
-   resp["cmd"] = "login_ack";
-   resp["result"] = "ok";
 
    auto const user_versions =
       j.at("menu_versions").get<std::vector<int>>();
@@ -373,10 +389,12 @@ worker::on_app_login( json const& j
                                   , std::begin(server_versions)
                                   , std::end(server_versions));
 
-   if (b)
-      resp["menus"] = menu;
+   auto const pwd = j.at("password").get<std::string>();
 
-   s->send(resp.dump(), false);
+   // We do not have to serialize the calls to retrieve_user_data
+   // since this will be done by the db object.
+   login_queue.push({s, pwd, b});
+   db.retrieve_user_data(s->get_id());
 
    return ev_res::login_ok;
 }
@@ -494,13 +512,8 @@ void worker::on_session_dtor( std::string const& id
    // session. Think where should we catch exceptions.
 
    auto const match = sessions.find(id);
-   if (match == std::end(sessions)) {
-      // This is a bug, all autheticated sessions should be in the
-      // sessions map. Only sessions that failed to register with
-      // trigger this condition.
-      assert(std::empty(id));
+   if (match == std::end(sessions))
       return;
-   }
 
    sessions.erase(match);
    db.unsubscribe_to_chat_msgs(id);

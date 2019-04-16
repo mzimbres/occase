@@ -182,25 +182,23 @@ void worker_session::do_close()
    auto const handler0 = [p = shared_from_this()](auto ec)
    {
       if (ec) {
-         if (ec == net::error::operation_aborted)
+         if (ec == net::error::operation_aborted) {
+            // The close frame has been received on time.
             return;
+         }
 
-         log( loglevel::debug
-            , "worker_session::on_close0: {0}."
+         log( loglevel::debug, "worker_session::on_close0: {0}."
             , ec.message());
 
          return;
       }
 
-      //std::cout << "Giving up waiting for close frame. Shutting down socket."
-      //          << std::endl;
       p->ws.next_layer().shutdown(net::ip::tcp::socket::shutdown_both, ec);
       p->ws.next_layer().close(ec);
    };
 
    timer.async_wait(handler0);
 
-   //std::cout << "worker_session::do_close()" << std::endl;
    auto const handler = [p = shared_from_this()](auto ec)
       { p->on_close(ec); };
 
@@ -231,6 +229,8 @@ void worker_session::send_menu_msg(std::shared_ptr<std::string> msg)
 
 void worker_session::shutdown()
 {
+   // TODO: We can call do_close directly here since it is also async.
+
    auto const handler = [p = shared_from_this()]()
       { p->do_close(); };
 

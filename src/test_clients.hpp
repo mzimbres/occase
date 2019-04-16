@@ -251,6 +251,32 @@ public:
    auto const& get_login() const noexcept {return op.user;}
 };
 
+using login_err_cfg = register_cfg;
+
+// This class will be used to register some users.
+class login_err {
+public:
+   using options_type = register_cfg;
+private:
+   using client_type = session_shell<login_err>;
+   using code_type = std::vector<std::vector<std::vector<int>>>;
+
+   options_type op;
+   std::string pwd;
+
+public:
+   login_err(options_type op_)
+   : op {op_}
+   { }
+
+   int on_read(std::string msg, std::shared_ptr<client_type> s);
+   int on_closed(boost::system::error_code ec)
+      { return 1; }
+   int on_handshake(std::shared_ptr<client_type> s);
+   int on_connect() const noexcept { return -1;}
+   auto const& get_login() const noexcept {return op.user;}
+};
+
 std::vector<login> test_reg(session_shell_cfg const& cfg, int n);
 
 }

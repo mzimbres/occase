@@ -229,6 +229,33 @@ void read_only_tests(options const& op)
    ioc.run();
 }
 
+void test_login_error(options const& op, login login)
+{
+   boost::asio::io_context ioc;
+
+   using client_type1 = session_shell<login_err>;
+
+   std::cout << "__________________________________________"
+             << std::endl;
+
+   std::cout << "Beginning to test login error." << std::endl;
+
+   // First test: Valid user_id wrong password.
+   auto l1 = login;
+   l1.pwd = "lalalal";
+
+   auto s1 = 
+      std::make_shared<client_type1>( ioc, op.make_session_cf()
+                                    , login_err_cfg {l1});
+   s1->run();
+   ioc.run();
+   std::cout << "Test Ok: Correct user id, wrong pwd." << std::endl;
+
+   //ioc.restart();
+   //ioc.run();
+
+}
+
 int main(int argc, char* argv[])
 {
    try {
@@ -268,7 +295,7 @@ int main(int argc, char* argv[])
 
          ("test,r"
          , po::value<int>(&op.test)->default_value(1)
-         , "Which test to run: 1, 2, 3.")
+         , "Which test to run: 1, 2, 3, 4.")
       ;
 
       po::variables_map vm;        
@@ -288,13 +315,17 @@ int main(int argc, char* argv[])
          test_online(op, std::move(pub_logins), std::move(sub_logins));
          std::cout << "Online tests: Ok." << std::endl;
       } else if (op.test == 2) {
-         auto login1 = test_reg(op.make_session_cf(), op.n_publishers);
-         auto login2 = test_reg(op.make_session_cf(), op.n_repliers);
+         auto login1 = test_reg(op.make_session_cf(), 1);
+         auto login2 = test_reg(op.make_session_cf(), 1);
          test_offline(op, login1.front(), login2.front());
          std::cout << "Offline tests: Ok." << std::endl;
       } else if (op.test == 3) {
          read_only_tests(op);
          std::cout << "Read only tests: Ok." << std::endl;
+      } else if (op.test == 4) {
+         auto logins = test_reg(op.make_session_cf(), op.n_publishers);
+         test_login_error(op, logins.front());
+         std::cout << "Login error tests: Ok." << std::endl;
       } else {
          std::cerr << "Invalid test." << std::endl;
       }

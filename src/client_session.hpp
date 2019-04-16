@@ -179,9 +179,7 @@ void session_shell<Mgr>::do_write()
 {
    //std::cout << "Sending: " << msg << std::endl;
    auto handler = [p = this->shared_from_this()](auto ec, auto res)
-   {
-      p->on_write(ec, res);
-   };
+      { p->on_write(ec, res); };
 
    ws.async_write(net::buffer(msg_queue.front()), handler);
 }
@@ -196,9 +194,7 @@ void session_shell<Mgr>::do_close()
 
    //std::cout << "do_close" << std::endl;
    auto handler = [p = this->shared_from_this()](auto ec)
-   {
-      p->on_close(ec);
-   };
+      { p->on_close(ec); };
 
    ws.async_close(beast::websocket::close_code::normal, handler);
 }
@@ -265,7 +261,7 @@ session_shell<Mgr>::on_connect( boost::system::error_code ec
    }
 
    auto handler = [p = this->shared_from_this()](auto ec)
-   { p->on_handshake(ec); };
+      { p->on_handshake(ec); };
 
    // Perform the websocket handshake
    ws.async_handshake(op.host, "/", handler);
@@ -313,9 +309,7 @@ template <class Mgr>
 void session_shell<Mgr>::do_read()
 {
    auto handler = [p = this->shared_from_this()](auto ec, auto res)
-   { 
-      p->on_read(ec, res);
-   };
+      { p->on_read(ec, res); };
 
    ws.async_read(buffer, handler);
 }
@@ -338,7 +332,7 @@ void session_shell<Mgr>::on_write( boost::system::error_code ec
 
 template <class Mgr>
 void session_shell<Mgr>::on_resolve( boost::system::error_code ec
-                                    , net::ip::tcp::resolver::results_type results)
+                                   , net::ip::tcp::resolver::results_type results)
 {
    if (ec)
       return fail(ec, "resolve");

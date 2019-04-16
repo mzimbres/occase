@@ -4,6 +4,21 @@
 #include "client_session.hpp"
 #include "session_launcher.hpp"
 
+namespace
+{
+
+std::string make_login_cmd(rt::cli::login const& user)
+{
+   json j;
+   j["cmd"] = "login";
+   j["user"] = user.id;
+   j["password"] = user.pwd;
+   j["menu_versions"] = std::vector<int> {};
+   return j.dump();
+}
+
+}
+
 namespace rt::cli
 {
 
@@ -99,8 +114,7 @@ int replier::on_closed(boost::system::error_code ec)
 };
 
 void
-replier::talk_to( std::string to
-                , long long post_id
+replier::talk_to( std::string to, long long post_id
                 , std::shared_ptr<client_type> s)
 {
    //std::cout << "Sub: User " << op.user << " sending to " << to
@@ -428,6 +442,34 @@ int register1::on_handshake(std::shared_ptr<client_type> s)
    return 1;
 }
 
+//________________________________
+
+int login_err::on_read(std::string msg, std::shared_ptr<client_type> s)
+{
+   auto const j = json::parse(msg);
+
+   auto const cmd = j.at("cmd").get<std::string>();
+   if (cmd == "login_ack") {
+      auto const res = j.at("result").get<std::string>();
+      if (res != "fail")
+         throw std::runtime_error("login_err::login_ack");
+
+      return 1;
+   }
+
+   throw std::runtime_error("login_err::on_read");
+   return -1;
+}
+
+int login_err::on_handshake(std::shared_ptr<client_type> s)
+{
+   auto str = make_login_cmd(op.user);
+   s->send_msg(str);
+   return 1;
+}
+
+//________________________________
+
 std::vector<login> test_reg(session_shell_cfg const& cfg, int n)
 {
    boost::asio::io_context ioc;
@@ -436,7 +478,7 @@ std::vector<login> test_reg(session_shell_cfg const& cfg, int n)
 
    std::vector<login> logins {static_cast<std::size_t>(n)};
    launcher_cfg lcfg { logins, std::chrono::milliseconds {100}
-                     , "Registration launching finished."};
+                     , "Register."};
 
    auto launcher =
       std::make_shared< session_launcher<client_type>

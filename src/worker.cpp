@@ -331,9 +331,7 @@ void worker::on_db_menu_connect()
 
 void worker::on_db_publish()
 {
-   post_queue.pop();
-   if (!std::empty(post_queue))
-      db.request_post_id();
+   // We do not need this function at the moment.
 }
 
 void worker::on_db_post_id(std::string const& post_id_str)
@@ -354,20 +352,21 @@ void worker::on_db_post_id(std::string const& post_id_str)
 
    if (auto s = post_queue.front().session.lock()) {
       s->send(std::move(ack_str), true);
-      return;
+   } else {
+      // If we get here the user is not online anymore. This should be a
+      // very rare situation since requesting an id takes milliseconds.
+      // We can simply store his ack in the database for later retrieval
+      // when the user connects again. It shall be difficult to test
+      // this.
+
+      std::initializer_list<std::string> param = {ack_str};
+
+      db.store_chat_msg( std::move(post_queue.front().user_id)
+                       , std::make_move_iterator(std::begin(param))
+                       , std::make_move_iterator(std::end(param)));
    }
 
-   // If we get here the user is not online anymore. This should be a
-   // very rare situation since requesting an id takes milliseconds.
-   // We can simply store his ack in the database for later retrieval
-   // when the user connects again. It shall be difficult to test
-   // this.
-
-   std::initializer_list<std::string> param = {ack_str};
-
-   db.store_chat_msg( std::move(post_queue.front().user_id)
-                    , std::make_move_iterator(std::begin(param))
-                    , std::make_move_iterator(std::end(param)));
+   post_queue.pop();
 }
 
 ev_res
@@ -495,13 +494,8 @@ worker::on_app_publish(json j, std::shared_ptr<worker_session> s)
       return ev_res::publish_fail;
    }
 
-   auto const is_empty = std::empty(post_queue);
-
    post_queue.push({s, std::move(items.front()), items.front().from});
-
-   if (is_empty)
-      db.request_post_id();
-
+   db.request_post_id();
    return ev_res::publish_ok;
 }
 

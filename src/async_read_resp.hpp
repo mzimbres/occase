@@ -180,6 +180,13 @@ auto hset( std::string const& key
 }
 
 inline
+auto hget(std::string const& key, std::string const& field)
+{
+   auto par = {key, field};
+   return resp_assemble("HGET", std::begin(par), std::end(par));
+}
+
+inline
 auto expire(std::string const& key, int secs)
 {
    auto par = {key, std::to_string(secs)};

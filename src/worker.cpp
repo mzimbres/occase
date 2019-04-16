@@ -224,13 +224,21 @@ worker::on_db_event( std::vector<std::string> data
 {
    switch (req.req)
    {
+      case redis::request::menu:
+         assert(std::size(data) == 1);
+         on_db_menu(data.back());
+         break;
+
       case redis::request::chat_messages:
          on_db_chat_msg(req.user_id, std::move(data));
          break;
 
-      case redis::request::menu:
-         assert(std::size(data) == 1);
-         on_db_menu(data.back());
+      case redis::request::post:
+         on_db_publish();
+         break;
+
+      case redis::request::posts:
+         on_db_posts(data);
          break;
 
       case redis::request::post_id:
@@ -238,30 +246,26 @@ worker::on_db_event( std::vector<std::string> data
          on_db_post_id(data.back());
          break;
 
-      case redis::request::post:
-         on_db_publish();
+      case redis::request::user_id:
+         assert(std::size(data) == 1);
+         on_db_user_id(data.back());
+         break;
+
+      case redis::request::user_data:
+         std::cout << data.back() << std::endl;
+         break;
+
+      case redis::request::register_user:
+         on_db_register();
          break;
 
       case redis::request::menu_connect:
          on_db_menu_connect();
          break;
 
-      case redis::request::posts:
-         on_db_posts(data);
-         break;
-
       case redis::request::unsol_publish:
          assert(std::size(data) == 1);
          on_db_post(data.back());
-         break;
-
-      case redis::request::user_id:
-         assert(std::size(data) == 1);
-         on_db_user_id(data.back());
-         break;
-
-      case redis::request::register_user:
-         on_db_register();
          break;
 
       default:
@@ -335,7 +339,7 @@ worker::on_app_login( json const& j
    auto const user = j.at("user").get<std::string>();
    auto const pwd = j.at("password").get<std::string>();
 
-   assert(!sessions.insert({user, s}).second);
+   assert(sessions.insert({user, s}).second);
 
    // TODO: Query the database to validate the session.
    //if (user != s->get_id()) {
@@ -349,6 +353,7 @@ worker::on_app_login( json const& j
 
    s->set_id(user);
 
+   db.retrieve_user_data(s->get_id());
    db.subscribe_to_chat_msgs(s->get_id());
    db.retrieve_chat_msgs(s->get_id());
 

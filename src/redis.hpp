@@ -15,6 +15,7 @@ enum class request
 , posts
 , post_id
 , user_id
+, user_data
 , register_user
 , get_chat_msgs
 , menu_connect
@@ -98,9 +99,9 @@ private:
    // unsubscribe).
    session ss_menu_sub;
 
-   // The session that deals with the publication of menu commands.
-   // On startup it will also be used to retrieve menu messages to
-   // load the workers.
+   // The session that deals with the publication of menu commands AND
+   // the registration of users On startup it will also be used to
+   // retrieve menu messages to load the workers.
    session ss_menu_pub;
    std::queue<request> menu_pub_queue;
 
@@ -143,8 +144,10 @@ public:
 
    void run();
 
-   // Retrieves the menu asynchronously. The callback will complete
-   // with redis::request::menu.
+   // Retrieves the menu asynchronously. Complete with
+   //
+   //    redis::request::menu.
+   //
    void retrieve_menu();
 
    // Instructs redis to notify us upon any change to the given
@@ -219,7 +222,15 @@ public:
    // Register a user in the database. Completes with
    //
    //    redis::request::register_user
+   //           
    void register_user(std::string const& user, std::string const& pwd);
+
+   // Retrieves the user password (and possibly other data in the
+   // future) from the database. Completes with 
+   //
+   //   redis::request::user_data
+   //
+   void retrieve_user_data(std::string const& user_id);
 
    // Closes all stablished connections with redis.
    void disconnect();

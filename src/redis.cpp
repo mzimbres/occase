@@ -245,6 +245,12 @@ void facade::register_user(std::string const& user, std::string const& pwd)
    menu_pub_queue.push(request::register_user);
 }
 
+void facade::retrieve_user_data(std::string const& user_id)
+{
+   ss_menu_pub.send(hget(user_id, "password"));
+   menu_pub_queue.push(request::user_data);
+}
+
 void facade::retrieve_posts(int begin)
 {
    log( loglevel::debug, "W{0}/facade::retrieve_posts({1})."

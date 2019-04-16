@@ -229,31 +229,40 @@ void read_only_tests(options const& op)
    ioc.run();
 }
 
-void test_login_error(options const& op, login login)
+void test_login_error(options const& op)
 {
-   boost::asio::io_context ioc;
-
    using client_type1 = session_shell<login_err>;
 
-   std::cout << "__________________________________________"
-             << std::endl;
+   {
+      // First test: Here we request a user_id from the server and
+      // sets a wrong password to see whether the server refuses to
+      // login the user.
+      auto l1 = test_reg(op.make_session_cf(), op.n_publishers);
+      l1.front().pwd = "Kabuf";
 
-   std::cout << "Beginning to test login error." << std::endl;
+      boost::asio::io_context ioc;
+      auto s1 = 
+         std::make_shared<client_type1>( ioc, op.make_session_cf()
+                                       , login_err_cfg {l1.front()});
+      s1->run();
+      ioc.run();
+      std::cout << "Test Ok: Correct user id, wrong pwd." << std::endl;
+   }
 
-   // First test: Valid user_id wrong password.
-   auto l1 = login;
-   l1.pwd = "lalalal";
+   {
+      // Second test: Here we request a user_id from the server and
+      // sets a wrong password to see whether the server refuses to
+      // login the user.
+      login invalid {"Kabuf", "Magralha"};
 
-   auto s1 = 
-      std::make_shared<client_type1>( ioc, op.make_session_cf()
-                                    , login_err_cfg {l1});
-   s1->run();
-   ioc.run();
-   std::cout << "Test Ok: Correct user id, wrong pwd." << std::endl;
-
-   //ioc.restart();
-   //ioc.run();
-
+      boost::asio::io_context ioc;
+      auto s1 = 
+         std::make_shared<client_type1>( ioc, op.make_session_cf()
+                                       , login_err_cfg {invalid});
+      s1->run();
+      ioc.run();
+      std::cout << "Test Ok: Invalid id." << std::endl;
+   }
 }
 
 int main(int argc, char* argv[])
@@ -323,9 +332,7 @@ int main(int argc, char* argv[])
          read_only_tests(op);
          std::cout << "Read only tests: Ok." << std::endl;
       } else if (op.test == 4) {
-         auto logins = test_reg(op.make_session_cf(), op.n_publishers);
-         test_login_error(op, logins.front());
-         std::cout << "Login error tests: Ok." << std::endl;
+         test_login_error(op);
       } else {
          std::cerr << "Invalid test." << std::endl;
       }

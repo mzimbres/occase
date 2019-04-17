@@ -59,6 +59,9 @@ namespace rt
  *      which is not good for traversal.
  */
 
+// TODO: Consider using a ring buffer to store posts instead of a
+// std::deque
+
 struct channel_cfg {
    // The frequency the channel will be cleaned up if no publish
    // activity is observed.

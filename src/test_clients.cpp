@@ -62,9 +62,7 @@ int replier::on_read( std::string msg
       auto items = j.at("items").get<std::vector<post>>();
 
       auto const f = [this, s](auto const& e)
-      {
-         talk_to(e.from, e.id, s);
-      };
+         { talk_to(e.from, e.id, s); };
 
       std::for_each(std::begin(items), std::end(items), f);
 
@@ -83,7 +81,8 @@ int replier::on_read( std::string msg
 
    if (cmd == "user_msg_server_ack") {
       if (--to_receive_posts == 0) {
-         //std::cout << "Sub: User " << op.user << " finished." << std::endl;
+         std::cout << "User " << op.user << " done. (Replier)."
+                   << std::endl;
          return -1; // Done.
       }
 
@@ -239,7 +238,8 @@ int publisher::handle_msg(std::shared_ptr<client_type> s)
    if (server_echo && post_id != -1 && user_msg_counter == 0) {
       pub_stack.pop();
       if (std::empty(pub_stack)) {
-         std::cout << "Pub: User " << op.user << " finished." << std::endl;
+         std::cout << "User " << op.user << " ok. (Publisher)."
+                   << std::endl;
          return -1;
       }
 
@@ -327,8 +327,11 @@ int publisher2::on_read(std::string msg, std::shared_ptr<client_type> s)
 
       auto const post_id = j.at("id").get<int>();
       post_ids.push_back(post_id);
-      if (--msg_counter == 0)
+      if (--msg_counter == 0) {
+         std::cout << "User " << op.user << " ok. (Publisher2)."
+                   << std::endl;
          return -1;
+      }
 
       return 1;
    }
@@ -346,7 +349,6 @@ int publisher2::on_handshake(std::shared_ptr<client_type> s)
    j["menu_versions"] = std::vector<int> {};
    auto msg = j.dump();
    s->send_msg(msg);
-   std::cout << "Sent: " << msg << std::endl;
    return 1;
 }
 
@@ -381,7 +383,6 @@ int msg_pull::on_read(std::string msg, std::shared_ptr<client_type> s)
       if (res != "ok")
          throw std::runtime_error("msg_pull::login_ack");
 
-      std::cout << "msg_pull::login_ack: ok." << std::endl;
       return 1;
    }
 
@@ -389,8 +390,11 @@ int msg_pull::on_read(std::string msg, std::shared_ptr<client_type> s)
       auto const post_id = j.at("post_id").get<int>();
       post_ids.push_back(post_id);
       //std::cout << "Expecting: " << op.expected_user_msgs << std::endl;
-      if (--op.expected_user_msgs == 0)
+      if (--op.expected_user_msgs == 0) {
+         std::cout << "User " << op.user << " ok. (msg_pull)."
+                   << std::endl;
          return -1;
+      }
       return 1;
    }
 
@@ -407,7 +411,6 @@ int msg_pull::on_handshake(std::shared_ptr<client_type> s)
    j["menu_versions"] = std::vector<int> {};
    auto msg = j.dump();
    s->send_msg(msg);
-   std::cout << "Sent: " << msg << std::endl;
    return 1;
 }
 
@@ -425,7 +428,8 @@ int register1::on_read(std::string msg, std::shared_ptr<client_type> s)
 
       op.user.id = j.at("id").get<std::string>();
       op.user.pwd = j.at("password").get<std::string>();
-      std::cout << "Registered: " << op.user << std::endl;
+      std::cout << "User " << op.user << " ok. (register1)."
+                << std::endl;
       return -1;
    }
 
@@ -457,6 +461,8 @@ int login_err::on_read(std::string msg, std::shared_ptr<client_type> s)
       return 1;
    }
 
+   std::cout << "User " << op.user << " ok. (login_err)."
+             << std::endl;
    throw std::runtime_error("login_err::on_read");
    return -1;
 }
@@ -477,8 +483,7 @@ std::vector<login> test_reg(session_shell_cfg const& cfg, int n)
    using client_type = register1;
 
    std::vector<login> logins {static_cast<std::size_t>(n)};
-   launcher_cfg lcfg { logins, std::chrono::milliseconds {100}
-                     , "Register."};
+   launcher_cfg lcfg {logins, std::chrono::milliseconds {100}, ""};
 
    auto launcher =
       std::make_shared< session_launcher<client_type>

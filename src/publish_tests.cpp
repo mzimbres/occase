@@ -51,7 +51,7 @@ struct options {
       return launcher_cfg
       { logins
       , std::chrono::milliseconds {launch_interval}
-      , {"Publisher"}
+      , {}
       };
    }
 
@@ -60,7 +60,7 @@ struct options {
       return launcher_cfg
       { logins
       , std::chrono::milliseconds {launch_interval}
-      , {"Replier"}
+      , {}
       };
    }
 
@@ -69,16 +69,16 @@ struct options {
       return launcher_cfg
       { std::vector<login>{300}
       , std::chrono::milliseconds {launch_interval}
-      , {"Handshake test"}
+      , {}
       };
    }
 
-   auto make_after_handshake_laucher_op() const
+   auto make_no_login_cfg() const
    {
       return launcher_cfg
       { std::vector<login>{300}
       , std::chrono::milliseconds {launch_interval}
-      , {"After handshake test."}
+      , {}
       };
    }
 };
@@ -102,22 +102,13 @@ public:
   ~timer() { }
 };
 
-void test_online( options const& op
-                , std::vector<login> pub_logins
-                , std::vector<login> sub_logins)
+void test_online(options const& op)
 {
    boost::asio::io_context ioc;
-   timer t;
 
-   auto const ts = [&t]()
+   auto pub_logins = test_reg(op.make_session_cf(), op.n_publishers);
+   auto const next = [&pub_logins, &ioc, &op]()
    {
-      std::cout << "Starting the timer." << std::endl;
-      t.start();
-   };
-
-   auto const next = [&pub_logins, &ioc, &op, ts]()
-   {
-      std::cout << "Starting launching pub." << std::endl;
       auto const s2 = std::make_shared< session_launcher<publisher>
                       >( ioc
                        , publisher_cfg {{}, op.n_repliers}
@@ -125,11 +116,10 @@ void test_online( options const& op
                        , op.make_pub_cfg(pub_logins)
                        );
 
-      s2->set_on_end(ts);
       s2->run({});
    };
 
-   std::cout << "Starting launching checkers." << std::endl;
+   auto const sub_logins = test_reg(op.make_session_cf(), op.n_repliers);
    auto const s = std::make_shared< session_launcher<replier>
                    >( ioc
                     , replier_cfg {{}, op.n_publishers}
@@ -143,90 +133,83 @@ void test_online( options const& op
    s->run({});
 
    ioc.run();
-   std::cout << "Time elapsed: " << t.get_count_now() << "s" << std::endl;
+
+   std::cout << "Test ok: Online messages." << std::endl;
 }
 
-void test_offline(options const& op, login login1, login login2)
+void test_offline(options const& op)
 {
    boost::asio::io_context ioc;
 
    using client_type1 = session_shell<publisher2>;
 
-   std::cout << "__________________________________________"
-             << std::endl;
-   std::cout << "Beginning the offline tests." << std::endl;
-   std::cout << "Starting the publisher " << login1 << std::endl;
+   auto const l1 = test_reg(op.make_session_cf(), 1);
    auto s1 = 
       std::make_shared<client_type1>( ioc
                                     , op.make_session_cf()
-                                    , publisher2_cfg {login1});
+                                    , publisher2_cfg {l1.front()});
    s1->run();
    ioc.run();
    auto post_ids = s1->get_mgr().get_post_ids();
    std::sort(std::begin(post_ids), std::end(post_ids));
    auto const n_post_ids = ssize(post_ids);
-   std::cout << "Number of acked posts: " << n_post_ids
-             << std::endl;
-   std::cout << "Publisher finished." << std::endl;
-
-   //_____________
-
-   std::cout << "Starting the reader " << login2 << std::endl;
 
    using client_type2 = session_shell<replier>;
 
+   auto const l2 = test_reg(op.make_session_cf(), 1);
    std::make_shared<client_type2>( ioc
                                  , op.make_session_cf()
-                                 , replier_cfg {login2, 1}
+                                 , replier_cfg {l2.front(), 1}
                                  )->run();
    ioc.restart();
    ioc.run();
 
-   std::cout << "Reader finished." << std::endl;
-
-   //_____________
-
    using client_type3 = session_shell<msg_pull>;
 
-   std::cout << "Starting the publisher " << login1 << std::endl;
    auto s3 = 
       std::make_shared<client_type3>( ioc
                                     , op.make_session_cf()
                                     , msg_pull_cfg
-                                      {login1, n_post_ids}
+                                      {l1.front(), n_post_ids}
                                     );
    s3->run();
    ioc.restart();
    ioc.run();
-   std::cout << "Publisher finished." << std::endl;
 
    auto post_ids2 = s3->get_mgr().get_post_ids();
    std::sort(std::begin(post_ids2), std::end(post_ids2));
-   if (post_ids2 != post_ids)
-      std::cout << "Error" << std::endl;
+
+   if (post_ids2 == post_ids)
+      std::cout << "Test ok: Offline messages." << std::endl;
    else
-      std::cout << "Success" << std::endl;
+      std::cout << "Test fail: Offline messages." << std::endl;
 }
 
 void read_only_tests(options const& op)
 {
    boost::asio::io_context ioc;
 
-   std::make_shared< session_launcher<handshake_tm>
+   std::make_shared< session_launcher<only_tcp_no_ws>
                    >( ioc
-                    , handshake_tm_cfg {}
+                    , only_tcp_no_ws_cfg {}
                     , op.make_session_cf()
                     , op.make_handshake_laucher_op()
                     )->run({});
 
-   std::make_shared< session_launcher<no_handshake_tm>
+   std::make_shared< session_launcher<no_login>
                    >( ioc
-                    , handshake_tm_cfg {}
+                    , only_tcp_no_ws_cfg {}
                     , op.make_session_cf()
-                    , op.make_after_handshake_laucher_op()
+                    , op.make_no_login_cfg()
                     )->run({});
 
    ioc.run();
+
+   std::cout << "Test ok: Only tcp, no ws handshake (timeout test)."
+             << std::endl;
+
+   std::cout << "Test ok: No register/login (timeout test)."
+             << std::endl;
 }
 
 void test_login_error(options const& op)
@@ -246,7 +229,7 @@ void test_login_error(options const& op)
                                        , login_err_cfg {l1.front()});
       s1->run();
       ioc.run();
-      std::cout << "Test Ok: Correct user id, wrong pwd." << std::endl;
+      std::cout << "Test ok: Correct user id, wrong pwd." << std::endl;
    }
 
    {
@@ -261,7 +244,7 @@ void test_login_error(options const& op)
                                        , login_err_cfg {invalid});
       s1->run();
       ioc.run();
-      std::cout << "Test Ok: Invalid id." << std::endl;
+      std::cout << "Test ok: Invalid user id." << std::endl;
    }
 }
 
@@ -318,23 +301,14 @@ int main(int argc, char* argv[])
 
       set_fd_limits(500000);
 
-      if (op.test == 1) {
-         auto pub_logins = test_reg(op.make_session_cf(), op.n_publishers);
-         auto sub_logins = test_reg(op.make_session_cf(), op.n_repliers);
-         test_online(op, std::move(pub_logins), std::move(sub_logins));
-         std::cout << "Online tests: Ok." << std::endl;
-      } else if (op.test == 2) {
-         auto login1 = test_reg(op.make_session_cf(), 1);
-         auto login2 = test_reg(op.make_session_cf(), 1);
-         test_offline(op, login1.front(), login2.front());
-         std::cout << "Offline tests: Ok." << std::endl;
-      } else if (op.test == 3) {
-         read_only_tests(op);
-         std::cout << "Read only tests: Ok." << std::endl;
-      } else if (op.test == 4) {
-         test_login_error(op);
-      } else {
-         std::cerr << "Invalid test." << std::endl;
+      switch (op.test)
+      {
+         case 1: test_online(op); break;
+         case 2: test_offline(op); break;
+         case 3: read_only_tests(op); break;
+         case 4: test_login_error(op); break;
+         default:
+            std::cerr << "Invalid test." << std::endl;
       }
 
    } catch (std::exception const& e) {

@@ -20,17 +20,18 @@ namespace rt::cli
 template <class Mgr>
 class session_shell;
 
-// Tests if the server drops a session that does not proceed with
-// authentication.
-
-struct handshake_tm_cfg {
+struct only_tcp_no_ws_cfg {
    login user;
 };
 
-struct handshake_tm {
-   using client_type = session_shell<handshake_tm>;
-   using options_type = handshake_tm_cfg;
-   handshake_tm(handshake_tm_cfg) noexcept { }
+// Does no proceed with the websocket handshake after stablishing the
+// tcp connection. This is meant to test if the server times out the
+// connection.
+struct only_tcp_no_ws {
+   using client_type = session_shell<only_tcp_no_ws>;
+   using options_type = only_tcp_no_ws_cfg;
+
+   only_tcp_no_ws(only_tcp_no_ws_cfg) noexcept { }
    auto on_read(std::string msg, std::shared_ptr<client_type> s) const 
       { throw std::runtime_error("Error."); return 1; }
    auto on_closed(boost::system::error_code ec) const 
@@ -45,13 +46,15 @@ struct handshake_tm {
       {return login {};}
 };
 
-class no_handshake_tm {
+// Stablishes the websocket connection but does not proceed with a
+// login or register command. The server should drop the connection.
+class no_login {
 private:
-   using client_type = session_shell<no_handshake_tm>;
+   using client_type = session_shell<no_login>;
 
 public:
-   using options_type = handshake_tm_cfg;
-   no_handshake_tm(handshake_tm_cfg) noexcept { }
+   using options_type = only_tcp_no_ws_cfg;
+   no_login(only_tcp_no_ws_cfg) noexcept { }
    auto on_read(std::string msg, std::shared_ptr<client_type> s)
       { throw std::runtime_error("accept_timer::on_read"); return -1; }
    auto on_closed(boost::system::error_code ec) const noexcept

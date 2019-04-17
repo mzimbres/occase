@@ -14,6 +14,8 @@
 #include "json_utils.hpp"
 #include "client_session.hpp"
 
+// Contains the implementation of many test clients.
+
 namespace rt::cli
 {
 
@@ -25,8 +27,7 @@ struct only_tcp_no_ws_cfg {
 };
 
 // Does no proceed with the websocket handshake after stablishing the
-// tcp connection. This is meant to test if the server times out the
-// connection.
+// tcp connection. The server should drop such clients.
 struct only_tcp_no_ws {
    using client_type = session_shell<only_tcp_no_ws>;
    using options_type = only_tcp_no_ws_cfg;
@@ -69,8 +70,7 @@ public:
       {return login {};}
 };
 
-/*
- * This test client will hang on the channels and send the publisher a
+/* This test client will hang on the channels and send the publisher a
  * user_msg. It will exit after receiving a pre-calculated number of
  * messages.
  */
@@ -200,8 +200,8 @@ struct msg_pull_cfg {
    int expected_user_msgs;
 };
 
-// This class will be used to publish some messages to the server and
-// exit quickly.
+// This class will be used to log in the server and wait for messages
+// the user may have received while he was offline.
 class msg_pull {
 public:
    using options_type = msg_pull_cfg;
@@ -230,7 +230,7 @@ struct register_cfg {
    login user;
 };
 
-// This class will be used to register some users.
+// This class will be used to register some users in the server.
 class register1 {
 public:
    using options_type = register_cfg;
@@ -256,7 +256,8 @@ public:
 
 using login_err_cfg = register_cfg;
 
-// This class will be used to register some users.
+// This class is used to test if the server rejects logins with wrong
+// credentials.
 class login_err {
 public:
    using options_type = register_cfg;
@@ -280,6 +281,7 @@ public:
    auto const& get_login() const noexcept {return op.user;}
 };
 
+// Register n users in the server and return the credentials.
 std::vector<login> test_reg(session_shell_cfg const& cfg, int n);
 
 }

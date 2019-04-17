@@ -36,12 +36,26 @@ std::ostream& operator<<(std::ostream& os, login o)
 }
 
 struct session_shell_cfg {
+   // Server address and port.
    std::string host;
    std::string port;
+
+   // The websocket handshake timeout used by the server.
    std::chrono::seconds handshake_timeout;
+
+   // The login timeout used by the server.
    std::chrono::seconds auth_timeout;
 };
 
+/* This class is quite messy as it has many functionality to test the
+ * server, for example, one can close the connection after the
+ * connection has been stablished or after the websocket handshake.
+ * Shutdown the tcp socket without sending the websocket close frame
+ * etc.
+ *
+ * To write tests more easily this class accepts a template parameter
+ * that is reponsible for the test logic and websocket messages.
+ */
 template <class Mgr>
 class session_shell :
    public std::enable_shared_from_this<session_shell<Mgr>> {

@@ -1,7 +1,9 @@
 #include "worker.hpp"
 
+#include <string>
 #include <iterator>
 #include <algorithm>
+#include <functional>
 
 #include <fmt/format.h>
 
@@ -152,7 +154,11 @@ void worker::on_db_user_id(std::string const& id)
 
    if (auto session = reg_queue.front().session.lock()) {
       reg_queue.front().pwd = pwdgen(pwd_size);
-      db.register_user(id, reg_queue.front().pwd);
+
+      // We store a hashed version of the password in the database.
+      auto const hashed_pwd = hash_func(reg_queue.front().pwd);
+      auto const hashed_pwd_str = std::to_string(hashed_pwd);
+      db.register_user(id, hashed_pwd_str);
       session->set_id(id);
    } else {
       // The user is not online anymore. The requested id is lost.
@@ -167,7 +173,10 @@ void worker::on_db_user_data(std::vector<std::string> const& data)
    assert(!std::empty(login_queue));
 
    if (auto s = login_queue.front().session.lock()) {
-      if (data.back() != login_queue.front().pwd) {
+      // In the db we store only hashed pwds.
+      auto const hashed_pwd = hash_func(login_queue.front().pwd);
+      auto const hashed_pwd_str = std::to_string(hashed_pwd);
+      if (data.back() != hashed_pwd_str) {
          // Incorrect pwd.
          json resp;
          resp["cmd"] = "login_ack";

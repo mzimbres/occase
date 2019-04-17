@@ -102,28 +102,25 @@ private:
    int last_post_id = 0;
    pwd_gen pwdgen;
 
+   std::hash<std::string> const hash_func {};
+
    void init();
    void create_channels(std::vector<menu_elem> const& menu);
 
    ev_res on_app_login( json const& j
                       , std::shared_ptr<worker_session> s);
-
    ev_res on_app_register( json const& j
                          , std::shared_ptr<worker_session> s);
-
    ev_res on_app_subscribe( json const& j
                           , std::shared_ptr<worker_session> s);
-
    ev_res on_app_chat_msg( std::string msg, json const& j
                          , std::shared_ptr<worker_session> s);
-
    ev_res on_app_publish( json j
                         , std::shared_ptr<worker_session> s);
 
    // Handlers for events we receive from the database.
    void on_db_chat_msg( std::string const& user_id
                       , std::vector<std::string> msgs);
-
    void on_db_menu(std::string const& data);
    void on_db_post(std::string const& data);
    void on_db_posts(std::vector<std::string> const& msgs);

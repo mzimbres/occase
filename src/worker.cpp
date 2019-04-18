@@ -370,7 +370,7 @@ void worker::on_db_post_id(std::string const& post_id_str)
 
       std::initializer_list<std::string> param = {ack_str};
 
-      db.store_chat_msg( std::move(post_queue.front().user_id)
+      db.store_chat_msg( std::move(post_queue.front().item.from)
                        , std::make_move_iterator(std::begin(param))
                        , std::make_move_iterator(std::end(param)));
    }
@@ -503,7 +503,10 @@ worker::on_app_publish(json j, std::shared_ptr<worker_session> s)
       return ev_res::publish_fail;
    }
 
-   post_queue.push({s, std::move(items.front()), items.front().from});
+   // It is important to not thrust the *from* field in the json
+   // command.
+   items.front().from = s->get_id();
+   post_queue.push({s, items.front()});
    db.request_post_id();
    return ev_res::publish_ok;
 }
@@ -536,6 +539,9 @@ worker::on_app_chat_msg( std::string msg, json const& j
    // and send him his message directly to avoid overloading the redis
    // server. This would be a big optimization in the case of small
    // number of workers.
+
+   // TODO: Do not thrust the from field in the json command before sending
+   // to the database. Override it with s->get_id().
 
    auto to = j.at("to").get<std::string>();
 

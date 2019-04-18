@@ -96,13 +96,8 @@ int replier::on_read( std::string msg
 
 int replier::on_handshake(std::shared_ptr<client_type> s)
 {
-   json j;
-   j["cmd"] = "login";
-   j["user"] = op.user.id;
-   j["password"] = op.user.pwd;
-   j["menu_versions"] = std::vector<int> {};
-   s->send_msg(j.dump());
-   //std::cout << "Sending " << j.dump() << std::endl;
+   auto const str = make_login_cmd(op.user);
+   s->send_msg(str);
    return 1;
 }
 
@@ -256,13 +251,8 @@ int publisher::handle_msg(std::shared_ptr<client_type> s)
 
 int publisher::on_handshake(std::shared_ptr<client_type> s)
 {
-   json j;
-   j["cmd"] = "login";
-   j["user"] = op.user.id;
-   j["password"] = op.user.pwd;
-   j["menu_versions"] = std::vector<int> {};
-   s->send_msg(j.dump());
-   //std::cout << "Sending " << j.dump() << std::endl;
+   auto const str = make_login_cmd(op.user);
+   s->send_msg(str);
    return 1;
 }
 
@@ -277,8 +267,7 @@ int publisher::send_group_msg(std::shared_ptr<client_type> s) const
    //std::cout << "Pub: Stack size: " << std::size(pub_stack)
    //          << std::endl;
 
-   post item {-1, op.user.id, "Not an interesting message."
-                 , pub_stack.top()};
+   post item {-1, {}, "Not an interesting message.", pub_stack.top()};
    json j_msg;
    j_msg["cmd"] = "publish";
    j_msg["items"] = std::vector<post>{item};
@@ -342,13 +331,8 @@ int publisher2::on_read(std::string msg, std::shared_ptr<client_type> s)
 
 int publisher2::on_handshake(std::shared_ptr<client_type> s)
 {
-   json j;
-   j["cmd"] = "login";
-   j["user"] = op.user.id;
-   j["password"] = op.user.pwd;
-   j["menu_versions"] = std::vector<int> {};
-   auto msg = j.dump();
-   s->send_msg(msg);
+   auto const str = make_login_cmd(op.user);
+   s->send_msg(str);
    return 1;
 }
 
@@ -404,13 +388,8 @@ int msg_pull::on_read(std::string msg, std::shared_ptr<client_type> s)
 
 int msg_pull::on_handshake(std::shared_ptr<client_type> s)
 {
-   json j;
-   j["cmd"] = "login";
-   j["user"] = op.user.id;
-   j["password"] = op.user.pwd;
-   j["menu_versions"] = std::vector<int> {};
-   auto msg = j.dump();
-   s->send_msg(msg);
+   auto const str = make_login_cmd(op.user);
+   s->send_msg(str);
    return 1;
 }
 

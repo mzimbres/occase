@@ -46,7 +46,6 @@ struct ws_ss_stats {
 struct post_queue_item {
    std::weak_ptr<worker_session> session;
    post item;
-   std::string user_id;
 };
 
 struct reg_queue_item {

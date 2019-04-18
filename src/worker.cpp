@@ -16,6 +16,23 @@
 namespace rt
 {
 
+std::ostream& operator<<(std::ostream& os, worker_stats const& stats)
+{
+   os << stats.number_of_sessions
+      << ";"
+      << stats.worker_post_queue_size
+      << ";"
+      << stats.worker_reg_queue_size
+      << ";"
+      << stats.worker_login_queue_size
+      << ";"
+      << stats.db_post_queue_size
+      << ";"
+      << stats.db_chat_queue_size;
+
+   return os;
+}
+
 worker::worker(worker_cfg cfg, int id_, net::io_context& ioc)
 : ioc_ {ioc}
 , id {id_}
@@ -597,6 +614,20 @@ worker::on_message(std::shared_ptr<worker_session> s, std::string msg)
    }
 
    return ev_res::unknown;
+}
+
+worker_stats worker::get_stats() const noexcept
+{
+   worker_stats wstats {};
+
+   wstats.number_of_sessions = ws_ss_stats_.number_of_sessions;
+   wstats.worker_post_queue_size = ssize(post_queue);
+   wstats.worker_reg_queue_size = ssize(reg_queue);
+   wstats.worker_login_queue_size = ssize(login_queue);
+   wstats.db_post_queue_size = db.get_post_queue_size();
+   wstats.db_chat_queue_size = db.get_chat_queue_size();
+
+   return wstats;
 }
 
 }

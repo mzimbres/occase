@@ -7,17 +7,6 @@ namespace rt
 
 class worker;
 
-struct server_stats {
-   int number_of_sessions;
-   int worker_post_queue_size;
-   int worker_reg_queue_size;
-   int worker_login_queue_size;
-   int db_post_queue_size;
-   int db_chat_queue_size;
-};
-
-std::ostream& operator<<(std::ostream& os, server_stats const& stats);
-
 struct stats_server_cfg {
    std::string port;
 };

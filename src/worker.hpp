@@ -60,6 +60,17 @@ struct login_queue_item {
    bool send_menu;
 };
 
+struct worker_stats {
+   int number_of_sessions = 0;
+   int worker_post_queue_size = 0;
+   int worker_reg_queue_size = 0;
+   int worker_login_queue_size = 0;
+   int db_post_queue_size = 0;
+   int db_chat_queue_size = 0;
+};
+
+std::ostream& operator<<(std::ostream& os, worker_stats const& stats);
+
 class worker {
 private:
    net::io_context& ioc_;
@@ -141,12 +152,6 @@ public:
 
    ev_res on_message(std::shared_ptr<worker_session> s, std::string msg);
 
-   auto get_post_queue_size() const noexcept
-      { return ssize(post_queue);}
-   auto get_reg_queue_size() const noexcept
-      { return ssize(reg_queue);}
-   auto get_login_queue_size() const noexcept
-      { return ssize(login_queue);}
    auto const& get_timeouts() const noexcept
       { return ws_ss_timeouts_;}
    auto& get_ws_stats() noexcept
@@ -156,8 +161,9 @@ public:
    void shutdown();
    auto get_id() const noexcept
       { return id;}
-   auto const& get_db() const noexcept
-      { return db;}
+   worker_stats get_stats() const noexcept;
+   auto& get_ioc() const noexcept
+   { return ioc_; }
 };
 
 }

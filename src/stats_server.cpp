@@ -12,23 +12,6 @@
 
 namespace rt {
 
-std::ostream& operator<<(std::ostream& os, server_stats const& stats)
-{
-   os << stats.number_of_sessions
-      << ";"
-      << stats.worker_post_queue_size
-      << ";"
-      << stats.worker_reg_queue_size
-      << ";"
-      << stats.worker_login_queue_size
-      << ";"
-      << stats.db_post_queue_size
-      << ";"
-      << stats.db_chat_queue_size;
-
-   return os;
-}
-
 class http_session
    : public std::enable_shared_from_this<http_session> {
 private:
@@ -38,85 +21,104 @@ private:
    http::response<http::dynamic_body> response_;
    net::steady_timer deadline_;
    worker const& worker_;
-   server_stats stats {};
+   worker_stats stats {};
 
    void read_request()
    {
       auto self = shared_from_this();
-       auto handler = [self](beast::error_code ec, std::size_t n)
-       {
-          boost::ignore_unused(n);
+      auto handler = [self](beast::error_code ec, std::size_t n)
+      {
+         boost::ignore_unused(n);
 
-          if (!ec)
-              self->process_request();
-       };
+         if (!ec)
+             self->process_request();
+      };
 
-       http::async_read(socket_, buffer_, request_, handler);
+      http::async_read(socket_, buffer_, request_, handler);
    }
 
    void process_request()
    {
-       response_.version(request_.version());
-       response_.keep_alive(false);
+      response_.version(request_.version());
+      response_.keep_alive(false);
 
-       switch(request_.method())
-       {
-       case http::verb::get:
-           response_.result(http::status::ok);
-           response_.set(http::field::server, "Beast");
-           create_response();
-           break;
+      switch(request_.method())
+      {
+      case http::verb::get:
+      {
+         response_.result(http::status::ok);
+         response_.set(http::field::server, "Beast");
+         // Now we need the data that is running on other io_contexts.
+         // Remember the worker is not thread safe. We have to update
+         // inside the io_context queue. 
+         auto handler = [this]()
+            { collect_stats_handler(); };
 
-       default:
-           // We return responses indicating an error if
-           // we do not recognize the request method.
-           response_.result(http::status::bad_request);
-           response_.set(http::field::content_type, "text/plain");
-           boost::beast::ostream(response_.body())
-               << "Invalid request-method '"
-               << request_.method_string().to_string()
-               << "'";
-           break;
-       }
+         worker_.get_ioc().post(handler);
+      }
+      break;
 
-       write_response();
+      default:
+      {
+         // We return responses indicating an error if
+         // we do not recognize the request method.
+         response_.result(http::status::bad_request);
+         response_.set(http::field::content_type, "text/plain");
+         beast::ostream(response_.body())
+             << "Invalid request-method '"
+             << request_.method_string().to_string()
+             << "'";
+         write_response();
+      }
+      break;
+      }
+
+   }
+
+   void collect_stats_handler()
+   {
+      // The stats data is not thread safe, but we do not need a
+      // mutext to synchronize access as we are not creating races.
+      // There is a definite time when the data is accessed.
+      stats = worker_.get_stats();
+      auto next = [this]()
+      {
+         create_response();
+         write_response();
+      };
+         
+
+      socket_.get_io_context().post(next);
    }
 
    void create_response()
    {
-       if (request_.target() == "/stats") {
-           stats.number_of_sessions = worker_.get_ws_stats().number_of_sessions;
-           stats.worker_post_queue_size = worker_.get_post_queue_size();
-           stats.worker_reg_queue_size = worker_.get_reg_queue_size();
-           stats.worker_login_queue_size = worker_.get_login_queue_size();
-           stats.db_post_queue_size = worker_.get_db().get_post_queue_size();
-           stats.db_chat_queue_size = worker_.get_db().get_chat_queue_size();
+      if (request_.target() == "/stats") {
+         response_.set(http::field::content_type, "text/csv");
+         boost::beast::ostream(response_.body())
+             << stats
+             << "\n";
 
-           response_.set(http::field::content_type, "text/csv");
-           boost::beast::ostream(response_.body())
-               << stats
-               << "\n";
-
-       } else {
-           response_.result(http::status::not_found);
-           response_.set(http::field::content_type, "text/plain");
-           boost::beast::ostream(response_.body()) << "File not found\r\n";
-       }
+      } else {
+         response_.result(http::status::not_found);
+         response_.set(http::field::content_type, "text/plain");
+         beast::ostream(response_.body()) << "File not found\r\n";
+      }
    }
 
    void write_response()
    {
-       auto self = shared_from_this();
+      auto self = shared_from_this();
 
-       response_.set(http::field::content_length, response_.body().size());
+      response_.set(http::field::content_length, response_.body().size());
 
-       auto handler = [self](beast::error_code ec, std::size_t)
-       {
-          self->socket_.shutdown(tcp::socket::shutdown_send, ec);
-          self->deadline_.cancel();
-       };
+      auto handler = [self](beast::error_code ec, std::size_t)
+      {
+         self->socket_.shutdown(tcp::socket::shutdown_send, ec);
+         self->deadline_.cancel();
+      };
 
-       http::async_write(socket_, response_, handler);
+      http::async_write(socket_, response_, handler);
    }
 
    // Check whether we have spent enough time on this connection.

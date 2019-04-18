@@ -112,7 +112,7 @@ private:
                          , std::shared_ptr<worker_session> s);
    ev_res on_app_subscribe( json const& j
                           , std::shared_ptr<worker_session> s);
-   ev_res on_app_chat_msg( std::string msg, json const& j
+   ev_res on_app_chat_msg( json j
                          , std::shared_ptr<worker_session> s);
    ev_res on_app_publish( json j
                         , std::shared_ptr<worker_session> s);

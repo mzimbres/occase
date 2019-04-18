@@ -24,34 +24,37 @@ worker_session::worker_session(net::ip::tcp::socket socket, worker& w)
 
 worker_session::~worker_session()
 {
-   if (is_logged_in()) {
-      // We also have to store all messages we weren't able to deliver
-      // to the user, due to, for example, a disconnection. But we are
-      // only interested in the persist messages.
-      auto const cond = [](auto const& o)
-         { return !o.persist; };
+   try {
+      --worker_.get_ws_stats().number_of_sessions;
 
-      auto const point =
-         std::remove_if( std::begin(msg_queue)
-                       , std::end(msg_queue)
-                       , cond);
+      if (is_logged_in()) {
+         // We also have to store all messages we weren't able to deliver
+         // to the user, due to, for example, a disconnection. But we are
+         // only interested in the persist messages.
+         auto const cond = [](auto const& o)
+            { return !o.persist; };
 
-      auto const d = std::distance(std::begin(msg_queue), point);
-      std::vector<std::string> msgs;
-      msgs.reserve(d);
+         auto const point =
+            std::remove_if( std::begin(msg_queue)
+                          , std::end(msg_queue)
+                          , cond);
 
-      auto const transformer = [](auto item)
-         { return std::move(item.msg); };
+         auto const d = std::distance(std::begin(msg_queue), point);
+         std::vector<std::string> msgs;
+         msgs.reserve(d);
 
-      std::transform( std::make_move_iterator(std::begin(msg_queue))
-                    , std::make_move_iterator(point)
-                    , std::back_inserter(msgs)
-                    , transformer);
+         auto const transformer = [](auto item)
+            { return std::move(item.msg); };
 
-      worker_.on_session_dtor(std::move(user_id), std::move(msgs));
+         std::transform( std::make_move_iterator(std::begin(msg_queue))
+                       , std::make_move_iterator(point)
+                       , std::back_inserter(msgs)
+                       , transformer);
+
+         worker_.on_session_dtor(std::move(user_id), std::move(msgs));
+      }
+   } catch (...) {
    }
-
-   --worker_.get_ws_stats().number_of_sessions;
 }
 
 void worker_session::accept()

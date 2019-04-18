@@ -473,7 +473,7 @@ worker::on_app_subscribe( json const& j
 ev_res
 worker::on_app_publish(json j, std::shared_ptr<worker_session> s)
 {
-   // TODO: Remove the restriction below that the items vector have
+   // Consider remove the restriction below that the items vector have
    // size one.
    auto items = j.at("items").get<std::vector<post>>();
 
@@ -514,9 +514,6 @@ worker::on_app_publish(json j, std::shared_ptr<worker_session> s)
 void worker::on_session_dtor( std::string const& id
                             , std::vector<std::string> msgs)
 {
-   // TODO: This function is called on the destructor on the server
-   // session. Think where should we catch exceptions.
-
    auto const match = sessions.find(id);
    if (match == std::end(sessions))
       return;
@@ -532,21 +529,20 @@ void worker::on_session_dtor( std::string const& id
 }
 
 ev_res
-worker::on_app_chat_msg( std::string msg, json const& j
-                       , std::shared_ptr<worker_session> s)
+worker::on_app_chat_msg(json j, std::shared_ptr<worker_session> s)
 {
    // Consider searching the sessions map if the user in this worker
    // and send him his message directly to avoid overloading the redis
    // server. This would be a big optimization in the case of small
    // number of workers.
 
-   // TODO: Do not thrust the from field in the json command before sending
-   // to the database. Override it with s->get_id().
-
-   auto to = j.at("to").get<std::string>();
-
+   // Do not thrust the from field in the json command before sending
+   // to the database.
+   j["from"] = s->get_id();
+   auto msg = j.dump();
    std::initializer_list<std::string> param = {msg};
 
+   auto to = j.at("to").get<std::string>();
    db.store_chat_msg( std::move(to)
                     , std::make_move_iterator(std::begin(param))
                     , std::make_move_iterator(std::end(param)));
@@ -580,7 +576,7 @@ void worker::shutdown()
 ev_res
 worker::on_message(std::shared_ptr<worker_session> s, std::string msg)
 {
-   auto const j = json::parse(msg);
+   auto j = json::parse(msg);
    auto const cmd = j.at("cmd").get<std::string>();
 
    if (s->is_logged_in()) {
@@ -591,7 +587,7 @@ worker::on_message(std::shared_ptr<worker_session> s, std::string msg)
          return on_app_publish(std::move(j), s);
 
       if (cmd == "user_msg")
-         return on_app_chat_msg(std::move(msg), j, s);
+         return on_app_chat_msg(std::move(j), s);
    } else {
       if (cmd == "login")
          return on_app_login(j, s);

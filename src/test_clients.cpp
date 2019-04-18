@@ -116,7 +116,6 @@ replier::talk_to( std::string to, long long post_id
 
    json j;
    j["cmd"] = "user_msg";
-   j["from"] = op.user.id;
    j["to"] = to;
    j["msg"] = "Tenho interesse nesse carro, podemos conversar?";
    j["post_id"] = post_id;

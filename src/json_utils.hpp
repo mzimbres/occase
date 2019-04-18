@@ -6,10 +6,11 @@
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
-using menu_code_type = std::vector<std::vector<std::vector<int>>>;
 
 namespace rt
 {
+
+using menu_code_type = std::vector<std::vector<std::vector<int>>>;
 
 struct post {
    int id;

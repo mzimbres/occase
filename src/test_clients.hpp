@@ -145,7 +145,7 @@ private:
 
    std::stack<code_type> pub_stack;
 
-   int send_group_msg(std::shared_ptr<client_type> s) const;
+   int send_post(std::shared_ptr<client_type> s) const;
 
    int handle_msg(std::shared_ptr<client_type> s);
 

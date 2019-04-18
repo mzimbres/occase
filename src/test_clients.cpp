@@ -17,6 +17,17 @@ std::string make_login_cmd(rt::cli::login const& user)
    return j.dump();
 }
 
+std::string
+make_post_cmd(rt::menu_code_type const& menu_code)
+{
+   rt::post item { -1, {}, "Not an interesting message."
+                 , menu_code};
+   json j;
+   j["cmd"] = "publish";
+   j["items"] = std::vector<rt::post>{item};
+   return j.dump();
+}
+
 }
 
 namespace rt::cli
@@ -159,7 +170,7 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
       if (res != "ok")
          throw std::runtime_error("publisher::subscribe_ack");
 
-      return send_group_msg(s);
+      return send_post(s);
    }
 
    if (cmd == "publish_ack") {
@@ -242,7 +253,7 @@ int publisher::handle_msg(std::shared_ptr<client_type> s)
       user_msg_counter = op.n_repliers;
       //std::cout << "=====> " << op.user << " " << post_id
       //          << " " << user_msg_counter <<  std::endl;
-      return send_group_msg(s);
+      return send_post(s);
    }
 
    return 1;
@@ -261,16 +272,10 @@ int publisher::on_closed(boost::system::error_code ec)
    return -1;
 };
 
-int publisher::send_group_msg(std::shared_ptr<client_type> s) const
+int publisher::send_post(std::shared_ptr<client_type> s) const
 {
-   //std::cout << "Pub: Stack size: " << std::size(pub_stack)
-   //          << std::endl;
-
-   post item {-1, {}, "Not an interesting message.", pub_stack.top()};
-   json j_msg;
-   j_msg["cmd"] = "publish";
-   j_msg["items"] = std::vector<post>{item};
-   s->send_msg(j_msg.dump());
+   auto const str = make_post_cmd(pub_stack.top());
+   s->send_msg(str);
    return 1;
 }
 

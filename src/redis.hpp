@@ -2,6 +2,7 @@
 
 #include <string>
 
+#include "utils.hpp"
 #include "redis_session.hpp"
 
 namespace rt::redis
@@ -239,10 +240,10 @@ public:
    void disconnect();
 
    auto get_post_queue_size() const noexcept
-      { return std::size(menu_pub_queue);}
+      { return ssize(menu_pub_queue);}
 
    auto get_chat_queue_size() const noexcept
-      { return std::size(chat_pub_queue);}
+      { return ssize(chat_pub_queue);}
 };
 
 }

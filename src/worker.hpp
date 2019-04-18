@@ -12,6 +12,7 @@
 #include <boost/asio/steady_timer.hpp>
 
 #include "menu.hpp"
+#include "utils.hpp"
 #include "redis.hpp"
 #include "config.hpp"
 #include "channel.hpp"
@@ -135,20 +136,17 @@ private:
 public:
    worker(worker_cfg cfg, int id_, net::io_context& ioc);
 
-   // When a server session dies, there are many things that must be
-   // cleaned up or persisted. This function is responsible for that
-   // TODO: Make it noexcept.
    void on_session_dtor( std::string const& id
                        , std::vector<std::string> msgs);
 
    ev_res on_message(std::shared_ptr<worker_session> s, std::string msg);
 
    auto get_post_queue_size() const noexcept
-      { return std::size(post_queue);}
+      { return ssize(post_queue);}
    auto get_reg_queue_size() const noexcept
-      { return std::size(reg_queue);}
+      { return ssize(reg_queue);}
    auto get_login_queue_size() const noexcept
-      { return std::size(login_queue);}
+      { return ssize(login_queue);}
    auto const& get_timeouts() const noexcept
       { return ws_ss_timeouts_;}
    auto& get_ws_stats() noexcept

@@ -12,126 +12,140 @@
 
 namespace rt {
 
-class http_session
-   : public std::enable_shared_from_this<http_session>
+std::ostream& operator<<(std::ostream& os, server_stats const& stats)
 {
+   os << stats.number_of_sessions
+      << ";"
+      << stats.worker_post_queue_size
+      << ";"
+      << stats.worker_reg_queue_size
+      << ";"
+      << stats.worker_login_queue_size
+      << ";"
+      << stats.db_post_queue_size
+      << ";"
+      << stats.db_chat_queue_size;
+
+   return os;
+}
+
+class http_session
+   : public std::enable_shared_from_this<http_session> {
 private:
-    tcp::socket socket_;
-    boost::beast::flat_buffer buffer_{8192};
-    http::request<http::dynamic_body> request_;
-    http::response<http::dynamic_body> response_;
-    net::steady_timer deadline_;
-    worker const& worker_;
+   tcp::socket socket_;
+   beast::flat_buffer buffer_{8192};
+   http::request<http::dynamic_body> request_;
+   http::response<http::dynamic_body> response_;
+   net::steady_timer deadline_;
+   worker const& worker_;
+   server_stats stats {};
 
-    void read_request()
-    {
-        auto handler =
-           [p = shared_from_this()](beast::error_code ec, std::size_t n)
-        {
-           boost::ignore_unused(n);
+   void read_request()
+   {
+      auto self = shared_from_this();
+       auto handler = [self](beast::error_code ec, std::size_t n)
+       {
+          boost::ignore_unused(n);
 
-           if(!ec)
-               p->process_request();
-        };
+          if (!ec)
+              self->process_request();
+       };
 
-        http::async_read(socket_, buffer_, request_, handler);
-    }
+       http::async_read(socket_, buffer_, request_, handler);
+   }
 
-    void process_request()
-    {
-        response_.version(request_.version());
-        response_.keep_alive(false);
+   void process_request()
+   {
+       response_.version(request_.version());
+       response_.keep_alive(false);
 
-        switch(request_.method())
-        {
-        case http::verb::get:
-            response_.result(http::status::ok);
-            response_.set(http::field::server, "Beast");
-            create_response();
-            break;
+       switch(request_.method())
+       {
+       case http::verb::get:
+           response_.result(http::status::ok);
+           response_.set(http::field::server, "Beast");
+           create_response();
+           break;
 
-        default:
-            // We return responses indicating an error if
-            // we do not recognize the request method.
-            response_.result(http::status::bad_request);
-            response_.set(http::field::content_type, "text/plain");
-            boost::beast::ostream(response_.body())
-                << "Invalid request-method '"
-                << request_.method_string().to_string()
-                << "'";
-            break;
-        }
+       default:
+           // We return responses indicating an error if
+           // we do not recognize the request method.
+           response_.result(http::status::bad_request);
+           response_.set(http::field::content_type, "text/plain");
+           boost::beast::ostream(response_.body())
+               << "Invalid request-method '"
+               << request_.method_string().to_string()
+               << "'";
+           break;
+       }
 
-        write_response();
-    }
+       write_response();
+   }
 
-    void create_response()
-    {
-        if (request_.target() == "/stats") {
-            response_.set(http::field::content_type, "text/csv");
-            boost::beast::ostream(response_.body())
-                << worker_.get_ws_stats().number_of_sessions
-                << ";"
-                << worker_.get_post_queue_size()
-                << ";"
-                << worker_.get_reg_queue_size()
-                << ";"
-                << worker_.get_login_queue_size()
-                << ";"
-                << worker_.get_db().get_post_queue_size()
-                << ";"
-                << worker_.get_db().get_chat_queue_size()
-                << "\n";
-        } else {
-            response_.result(http::status::not_found);
-            response_.set(http::field::content_type, "text/plain");
-            boost::beast::ostream(response_.body()) << "File not found\r\n";
-        }
-    }
+   void create_response()
+   {
+       if (request_.target() == "/stats") {
+           stats.number_of_sessions = worker_.get_ws_stats().number_of_sessions;
+           stats.worker_post_queue_size = worker_.get_post_queue_size();
+           stats.worker_reg_queue_size = worker_.get_reg_queue_size();
+           stats.worker_login_queue_size = worker_.get_login_queue_size();
+           stats.db_post_queue_size = worker_.get_db().get_post_queue_size();
+           stats.db_chat_queue_size = worker_.get_db().get_chat_queue_size();
 
-    void write_response()
-    {
-        auto self = shared_from_this();
+           response_.set(http::field::content_type, "text/csv");
+           boost::beast::ostream(response_.body())
+               << stats
+               << "\n";
 
-        response_.set(http::field::content_length, response_.body().size());
+       } else {
+           response_.result(http::status::not_found);
+           response_.set(http::field::content_type, "text/plain");
+           boost::beast::ostream(response_.body()) << "File not found\r\n";
+       }
+   }
 
-        auto handler = [self](beast::error_code ec, std::size_t)
-        {
-           self->socket_.shutdown(tcp::socket::shutdown_send, ec);
-           self->deadline_.cancel();
-        };
+   void write_response()
+   {
+       auto self = shared_from_this();
 
-        http::async_write(socket_, response_, handler);
-    }
+       response_.set(http::field::content_length, response_.body().size());
 
-    // Check whether we have spent enough time on this connection.
-    void check_deadline()
-    {
-        auto self = shared_from_this();
+       auto handler = [self](beast::error_code ec, std::size_t)
+       {
+          self->socket_.shutdown(tcp::socket::shutdown_send, ec);
+          self->deadline_.cancel();
+       };
 
-        auto handler = [self](boost::beast::error_code ec)
-        {
-            if (!ec)
-               self->socket_.close(ec);
-        };
+       http::async_write(socket_, response_, handler);
+   }
 
-        deadline_.async_wait(handler);
-    }
+   // Check whether we have spent enough time on this connection.
+   void check_deadline()
+   {
+       auto self = shared_from_this();
+
+       auto handler = [self](boost::beast::error_code ec)
+       {
+           if (!ec)
+              self->socket_.close(ec);
+       };
+
+       deadline_.async_wait(handler);
+   }
 
 public:
-    http_session(tcp::socket socket, worker const& w)
-    : socket_ {std::move(socket)}
-    , deadline_ { socket_.get_executor().context()
-                , std::chrono::seconds(60)}
-    , worker_ {w}
-    { }
+   http_session(tcp::socket socket, worker const& w)
+   : socket_ {std::move(socket)}
+   , deadline_ { socket_.get_executor().context()
+               , std::chrono::seconds(60)}
+   , worker_ {w}
+   { }
 
-    void start()
-    {
-        read_request();
-        check_deadline();
-    }
-
+   void start()
+   {
+       read_request();
+       check_deadline();
+   }
 };
 
 stats_server::stats_server( stats_server_cfg const& cfg

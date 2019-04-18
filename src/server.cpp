@@ -114,6 +114,10 @@ auto get_server_op(int argc, char* argv[])
    , "The maximum number of messages that is allowed to be sent to "
      "the user when he subscribes to his channels.")
 
+   ( "password-size"
+   , po::value<int>(&cfg.worker.worker.pwd_size)->default_value(10)
+   , "The size of the password sent to the app.")
+
    ( "redis-server-address"
    , po::value<std::string>(&cfg.worker.db.ss_cfg.host)->
        default_value("127.0.0.1")

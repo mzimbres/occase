@@ -25,6 +25,9 @@ struct worker_only_cfg {
    // The maximum number of channels that is allowed to be sent to the
    // user on subscribe.
    int max_posts_on_sub; 
+
+   // The size of the password sent to the app.
+   int pwd_size; 
 };
 
 struct worker_cfg {
@@ -60,9 +63,6 @@ struct login_queue_item {
 class worker {
 private:
    net::io_context& ioc_;
-
-   // The size of the passwords sent to the app.
-   static const auto pwd_size = 10;
 
    // This worker id.
    int const id;

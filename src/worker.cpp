@@ -153,7 +153,7 @@ void worker::on_db_user_id(std::string const& id)
    assert(!std::empty(reg_queue));
 
    if (auto session = reg_queue.front().session.lock()) {
-      reg_queue.front().pwd = pwdgen(pwd_size);
+      reg_queue.front().pwd = pwdgen(cfg.pwd_size);
 
       // We store a hashed version of the password in the database.
       auto const hashed_pwd = hash_func(reg_queue.front().pwd);

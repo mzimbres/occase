@@ -155,7 +155,7 @@ auto get_server_op(int argc, char* argv[])
    ( "redis-key-user-id"
    , po::value<std::string>(&cfg.worker.db.cfg.user_id_key)->
         default_value("user_id")
-   , "The Key used to store the user ids.")
+   , "The Key used to store the user id counter.")
 
    ( "redis-key-chat-msgs-counter"
    , po::value<std::string>(&cfg.worker.db.cfg.chat_msgs_counter_key)->
@@ -173,6 +173,11 @@ auto get_server_op(int argc, char* argv[])
    , po::value<std::string>(&cfg.worker.db.cfg.posts_key)->
         default_value("posts")
    , "Redis key used to store posts (in a sorted set).")
+
+   ( "redis-key-user-data-prefix"
+   , po::value<std::string>(&cfg.worker.db.cfg.posts_key)->
+        default_value("id")
+   , "The prefix to every id holding user data (password for example).")
 
    ("redis-conn-retry-interval"
    , po::value<int>(&conn_retry_interval)->default_value(500)

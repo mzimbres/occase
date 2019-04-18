@@ -66,6 +66,9 @@ struct db_cfg {
    // server for the first time it will get an id.
    std::string user_id_key;
 
+   // The prefix to every id holding user data (password for example).
+   std::string user_data_prefix_key;
+
    // Expiration time for user message keys. Keys will be deleted on
    // expiration and all chat messages that have not been retrieved
    // are gone.

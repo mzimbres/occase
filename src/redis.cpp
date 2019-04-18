@@ -241,13 +241,15 @@ void facade::request_user_id()
 
 void facade::register_user(std::string const& user, std::string const& pwd)
 {
-   ss_menu_pub.send(hset(user, "password", pwd));
+   auto const key =  cfg.user_data_prefix_key + user;
+   ss_menu_pub.send(hset(key, "password", pwd));
    menu_pub_queue.push(request::register_user);
 }
 
-void facade::retrieve_user_data(std::string const& user_id)
+void facade::retrieve_user_data(std::string const& user)
 {
-   ss_menu_pub.send(hget(user_id, "password"));
+   auto const key =  cfg.user_data_prefix_key + user;
+   ss_menu_pub.send(hget(key, "password"));
    menu_pub_queue.push(request::user_data);
 }
 

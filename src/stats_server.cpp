@@ -51,8 +51,9 @@ private:
          // Now we need the data that is running on other io_contexts.
          // Remember the worker is not thread safe. We have to update
          // inside the io_context queue. 
-         auto handler = [this]()
-            { collect_stats_handler(); };
+         auto self = shared_from_this();
+         auto handler = [self]()
+            { self->collect_stats_handler(); };
 
          worker_.get_ioc().post(handler);
       }
@@ -79,12 +80,13 @@ private:
    {
       // The stats data is not thread safe, but we do not need a
       // mutext to synchronize access as we are not creating races.
-      // There is a definite time when the data is accessed.
+      // It is accessed in sequence by each thread.
       stats = worker_.get_stats();
-      auto next = [this]()
+      auto self = shared_from_this();
+      auto next = [self]()
       {
-         create_response();
-         write_response();
+         self->create_response();
+         self->write_response();
       };
          
 

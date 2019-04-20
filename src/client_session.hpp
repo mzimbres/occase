@@ -105,7 +105,16 @@ public:
    }
 
    void run();
-   void send_msg(std::string msg);
+
+   // The follwoing values are supported for r
+   //
+   //  0: The defaul, normal behaviour.
+   // -1: The tcp socket is shutdown right after the message has been
+   //     written in the socket.
+   // -2: Like -1, but not the tcp socket but the websocket connection
+   //     is gracefully closed.
+   //
+   void send_msg(std::string msg, int r = 0);
    auto const& get_mgr() const noexcept {return mgr;}
 };
 
@@ -143,8 +152,7 @@ void session_shell<Mgr>::on_read( boost::system::error_code ec
       }
 
       if (ec == net::error::operation_aborted) {
-         std::cout << "Leaving on read 3: " << mgr.get_login()
-                   << std::endl;
+         // A shutdown operation can cause this.
          timer.cancel();
          return;
       }
@@ -185,10 +193,10 @@ void session_shell<Mgr>::on_read( boost::system::error_code ec
 }
 
 template <class Mgr>
-void session_shell<Mgr>::send_msg(std::string msg)
+void session_shell<Mgr>::send_msg(std::string msg, int r)
 {
    auto is_empty = std::empty(msg_queue);
-   msg_queue.push({std::move(msg), 0});
+   msg_queue.push({std::move(msg), r});
 
    if (is_empty)
       do_write();
@@ -336,9 +344,16 @@ void session_shell<Mgr>::do_read()
 
 template <class Mgr>
 void session_shell<Mgr>::on_write( boost::system::error_code ec
-                                  , std::size_t bytes_transferred)
+                                 , std::size_t bytes_transferred)
 {
    boost::ignore_unused(bytes_transferred);
+
+   auto const r = msg_queue.front().r;
+   if (r == -1) {
+      ws.next_layer().shutdown(net::ip::tcp::socket::shutdown_both, ec);
+      ws.next_layer().close(ec);
+      return;
+   }
 
    msg_queue.pop();
    if (msg_queue.empty())

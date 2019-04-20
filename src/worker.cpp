@@ -397,6 +397,10 @@ void worker::on_db_post_id(std::string const& post_id_str)
       // when the user connects again. It shall be difficult to test
       // this.
 
+      log( loglevel::debug
+         , "W{0}/on_db_post_id: Sending ack to the database."
+         , id);
+
       std::initializer_list<std::string> param = {ack_str};
 
       db.store_chat_msg( std::move(post_queue.front().item.from)
@@ -540,18 +544,22 @@ worker::on_app_publish(json j, std::shared_ptr<worker_session> s)
    return ev_res::publish_ok;
 }
 
-void worker::on_session_dtor( std::string const& id
+void worker::on_session_dtor( std::string const& user_id
                             , std::vector<std::string> msgs)
 {
-   auto const match = sessions.find(id);
+   auto const match = sessions.find(user_id);
    if (match == std::end(sessions))
       return;
 
    sessions.erase(match);
-   db.unsubscribe_to_chat_msgs(id);
+   db.unsubscribe_to_chat_msgs(user_id);
 
    if (!std::empty(msgs)) {
-      db.store_chat_msg( std::move(id)
+      log( loglevel::debug
+         , "W{0}/on_session_dtor: Storing messages from {1} in db."
+         , id, user_id);
+
+      db.store_chat_msg( std::move(user_id)
                        , std::make_move_iterator(std::begin(msgs))
                        , std::make_move_iterator(std::end(msgs)));
    }

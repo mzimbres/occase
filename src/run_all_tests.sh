@@ -19,6 +19,7 @@ sleep 3
 ./publish_tests --test 3 --launch-interval 10
 ./publish_tests --test 2 --handshake-timeout 3
 ./publish_tests --test 4
+./publish_tests --test 5
 
 kill -9 $server_pid
 

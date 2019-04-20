@@ -386,6 +386,16 @@ int msg_pull::on_read(std::string msg, std::shared_ptr<client_type> s)
       return 1;
    }
 
+   if (cmd == "publish_ack") {
+      auto const res = j.at("result").get<std::string>();
+      if (res != "ok")
+         throw std::runtime_error("msg_pull::publish_ack");
+
+      //auto const post_id = j.at("id").get<int>();
+      //std::cout << op.user << " publish_ack " << post_id << std::endl;
+      return -1;
+   }
+
    throw std::runtime_error("msg_pull::on_read4");
    return -1;
 }
@@ -459,6 +469,42 @@ int login_err::on_handshake(std::shared_ptr<client_type> s)
 
 //________________________________
 
+int early_close::on_read(std::string msg, std::shared_ptr<client_type> s)
+{
+   auto const j = json::parse(msg);
+
+   auto const cmd = j.at("cmd").get<std::string>();
+   if (cmd == "login_ack") {
+      auto const res = j.at("result").get<std::string>();
+      if (res != "ok")
+         throw std::runtime_error("early_close::login_ack");
+
+      send_post(s);
+      return 1;
+   }
+
+   std::cout << "early_close: " << msg << std::endl;
+
+   throw std::runtime_error("early_close::on_read4");
+   return -1;
+}
+
+int early_close::on_handshake(std::shared_ptr<client_type> s)
+{
+   auto const str = make_login_cmd(op.user);
+   s->send_msg(str);
+   return 1;
+}
+
+void early_close::send_post(std::shared_ptr<client_type> s) const
+{
+   auto const code = code_type {{{0, 0, 0, 0}}, {{0, 0, 0, 0}}};
+   auto const str = make_post_cmd(code);
+   s->send_msg(str, -1);
+}
+
+//________________________________
+
 std::vector<login> test_reg(session_shell_cfg const& cfg, int n)
 {
    boost::asio::io_context ioc;
@@ -492,5 +538,4 @@ std::vector<login> test_reg(session_shell_cfg const& cfg, int n)
 }
 
 }
-
 

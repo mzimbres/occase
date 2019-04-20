@@ -267,6 +267,48 @@ void test_login_error(options const& op)
    }
 }
 
+void test_early_close(options const& op)
+{
+   boost::asio::io_context ioc {1};
+
+   auto const l1 = test_reg(op.make_session_cf(), 1);
+
+   {
+      using client_type = early_close;
+      using config_type = client_type::options_type;
+      using session_type = session_shell<client_type>;
+
+      auto s = 
+         std::make_shared<session_type>( ioc, op.make_session_cf()
+                                       , config_type {l1.front()});
+      s->run();
+      ioc.run();
+   }
+
+   // This value should be kept in sync with the pong timeout in
+   // test.conf. The reason is that we have to wait untill the
+   // websocket session in the server dies and the messages that could
+   // not be sent back to the client are sent to the db. Only after
+   // that we want to log in and retrieve the messages.
+   std::this_thread::sleep_for(std::chrono::seconds {3});
+
+   {
+      using client_type = msg_pull;
+      using config_type = client_type::options_type;
+      using session_type = session_shell<client_type>;
+
+      auto s = 
+         std::make_shared<session_type>( ioc
+                                       , op.make_session_cf()
+                                       , config_type {l1.front(), 0});
+      s->run();
+      ioc.restart();
+      ioc.run();
+   }
+
+   std::cout << "Test ok: Early close after post." << std::endl;
+}
+
 int main(int argc, char* argv[])
 {
    try {
@@ -306,7 +348,7 @@ int main(int argc, char* argv[])
 
          ("test,r"
          , po::value<int>(&op.test)->default_value(1)
-         , "Which test to run: 1, 2, 3, 4.")
+         , "Which test to run: 1, 2, 3, 4, 5.")
       ;
 
       po::variables_map vm;        
@@ -326,6 +368,7 @@ int main(int argc, char* argv[])
          case 2: test_offline(op); break;
          case 3: read_only_tests(op); break;
          case 4: test_login_error(op); break;
+         case 5: test_early_close(op); break;
          default:
             std::cerr << "Invalid test." << std::endl;
       }

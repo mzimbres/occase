@@ -194,7 +194,8 @@ public:
 };
 
 // This class will be used to log in the server and wait for messages
-// the user may have received while he was offline.
+// the user may have received while he was offline. It will wait for
+// *expected_user_msgs* chat messages or one publish_ack.
 class msg_pull {
 public:
    struct options_type {
@@ -270,6 +271,36 @@ public:
    int on_read(std::string msg, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec)
       { return -1; }
+   int on_handshake(std::shared_ptr<client_type> s);
+   int on_connect() const noexcept { return 1;}
+   auto const& get_login() const noexcept {return op.user;}
+};
+
+// Closes the tcp connection right after writing it on the socket. The
+// server should not be able to send the post_ack back to the app and
+// send it to the database when the worker_session dies.
+class early_close {
+public:
+   struct options_type {
+      login user;
+   };
+
+private:
+   using client_type = session_shell<early_close>;
+   using code_type = std::vector<std::vector<std::vector<int>>>;
+
+   options_type op;
+
+   void send_post(std::shared_ptr<client_type> s) const;
+
+public:
+   early_close(options_type op_)
+   : op {op_}
+   { }
+
+   int on_read(std::string msg, std::shared_ptr<client_type> s);
+   int on_closed(boost::system::error_code ec)
+      { throw std::runtime_error("early_close::on_closed"); return -1; }
    int on_handshake(std::shared_ptr<client_type> s);
    int on_connect() const noexcept { return 1;}
    auto const& get_login() const noexcept {return op.user;}

@@ -109,9 +109,12 @@ void test_online(options const& op)
    auto pub_logins = test_reg(op.make_session_cf(), op.n_publishers);
    auto const next = [&pub_logins, &ioc, &op]()
    {
+      using client_type = publisher;
+      using config_type = client_type::options_type;
+
       auto const s2 = std::make_shared< session_launcher<publisher>
                       >( ioc
-                       , publisher_cfg {{}, op.n_repliers}
+                       , config_type {{}, op.n_repliers}
                        , op.make_session_cf()
                        , op.make_pub_cfg(pub_logins)
                        );
@@ -119,10 +122,13 @@ void test_online(options const& op)
       s2->run({});
    };
 
+   using client_type = replier;
+   using config_type = client_type::options_type;
+
    auto const sub_logins = test_reg(op.make_session_cf(), op.n_repliers);
-   auto const s = std::make_shared< session_launcher<replier>
+   auto const s = std::make_shared< session_launcher<client_type>
                    >( ioc
-                    , replier_cfg {{}, op.n_publishers}
+                    , config_type {{}, op.n_publishers}
                     , op.make_session_cf()
                     , op.make_sub_cfg(sub_logins)
                     );
@@ -141,37 +147,42 @@ void test_offline(options const& op)
 {
    boost::asio::io_context ioc;
 
-   using client_type1 = session_shell<publisher2>;
+   using client_type1 = publisher2;
+   using config_type1 = client_type1::options_type;
+   using session_type1 = session_shell<client_type1>;
 
    auto const l1 = test_reg(op.make_session_cf(), 1);
    auto s1 = 
-      std::make_shared<client_type1>( ioc
-                                    , op.make_session_cf()
-                                    , publisher2_cfg {l1.front()});
+      std::make_shared<session_type1>( ioc
+                                     , op.make_session_cf()
+                                     , config_type1 {l1.front()});
    s1->run();
    ioc.run();
    auto post_ids = s1->get_mgr().get_post_ids();
    std::sort(std::begin(post_ids), std::end(post_ids));
    auto const n_post_ids = ssize(post_ids);
 
-   using client_type2 = session_shell<replier>;
+   using client_type2 = replier;
+   using config_type2 = client_type2::options_type;
+   using session_type2 = session_shell<replier>;
 
    auto const l2 = test_reg(op.make_session_cf(), 1);
-   std::make_shared<client_type2>( ioc
-                                 , op.make_session_cf()
-                                 , replier_cfg {l2.front(), 1}
-                                 )->run();
+   std::make_shared<session_type2>( ioc
+                                  , op.make_session_cf()
+                                  , config_type2 {l2.front(), 1}
+                                  )->run();
    ioc.restart();
    ioc.run();
 
-   using client_type3 = session_shell<msg_pull>;
+   using client_type3 = msg_pull;
+   using config_type3 = client_type3::options_type;
+   using session_type3 = session_shell<client_type3>;
 
    auto s3 = 
-      std::make_shared<client_type3>( ioc
-                                    , op.make_session_cf()
-                                    , msg_pull_cfg
-                                      {l1.front(), n_post_ids}
-                                    );
+      std::make_shared<session_type3>( ioc
+                                     , op.make_session_cf()
+                                     , config_type3
+                                       {l1.front(), n_post_ids});
    s3->run();
    ioc.restart();
    ioc.run();
@@ -187,18 +198,24 @@ void test_offline(options const& op)
 
 void read_only_tests(options const& op)
 {
-   boost::asio::io_context ioc;
+   using client_type1 = only_tcp_conn;
+   using config_type1 = only_tcp_conn::options_type;
 
-   std::make_shared< session_launcher<only_tcp_no_ws>
+   boost::asio::io_context ioc {1};
+
+   std::make_shared< session_launcher<client_type1>
                    >( ioc
-                    , only_tcp_no_ws_cfg {}
+                    , config_type1 {}
                     , op.make_session_cf()
                     , op.make_handshake_laucher_op()
                     )->run({});
 
-   std::make_shared< session_launcher<no_login>
+   using client_type2 = no_login;
+   using config_type2 = no_login::options_type;
+
+   std::make_shared< session_launcher<client_type2>
                    >( ioc
-                    , only_tcp_no_ws_cfg {}
+                    , config_type2 {}
                     , op.make_session_cf()
                     , op.make_no_login_cfg()
                     )->run({});
@@ -214,7 +231,9 @@ void read_only_tests(options const& op)
 
 void test_login_error(options const& op)
 {
-   using client_type1 = session_shell<login_err>;
+   using client_type = login_err;
+   using config_type = client_type::options_type;
+   using session_type = session_shell<client_type>;
 
    {
       // First test: Here we request a user_id from the server and
@@ -225,8 +244,8 @@ void test_login_error(options const& op)
 
       boost::asio::io_context ioc;
       auto s1 = 
-         std::make_shared<client_type1>( ioc, op.make_session_cf()
-                                       , login_err_cfg {l1.front()});
+         std::make_shared<session_type>( ioc, op.make_session_cf()
+                                       , config_type {l1.front()});
       s1->run();
       ioc.run();
       std::cout << "Test ok: Correct user id, wrong pwd." << std::endl;
@@ -240,8 +259,8 @@ void test_login_error(options const& op)
 
       boost::asio::io_context ioc;
       auto s1 = 
-         std::make_shared<client_type1>( ioc, op.make_session_cf()
-                                       , login_err_cfg {invalid});
+         std::make_shared<session_type>( ioc, op.make_session_cf()
+                                       , config_type {invalid});
       s1->run();
       ioc.run();
       std::cout << "Test ok: Invalid user id." << std::endl;

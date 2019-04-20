@@ -56,12 +56,15 @@ struct client_op {
 
 void launch_sessions(client_op const& op, std::vector<login> logins)
 {
+   using client_type = replier;
+   using config_type = client_type::options_type;
+
    boost::asio::io_context ioc;
 
    auto const s =
-      std::make_shared< session_launcher<replier>
+      std::make_shared< session_launcher<client_type>
                       >( ioc
-                       , replier_cfg {{}, 100}
+                       , config_type {{}, 100}
                        , op.make_session_cfg()
                        , op.make_client_cfg(logins)
                        );

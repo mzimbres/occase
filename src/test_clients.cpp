@@ -464,6 +464,7 @@ std::vector<login> test_reg(session_shell_cfg const& cfg, int n)
    boost::asio::io_context ioc;
 
    using client_type = register1;
+   using config_type = client_type::options_type;
 
    std::vector<login> logins {static_cast<std::size_t>(n)};
    launcher_cfg lcfg {logins, std::chrono::milliseconds {100}, ""};
@@ -471,7 +472,7 @@ std::vector<login> test_reg(session_shell_cfg const& cfg, int n)
    auto launcher =
       std::make_shared< session_launcher<client_type>
                       >( ioc
-                       , register_cfg {}
+                       , config_type {}
                        , cfg
                        , lcfg);
    

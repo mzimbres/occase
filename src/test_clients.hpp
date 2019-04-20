@@ -22,17 +22,16 @@ namespace rt::cli
 template <class Mgr>
 class session_shell;
 
-struct only_tcp_no_ws_cfg {
-   login user;
-};
-
 // Does no proceed with the websocket handshake after stablishing the
 // tcp connection. The server should drop such clients.
-struct only_tcp_no_ws {
-   using client_type = session_shell<only_tcp_no_ws>;
-   using options_type = only_tcp_no_ws_cfg;
+struct only_tcp_conn {
+   using client_type = session_shell<only_tcp_conn>;
 
-   only_tcp_no_ws(only_tcp_no_ws_cfg) noexcept { }
+   struct options_type {
+      login user;
+   };
+
+   only_tcp_conn(options_type) noexcept { }
    auto on_read(std::string msg, std::shared_ptr<client_type> s) const 
       { throw std::runtime_error("Error."); return 1; }
    auto on_closed(boost::system::error_code ec) const 
@@ -54,8 +53,11 @@ private:
    using client_type = session_shell<no_login>;
 
 public:
-   using options_type = only_tcp_no_ws_cfg;
-   no_login(only_tcp_no_ws_cfg) noexcept { }
+   struct options_type {
+      login user;
+   };
+
+   no_login(options_type) noexcept { }
    auto on_read(std::string msg, std::shared_ptr<client_type> s)
       { throw std::runtime_error("accept_timer::on_read"); return -1; }
    auto on_closed(boost::system::error_code ec) const noexcept
@@ -75,14 +77,12 @@ public:
  * messages.
  */
 
-struct replier_cfg {
-   login user;
-   int n_publishers;
-};
-
 class replier {
 public:
-   using options_type = replier_cfg;
+   struct options_type {
+      login user;
+      int n_publishers;
+   };
 
 private:
    using client_type = session_shell<replier>;
@@ -125,14 +125,13 @@ public:
  * frame.
  */
 
-struct publisher_cfg {
-   login user;
-   int n_repliers;
-};
-
 class publisher {
 public:
-   using options_type = publisher_cfg;
+   struct options_type {
+      login user;
+      int n_repliers;
+   };
+
 private:
    using client_type = session_shell<publisher>;
    using code_type = std::vector<std::vector<std::vector<int>>>;
@@ -162,15 +161,14 @@ public:
    auto const& get_login() const noexcept {return op.user;}
 };
 
-struct publisher2_cfg {
-   login user;
-};
-
 // This class will be used to publish some messages to the server and
 // exit quickly.
 class publisher2 {
 public:
-   using options_type = publisher2_cfg;
+   struct options_type {
+      login user;
+   };
+
 private:
    using client_type = session_shell<publisher2>;
    using code_type = std::vector<std::vector<std::vector<int>>>;
@@ -195,16 +193,15 @@ public:
    auto get_post_ids() const {return post_ids;}
 };
 
-struct msg_pull_cfg {
-   login user;
-   int expected_user_msgs;
-};
-
 // This class will be used to log in the server and wait for messages
 // the user may have received while he was offline.
 class msg_pull {
 public:
-   using options_type = msg_pull_cfg;
+   struct options_type {
+      login user;
+      int expected_user_msgs;
+   };
+
 private:
    using client_type = session_shell<msg_pull>;
    using code_type = std::vector<std::vector<std::vector<int>>>;
@@ -226,14 +223,13 @@ public:
    auto get_post_ids() const {return post_ids;}
 };
 
-struct register_cfg {
-   login user;
-};
-
 // This class will be used to register some users in the server.
 class register1 {
 public:
-   using options_type = register_cfg;
+   struct options_type {
+      login user;
+   };
+
 private:
    using client_type = session_shell<register1>;
    using code_type = std::vector<std::vector<std::vector<int>>>;
@@ -254,13 +250,11 @@ public:
    auto const& get_login() const noexcept {return op.user;}
 };
 
-using login_err_cfg = register_cfg;
-
 // This class is used to test if the server rejects logins with wrong
 // credentials.
 class login_err {
 public:
-   using options_type = register_cfg;
+   using options_type = register1::options_type;
 private:
    using client_type = session_shell<login_err>;
    using code_type = std::vector<std::vector<std::vector<int>>>;

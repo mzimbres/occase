@@ -66,7 +66,13 @@ private:
    beast::multi_buffer buffer;
    std::string text;
    session_shell_cfg op;
-   std::queue<std::string> msg_queue;
+
+   struct queue_item {
+      std::string msg;
+      int r;
+   };
+
+   std::queue<queue_item> msg_queue;
    bool closing = false;
    std::string receive_buffer;
 
@@ -182,7 +188,7 @@ template <class Mgr>
 void session_shell<Mgr>::send_msg(std::string msg)
 {
    auto is_empty = std::empty(msg_queue);
-   msg_queue.push(std::move(msg));
+   msg_queue.push({std::move(msg), 0});
 
    if (is_empty)
       do_write();
@@ -195,7 +201,7 @@ void session_shell<Mgr>::do_write()
    auto handler = [p = this->shared_from_this()](auto ec, auto res)
       { p->on_write(ec, res); };
 
-   ws.async_write(net::buffer(msg_queue.front()), handler);
+   ws.async_write(net::buffer(msg_queue.front().msg), handler);
 }
 
 template <class Mgr>

@@ -2,6 +2,7 @@
 
 #include <stack>
 #include <queue>
+#include <thread>
 #include <vector>
 #include <memory>
 #include <string>
@@ -9,7 +10,7 @@
 #include <unordered_map>
 
 #include <boost/asio.hpp>
-#include <boost/asio/steady_timer.hpp>
+#include <boost/asio/signal_set.hpp>
 
 #include "menu.hpp"
 #include "utils.hpp"
@@ -68,6 +69,8 @@ struct worker_stats {
    int db_post_queue_size = 0;
    int db_chat_queue_size = 0;
 };
+
+void add(worker_stats& a, worker_stats const& b);
 
 std::ostream& operator<<(std::ostream& os, worker_stats const& stats);
 
@@ -164,6 +167,20 @@ public:
    worker_stats get_stats() const noexcept;
    auto& get_ioc() const noexcept
    { return ioc_; }
+};
+
+struct worker_arena {
+   int id_;
+   net::io_context ioc_ {1};
+   net::signal_set signals_;
+   worker worker_;
+   std::thread thread_;
+
+   worker_arena(worker_cfg const& cfg, int i);
+   ~worker_arena();
+
+   void on_signal(boost::system::error_code const& ec, int n);
+   void run() noexcept;
 };
 
 }

@@ -1,10 +1,10 @@
 #include "stats_server.hpp"
 
 #include <chrono>
-#include <cstdlib>
-#include <iostream>
 #include <memory>
 #include <string>
+#include <cstdlib>
+#include <iostream>
 
 #include "config.hpp"
 #include "logger.hpp"
@@ -12,6 +12,7 @@
 
 namespace rt {
 
+// Traverses all workers collecting statistics.
 class http_session
    : public std::enable_shared_from_this<http_session> {
 private:
@@ -20,7 +21,7 @@ private:
    http::request<http::dynamic_body> request_;
    http::response<http::dynamic_body> response_;
    net::steady_timer deadline_;
-   worker const& worker_;
+   std::vector<std::shared_ptr<worker_arena>> const& warenas_;
    worker_stats stats {};
 
    void read_request()
@@ -37,13 +38,21 @@ private:
       http::async_read(socket_, buffer_, request_, handler);
    }
 
+   void collect_from(int i)
+   {
+      auto self = shared_from_this();
+      auto handler = [i, self]()
+         { self->collect_stats_handler(i); };
+
+      warenas_.at(i)->worker_.get_ioc().post(handler);
+   }
+
    void process_request()
    {
       response_.version(request_.version());
       response_.keep_alive(false);
 
-      switch(request_.method())
-      {
+      switch(request_.method()) {
       case http::verb::get:
       {
          response_.result(http::status::ok);
@@ -51,11 +60,7 @@ private:
          // Now we need the data that is running on other io_contexts.
          // Remember the worker is not thread safe. We have to update
          // inside the io_context queue. 
-         auto self = shared_from_this();
-         auto handler = [self]()
-            { self->collect_stats_handler(); };
-
-         worker_.get_ioc().post(handler);
+         collect_from(0);
       }
       break;
 
@@ -76,21 +81,27 @@ private:
 
    }
 
-   void collect_stats_handler()
+   void collect_stats_handler(int i)
    {
-      // The stats data is not thread safe, but we do not need a
-      // mutext to synchronize access as we are not creating races.
-      // It is accessed in sequence by each thread.
-      stats = worker_.get_stats();
-      auto self = shared_from_this();
-      auto next = [self]()
-      {
-         self->create_response();
-         self->write_response();
-      };
-         
+      add(stats, warenas_.at(i)->worker_.get_stats());
 
-      socket_.get_io_context().post(next);
+      ++i;
+      if (i == ssize(warenas_)) {
+         // The stats data is not thread safe, but we do not need a
+         // mutext to synchronize access as we are not creating races.
+         // It is accessed in sequence by each thread.
+         auto self = shared_from_this();
+         auto next = [self]()
+         {
+            self->create_response();
+            self->write_response();
+         };
+            
+
+         socket_.get_io_context().post(next);
+      } else {
+         collect_from(i);
+      }
    }
 
    void create_response()
@@ -138,11 +149,12 @@ private:
    }
 
 public:
-   http_session(tcp::socket socket, worker const& w)
+   http_session( tcp::socket socket
+               , std::vector<std::shared_ptr<worker_arena>> const& warenas)
    : socket_ {std::move(socket)}
    , deadline_ { socket_.get_executor().context()
                , std::chrono::seconds(60)}
-   , worker_ {w}
+   , warenas_ {warenas}
    { }
 
    void start()
@@ -152,14 +164,14 @@ public:
    }
 };
 
-stats_server::stats_server( stats_server_cfg const& cfg
-                          , worker const& w
-                          , int i
-                          , net::io_context& ioc)
+stats_server::stats_server(
+                 stats_server_cfg const& cfg
+               , std::vector<std::shared_ptr<worker_arena>> const& warenas
+               , net::io_context& ioc)
 : acceptor_ {ioc, { net::ip::tcp::v4()
-                  , static_cast<unsigned short>(std::stoi(cfg.port) + i)}}
+                  , static_cast<unsigned short>(std::stoi(cfg.port))}}
 , socket_ {ioc}
-, worker_ {w}
+, warenas_ {warenas}
 {
    run();
 }
@@ -169,16 +181,14 @@ void stats_server::on_accept(beast::error_code const& ec)
    if (ec) {
       if (ec == net::error::operation_aborted) {
          log( loglevel::info
-            , "W{0}/stats: Stopping accepting connections"
-            , worker_.get_id());
+            , "stats_server: Stopping accepting connections");
          return;
       }
 
-      log( loglevel::debug, "W{0}/stats: on_accept: {1}"
-         , ec.message(), worker_.get_id());
+      log(loglevel::debug, "stats: on_accept: {1}", ec.message());
    } else {
       std::make_shared<http_session>( std::move(socket_)
-                                    , worker_)->start();
+                                    , warenas_)->start();
    }
 
    do_accept();

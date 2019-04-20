@@ -16,6 +16,7 @@
 namespace rt
 {
 
+//__________________________________________________________________________
 std::ostream& operator<<(std::ostream& os, worker_stats const& stats)
 {
    os << stats.number_of_sessions
@@ -33,6 +34,17 @@ std::ostream& operator<<(std::ostream& os, worker_stats const& stats)
    return os;
 }
 
+void add(worker_stats& a, worker_stats const& b)
+{
+   a.number_of_sessions      += b.number_of_sessions;
+   a.worker_post_queue_size  += b.worker_post_queue_size;
+   a.worker_reg_queue_size   += b.worker_reg_queue_size;
+   a.worker_login_queue_size += b.worker_login_queue_size;
+   a.db_post_queue_size      += b.db_post_queue_size;
+   a.db_chat_queue_size      += b.db_chat_queue_size;
+}
+
+//__________________________________________________________________________
 worker::worker(worker_cfg cfg, int id_, net::io_context& ioc)
 : ioc_ {ioc}
 , id {id_}
@@ -628,6 +640,58 @@ worker_stats worker::get_stats() const noexcept
    wstats.db_chat_queue_size = db.get_chat_queue_size();
 
    return wstats;
+}
+
+//________________________________________________________________________
+
+worker_arena::worker_arena(worker_cfg const& cfg, int i)
+: id_ {i}
+, signals_ {ioc_, SIGINT, SIGTERM}
+, worker_ {cfg, i, ioc_}
+, thread_ { std::thread {[this](){ run();}} }
+{
+   auto handler = [this](auto const& ec, auto n)
+      { on_signal(ec, n); };
+
+   signals_.async_wait(handler);
+}
+
+worker_arena::~worker_arena()
+{
+   thread_.join();
+}
+
+void worker_arena::on_signal(boost::system::error_code const& ec, int n)
+{
+   if (ec) {
+      if (ec == net::error::operation_aborted) {
+         // No signal occurred, the handler was canceled. We just
+         // leave.
+         return;
+      }
+
+      log( loglevel::crit
+         , "W{0}/worker_arena::on_signal: Unhandled error '{1}'"
+         , id_, ec.message());
+
+      return;
+   }
+
+   log( loglevel::notice
+      , "W{0}/worker_arena::on_signal: Signal {1} has been captured."
+      , id_, n);
+
+   worker_.shutdown();
+}
+
+void worker_arena::run() noexcept
+{
+   try {
+      ioc_.run();
+   } catch (std::exception const& e) {
+      log( loglevel::notice
+         , "W{0}/worker_arena::run: {1}", id_, e.what());
+   }
 }
 
 }

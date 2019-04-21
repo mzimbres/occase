@@ -12,6 +12,7 @@
 
 #include "logger.hpp"
 #include "listener.hpp"
+#include "release.hpp"
 
 using namespace rt;
 
@@ -26,11 +27,15 @@ auto get_server_op(int argc, char* argv[])
    std::string log_on_stderr = "no";
    std::string conf_file;
    std::string daemonize;
+   std::string version;
 
    po::options_description desc("Options");
    desc.add_options()
    ("help,h"
    , "Produces help message")
+
+   ("git-sha1,v"
+   , "The git SHA1 the server was built.")
 
    ("config"
    , po::value<std::string>(&conf_file)
@@ -225,6 +230,11 @@ auto get_server_op(int argc, char* argv[])
 
    if (vm.count("help")) {
       std::cout << desc << "\n";
+      return listener_cfg {true};
+   }
+
+   if (vm.count("git-sha1")) {
+      std::cout << GIT_SHA1 << "\n";
       return listener_cfg {true};
    }
 

@@ -28,6 +28,7 @@ server_objs += worker_session.o
 server_objs += listener.o
 server_objs += redis.o
 server_objs += stats_server.o
+server_objs += release.o
 
 client_objs =
 client_objs += test_clients.o
@@ -58,6 +59,8 @@ srcs += async_read_resp.hpp
 
 aux = Makefile
 
+release_hdr := $(shell sh -c './mkreleasehdr.sh')
+
 all: $(exes)
 
 Makefile.dep:
@@ -82,7 +85,7 @@ aedis: % : %.o $(aedis_objs) $(common_objs)
 
 .PHONY: clean
 clean:
-	rm -f $(exes) $(exe_objs) $(lib_objs) $(DIST_NAME).tar.gz Makefile.dep
+	rm -f $(exes) $(exe_objs) $(lib_objs) $(DIST_NAME).tar.gz Makefile.dep release.cpp release.hpp
 
 $(DIST_NAME).tar.gz: $(srcs) $(aux)
 	git archive --format=tar.gz --prefix=sellit/ HEAD > sellit.tar.gz

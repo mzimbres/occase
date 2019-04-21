@@ -1,10 +1,19 @@
-A *post* is the central idea behind the menu-chat. A post carries the
-information about an item in a menu entry. A menu is composed of one
-or more menu entries. Let us take as an example a menu that has two
-menu items, where the first contains the information about location
-and the second about car models
+Posts
+-----
 
-   Location (menu1)        | Car (menu2)
+A *post* is the central idea behind the menu-chat. To understand how
+they work we have to first introduce the concept of a *menu*. First, a
+menu is composed of one or more menu entries, say
+
+   menu = entry1 x entry2 x entry3 x ...
+
+An entry aggregates related information in a tree like structure
+similar to how chapters, sections, subsections etc. are used to
+structure a book. For example, a menu with two entries could be the
+one shown below, where the first entry contains information about
+locations and the second about cars
+
+       Location            |                  Car
                            |                                                                     
 World                      | Car
    Brazil                  |    Ferrari
@@ -44,49 +53,96 @@ World                      | Car
    
 Some important things to notice
 
-   1. The menu1 and menu2 are refered to as menu entries. A deployment
-      can use as many menu entries as it likes, though there are
-      technical difficults as the number of menu items and their sizes
-      grow.
+   1. A deployment can use as many menu entries as it likes, though
+      there are technical difficults as the size of each individual
+      entry grows. We will address this later.
 
-   2. The *Location* menu entry has depth 4 whereas the menu *cars*
-      has depth 6. We refer however to the menu item depth minus one
-      as the root of the three is always one and not used in the app
-      or the server.
+   2. The *Location* menu entry has depth 4 whereas the entry *cars*
+      has depth 6. Sometimes it is convenient to omit the root node
+      and work with an *effective* depth defined to be the real depth
+      minus one.
 
-Codes
------
+Menu codes
+----------
 
 It is not difficult to see that we can refer to each of the items in a
-menu entry the same way we index chapters, sections, subsections in a
-book.  If we omit the root node, we see some of the codes are
+menu entry by specifying its position in the menu entry. If we omit
+the root node like we said above, we see some of the codes are
 
    [0, 1, 1] ===> Teresopolis
    [1, 2, 0] ===> Köln
    etc.
 
-A *post* contains the code of the items in each menu entry. So, if the
-user want to sell a 
+A *post* on the other hand contains the code of each of the items in
+each menu entries the user wants to refer to. So a
 
-   BMW/320iAi 2.0 TB M Sport ActiveFlex 16V 4p/2018/Gasoline/R$ 165.587,00
+   BMW
+      320iAi 2.0 TB M Sport ActiveFlex 16V 4p
+         2018
+            Gasoline
+               R$ 165.587,00
 
-in 
+that is located in
 
-   Brazil/Sao Paulo/Atibaia
+   Brazil
+      Sao Paulo
+         Atibaia
 
-The post is fully determined by the codes
+is fully specified by the codes
 
    [0, 0, 1] and [1, 1, 0, 1, 0, 0]
 
-When an app receives these codes it can reconstruct the information to
-present it to the user. A post also contains additional information
-which we will discuss later.
+The code is include in the json string sent by the app to the server,
+for example
 
-To receive the posts an app has to subscribe to the channel the user
-is interested in. So let us talk about channels.
+   { "from":"5"
+   , "id":33
+   , "msg":"Not an interesting message."
+   , "to":[[[0,0,1]],[[1,1,0,1,0,0]]]
+   }
+
+When an app receives these codes it can reconstruct the information to
+present it to the user. The user should notice that the code is
+represented as an array of integers that is contained inside other
+arrays. We will explain why it is this way after we introduce the
+channels.
 
 Channels
 --------
 
-When a server reads the menu it will create the channels.
+The app allows the user to filter the posts it receives. The filter
+mechanism is based on the depth of a channel. For example, in the
+locations menu above, at the depth two we have the states of each
+country, in the cars entry at the depth four we have the year the car
+has been produced. When the server is started it will read the menu
+and create the channels for a specific depth. If we use depth two for
+both menus above the server will combine therefore
+
+                                  
+   Sao Paulo                
+   Atibaia                  
+   Piracaia                 
+   Rio de Janeiro                
+   Teresópolis                   
+   Macaé                         
+   München                  GTC4      
+   Stuttgart         X      116iA     
+   Karlsruhe                320iA     
+   Offenburg                     
+   Köln                          
+   Düsseldorf                    
+   Bochum                   
+   Essen                         
+   Strasburg                     
+
+Which means 45 channels would be created. When the server receives a
+post it will read the codes up the the depth of each menu entry and
+with that find out which channel the post will be published in.
+
+When a user want to subscribe to some channels all it has to do is to
+send the codes of each menu entry. For example
+
+   [[[0,0], [0,1], [0,2], ...],[[1,1], [1,2], [2,0], ...]]
+
+and the server will combine the codes of all entries with each other.
 

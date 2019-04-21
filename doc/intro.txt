@@ -23,20 +23,20 @@ looks like
                    \__________Redis__________/                    
 
 
-Each of the servers are directly exposed to the public internet.
-There is one main reasons for why no proxy servers or load balancers
-are expected to used to intermediate the connection between the apps
-and the servers
+In a typical deployment each of the servers are directly exposed to
+the public internet.  There is one main reasons for why no proxy
+servers or load balancers are expected to be used to intermediate the
+connection between the apps and the servers
 
   1. The servers and the apps communicate via websocket and the
      connection is expected to last for a long time.
 
-  2. Each server is expected to deal with many hundreds of thousends
+  2. Each server is expected to deal with many hundreds of thausends
      of simultaneous connections.
 
   3. Avoid a single point of failure.
 
-In such an arrangement is would be easy to saturate any proxy server
+In such an arrangement it would be easy to saturate any proxy server
 and/or load balancer (unless using a load balancer at ip level, which
 may be expensive). The system has no single point of failure and is
 meant to be easy and cheap to operate and deploy.

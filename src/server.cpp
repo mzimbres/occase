@@ -175,7 +175,7 @@ auto get_server_op(int argc, char* argv[])
    , "Redis key used to store posts (in a sorted set).")
 
    ( "redis-key-user-data-prefix"
-   , po::value<std::string>(&cfg.worker.db.cfg.posts_key)->
+   , po::value<std::string>(&cfg.worker.db.cfg.user_data_prefix_key)->
         default_value("id")
    , "The prefix to every id holding user data (password for example).")
 

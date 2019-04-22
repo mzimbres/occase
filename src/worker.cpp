@@ -496,10 +496,13 @@ worker::on_app_subscribe( json const& j
    resp["result"] = "ok";
    s->send(resp.dump(), false);
 
-   json j_pub;
-   j_pub["cmd"] = "publish";
-   j_pub["items"] = items;
-   s->send(j_pub.dump(), false);
+   if (!std::empty(items)) {
+      json j_pub;
+      j_pub["cmd"] = "publish";
+      j_pub["items"] = items;
+      s->send(j_pub.dump(), false);
+   }
+
    return ev_res::subscribe_ok;
 }
 

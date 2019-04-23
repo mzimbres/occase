@@ -466,9 +466,11 @@ worker::on_app_subscribe( json const& j
       auto const hash_code =
          to_hash_code_impl(menu_codes, std::cbegin(comb));
       auto const g = channels.find(hash_code);
-      assert(g != std::end(channels));
-      if (g == std::end(channels))
+      if (g == std::end(channels)) {
+         log( loglevel::debug
+            , "W{0}/on_app_subscribe: Invalid channels." , id);
          return;
+      }
 
       // TODO: Change 0 with the latest id the user has received.
       g->second.retrieve_pub_items(0, std::back_inserter(items));

@@ -56,6 +56,7 @@ int replier::on_read( std::string msg
 
       json j_sub;
       j_sub["cmd"] = "subscribe";
+      j_sub["last_post_id"] = 0;
       j_sub["channels"] = menu_codes;
       s->send_msg(j_sub.dump());
       return 1;
@@ -80,7 +81,7 @@ int replier::on_read( std::string msg
       return 1;
    }
 
-   if (cmd == "user_msg") {
+   if (cmd == "message") {
       // Used only by the app. Not in the tests.
       std::cout << "Should not get here in the tests." << std::endl;
       std::cout << msg << std::endl;
@@ -90,7 +91,7 @@ int replier::on_read( std::string msg
       return 1;
    }
 
-   if (cmd == "user_msg_server_ack") {
+   if (cmd == "message_server_ack") {
       if (--to_receive_posts == 0) {
          std::cout << "User " << op.user << " done. (Replier)."
                    << std::endl;
@@ -126,7 +127,7 @@ replier::talk_to( std::string to, long long post_id
    //          << ", post_id: " << post_id << std::endl;
 
    json j;
-   j["cmd"] = "user_msg";
+   j["cmd"] = "message";
    j["to"] = to;
    j["msg"] = "Tenho interesse nesse carro, podemos conversar?";
    j["post_id"] = post_id;
@@ -160,6 +161,7 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
 
       json j_sub;
       j_sub["cmd"] = "subscribe";
+      j_sub["last_post_id"] = 0;
       j_sub["channels"] = menu_codes;
       s->send_msg(j_sub.dump());
       return 1;
@@ -214,7 +216,7 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
       return handle_msg(s);
    }
 
-   if (cmd == "user_msg") {
+   if (cmd == "message") {
       // This test is to make sure the server is not sending us a
       // message meant to some other user.
       auto const to = j.at("to").get<std::string>();
@@ -228,7 +230,7 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
          throw std::runtime_error("publisher::on_read6");
       }
 
-      //std::cout << op.user << " user_msg " << post_id << " "
+      //std::cout << op.user << " message " << post_id << " "
       //          << user_msg_counter << std::endl;
       --user_msg_counter;
       return handle_msg(s);
@@ -374,7 +376,7 @@ int msg_pull::on_read(std::string msg, std::shared_ptr<client_type> s)
       return 1;
    }
 
-   if (cmd == "user_msg") {
+   if (cmd == "message") {
       auto const post_id = j.at("post_id").get<int>();
       post_ids.push_back(post_id);
       //std::cout << "Expecting: " << op.expected_user_msgs << std::endl;

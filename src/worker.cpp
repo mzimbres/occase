@@ -456,6 +456,9 @@ worker::on_app_subscribe( json const& j
    auto const menu_codes =
       j.at("channels").get<menu_code_type>();
 
+   auto const app_last_post_id =
+      j.at("last_post_id").get<int>();
+
    auto n_channels = 0;
    std::vector<post> items;
 
@@ -472,8 +475,8 @@ worker::on_app_subscribe( json const& j
          return;
       }
 
-      // TODO: Change 0 with the latest id the user has received.
-      g->second.retrieve_pub_items(0, std::back_inserter(items));
+      g->second.retrieve_pub_items( app_last_post_id
+                                  , std::back_inserter(items));
       g->second.add_member(psession, ch_cfg.cleanup_rate);
       ++n_channels;
    };
@@ -590,7 +593,7 @@ worker::on_app_chat_msg(json j, std::shared_ptr<worker_session> s)
                     , std::make_move_iterator(std::end(param)));
 
    json ack;
-   ack["cmd"] = "user_msg_server_ack";
+   ack["cmd"] = "message_server_ack";
    ack["result"] = "ok";
    s->send(ack.dump(), false);
    return ev_res::chat_msg_ok;
@@ -628,7 +631,7 @@ worker::on_message(std::shared_ptr<worker_session> s, std::string msg)
       if (cmd == "publish")
          return on_app_publish(std::move(j), s);
 
-      if (cmd == "user_msg")
+      if (cmd == "message")
          return on_app_chat_msg(std::move(j), s);
    } else {
       if (cmd == "login")

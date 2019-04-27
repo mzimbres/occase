@@ -70,7 +70,7 @@ int replier::on_read( std::string msg
       return 1;
    }
 
-   if (cmd == "publish") {
+   if (cmd == "post") {
       auto items = j.at("items").get<std::vector<post>>();
 
       auto const f = [this, s](auto const& e)
@@ -185,7 +185,7 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
       return handle_msg(s);
    }
 
-   if (cmd == "publish") {
+   if (cmd == "post") {
       // We are only interested in our own publishes at the moment.
       auto items = j.at("items").get<std::vector<post>>();
 
@@ -236,6 +236,7 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
       return handle_msg(s);
    }
 
+   std::cout << "Error: publisher ===> " << cmd << std::endl;
    throw std::runtime_error("publisher::on_read4");
    return -1;
 }
@@ -359,7 +360,6 @@ int publisher2::pub( menu_code_type const& pub_code
    s->send_msg(j_msg.dump());
    return 1;
 }
-
 
 //________________________________
 

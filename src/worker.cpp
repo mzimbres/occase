@@ -213,9 +213,17 @@ void worker::on_db_user_data(std::vector<std::string> const& data)
          s->send(resp.dump(), false);
          s->shutdown();
       } else {
-         // We do not expect the insertion to fail, at the moment
-         // however I do not see a reason to treat error.
-         sessions.insert({s->get_id(), s});
+         auto const ss = sessions.insert({s->get_id(), s});
+         if (!ss.second) {
+            // This user has a session that is still alive? We cannot
+            // proceed.
+            json resp;
+            resp["cmd"] = "login_ack";
+            resp["result"] = "fail";
+            s->send(resp.dump(), false);
+            s->shutdown();
+            return;
+         }
 
          db.subscribe_to_chat_msgs(s->get_id());
          db.retrieve_chat_msgs(s->get_id());
@@ -418,15 +426,15 @@ worker::on_app_login( json const& j
    auto const user = j.at("user").get<std::string>();
    s->set_id(user);
 
-   auto const user_versions =
+   auto const menu_versions =
       j.at("menu_versions").get<std::vector<int>>();
 
    // Cache this value?
    auto const server_versions = read_versions(menu);
 
-   auto const b =
-      std::lexicographical_compare( std::begin(user_versions)
-                                  , std::end(user_versions)
+   auto const needs_new_menu =
+      std::lexicographical_compare( std::begin(menu_versions)
+                                  , std::end(menu_versions)
                                   , std::begin(server_versions)
                                   , std::end(server_versions));
 
@@ -434,7 +442,7 @@ worker::on_app_login( json const& j
 
    // We do not have to serialize the calls to retrieve_user_data
    // since this will be done by the db object.
-   login_queue.push({s, pwd, b});
+   login_queue.push({s, pwd, needs_new_menu});
    db.retrieve_user_data(s->get_id());
 
    return ev_res::login_ok;
@@ -503,7 +511,7 @@ worker::on_app_subscribe( json const& j
 
    if (!std::empty(items)) {
       json j_pub;
-      j_pub["cmd"] = "publish";
+      j_pub["cmd"] = "post";
       j_pub["items"] = items;
       s->send(j_pub.dump(), false);
    }

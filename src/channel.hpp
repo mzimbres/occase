@@ -25,15 +25,14 @@ namespace rt
  *
  *    To avoid having to remove sessions from the channel we
  *    introduced the proxy pointers, see worker_session for more
- *    details. They basically make it possible to expire all
- *    shared_pointers corresponding to a session at once, leaving us
- *    with an expired std::weak_ptr that will be removed the next time
- *    we traverse the sessions in the channel (which happens on every
- *    publication).
+ *    details. They make it possible to expire all weak_pointers
+ *    corresponding to a session at once, leaving us with an expired
+ *    std::weak_ptr that will be removed the next time we traverse the
+ *    sessions in the channel (which happens on every publication).
  *
  *    It is also possible to support remove later by keeping a sorted
- *    list of user_id that we can search as we traverse the vector
- *    when publishing the messages. No need for that at the moment.
+ *    list of user_id's that we can search as we traverse the vector
+ *    while publishing the messages. No need for that at the moment.
  *
  * Cleanup
  *
@@ -139,7 +138,7 @@ public:
    void broadcast(post item, int max_posts)
    {
       json j_pub;
-      j_pub["cmd"] = "publish";
+      j_pub["cmd"] = "post";
       j_pub["items"] = std::vector<post>{item};
 
       auto msg = std::make_shared<std::string>(j_pub.dump());

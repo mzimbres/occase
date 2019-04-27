@@ -245,6 +245,13 @@ auto del(std::string const& key)
    return resp_assemble("del", std::begin(par), std::end(par));
 }
 
+inline
+auto llen(std::string const& key)
+{
+   auto par = {key};
+   return resp_assemble("llen", std::begin(par), std::end(par));
+}
+
 template < class AsyncStream
          , class Handler>
 struct read_resp_op {

@@ -233,6 +233,7 @@ void worker_session::send_menu_msg(std::shared_ptr<std::string> msg)
 void worker_session::shutdown()
 {
    // TODO: We can call do_close directly here since it is also async.
+   log(loglevel::debug, "worker_session::shutdown: {0}.", user_id);
 
    auto const handler = [p = shared_from_this()]()
       { p->do_close(); };
@@ -264,6 +265,9 @@ void worker_session::do_pong_wait()
       if (p->pp_state == ping_pong::ping_sent) {
          // We did not receive the pong. We can shutdown and close the
          // socket.
+         log( loglevel::debug
+            , "worker_session::do_pong_wait1: Sessions has expired.");
+
          p->ws.next_layer().shutdown(net::ip::tcp::socket::shutdown_both, ec);
          p->ws.next_layer().close(ec);
          return;
@@ -334,6 +338,9 @@ void worker_session::on_read( boost::system::error_code ec
    boost::ignore_unused(bytes_transferred);
 
    if (ec == beast::websocket::error::closed) {
+      log( loglevel::debug
+         , "worker_session::on_read: Gracefully closed {0}."
+         , user_id);
       // The connection has been gracefully closed. The only possible
       // pending operations now are the timers.
       //std::cout << "worker_session::on_read: socket closed gracefully."

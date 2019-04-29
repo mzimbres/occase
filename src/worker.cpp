@@ -197,49 +197,68 @@ void worker::on_db_user_id(std::string const& id)
    }
 }
 
-void worker::on_db_user_data(std::vector<std::string> const& data)
+void
+worker::on_db_user_data(std::vector<std::string> const& data) noexcept
 {
-   assert(!std::empty(login_queue));
+   try {
+      assert(!std::empty(login_queue));
 
-   if (auto s = login_queue.front().session.lock()) {
-      // In the db we store only hashed pwds.
-      auto const hashed_pwd = hash_func(login_queue.front().pwd);
-      auto const hashed_pwd_str = std::to_string(hashed_pwd);
-      if (data.back() != hashed_pwd_str) {
-         // Incorrect pwd.
-         json resp;
-         resp["cmd"] = "login_ack";
-         resp["result"] = "fail";
-         s->send(resp.dump(), false);
-         s->shutdown();
-      } else {
-         auto const ss = sessions.insert({s->get_id(), s});
-         if (!ss.second) {
-            // This user has a session that is still alive? We cannot
-            // proceed.
+      if (auto s = login_queue.front().session.lock()) {
+         // In the db we store only hashed pwds.
+         auto const hashed_pwd = hash_func(login_queue.front().pwd);
+         auto const hashed_pwd_str = std::to_string(hashed_pwd);
+         if (data.back() != hashed_pwd_str) {
+            // Incorrect pwd.
             json resp;
             resp["cmd"] = "login_ack";
             resp["result"] = "fail";
             s->send(resp.dump(), false);
             s->shutdown();
-            return;
+            log( loglevel::debug
+               , "W{0}/on_db_user_data: login_ack failed1 for {1}:{2}."
+               , id, s->get_id(), login_queue.front().pwd);
+         } else {
+            auto const ss = sessions.insert({s->get_id(), s});
+            if (!ss.second) {
+               // Somebody is exploiting the server? Each app gets a
+               // different id and therefore there should never be
+               // more than one session with the same id. For now, I
+               // will simply override the old session and disregard
+               // any pending messages.
+
+               // The old session has to be shutdown first
+               if (auto old_ss = ss.first->second.lock()) {
+                  old_ss->shutdown();
+                  // We have to prevent the cleanup operation when its
+                  // destructor is called. That would cause the new
+                  // session to be removed from the map again.
+                  old_ss->set_id("");
+               } else {
+                  // Awckward, the old session has already expired and
+                  // we did not remove it from the map. It should be
+                  // fixed.
+               }
+
+               ss.first->second = s;
+            }
+
+            db.subscribe_to_chat_msgs(s->get_id());
+            db.retrieve_chat_msgs(s->get_id());
+
+            json resp;
+            resp["cmd"] = "login_ack";
+            resp["result"] = "ok";
+            if (login_queue.front().send_menu)
+               resp["menus"] = menu;
+
+            s->send(resp.dump(), false);
          }
-
-         db.subscribe_to_chat_msgs(s->get_id());
-         db.retrieve_chat_msgs(s->get_id());
-
-         json resp;
-         resp["cmd"] = "login_ack";
-         resp["result"] = "ok";
-         if (login_queue.front().send_menu)
-            resp["menus"] = menu;
-
-         s->send(resp.dump(), false);
+      } else {
+         // The user is not online anymore. The requested id is lost.
+         // Very unlikely to happen since the communication with redis is
+         // very fast.
       }
-   } else {
-      // The user is not online anymore. The requested id is lost.
-      // Very unlikely to happen since the communication with redis is
-      // very fast.
+   } catch (...) {
    }
 
    login_queue.pop();

@@ -145,7 +145,7 @@ private:
    void on_db_menu_connect();
    void on_db_user_id(std::string const& msg);
    void on_db_register();
-   void on_db_user_data(std::vector<std::string> const& data);
+   void on_db_user_data(std::vector<std::string> const& data) noexcept;
 
 public:
    worker(worker_cfg cfg, int id_, net::io_context& ioc);

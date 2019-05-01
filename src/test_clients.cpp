@@ -82,23 +82,26 @@ int replier::on_read( std::string msg
    }
 
    if (cmd == "message") {
-      // Used only by the app. Not in the tests.
-      std::cout << "Should not get here in the tests." << std::endl;
-      std::cout << msg << std::endl;
-      auto const post_id = j.at("post_id").get<long long>();
-      auto const from = j.at("from").get<std::string>();
-      talk_to(from, post_id, s);
-      return 1;
-   }
+      auto const type = j.at("type").get<std::string>();
+      if (type == "server_ack") {
+         if (--to_receive_posts == 0) {
+            std::cout << "User " << op.user << " done. (Replier)."
+                      << std::endl;
+            return -1; // Done.
+         }
 
-   if (cmd == "message_server_ack") {
-      if (--to_receive_posts == 0) {
-         std::cout << "User " << op.user << " done. (Replier)."
-                   << std::endl;
-         return -1; // Done.
+         return 1; // Fix the server and remove this.
       }
 
-      return 1; // Fix the server and remove this.
+      if (type == "chat") {
+         // Used only by the app. Not in the tests.
+         std::cout << "Should not get here in the tests." << std::endl;
+         std::cout << msg << std::endl;
+         auto const post_id = j.at("post_id").get<long long>();
+         auto const from = j.at("from").get<std::string>();
+         talk_to(from, post_id, s);
+         return 1;
+      }
    }
 
    std::cout << j << std::endl;
@@ -128,6 +131,7 @@ replier::talk_to( std::string to, long long post_id
 
    json j;
    j["cmd"] = "message";
+   j["type"] = "chat";
    j["to"] = to;
    j["msg"] = "Tenho interesse nesse carro, podemos conversar?";
    j["post_id"] = post_id;
@@ -217,23 +221,29 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
    }
 
    if (cmd == "message") {
-      // This test is to make sure the server is not sending us a
-      // message meant to some other user.
-      auto const to = j.at("to").get<std::string>();
-      if (to != op.user.id)
-         throw std::runtime_error("publisher::on_read5");
+      auto const type = j.at("type").get<std::string>();
+      if (type == "server_ack")
+         return 1;
 
-      auto const post_id2 = j.at("post_id").get<int>();
-      if (post_id != post_id2) {
-         std::cout << op.user << " " << post_id << " != " << post_id2 << " " << msg
-                   << std::endl;
-         throw std::runtime_error("publisher::on_read6");
+      if (type == "chat") {
+         // This test is to make sure the server is not sending us a
+         // message meant to some other user.
+         auto const to = j.at("to").get<std::string>();
+         if (to != op.user.id)
+            throw std::runtime_error("publisher::on_read5");
+
+         auto const post_id2 = j.at("post_id").get<int>();
+         if (post_id != post_id2) {
+            std::cout << op.user << " " << post_id << " != " << post_id2
+                      << " " << msg << std::endl;
+            throw std::runtime_error("publisher::on_read6");
+         }
+
+         //std::cout << op.user << " message " << post_id << " "
+         //          << user_msg_counter << std::endl;
+         --user_msg_counter;
+         return handle_msg(s);
       }
-
-      //std::cout << op.user << " message " << post_id << " "
-      //          << user_msg_counter << std::endl;
-      --user_msg_counter;
-      return handle_msg(s);
    }
 
    std::cout << "Error: publisher ===> " << cmd << std::endl;
@@ -377,15 +387,23 @@ int msg_pull::on_read(std::string msg, std::shared_ptr<client_type> s)
    }
 
    if (cmd == "message") {
-      auto const post_id = j.at("post_id").get<int>();
-      post_ids.push_back(post_id);
-      //std::cout << "Expecting: " << op.expected_user_msgs << std::endl;
-      if (--op.expected_user_msgs == 0) {
-         std::cout << "User " << op.user << " ok. (msg_pull)."
-                   << std::endl;
-         return -1;
+      auto const type = j.at("type").get<std::string>();
+      if (type == "server_ack") {
+         return 1;
       }
-      return 1;
+
+      if (type == "chat") {
+         auto const post_id = j.at("post_id").get<int>();
+         post_ids.push_back(post_id);
+         //std::cout << "Expecting: " << op.expected_user_msgs
+         //          << std::endl;
+         if (--op.expected_user_msgs == 0) {
+            std::cout << "User " << op.user << " ok. (msg_pull)."
+                      << std::endl;
+            return -1;
+         }
+         return 1;
+      }
    }
 
    if (cmd == "publish_ack") {

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <stack>
 #include <queue>
 #include <thread>
 #include <vector>
@@ -28,7 +27,7 @@ struct worker_only_cfg {
    // user on subscribe.
    int max_posts_on_sub; 
 
-   // The size of the password sent to the app.
+   // The size of the password sent to the app when it registers.
    int pwd_size; 
 };
 
@@ -70,7 +69,7 @@ struct worker_stats {
    int db_chat_queue_size = 0;
 };
 
-void add(worker_stats& a, worker_stats const& b);
+void add(worker_stats& a, worker_stats const& b) noexcept;
 
 std::ostream& operator<<(std::ostream& os, worker_stats const& stats);
 
@@ -106,16 +105,23 @@ private:
    // from redis.
    std::queue<post_queue_item> post_queue;
 
-   // Queue with sessions waiting for a user ids that are retrieved
+   // Queue with sessions waiting for a user id that are retrieved
    // from redis.
    std::queue<reg_queue_item> reg_queue;
 
    // Queue of users waiting to be checked for login.
    std::queue<login_queue_item> login_queue;
 
+   // The last post id that this channel has received from reidis
+   // pubsub menu channel.
    int last_post_id = 0;
+
+   // Generateds passwords that are sent to the app.
    pwd_gen pwdgen;
 
+   // Before we store the password in the database we hash it.
+   // TODO: Implement a platform independent has function or use from
+   // a package. Use salt.
    std::hash<std::string> const hash_func {};
 
    void init();
@@ -153,7 +159,7 @@ public:
    void on_session_dtor( std::string const& id
                        , std::vector<std::string> msgs);
 
-   ev_res on_message(std::shared_ptr<worker_session> s, std::string msg);
+   ev_res on_app(std::shared_ptr<worker_session> s, std::string msg);
 
    auto const& get_timeouts() const noexcept
       { return ws_ss_timeouts_;}

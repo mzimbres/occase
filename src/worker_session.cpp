@@ -365,7 +365,7 @@ void worker_session::on_read( boost::system::error_code ec
    try {
       auto const msg = beast::buffers_to_string(buffer.data());
       buffer.consume(std::size(buffer));
-      auto const r = worker_.on_message(shared_from_this(), std::move(msg));
+      auto const r = worker_.on_app(shared_from_this(), std::move(msg));
       handle_ev(r);
       do_read();
    } catch (std::exception const& e) {

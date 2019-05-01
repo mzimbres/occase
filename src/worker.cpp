@@ -34,7 +34,7 @@ std::ostream& operator<<(std::ostream& os, worker_stats const& stats)
    return os;
 }
 
-void add(worker_stats& a, worker_stats const& b)
+void add(worker_stats& a, worker_stats const& b) noexcept
 {
    a.number_of_sessions      += b.number_of_sessions;
    a.worker_post_queue_size  += b.worker_post_queue_size;
@@ -72,7 +72,7 @@ void worker::on_db_menu(std::string const& data)
    menu = j_menu.at("menus").get<std::vector<menu_elem>>();
 
    if (is_empty) {
-      // The menu vector was empty. This happens only when the server
+      // The menu vector is empty. This happens only when the server
       // is started. We have to save the menu and retrieve the menu
       // messages from the database. It is important that the channels
       // are not created now since we did not retrieve the messages
@@ -99,7 +99,7 @@ void worker::on_db_menu(std::string const& data)
    }
 
    // The menu is not empty which means we have received a new menu
-   // and whould update the old. We only have to create the additional
+   // and should update the old. We only have to create the additional
    // channels and there is no need to retrieve messages from the
    // database. The new menu may contain additional channels that
    // should be created here.
@@ -480,26 +480,29 @@ ev_res
 worker::on_app_subscribe( json const& j
                         , std::shared_ptr<worker_session> s)
 {
-   auto const menu_codes =
-      j.at("channels").get<menu_code_type>();
-
-   auto const app_last_post_id =
-      j.at("last_post_id").get<int>();
+   auto const menu_codes = j.at("channels").get<menu_code_type>();
+   auto const app_last_post_id = j.at("last_post_id").get<int>();
 
    auto n_channels = 0;
    std::vector<post> items;
 
    auto psession = s->get_proxy_session(true);
 
+   auto invalid_channel = 0;
    auto f = [&, this](auto const& comb)
    {
       auto const hash_code =
          to_hash_code_impl(menu_codes, std::cbegin(comb));
       auto const g = channels.find(hash_code);
       if (g == std::end(channels)) {
-         log( loglevel::debug
-            , "W{0}/on_app_subscribe: Invalid channels." , id);
+         ++invalid_channel;
          return;
+      }
+
+      if (invalid_channel != 0) {
+         log( loglevel::debug
+            , "W{0}/on_app_subscribe: Invalid channel(s)."
+            , invalid_channel);
       }
 
       g->second.retrieve_pub_items( app_last_post_id
@@ -620,7 +623,8 @@ worker::on_app_chat_msg(json j, std::shared_ptr<worker_session> s)
                     , std::make_move_iterator(std::end(param)));
 
    json ack;
-   ack["cmd"] = "message_server_ack";
+   ack["cmd"] = "message";
+   ack["type"] = "server_ack";
    ack["result"] = "ok";
    s->send(ack.dump(), false);
    return ev_res::chat_msg_ok;
@@ -645,8 +649,7 @@ void worker::shutdown()
    db.disconnect();
 }
 
-ev_res
-worker::on_message(std::shared_ptr<worker_session> s, std::string msg)
+ev_res worker::on_app(std::shared_ptr<worker_session> s, std::string msg)
 {
    auto j = json::parse(msg);
    auto const cmd = j.at("cmd").get<std::string>();

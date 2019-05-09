@@ -4,6 +4,7 @@
 #include <chrono>
 #include <memory>
 #include <atomic>
+#include <cstdint>
 
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
@@ -78,6 +79,8 @@ private:
 
    std::string user_id;
 
+   std::uint64_t menu_filter = 0;
+
    void do_read();
    void do_write(std::string const& msg);
    void on_read( boost::system::error_code ec
@@ -102,7 +105,8 @@ public:
    // Messages for which persist is true will be persisted on the
    // database and sent to the user next time he reconnects.
    void send(std::string msg, bool persist);
-   void send_menu_msg(std::shared_ptr<std::string> msg);
+   void send_menu_msg( std::shared_ptr<std::string> msg
+                     , std::uint64_t filter);
    void shutdown();
 
    void set_id(std::string id)

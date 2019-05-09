@@ -617,13 +617,18 @@ worker::on_app_chat_msg(json j, std::shared_ptr<worker_session> s)
    auto msg = j.dump();
    std::initializer_list<std::string> param = {msg};
 
-   auto to = j.at("to").get<std::string>();
-   db.store_chat_msg( std::move(to)
+   auto const to = j.at("to").get<std::string>();
+   db.store_chat_msg( to
                     , std::make_move_iterator(std::begin(param))
                     , std::make_move_iterator(std::end(param)));
 
+   auto const is_sender_post = j.at("is_sender_post").get<bool>();
+   auto const post_id = j.at("post_id").get<int>();
    json ack;
    ack["cmd"] = "message";
+   ack["from"] = to;
+   ack["is_sender_post"] = !is_sender_post;
+   ack["post_id"] = post_id;
    ack["type"] = "server_ack";
    ack["result"] = "ok";
    s->send(ack.dump(), false);

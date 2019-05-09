@@ -1,7 +1,8 @@
 #pragma once
 
-#include <ostream>
 #include <string>
+#include <ostream>
+#include <cstdint>
 
 #include <nlohmann/json.hpp>
 
@@ -17,6 +18,7 @@ struct post {
    std::string from;
    std::string msg;
    menu_code_type to;
+   std::uint64_t filter;
 
    friend
    auto operator<(post const& a, post const& b) noexcept
@@ -28,7 +30,15 @@ struct post {
 inline
 void to_json(json& j, post const& e)
 {
-   j = json{{"id", e.id}, {"from", e.from}, {"msg", e.msg}, {"to", e.to}};
+   // Maybe we should not include the filter field below. The does not
+   // need it.
+
+   j = json{ {"id", e.id}
+           , {"from", e.from}
+           , {"msg", e.msg}
+           , {"to", e.to}
+           , {"filter", e.filter}
+           };
 }
 
 inline
@@ -38,6 +48,7 @@ void from_json(json const& j, post& e)
   e.from = j.at("from").get<std::string>();
   e.msg = j.at("msg").get<std::string>();
   e.to = j.at("to").get<menu_code_type>();
+  e.filter = j.at("filter").get<std::uint64_t>();
 }
 
 }

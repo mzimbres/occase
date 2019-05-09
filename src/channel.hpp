@@ -141,11 +141,12 @@ public:
       j_pub["cmd"] = "post";
       j_pub["items"] = std::vector<post>{item};
 
+      auto const filter = item.filter;
       auto msg = std::make_shared<std::string>(j_pub.dump());
       store_item(std::move(item), max_posts);
 
-      auto f = [msg](auto session)
-         { session->send_menu_msg(msg); };
+      auto f = [msg, filter](auto session)
+         { session->send_menu_msg(msg, filter); };
 
       // TODO: Use the return value for statistics.
       cleanup_traversal(f);

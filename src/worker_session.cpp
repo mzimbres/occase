@@ -220,8 +220,13 @@ void worker_session::send(std::string msg, bool persist)
       do_write(msg_queue.front().msg);
 }
 
-void worker_session::send_menu_msg(std::shared_ptr<std::string> msg)
+void
+worker_session::send_menu_msg( std::shared_ptr<std::string> msg
+                             , std::uint64_t filter)
 {
+   if ((menu_filter & filter) != menu_filter)
+      return;
+
    auto const is_empty = std::empty(msg_queue);
 
    msg_queue.push_back({{}, msg, false});

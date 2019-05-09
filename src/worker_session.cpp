@@ -322,6 +322,10 @@ void worker_session::handle_ev(ev_res r)
       break;
       case ev_res::register_fail:
       case ev_res::login_fail:
+      case ev_res::subscribe_fail:
+      case ev_res::publish_fail:
+      case ev_res::chat_msg_fail:
+      case ev_res::unknown:
       {
          timer.cancel();
          do_close();
@@ -362,20 +366,11 @@ void worker_session::on_read( boost::system::error_code ec
    if (ec)
       return;
 
-   try {
-      auto const msg = beast::buffers_to_string(buffer.data());
-      buffer.consume(std::size(buffer));
-      auto const r = worker_.on_app(shared_from_this(), std::move(msg));
-      handle_ev(r);
-      do_read();
-   } catch (std::exception const& e) {
-      log( loglevel::debug
-         , "worker_session::on_read: {0}."
-         , e.what());
-
-      timer.cancel();
-      do_close();
-   }
+   auto msg = beast::buffers_to_string(buffer.data());
+   buffer.consume(std::size(buffer));
+   auto const r = worker_.on_app(shared_from_this(), std::move(msg));
+   handle_ev(r);
+   do_read();
 }
 
 void worker_session::on_write( boost::system::error_code ec

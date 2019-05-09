@@ -159,7 +159,8 @@ public:
    void on_session_dtor( std::string const& id
                        , std::vector<std::string> msgs);
 
-   ev_res on_app(std::shared_ptr<worker_session> s, std::string msg);
+   ev_res on_app( std::shared_ptr<worker_session> s
+                , std::string msg) noexcept;
 
    auto const& get_timeouts() const noexcept
       { return ws_ss_timeouts_;}

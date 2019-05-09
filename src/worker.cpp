@@ -649,26 +649,23 @@ void worker::shutdown()
    db.disconnect();
 }
 
-ev_res worker::on_app(std::shared_ptr<worker_session> s, std::string msg)
+ev_res worker::on_app( std::shared_ptr<worker_session> s
+                     , std::string msg) noexcept
 {
-   auto j = json::parse(msg);
-   auto const cmd = j.at("cmd").get<std::string>();
+   try {
+      auto j = json::parse(msg);
+      auto const cmd = j.at("cmd").get<std::string>();
 
-   if (s->is_logged_in()) {
-      if (cmd == "subscribe")
-         return on_app_subscribe(j, s);
-
-      if (cmd == "publish")
-         return on_app_publish(std::move(j), s);
-
-      if (cmd == "message")
-         return on_app_chat_msg(std::move(j), s);
-   } else {
-      if (cmd == "login")
-         return on_app_login(j, s);
-
-      if (cmd == "register")
-         return on_app_register(j, s);
+      if (s->is_logged_in()) {
+         if (cmd == "subscribe") return on_app_subscribe(j, s);
+         if (cmd == "publish")   return on_app_publish(std::move(j), s);
+         if (cmd == "message")   return on_app_chat_msg(std::move(j), s);
+      } else {
+         if (cmd == "login")     return on_app_login(j, s);
+         if (cmd == "register")  return on_app_register(j, s);
+      }
+   } catch (std::exception const& e) {
+      log(loglevel::debug, "worker::on_app: {0}.", e.what());
    }
 
    return ev_res::unknown;

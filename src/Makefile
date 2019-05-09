@@ -88,7 +88,7 @@ clean:
 	rm -f $(exes) $(exe_objs) $(lib_objs) $(DIST_NAME).tar.gz Makefile.dep release.cpp release.hpp
 
 $(DIST_NAME).tar.gz: $(srcs) $(aux)
-	git archive --format=tar.gz --prefix=sellit/ HEAD > sellit.tar.gz
+	git archive --format=tar.gz --prefix=sellit/ HEAD > menu_chat_server.tar.gz
 
 .PHONY: dist
 dist: $(DIST_NAME).tar.gz

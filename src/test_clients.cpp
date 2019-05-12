@@ -74,7 +74,7 @@ int replier::on_read( std::string msg
       auto items = j.at("items").get<std::vector<post>>();
 
       auto const f = [this, s](auto const& e)
-         { talk_to(e.from, e.id, s); };
+         { send_chat_msg(e.from, e.id, s); };
 
       std::for_each(std::begin(items), std::end(items), f);
 
@@ -99,7 +99,19 @@ int replier::on_read( std::string msg
          std::cout << msg << std::endl;
          auto const post_id = j.at("post_id").get<long long>();
          auto const from = j.at("from").get<std::string>();
-         talk_to(from, post_id, s);
+
+         ack_chat(from, post_id, s, "app_ack_received");
+         ack_chat(from, post_id, s, "app_ack_read");
+         send_chat_msg(from, post_id, s);
+         return 1;
+      }
+
+      // Currently we make no use of these commands.
+      if (type == "app_ack_received") {
+         return 1;
+      }
+
+      if (type == "app_ack_read") {
          return 1;
       }
    }
@@ -123,8 +135,8 @@ int replier::on_closed(boost::system::error_code ec)
 };
 
 void
-replier::talk_to( std::string to, long long post_id
-                , std::shared_ptr<client_type> s)
+replier::send_chat_msg( std::string to, long long post_id
+                      , std::shared_ptr<client_type> s)
 {
    //std::cout << "Sub: User " << op.user << " sending to " << to
    //          << ", post_id: " << post_id << std::endl;
@@ -134,6 +146,21 @@ replier::talk_to( std::string to, long long post_id
    j["type"] = "chat";
    j["to"] = to;
    j["msg"] = "Tenho interesse nesse carro, podemos conversar?";
+   j["post_id"] = post_id;
+   j["is_sender_post"] = false;
+
+   s->send_msg(j.dump());
+}
+
+void
+replier::ack_chat( std::string to, long long post_id
+                 , std::shared_ptr<client_type> s
+                 , std::string const& type)
+{
+   json j;
+   j["cmd"] = "message";
+   j["type"] = type;
+   j["to"] = to;
    j["post_id"] = post_id;
    j["is_sender_post"] = false;
 

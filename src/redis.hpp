@@ -176,7 +176,7 @@ public:
       auto const key = cfg.chat_msg_prefix + id;
       auto cmd_str = multi()
                    + incr(cfg.chat_msgs_counter_key)
-                   + lpush(key, begin, end)
+                   + rpush(key, begin, end)
                    + expire(key, cfg.chat_msg_exp_time)
                    + exec();
 

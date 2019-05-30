@@ -91,6 +91,7 @@ private:
 
    int to_receive_posts;
    std::vector<menu_elem> menus;
+   std::string nick;
 
    void send_chat_msg( std::string user, long long id
                      , std::shared_ptr<client_type> s);

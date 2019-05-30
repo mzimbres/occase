@@ -103,6 +103,17 @@ int replier::on_read( std::string msg
          ack_chat(from, post_id, s, "app_ack_received");
          ack_chat(from, post_id, s, "app_ack_read");
          send_chat_msg(from, post_id, s);
+
+         // Requests the user nick on every single message. This
+         // prevents me from having to implement complex logic in this
+         // client. It is ok for testing.
+         json jj;
+         jj["cmd"] = "message";
+         jj["type"] = "nick_req";
+         jj["to"] = from;
+         jj["post_id"] = post_id;
+         jj["is_sender_post"] = false;
+         s->send_msg(jj.dump());
          return 1;
       }
 
@@ -112,6 +123,28 @@ int replier::on_read( std::string msg
       }
 
       if (type == "app_ack_read") {
+         return 1;
+      }
+
+      if (type == "nick_req") {
+         auto const post_id = j.at("post_id").get<long long>();
+         auto const from = j.at("from").get<std::string>();
+         json jj;
+         jj["cmd"] = "message";
+         jj["type"] = "nick_req_ack";
+         jj["to"] = from;
+         jj["post_id"] = post_id;
+         jj["is_sender_post"] = false;
+         jj["nick"] = "Magal";
+
+         s->send_msg(jj.dump());
+         return 1;
+      }
+
+      if (type == "nick_req_ack") {
+         auto const post_id = j.at("nick").get<std::string>();
+         auto const from = j.at("from").get<std::string>();
+         std::cout << "User " << from << "has nick " << nick << std::endl;
          return 1;
       }
    }

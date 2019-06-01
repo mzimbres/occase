@@ -17,6 +17,7 @@ struct post {
    int id;
    std::string from;
    std::string msg;
+   std::string nick;
    menu_code_type to;
    std::uint64_t filter;
 
@@ -38,6 +39,7 @@ void to_json(json& j, post const& e)
            , {"msg", e.msg}
            , {"to", e.to}
            , {"filter", e.filter}
+           , {"nick", e.nick}
            };
 }
 
@@ -49,6 +51,7 @@ void from_json(json const& j, post& e)
   e.msg = j.at("msg").get<std::string>();
   e.to = j.at("to").get<menu_code_type>();
   e.filter = j.at("filter").get<std::uint64_t>();
+  e.nick = j.at("nick").get<std::string>();
 }
 
 }

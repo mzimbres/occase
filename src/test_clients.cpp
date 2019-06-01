@@ -21,7 +21,7 @@ std::string
 make_post_cmd(rt::menu_code_type const& menu_code)
 {
    rt::post item { -1, {}, "Not an interesting message."
-                 , menu_code, 0};
+                 , "Kabuff", menu_code, 0};
    json j;
    j["cmd"] = "publish";
    j["items"] = std::vector<rt::post>{item};
@@ -58,6 +58,7 @@ int replier::on_read( std::string msg
       j_sub["cmd"] = "subscribe";
       j_sub["last_post_id"] = 0;
       j_sub["channels"] = menu_codes;
+      j_sub["filter"] = 0;
       s->send_msg(j_sub.dump());
       return 1;
    }
@@ -103,17 +104,6 @@ int replier::on_read( std::string msg
          ack_chat(from, post_id, s, "app_ack_received");
          ack_chat(from, post_id, s, "app_ack_read");
          send_chat_msg(from, post_id, s);
-
-         // Requests the user nick on every single message. This
-         // prevents me from having to implement complex logic in this
-         // client. It is ok for testing.
-         json jj;
-         jj["cmd"] = "message";
-         jj["type"] = "nick_req";
-         jj["to"] = from;
-         jj["post_id"] = post_id;
-         jj["is_sender_post"] = false;
-         s->send_msg(jj.dump());
          return 1;
       }
 
@@ -123,28 +113,6 @@ int replier::on_read( std::string msg
       }
 
       if (type == "app_ack_read") {
-         return 1;
-      }
-
-      if (type == "nick_req") {
-         auto const post_id = j.at("post_id").get<long long>();
-         auto const from = j.at("from").get<std::string>();
-         json jj;
-         jj["cmd"] = "message";
-         jj["type"] = "nick_req_ack";
-         jj["to"] = from;
-         jj["post_id"] = post_id;
-         jj["is_sender_post"] = false;
-         jj["nick"] = "Magal";
-
-         s->send_msg(jj.dump());
-         return 1;
-      }
-
-      if (type == "nick_req_ack") {
-         auto const post_id = j.at("nick").get<std::string>();
-         auto const from = j.at("from").get<std::string>();
-         std::cout << "User " << from << "has nick " << nick << std::endl;
          return 1;
       }
    }
@@ -181,6 +149,7 @@ replier::send_chat_msg( std::string to, long long post_id
    j["msg"] = "Tenho interesse nesse carro, podemos conversar?";
    j["post_id"] = post_id;
    j["is_sender_post"] = false;
+   j["nick"] = "Majsjsjs";
 
    s->send_msg(j.dump());
 }
@@ -196,6 +165,7 @@ replier::ack_chat( std::string to, long long post_id
    j["to"] = to;
    j["post_id"] = post_id;
    j["is_sender_post"] = false;
+   j["nick"] = "Zebu";
 
    s->send_msg(j.dump());
 }
@@ -423,7 +393,7 @@ int publisher2::pub( menu_code_type const& pub_code
                  , std::shared_ptr<client_type> s) const
 {
    post item {-1, op.user.id, "Not an interesting message."
-                 , pub_code, 0};
+             , "Campeao", pub_code, 0};
    json j_msg;
    j_msg["cmd"] = "publish";
    j_msg["items"] = std::vector<post>{item};

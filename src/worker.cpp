@@ -481,11 +481,13 @@ worker::on_app_subscribe( json const& j
                         , std::shared_ptr<worker_session> s)
 {
    auto const menu_codes = j.at("channels").get<menu_code_type>();
+   auto const filter = j.at("filter").get<std::uint64_t>();
    auto const app_last_post_id = j.at("last_post_id").get<int>();
 
    auto n_channels = 0;
    std::vector<post> items;
 
+   s->set_filter(filter);
    auto psession = s->get_proxy_session(true);
 
    auto invalid_channel = 0;

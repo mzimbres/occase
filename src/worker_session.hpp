@@ -111,6 +111,8 @@ public:
 
    void set_id(std::string id)
       { user_id = std::move(id); };
+   void set_filter(std::uint64_t filter)
+      { menu_filter = filter; }
    auto const& get_id() const noexcept
       { return user_id;}
    auto is_logged_in() const noexcept

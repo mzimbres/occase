@@ -20,6 +20,7 @@ struct post {
    std::string nick;
    menu_code_type to;
    std::uint64_t filter;
+   long int date = 0;
 
    friend
    auto operator<(post const& a, post const& b) noexcept
@@ -40,6 +41,7 @@ void to_json(json& j, post const& e)
            , {"to", e.to}
            , {"filter", e.filter}
            , {"nick", e.nick}
+           , {"date", e.date}
            };
 }
 
@@ -52,6 +54,7 @@ void from_json(json const& j, post& e)
   e.to = j.at("to").get<menu_code_type>();
   e.filter = j.at("filter").get<std::uint64_t>();
   e.nick = j.at("nick").get<std::string>();
+  e.date = j.at("date").get<long int>();
 }
 
 }

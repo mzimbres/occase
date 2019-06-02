@@ -21,7 +21,7 @@ std::string
 make_post_cmd(rt::menu_code_type const& menu_code)
 {
    rt::post item { -1, {}, "Not an interesting message."
-                 , "Kabuff", menu_code, 0};
+                 , "Kabuff", menu_code, 0, 0};
    json j;
    j["cmd"] = "publish";
    j["items"] = std::vector<rt::post>{item};
@@ -393,7 +393,7 @@ int publisher2::pub( menu_code_type const& pub_code
                  , std::shared_ptr<client_type> s) const
 {
    post item {-1, op.user.id, "Not an interesting message."
-             , "Campeao", pub_code, 0};
+             , "Campeao", pub_code, 0, 0};
    json j_msg;
    j_msg["cmd"] = "publish";
    j_msg["items"] = std::vector<post>{item};

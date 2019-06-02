@@ -413,6 +413,7 @@ void worker::on_db_post_id(std::string const& post_id_str)
    ack["cmd"] = "publish_ack";
    ack["result"] = "ok";
    ack["id"] = post_queue.front().item.id;
+   ack["date"] = post_queue.front().item.date;
    auto ack_str = ack.dump();
 
    if (auto s = post_queue.front().session.lock()) {
@@ -576,9 +577,14 @@ worker::on_app_publish(json j, std::shared_ptr<worker_session> s)
       return ev_res::publish_fail;
    }
 
+   using namespace std::chrono;
+
    // It is important to not thrust the *from* field in the json
    // command.
    items.front().from = s->get_id();
+   items.front().date =
+      duration_cast< milliseconds
+                   >(system_clock::now().time_since_epoch()).count();
    post_queue.push({s, items.front()});
    db.request_post_id();
    return ev_res::publish_ok;

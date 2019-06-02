@@ -112,13 +112,15 @@ void worker_session::on_accept(boost::system::error_code ec)
          return;
       }
 
-      auto const str =
-         ws.next_layer().remote_endpoint().address().to_string();
+      auto const err = ec.message();
+      auto ed = ws.next_layer().remote_endpoint(ec).address().to_string();
+      if (ec)
+         ed = ec.message();
 
       log( loglevel::debug
-         , "worker_session::on_accept1: {0}. Remote endpoint {1}."
-         , ec.message()
-         , str);
+         , "worker_session::on_accept1: {0}. Remote endpoint: {1}."
+         , err
+         , ed);
 
       return;
    }

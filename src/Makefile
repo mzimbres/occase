@@ -9,7 +9,7 @@ DEBUG    = -g -ggdb3
 LDFLAGS  = -lpthread -lfmt
 CPPFLAGS = -I. -I$(boost_inc_dir) -std=c++17 $(DEBUG) -Wall# -Werror
 
-DIST_NAME = sellit
+DIST_NAME = menu_chat_server
 
 exes =
 exes += publish_tests

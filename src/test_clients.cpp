@@ -7,6 +7,30 @@
 namespace
 {
 
+std::vector<std::string> const nicks
+{ "Magraboia"
+, "Jujuba"
+, "Caju"
+, "Lasca Fina"
+, "Kabuff"
+, "Gomes"
+, "Fui lá"
+, "Felino"
+, "Zé Caque"
+, "Noski"
+, "Bezerro"
+, "Palminha"
+, "Rebolo"
+, "Fui e Voltei"
+, "Mijoca"
+, "Brancona"
+, "Mandibula"
+, "Largado"
+, "Mosga"
+, "Victor"
+, "Peste Branda"
+};
+
 std::string make_login_cmd(rt::cli::login const& user)
 {
    json j;
@@ -142,6 +166,7 @@ replier::send_chat_msg( std::string to, long long post_id
    //std::cout << "Sub: User " << op.user << " sending to " << to
    //          << ", post_id: " << post_id << std::endl;
 
+   auto const n = std::stoi(op.user.id);
    json j;
    j["cmd"] = "message";
    j["type"] = "chat";
@@ -149,7 +174,7 @@ replier::send_chat_msg( std::string to, long long post_id
    j["msg"] = "Tenho interesse nesse carro, podemos conversar?";
    j["post_id"] = post_id;
    j["is_sender_post"] = false;
-   j["nick"] = "Majsjsjs";
+   j["nick"] = nicks.at(n % std::size(nicks));
 
    s->send_msg(j.dump());
 }

@@ -222,6 +222,7 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
       j_sub["cmd"] = "subscribe";
       j_sub["last_post_id"] = 0;
       j_sub["channels"] = menu_codes;
+      j_sub["filter"] = 0;
       s->send_msg(j_sub.dump());
       return 1;
    }

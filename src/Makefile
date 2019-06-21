@@ -5,7 +5,7 @@ ext_libs =
 ext_libs += $(boost_lib_dir)/libboost_system.a
 ext_libs += $(boost_lib_dir)/libboost_program_options.a
 
-DEBUG    = -g -ggdb3
+DEBUG    = -O2 #-g -ggdb3
 LDFLAGS  = -lpthread -lfmt
 CPPFLAGS = -I. -I$(boost_inc_dir) -std=c++17 $(DEBUG) -Wall# -Werror
 
@@ -75,7 +75,7 @@ publish_tests: % : %.o $(client_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
 server: % : %.o $(server_objs) $(common_objs) $(aedis_objs)
-	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
+	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_CONCURRENCY_HINT_1=BOOST_ASIO_CONCURRENCY_HINT_UNSAFE_IO
 
 menu_dump: % : %.o $(menu_dump_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) -lfmt $(ext_libs)

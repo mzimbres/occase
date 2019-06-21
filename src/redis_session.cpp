@@ -65,10 +65,11 @@ void session::run()
 {
    auto addr = split(cfg.sentinels.front());
    std::cout << addr.first << " -- " << addr.second << std::endl;
-   auto handler = [this](auto ec, auto res)
-      { on_resolve(ec, res); };
 
-   resolver.async_resolve(cfg.host, cfg.port, handler);
+   // Calling sync resolve to avoid starting a new thread.
+   boost::system::error_code ec;
+   auto res = resolver.resolve(cfg.host, cfg.port, ec);
+   on_resolve(ec, res);
 }
 
 void session::send(std::string msg)

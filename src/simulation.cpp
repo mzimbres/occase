@@ -30,6 +30,7 @@ struct client_op {
    std::string host {"127.0.0.1"};
    std::string port {"8080"};
    int listen_users = 10;
+   int n_replies = 2;
    int handshake_tm = 3;
    int launch_interval = 100;
    int auth_timeout = 3;
@@ -56,7 +57,7 @@ struct client_op {
 
 void launch_sessions(client_op const& op, std::vector<login> logins)
 {
-   using client_type = replier;
+   using client_type = simulator;
    using config_type = client_type::options_type;
 
    boost::asio::io_context ioc;
@@ -64,7 +65,7 @@ void launch_sessions(client_op const& op, std::vector<login> logins)
    auto const s =
       std::make_shared< session_launcher<client_type>
                       >( ioc
-                       , config_type {{}, 100}
+                       , config_type {{}, op.n_replies}
                        , op.make_session_cfg()
                        , op.make_client_cfg(logins)
                        );
@@ -92,6 +93,11 @@ int main(int argc, char* argv[])
          ("listen-users,c"
          , po::value<int>(&op.listen_users)->default_value(10)
          , "Number of listen users."
+         )
+
+         ("number-of-replies,r"
+         , po::value<int>(&op.n_replies)->default_value(10)
+         , "The number of replies."
          )
 
          ("launch-interval,g"

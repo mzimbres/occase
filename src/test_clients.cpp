@@ -119,15 +119,7 @@ int replier::on_read( std::string msg
       }
 
       if (type == "chat") {
-         // Used only by the app. Not in the tests.
          std::cout << "Should not get here in the tests." << std::endl;
-         std::cout << msg << std::endl;
-         auto const post_id = j.at("post_id").get<long long>();
-         auto const from = j.at("from").get<std::string>();
-
-         ack_chat(from, post_id, s, "app_ack_received");
-         ack_chat(from, post_id, s, "app_ack_read");
-         send_chat_msg(from, post_id, s);
          return 1;
       }
 
@@ -183,6 +175,138 @@ void
 replier::ack_chat( std::string to, long long post_id
                  , std::shared_ptr<client_type> s
                  , std::string const& type)
+{
+   json j;
+   j["cmd"] = "message";
+   j["type"] = type;
+   j["to"] = to;
+   j["post_id"] = post_id;
+   j["is_sender_post"] = false;
+   j["nick"] = "Zebu";
+
+   s->send_msg(j.dump());
+}
+
+//______________
+
+int simulator::on_read( std::string msg
+                    , std::shared_ptr<client_type> s)
+{
+   auto const j = json::parse(msg);
+
+   auto const cmd = j.at("cmd").get<std::string>();
+   if (cmd == "login_ack") {
+      auto const res = j.at("result").get<std::string>();
+      if (res != "ok")
+         throw std::runtime_error("simulator::login_ack");
+
+      menus = j.at("menus").get<std::vector<menu_elem>>();
+      auto const menu_codes = menu_elems_to_codes(menus);
+      auto const pub_codes = channel_codes(menu_codes, menus);
+      assert(!std::empty(pub_codes));
+
+      json j_sub;
+      j_sub["cmd"] = "subscribe";
+      j_sub["last_post_id"] = 0;
+      j_sub["channels"] = menu_codes;
+      j_sub["filter"] = 0;
+      s->send_msg(j_sub.dump());
+      return 1;
+   }
+
+   if (cmd == "subscribe_ack") {
+      auto const res = j.at("result").get<std::string>();
+      if (res != "ok")
+         throw std::runtime_error("simulator::subscribe_ack");
+
+      return 1;
+   }
+
+   if (cmd == "post") {
+      auto items = j.at("items").get<std::vector<post>>();
+
+      auto const f = [this, s](auto const& e)
+         { send_chat_msg(e.from, e.id, s); };
+
+      std::for_each(std::begin(items), std::end(items), f);
+
+      return 1;
+   }
+
+   if (cmd == "message") {
+      auto const type = j.at("type").get<std::string>();
+      if (type == "server_ack")
+         return 1; // Fix the server and remove this.
+
+      if (type == "chat") {
+         // Used only by the app. Not in the tests.
+         std::cout << msg << std::endl;
+         auto const post_id = j.at("post_id").get<long long>();
+         auto const from = j.at("from").get<std::string>();
+
+         ack_chat(from, post_id, s, "app_ack_received");
+         ack_chat(from, post_id, s, "app_ack_read");
+         send_chat_msg(from, post_id, s);
+         return 1;
+      }
+
+      if (type == "app_ack_received" || type == "app_ack_read") {
+         if (++counter == op.counter) {
+            counter = 0;
+            return 1;
+         }
+
+         std::cout << "Ack received. Sending new msg ..." << std::endl;
+         auto const post_id = j.at("post_id").get<long long>();
+         auto const from = j.at("from").get<std::string>();
+         send_chat_msg(from, post_id, s);
+         return 1;
+      }
+
+      if (type == "app_ack_read") {
+         return 1;
+      }
+   }
+
+   std::cout << j << std::endl;
+   throw std::runtime_error("simulator::inexistent");
+   return -1;
+}
+
+int simulator::on_handshake(std::shared_ptr<client_type> s)
+{
+   auto const str = make_login_cmd(op.user);
+   s->send_msg(str);
+   return 1;
+}
+
+int simulator::on_closed(boost::system::error_code ec)
+{
+   throw std::runtime_error("simulator::on_closed");
+   return -1;
+};
+
+void
+simulator::send_chat_msg( std::string to, long long post_id
+                      , std::shared_ptr<client_type> s)
+{
+   auto const n = std::stoi(op.user.id);
+   json j;
+   j["cmd"] = "message";
+   j["type"] = "chat";
+   j["to"] = to;
+   j["msg"] = "Message" + std::to_string(counter);
+   j["post_id"] = post_id;
+   j["is_sender_post"] = false;
+   j["nick"] = nicks.at(n % std::size(nicks));
+
+   s->send_msg(j.dump());
+}
+
+void
+simulator::ack_chat( std::string to, long long post_id
+                   , std::shared_ptr<client_type> s
+                   , std::string const& type)
 {
    json j;
    j["cmd"] = "message";

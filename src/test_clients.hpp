@@ -111,6 +111,40 @@ public:
    auto const& get_login() const noexcept {return op.user;}
 };
 
+class simulator {
+public:
+   struct options_type {
+      login user;
+      int counter = 0;
+   };
+
+private:
+   using client_type = session_shell<simulator>;
+
+   options_type op;
+   int counter = 0;
+
+   std::vector<menu_elem> menus;
+   std::string nick;
+
+   void send_chat_msg( std::string user, long long id
+                     , std::shared_ptr<client_type> s);
+
+   void ack_chat( std::string user, long long id
+                , std::shared_ptr<client_type> s
+                , std::string const& type);
+
+public:
+   simulator(options_type op_)
+   : op(op_) { }
+
+   int on_read(std::string msg, std::shared_ptr<client_type> s);
+   int on_closed(boost::system::error_code ec);
+   int on_handshake(std::shared_ptr<client_type> s);
+   int on_connect() const noexcept { return 1;}
+   auto const& get_login() const noexcept {return op.user;}
+};
+
 /* This class is meant to perform the following test
  *
  * 1. Log in with menu versions 0 to get the server send us the menus.

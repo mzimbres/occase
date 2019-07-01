@@ -287,7 +287,7 @@ menu::dump(oformat of, char line_sep, int const max_depth)
    std::string output;
    std::ostringstream oss;
 
-   menu_view<3> view {head.children.front()};
+   menu_view<3> view {head.children.front(), max_depth};
 
    auto const f = [&](auto const& node)
    {

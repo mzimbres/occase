@@ -118,7 +118,7 @@ int replier::on_read( std::string msg
          return 1; // Fix the server and remove this.
       }
 
-      if (type == "chat") {
+      if (type == "chat" || type == "chat_redirected") {
          std::cout << "Should not get here in the tests." << std::endl;
          return 1;
       }
@@ -162,6 +162,7 @@ replier::send_chat_msg( std::string to, long long post_id
    json j;
    j["cmd"] = "message";
    j["type"] = "chat";
+   j["refers_to"] = -1;
    j["to"] = to;
    j["msg"] = "Tenho interesse nesse carro, podemos conversar?";
    j["post_id"] = post_id;
@@ -238,7 +239,7 @@ int simulator::on_read( std::string msg
       if (type == "server_ack")
          return 1; // Fix the server and remove this.
 
-      if (type == "chat") {
+      if (type == "chat" || type == "chat_redirected") {
          // Used only by the app. Not in the tests.
          std::cout << msg << std::endl;
          auto const post_id = j.at("post_id").get<long long>();
@@ -294,6 +295,7 @@ simulator::send_chat_msg( std::string to, long long post_id
    json j;
    j["cmd"] = "message";
    j["type"] = "chat";
+   j["refers_to"] = -1;
    j["to"] = to;
    j["msg"] = "Message" + std::to_string(counter);
    j["post_id"] = post_id;

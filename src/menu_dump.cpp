@@ -139,14 +139,15 @@ convert_to_menu_elem(std::string const& file_info_raw)
 int impl(menu_op const& op)
 {
    if (op.oformat == 5) {
-      std::vector<menu_elem> elems;
-      for (auto const& e : op.files)
-         elems.push_back(convert_to_menu_elem(e));
+      std::cerr << "Unsuported." << std::endl;
+      //std::vector<menu_elem> elems;
+      //for (auto const& e : op.files)
+      //   elems.push_back(convert_to_menu_elem(e));
 
-      auto const hash_codes = menu_elems_to_codes(elems);
-      auto const channels = channel_codes(hash_codes, elems);
-      for (auto const& c : channels)
-         std::cout << to_hash_code(c) << std::endl;
+      //auto const hash_codes = menu_elems_to_codes(elems);
+      //auto const channels = channel_codes(hash_codes, elems);
+      //for (auto const& c : channels)
+      //   std::cout << to_hash_code(c) << std::endl;
 
       return 0;
    }

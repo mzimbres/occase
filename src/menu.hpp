@@ -297,143 +297,95 @@ struct menu_elem {
    int version = 0;
 };
 
-// Stolen from rtcpp.
-template <class Iter, class Iter1>
-auto next_tuple( Iter begin, Iter end
-               , Iter1 min, Iter1 max)
-{
-    auto j = end - begin - 1;
-    while (begin[j] == max[j]) {
-      begin[j] = min[j];
-      --j;
-    }
-    ++begin[j];
-    
-    return j != 0;
-}
-
-template <class F>
-void
-visit_menu_codes( menu_code_type const& channels
-                , F f
-                , int max_tuples = std::numeric_limits<int>::max())
-{
-   if (std::empty(channels))
-      return;
-
-   auto empty = [](auto const& o)
-      { return std::empty(o); };
-
-   auto const b =
-      std::none_of(std::begin(channels), std::end(channels), empty);
-   
-   if (!b)
-      return;
-
-   std::vector<int> min(1 + ssize(channels), 0);
-   std::vector<int> max(1, min.front() + 1);
-   for (auto const& o : channels)
-      max.push_back(ssize(o) - 1);
-   
-   auto comb = min;
-   bool r = false;
-   do {
-      f(comb);
-      r = next_tuple( std::begin(comb), std::end(comb)
-                    , std::begin(min), std::begin(max));
-   } while (r && --max_tuples != 0);
-}
-
 void to_json(json& j, menu_elem const& e);
 void from_json(json const& j, menu_elem& e);
 
-/* This function receives input in the form
- *
- *   _________menu_1__________     __________menu_2________   etc.
- *  |                         |   |                        |
- * [[[1, 2, 3], [3, 4, 1], ...], [[a, b, c], [d, e, f], ...], ...]
- *
- * The menu_1 may refer to regions of a country and menu_2 to a
- * product for example.  The inner most array contains the coordinates
- * of the menu items the user wants to subscribe to. It has the form
- *
- *    [1, 2, 3, ..]
- *
- * Each position in this array refers to a level in the menu, for
- * example
- *
- *    [State, City, Neighbourhood]
- *
- * This array is contained in another array with the other channels
- * the user wants to subscribe to, for example
- *
- *    [Sao Paulo, Atibaia, Vila Santista]
- *    [Sao Paulo, Atibaia, Centro]
- *    [Sao Paulo, Campinas, Barao Geraldo]
- *    ...
- *
- * These arrays in turn are grouped in the outer most array where each
- * element corresponds to a menu. There will be typically two or three
- * menus per app.
- * 
- * The function respects the menu depth, so if the menu coodinates
- * have length 6 but the the hash codes are generate for depth 2 only
- * the first two elements will be considered.
- *
- * The output is the combination of the codes respecting the depths.
- * For the input array above the output would be
- *
- * [[[[1, 2], [a, b]]], [[[1, 2], [c, d]]], ..., [[[3, 4], [a, b]]], ...
- *
- * Each element of the outermost array will have length one.
- */
-std::vector<menu_code_type>
-channel_codes( menu_code_type const& codes
-             , std::vector<menu_elem> const& menu_elems);
+inline
+std::uint64_t to_channel_hash_code_d1(channel_code_type const& c)
+{
+   if (std::size(c) < 1)
+      return 0;
 
-std::uint64_t
-to_channel_hash_code_s2d2( std::vector<int> const& c1
-                         , std::vector<int> const& c2);
+   return c[0];
+}
+
+inline
+std::uint64_t to_channel_hash_code_d2(channel_code_type const& c)
+{
+   if (std::size(c) < 2)
+      return 0;
+
+   std::uint64_t ca = c[0];
+   std::uint64_t cb = c[1];
+
+   constexpr auto shift = 32;
+
+   ca <<= shift;
+   return ca | cb;
+}
+
+inline
+std::uint64_t to_channel_hash_code_d3(channel_code_type const& c)
+{
+   if (std::size(c) < 3)
+      return 0;
+
+   std::uint64_t ca = c[0];
+   std::uint64_t cb = c[1];
+   std::uint64_t cc = c[2];
+
+   constexpr auto shift = 21;
+
+   ca <<= 2 * shift;
+   cb <<= 1 * shift;
+   return ca | cb | cc;
+}
+
+inline
+std::uint64_t to_channel_hash_code_d4(channel_code_type const& c)
+{
+   if (std::size(c) < 4)
+      return 0;
+
+   std::uint64_t ca = c[0];
+   std::uint64_t cb = c[1];
+   std::uint64_t cc = c[2];
+   std::uint64_t cd = c[3];
+
+   constexpr auto shift = 16;
+
+   ca <<= 3 * shift;
+   cb <<= 2 * shift;
+   cc <<= 1 * shift;
+   return ca | cb | cc | cd;
+}
 
 /* This function will hash a channel code in the form
  *
- *   __menu_1__    __menu_2__    __menu_3__         
- *  |          |  |          |  |          |  
- * [[[1, 3,  4]], [[5, 1,  4]], [[2, 1,  8]]]
+ *   __menu_1__    __menu_2__ 
+ *  |          |  |          |
+ * [[[1, 3,  4]], [[5, 1,  4]]]
  *
  * to an 64 bits integer which will be used for hashing. Each menu
  * configuration requires its own hashing function. This version is
  * suitable for two menus where both have filter depth 2 and has to be
  * extended for other sizes.
  */
-template <class RandomAccessIterator>
-inline std::uint64_t
-to_hash_code_impl( menu_code_type const& code
-                 , RandomAccessIterator comb)
+inline
+std::uint64_t to_hash_code(channel_code_type const& c, int depth)
 {
-   auto const size = std::size(code);
-   switch (size) {
-   case 2: return to_channel_hash_code_s2d2( code.at(0).at(comb[1])
-                                           , code.at(1).at(comb[2]));
+   switch (depth) {
+      case 1: return to_channel_hash_code_d1(c);
+      case 2: return to_channel_hash_code_d2(c);
+      case 3: return to_channel_hash_code_d3(c);
+      case 4: return to_channel_hash_code_d4(c);
    }
 
    assert(false);
    return 0;
 }
 
-inline
-std::uint64_t to_hash_code(menu_code_type const& code)
-{
-   // Support menu with size up to 5.
-   std::array<int, 6> comb {0, 0, 0, 0, 0, 0};
-   return to_hash_code_impl(code, std::cbegin(comb));
-}
-
-/* This function will convert a vector of menu_elem in the structure
- * that is input for channel_codes decribed above.
- */
-menu_code_type
-menu_elems_to_codes(std::vector<menu_elem> const& elems);
+menu_channel_elem_type menu_elems_to_codes(menu_elem const& elem);
 
 std::vector<int>
 read_versions(std::vector<menu_elem> const& elems);

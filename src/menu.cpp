@@ -334,89 +334,21 @@ void from_json(json const& j, menu_elem& e)
   e.version = j.at("version").get<int>();
 }
 
-menu_code_type
-make_menu_code( std::vector<int> const& comb
-              , menu_code_type const& channels
-              , std::vector<menu_elem> const& menus)
+menu_channel_elem_type menu_elems_to_codes(menu_elem const& elem)
 {
-   menu_code_type foo;
-   for (auto i = 0; i < ssize(channels); ++i) {
-      auto const idx = comb.at(1 + i);
-      foo.push_back(
-         { std::vector<int>(
-            std::begin(channels.at(i).at(idx)),
-            std::begin(channels.at(i).at(idx)) + menus.at(i).depth)
-         });
-   }
+   menu m {elem.data};
+   if (std::empty(m))
+      throw std::runtime_error("Menu is empty.");
 
-   return foo;
-}
+   // TODO: Use std::generate here.
+   menu_channel_elem_type codes;
+   for (auto const& o : menu_view<0> {m, elem.depth})
+      codes.push_back(o.code);
 
-std::vector<menu_code_type>
-channel_codes( menu_code_type const& channels
-             , std::vector<menu_elem> const& menus)
-{
-   std::vector<menu_code_type> ret;
-   auto f = [&](auto const& comb)
-      { ret.push_back(make_menu_code(comb, channels, menus)); };
+   if (std::empty(codes))
+      throw std::runtime_error("Invalid menu.");
 
-   visit_menu_codes(channels, f);
-
-   return ret;
-}
-
-std::uint64_t
-to_channel_hash_code_s2d2( std::vector<int> const& c1
-                         , std::vector<int> const& c2)
-{
-   constexpr auto depth = 2;
-
-   if (std::size(c1) < depth)
-      return 0;
-
-   if (std::size(c2) < depth)
-      return 0;
-   
-   // First menu.
-   std::uint64_t c1a = c1.at(0);
-   std::uint64_t c1b = c1.at(1);
-
-   // Second menu.
-   std::uint64_t c2a = c2.at(0);
-   std::uint64_t c2b = c2.at(1);
-
-   c1a <<= 48;
-   c1b <<= 32;
-   c2a <<= 16;
-   // c2b is already in the correct position.
-
-   return c1a | c1b | c2a | c2b;
-}
-
-menu_code_type
-menu_elems_to_codes(std::vector<menu_elem> const& elems)
-{
-   // First we collect the codes from each menu at the desired depth.
-   menu_code_type hash_codes;
-   for (auto const& elem : elems) {
-      menu m {elem.data};
-      if (std::empty(m))
-         throw std::runtime_error("Menu is empty.");
-
-      std::vector<std::vector<int>> codes;
-      for (auto const& o : menu_view<0> {m, elem.depth})
-         codes.push_back(o.code);
-
-      if (std::empty(codes))
-         throw std::runtime_error("Invalid menu.");
-
-      hash_codes.push_back(std::move(codes));
-   }
-
-   if (std::empty(hash_codes))
-      throw std::runtime_error("Menus is empty.");
-
-   return hash_codes;
+   return codes;
 }
 
 std::vector<int>

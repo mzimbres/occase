@@ -11,8 +11,10 @@
 #include <boost/asio/steady_timer.hpp>
 #include <boost/asio/bind_executor.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/container/static_vector.hpp>
 
 #include "config.hpp"
+#include "json_utils.hpp"
 
 namespace rt
 {
@@ -81,6 +83,14 @@ private:
 
    std::uint64_t menu_filter = 0;
 
+   static constexpr auto menu_codes_size = 16;
+
+   using menu_codes_type =
+      boost::container::static_vector< std::uint64_t
+                                     , menu_codes_size>;
+
+   menu_codes_type menu_codes;
+
    void do_read();
    void do_write(std::string const& msg);
    void on_read( boost::system::error_code ec
@@ -96,6 +106,7 @@ private:
    void do_send(msg_entry entry);
 
 public:
+
    explicit
    worker_session(net::ip::tcp::socket socket, worker& w);
    ~worker_session();
@@ -105,14 +116,16 @@ public:
    // Messages for which persist is true will be persisted on the
    // database and sent to the user next time he reconnects.
    void send(std::string msg, bool persist);
-   void send_menu_msg( std::shared_ptr<std::string> msg
-                     , std::uint64_t filter);
+   void send_post( std::shared_ptr<std::string> msg
+                 , std::uint32_t hash_code
+                 , std::uint64_t filter);
    void shutdown();
 
    void set_id(std::string id)
       { user_id = std::move(id); };
    void set_filter(std::uint64_t filter)
       { menu_filter = filter; }
+   void set_filter(menu_channel_elem_type const& o, int depth);
    auto const& get_id() const noexcept
       { return user_id;}
    auto is_logged_in() const noexcept

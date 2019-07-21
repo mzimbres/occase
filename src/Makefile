@@ -5,7 +5,7 @@ ext_libs =
 ext_libs += $(boost_lib_dir)/libboost_system.a
 ext_libs += $(boost_lib_dir)/libboost_program_options.a
 
-DEBUG    = -O2 #-g -ggdb3
+DEBUG    = -g -ggdb3
 LDFLAGS  = -lpthread -lfmt
 CPPFLAGS = -I. -I$(boost_inc_dir) -std=c++17 $(DEBUG) -Wall# -Werror
 

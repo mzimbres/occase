@@ -9,6 +9,7 @@
 
 #include "logger.hpp"
 #include "worker.hpp"
+#include "menu.hpp"
 
 namespace rt
 {
@@ -228,10 +229,18 @@ void worker_session::send(std::string msg, bool persist)
 }
 
 void
-worker_session::send_menu_msg( std::shared_ptr<std::string> msg
-                             , std::uint64_t filter)
+worker_session::send_post( std::shared_ptr<std::string> msg
+                         , std::uint32_t hash_code
+                         , std::uint64_t filter)
 {
    if ((menu_filter & filter) != menu_filter)
+      return;
+
+   auto const match =
+      std::binary_search( std::begin(menu_codes)
+                        , std::end(menu_codes)
+                        , hash_code);
+   if (!match)
       return;
 
    auto const is_empty = std::empty(msg_queue);
@@ -433,6 +442,24 @@ worker_session::get_proxy_session(bool make_new_session)
    }
 
    return psession;
+}
+
+void
+worker_session::set_filter(menu_channel_elem_type const& o, int depth)
+{
+   auto const max_channels =
+      std::min(ssize(o), menu_codes_size);
+
+   auto f = [depth](auto const& e)
+      { return to_hash_code(e, depth); };
+
+   menu_codes.clear();
+   std::transform( std::cbegin(o)
+                 , std::cbegin(o) + max_channels
+                 , std::back_inserter(menu_codes)
+                 , f);
+
+   std::sort(std::begin(menu_codes), std::end(menu_codes));
 }
 
 }

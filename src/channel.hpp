@@ -135,20 +135,23 @@ private:
    }
 
 public:
-   void broadcast(post item, int max_posts)
+   void broadcast(post item, int max_posts, int hash_depth)
    {
       json j_pub;
       j_pub["cmd"] = "post";
       j_pub["items"] = std::vector<post>{item};
 
+      auto const hash_code =
+         to_hash_code( item.to.at(0).at(0)
+                     , hash_depth);
+
       auto const filter = item.filter;
       auto msg = std::make_shared<std::string>(j_pub.dump());
       store_item(std::move(item), max_posts);
 
-      auto f = [msg, filter](auto session)
-         { session->send_menu_msg(msg, filter); };
+      auto f = [msg, filter, hash_code](auto session)
+         { session->send_post(msg, hash_code, filter); };
 
-      // TODO: Use the return value for statistics.
       cleanup_traversal(f);
       insertions_on_inactivity = 0;
    }

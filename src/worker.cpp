@@ -106,16 +106,15 @@ void worker::on_db_menu(std::string const& data)
    create_channels(menu);
 }
 
-void worker::create_channels(std::vector<menu_elem> const& menus_)
+void worker::create_channels(std::vector<menu_elem> const& me)
 {
-   auto const menu_codes = menu_elems_to_codes(menus_);
+   auto const menu_channels = menu_elems_to_codes(me.back());
 
    auto created = 0;
    auto existed = 0;
-   auto f = [&, this](auto const& comb)
+   auto f = [&, this](auto const& code)
    {
-      auto const hash_code =
-         to_hash_code_impl(menu_codes, std::cbegin(comb));
+      auto const hash_code = to_hash_code(code, me.back().depth);
 
       if (channels.insert({hash_code, {}}).second)
          ++created;
@@ -123,7 +122,9 @@ void worker::create_channels(std::vector<menu_elem> const& menus_)
          ++existed;
    };
 
-   visit_menu_codes(menu_codes, f);
+   std::for_each( std::cbegin(menu_channels)
+                , std::cend(menu_channels)
+                , f);
 
    if (created != 0)
       log(loglevel::info, "W{0}: {1} channels created.", id, created);
@@ -161,20 +162,25 @@ void worker::on_db_post(std::string const& msg)
 {
    auto const j = json::parse(msg);
    auto const item = j.get<post>();
-   auto const hash_code = to_hash_code(item.to);
+
+   auto const hash_code =
+      to_hash_code( item.to.at(1).at(0)
+                  , menu.back().depth);
+
    auto const g = channels.find(hash_code);
    if (g == std::end(channels)) {
       // This can happen if the subscription to the menu channel
       // happens before we receive the menu and generate the channels.
       // That is why it is important to update the last message id
       // only after this check.
+      log(loglevel::debug, "W{0}: Channel could not be found.", id);
       return;
    }
 
    if (item.id > last_post_id)
       last_post_id = item.id;
 
-   g->second.broadcast(item, ch_cfg.max_posts);
+   g->second.broadcast(item, ch_cfg.max_posts, menu.at(0).depth);
 }
 
 void worker::on_db_user_id(std::string const& id)
@@ -481,40 +487,47 @@ ev_res
 worker::on_app_subscribe( json const& j
                         , std::shared_ptr<worker_session> s)
 {
-   auto const menu_codes = j.at("channels").get<menu_code_type>();
+   auto const menu_channels = j.at("channels").get<menu_code_type>();
    auto const filter = j.at("filter").get<std::uint64_t>();
    auto const app_last_post_id = j.at("last_post_id").get<int>();
+
+   s->set_filter(filter);
+   s->set_filter(menu_channels.at(0), menu.front().depth);
 
    auto n_channels = 0;
    std::vector<post> items;
 
-   s->set_filter(filter);
    auto psession = s->get_proxy_session(true);
 
-   auto invalid_channel = 0;
-   auto f = [&, this](auto const& comb)
+   auto invalid_channels = 0;
+   auto f = [&, this](auto const& code)
    {
-      auto const hash_code =
-         to_hash_code_impl(menu_codes, std::cbegin(comb));
+      auto const hash_code = to_hash_code(code, menu.at(1).depth);
       auto const g = channels.find(hash_code);
       if (g == std::end(channels)) {
-         ++invalid_channel;
+         ++invalid_channels;
          return;
       }
 
-      if (invalid_channel != 0) {
+      if (invalid_channels != 0) {
          log( loglevel::debug
             , "W{0}/on_app_subscribe: Invalid channel(s)."
-            , invalid_channel);
+            , invalid_channels);
       }
 
       g->second.retrieve_pub_items( app_last_post_id
                                   , std::back_inserter(items));
+
       g->second.add_member(psession, ch_cfg.cleanup_rate);
       ++n_channels;
    };
 
-   visit_menu_codes(menu_codes, f, ch_cfg.max_sub);
+   auto const d = std::min( ssize(menu_channels.at(1))
+                          , ch_cfg.max_sub);
+
+   std::for_each( std::cbegin(menu_channels.at(1))
+                , std::cbegin(menu_channels.at(1)) + d
+                , f);
 
    if (ssize(items) > cfg.max_posts_on_sub) {
       auto comp = [](auto const& a, auto const& b)
@@ -560,7 +573,9 @@ worker::on_app_publish(json j, std::shared_ptr<worker_session> s)
 
    // The channel code has the form [[[1, 2]], [[2, 3, 4]], [[1, 2]]]
    // where each array in the outermost array refers to one menu.
-   auto const hash_code = to_hash_code(items.front().to);
+   auto const hash_code =
+      to_hash_code( items.front().to.at(1).at(0)
+                  , menu.back().depth);
 
    auto const g = channels.find(hash_code);
    if (g == std::end(channels) || std::size(items) != 1) {

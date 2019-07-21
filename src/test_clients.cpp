@@ -4,7 +4,7 @@
 #include "client_session.hpp"
 #include "session_launcher.hpp"
 
-namespace
+namespace rt
 {
 
 std::vector<std::string> const nicks
@@ -52,6 +52,85 @@ make_post_cmd(rt::menu_code_type const& menu_code)
    return j.dump();
 }
 
+
+/* Collects the channel codes from all menus and returns the array
+ * containing them. The ouput array is described in the documentation
+ * of channel_codes below.
+ */
+auto create_channels(std::vector<menu_elem> const& menus)
+{
+   auto const c0 = menu_elems_to_codes(menus.at(0));
+   auto const c1 = menu_elems_to_codes(menus.at(1));
+   return menu_code_type {c0, c1};
+}
+
+/* This function receives input in the form
+ *
+ *   _________menu_1__________     __________menu_2________   etc.
+ *  |                         |   |                        |
+ * [[[1, 2, 3], [3, 4, 1], ...], [[a, b, c], [d, e, f], ...]]
+ *
+ * The menu_1 may refer to regions of a country and menu_2 to a
+ * product for example.  The inner most array contains the coordinates
+ * of the menu items the user wants to subscribe to. It has the form
+ *
+ *    [1, 2, 3, ..]
+ *
+ * Each position in this array refers to a level in the menu, for
+ * example
+ *
+ *    [State, City, Neighbourhood]
+ *
+ * This array is contained in another array with the other channels
+ * the user wants to subscribe to, for example
+ *
+ *    [Sao Paulo, Atibaia, Vila Santista]
+ *    [Sao Paulo, Atibaia, Centro]
+ *    [Sao Paulo, Campinas, Barao Geraldo]
+ *    ...
+ *
+ * These arrays in turn are grouped in the outer most array where each
+ * element corresponds to a menu. There will be typically two or three
+ * menus per app.
+ * 
+ * The function respects the menu depth, so if the menu coodinates
+ * have length 6 but the the hash codes are generate for depth 2 only
+ * the first two elements will be considered.
+ *
+ * The output is the combination of the codes respecting the depths.
+ * For the input array above the output would be
+ *
+ * [[[[1, 2], [a, b]]], [[[1, 2], [c, d]]], ..., [[[3, 4], [a, b]]], ...
+ *
+ * Each element of the outermost array will have length one.
+ */
+std::vector<menu_code_type>
+channel_codes( menu_code_type const& channels
+             , std::vector<rt::menu_elem> const& menus)
+{
+   std::vector<menu_code_type> ret;
+   for (auto i = 0; i < ssize(channels.at(0)); ++i) {
+      for (auto j = 0; j < ssize(channels.at(1)); ++j) {
+         auto begin0 = std::begin(channels.at(0).at(i));
+         auto end0 = begin0 + menus.at(0).depth;
+
+         auto begin1 = std::begin(channels.at(1).at(j));
+         auto end1 = begin1 + menus.at(1).depth;
+
+         channel_code_type c0 {begin0, end0};
+         channel_code_type c1 {begin1, end1};
+
+         menu_channel_elem_type d0 {c0};
+         menu_channel_elem_type d1 {c1};
+
+         menu_code_type foo {d0, d1};
+         ret.push_back(foo);
+      }
+   }
+
+   return ret;
+}
+
 }
 
 namespace rt::cli
@@ -69,11 +148,16 @@ int replier::on_read( std::string msg
          throw std::runtime_error("replier::login_ack");
 
       menus = j.at("menus").get<std::vector<menu_elem>>();
-      auto const menu_codes = menu_elems_to_codes(menus);
-      auto const pub_codes = channel_codes(menu_codes, menus);
-      assert(!std::empty(pub_codes));
+      assert(std::size(menus) == 2);
 
-      to_receive_posts = op.n_publishers * std::size(pub_codes);
+      auto const menu_codes_0 = menu_elems_to_codes(menus.at(0));
+      auto const menu_codes_1 = menu_elems_to_codes(menus.at(1));
+
+      to_receive_posts = op.n_publishers
+                       * std::size(menu_codes_0)
+                       * std::size(menu_codes_1);
+
+      menu_code_type menu_codes {menu_codes_0, menu_codes_1};
 
       //std::cout << "Sub: User " << op.user << " expects: " << to_receive_posts
       //          << std::endl;
@@ -202,9 +286,7 @@ int simulator::on_read( std::string msg
          throw std::runtime_error("simulator::login_ack");
 
       menus = j.at("menus").get<std::vector<menu_elem>>();
-      auto const menu_codes = menu_elems_to_codes(menus);
-      auto const pub_codes = channel_codes(menu_codes, menus);
-      assert(!std::empty(pub_codes));
+      auto const menu_codes = create_channels(menus);
 
       json j_sub;
       j_sub["cmd"] = "subscribe";
@@ -334,7 +416,7 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
          throw std::runtime_error("publisher::login_ack");
 
       auto const menus = j.at("menus").get<std::vector<menu_elem>>();
-      auto const menu_codes = menu_elems_to_codes(menus);
+      auto const menu_codes = create_channels(menus);
       auto const pub_codes = channel_codes(menu_codes, menus);
 
       assert(!std::empty(pub_codes));
@@ -487,7 +569,7 @@ int publisher2::on_read(std::string msg, std::shared_ptr<client_type> s)
          throw std::runtime_error("publisher2::login_ack");
 
       auto const menus = j.at("menus").get<std::vector<menu_elem>>();
-      auto const menu_codes = menu_elems_to_codes(menus);
+      auto const menu_codes = create_channels(menus);
       auto const pub_codes = channel_codes(menu_codes, menus);
 
       assert(!std::empty(pub_codes));

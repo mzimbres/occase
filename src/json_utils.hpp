@@ -11,7 +11,9 @@ using json = nlohmann::json;
 namespace rt
 {
 
-using menu_code_type = std::vector<std::vector<std::vector<int>>>;
+using channel_code_type = std::vector<int>;
+using menu_channel_elem_type = std::vector<channel_code_type>;
+using menu_code_type = std::vector<menu_channel_elem_type>;
 
 struct post {
    int id;

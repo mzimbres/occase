@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# NOTE: Be aware of the fact that the max number of items in the first
+# menu that can be subscribed to is 16, therefore the first menu has
+# to have at most that number of entries at its depth for the test to
+# work.
+
 # Test 1
 #########################################################
 

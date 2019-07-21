@@ -68,8 +68,8 @@ void worker::init()
 void worker::on_db_menu(std::string const& data)
 {
    auto const j_menu = json::parse(data);
-   auto const is_empty = std::empty(menu);
-   menu = j_menu.at("menus").get<std::vector<menu_elem>>();
+   auto const is_empty = is_menu_empty(menu);
+   menu = j_menu.at("menus").get<menu_elems_array_type>();
 
    if (is_empty) {
       // The menu vector is empty. This happens only when the server
@@ -106,7 +106,7 @@ void worker::on_db_menu(std::string const& data)
    create_channels(menu);
 }
 
-void worker::create_channels(std::vector<menu_elem> const& me)
+void worker::create_channels(menu_elems_array_type const& me)
 {
    auto const menu_channels = menu_elems_to_codes(me.back());
 
@@ -393,7 +393,7 @@ void worker::on_db_menu_connect()
    //    restablished. In this case we have to retrieve all the
    //    messages that may have arrived while we were offline.
 
-   if (std::empty(menu)) {
+   if (is_menu_empty(menu)) {
       db.retrieve_menu();
    } else {
       db.retrieve_posts(1 + last_post_id);

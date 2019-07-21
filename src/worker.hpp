@@ -1,6 +1,7 @@
 #pragma once
 
 #include <queue>
+#include <array>
 #include <thread>
 #include <vector>
 #include <memory>
@@ -99,7 +100,7 @@ private:
 
    redis::facade db;
 
-   std::vector<menu_elem> menu;
+   menu_elems_array_type menu;
 
    // Queue of user posts waiting for an id that has been requested
    // from redis.
@@ -125,7 +126,7 @@ private:
    std::hash<std::string> const hash_func {};
 
    void init();
-   void create_channels(std::vector<menu_elem> const& menu);
+   void create_channels(menu_elems_array_type const& menu);
 
    ev_res on_app_login( json const& j
                       , std::shared_ptr<worker_session> s);

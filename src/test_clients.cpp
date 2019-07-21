@@ -57,7 +57,7 @@ make_post_cmd(rt::menu_code_type const& menu_code)
  * containing them. The ouput array is described in the documentation
  * of channel_codes below.
  */
-auto create_channels(std::vector<menu_elem> const& menus)
+auto create_channels(menu_elems_array_type const& menus)
 {
    auto const c0 = menu_elems_to_codes(menus.at(0));
    auto const c1 = menu_elems_to_codes(menus.at(1));
@@ -106,7 +106,7 @@ auto create_channels(std::vector<menu_elem> const& menus)
  */
 std::vector<menu_code_type>
 channel_codes( menu_code_type const& channels
-             , std::vector<rt::menu_elem> const& menus)
+             , menu_elems_array_type const& menus)
 {
    std::vector<menu_code_type> ret;
    for (auto i = 0; i < ssize(channels.at(0)); ++i) {
@@ -147,7 +147,7 @@ int replier::on_read( std::string msg
       if (res != "ok")
          throw std::runtime_error("replier::login_ack");
 
-      menus = j.at("menus").get<std::vector<menu_elem>>();
+      menus = j.at("menus").get<menu_elems_array_type>();
       assert(std::size(menus) == 2);
 
       auto const menu_codes_0 = menu_elems_to_codes(menus.at(0));
@@ -285,7 +285,7 @@ int simulator::on_read( std::string msg
       if (res != "ok")
          throw std::runtime_error("simulator::login_ack");
 
-      menus = j.at("menus").get<std::vector<menu_elem>>();
+      menus = j.at("menus").get<menu_elems_array_type>();
       auto const menu_codes = create_channels(menus);
 
       json j_sub;
@@ -415,7 +415,7 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
       if (res != "ok")
          throw std::runtime_error("publisher::login_ack");
 
-      auto const menus = j.at("menus").get<std::vector<menu_elem>>();
+      auto const menus = j.at("menus").get<menu_elems_array_type>();
       auto const menu_codes = create_channels(menus);
       auto const pub_codes = channel_codes(menu_codes, menus);
 
@@ -568,7 +568,7 @@ int publisher2::on_read(std::string msg, std::shared_ptr<client_type> s)
       if (res != "ok")
          throw std::runtime_error("publisher2::login_ack");
 
-      auto const menus = j.at("menus").get<std::vector<menu_elem>>();
+      auto const menus = j.at("menus").get<menu_elems_array_type>();
       auto const menu_codes = create_channels(menus);
       auto const pub_codes = channel_codes(menu_codes, menus);
 
@@ -782,7 +782,7 @@ int early_close::on_handshake(std::shared_ptr<client_type> s)
 
 void early_close::send_post(std::shared_ptr<client_type> s) const
 {
-   auto const code = code_type {{{0, 0, 0, 0}}, {{0, 0, 0, 0}}};
+   auto const code = menu_code_type {{{{0, 0, 0, 0}}, {{0, 0, 0, 0}}}};
    auto const str = make_post_cmd(code);
    s->send_msg(str, -1);
 }

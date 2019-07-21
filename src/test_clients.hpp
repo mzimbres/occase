@@ -90,7 +90,7 @@ private:
    options_type op;
 
    int to_receive_posts;
-   std::vector<menu_elem> menus;
+   menu_elems_array_type menus;
    std::string nick;
 
    void send_chat_msg( std::string user, long long id
@@ -124,7 +124,7 @@ private:
    options_type op;
    int counter = 0;
 
-   std::vector<menu_elem> menus;
+   menu_elems_array_type menus;
    std::string nick;
 
    void send_chat_msg( std::string user, long long id
@@ -173,7 +173,6 @@ public:
 
 private:
    using client_type = session_shell<publisher>;
-   using code_type = std::vector<std::vector<std::vector<int>>>;
 
    options_type op;
 
@@ -181,7 +180,7 @@ private:
    int post_id = -1;
    int user_msg_counter;
 
-   std::stack<code_type> pub_stack;
+   std::stack<menu_code_type> pub_stack;
 
    int send_post(std::shared_ptr<client_type> s) const;
 
@@ -210,7 +209,6 @@ public:
 
 private:
    using client_type = session_shell<publisher2>;
-   using code_type = std::vector<std::vector<std::vector<int>>>;
 
    options_type op;
    int msg_counter;
@@ -244,7 +242,6 @@ public:
 
 private:
    using client_type = session_shell<msg_pull>;
-   using code_type = std::vector<std::vector<std::vector<int>>>;
 
    options_type op;
    std::vector<int> post_ids;
@@ -272,7 +269,6 @@ public:
 
 private:
    using client_type = session_shell<register1>;
-   using code_type = std::vector<std::vector<std::vector<int>>>;
 
    options_type op;
    std::string pwd;
@@ -297,7 +293,6 @@ public:
    using options_type = register1::options_type;
 private:
    using client_type = session_shell<login_err>;
-   using code_type = std::vector<std::vector<std::vector<int>>>;
 
    options_type op;
    std::string pwd;
@@ -326,7 +321,6 @@ public:
 
 private:
    using client_type = session_shell<early_close>;
-   using code_type = std::vector<std::vector<std::vector<int>>>;
 
    options_type op;
 

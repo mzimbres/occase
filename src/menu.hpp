@@ -291,15 +291,6 @@ public:
    iterator end() const {return iterator{};}
 };
 
-struct menu_elem {
-   std::string data;
-   int depth = 0;
-   int version = 0;
-};
-
-void to_json(json& j, menu_elem const& e);
-void from_json(json const& j, menu_elem& e);
-
 inline
 std::uint64_t to_channel_hash_code_d1(channel_code_type const& c)
 {
@@ -388,7 +379,7 @@ std::uint64_t to_hash_code(channel_code_type const& c, int depth)
 menu_channel_elem_type menu_elems_to_codes(menu_elem const& elem);
 
 std::vector<int>
-read_versions(std::vector<menu_elem> const& elems);
+read_versions(menu_elems_array_type const& elems);
 
 }
 

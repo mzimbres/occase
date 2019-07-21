@@ -322,18 +322,6 @@ menu::~menu()
       delete iter.get_pointer_to_node();
 }
 
-void to_json(json& j, menu_elem const& e)
-{
-  j = json{{"data", e.data}, {"depth", e.depth}, {"version", e.version}};
-}
-
-void from_json(json const& j, menu_elem& e)
-{
-  e.data = j.at("data").get<std::string>();
-  e.depth = j.at("depth").get<unsigned>();
-  e.version = j.at("version").get<int>();
-}
-
 menu_channel_elem_type menu_elems_to_codes(menu_elem const& elem)
 {
    menu m {elem.data};
@@ -352,7 +340,7 @@ menu_channel_elem_type menu_elems_to_codes(menu_elem const& elem)
 }
 
 std::vector<int>
-read_versions(std::vector<menu_elem> const& elems)
+read_versions(menu_elems_array_type const& elems)
 {
    auto make_version = [](auto const& e)
       { return e.version; };

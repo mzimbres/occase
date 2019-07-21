@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+#include <array>
 #include <string>
 #include <ostream>
 #include <cstdint>
@@ -11,9 +13,43 @@ using json = nlohmann::json;
 namespace rt
 {
 
+constexpr auto menu_size = 2;
+
+struct menu_elem {
+   std::string data;
+   int depth = 0;
+   int version = 0;
+};
+
+using menu_elems_array_type = std::array<menu_elem, menu_size>;
+
+inline
+auto is_menu_empty(menu_elems_array_type const& m)
+{
+   return std::empty(m.front().data)
+       || std::empty(m.back().data)
+       || m.front().depth == 0
+       || m.back().depth == 0;
+}
+
+inline
+void to_json(json& j, menu_elem const& e)
+{
+  j = json{{"data", e.data}, {"depth", e.depth}, {"version", e.version}};
+}
+
+inline
+void from_json(json const& j, menu_elem& e)
+{
+  e.data = j.at("data").get<std::string>();
+  e.depth = j.at("depth").get<unsigned>();
+  e.version = j.at("version").get<int>();
+}
+
+
 using channel_code_type = std::vector<int>;
 using menu_channel_elem_type = std::vector<channel_code_type>;
-using menu_code_type = std::vector<menu_channel_elem_type>;
+using menu_code_type = std::array<menu_channel_elem_type, menu_size>;
 
 struct post {
    int id;

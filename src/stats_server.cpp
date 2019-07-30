@@ -98,7 +98,7 @@ private:
          };
             
 
-         socket_.get_io_context().post(next);
+         net::post(socket_.get_executor(), next);
       } else {
          collect_from(i);
       }
@@ -152,7 +152,7 @@ public:
    http_session( tcp::socket socket
                , std::vector<std::shared_ptr<worker_arena>> const& warenas)
    : socket_ {std::move(socket)}
-   , deadline_ { socket_.get_executor().context()
+   , deadline_ { socket_.get_executor()
                , std::chrono::seconds(60)}
    , warenas_ {warenas}
    { }

@@ -1,8 +1,7 @@
-boost_inc_dir = /opt/boost_1_67_0/include
-boost_lib_dir = /opt/boost_1_67_0/lib
+boost_inc_dir = /opt/boost_1_70_0/include
+boost_lib_dir = /opt/boost_1_70_0/lib
 
 ext_libs =
-ext_libs += $(boost_lib_dir)/libboost_system.a
 ext_libs += $(boost_lib_dir)/libboost_program_options.a
 
 DEBUG    = -g -ggdb3

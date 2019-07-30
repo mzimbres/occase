@@ -16,7 +16,7 @@ namespace rt
 
 worker_session::worker_session(net::ip::tcp::socket socket, worker& w)
 : ws(std::move(socket))
-, timer( ws.get_executor().context()
+, timer( ws.get_executor()
        , std::chrono::steady_clock::time_point::max())
 , worker_(w)
 {

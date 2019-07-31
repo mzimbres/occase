@@ -6,9 +6,11 @@ ext_libs += $(boost_lib_dir)/libboost_program_options.a
 
 DEBUG    = -g -ggdb3
 LDFLAGS  = -lpthread -lfmt
-CPPFLAGS = -I. -I$(boost_inc_dir) -std=c++17 $(DEBUG) -Wall# -Werror
+CPPFLAGS = -I./src -I$(boost_inc_dir) -std=c++17 $(DEBUG) -Wall# -Werror
 
 DIST_NAME = menu_chat_server
+
+VPATH = src
 
 exes =
 exes += publish_tests
@@ -58,12 +60,12 @@ srcs += async_read_resp.hpp
 
 aux = Makefile
 
-release_hdr := $(shell sh -c './mkreleasehdr.sh')
+release_hdr := $(shell sh -c './src/mkreleasehdr.sh')
 
 all: $(exes)
 
 Makefile.dep:
-	-$(CXX) -MM *.cpp > $@
+	-$(CXX) -MM ./src/*.cpp > ./src/$@
 
 -include Makefile.dep
 
@@ -84,10 +86,10 @@ aedis: % : %.o $(aedis_objs) $(common_objs)
 
 .PHONY: clean
 clean:
-	rm -f $(exes) $(exe_objs) $(lib_objs) $(DIST_NAME).tar.gz Makefile.dep release.cpp release.hpp
+	rm -f $(exes) $(exe_objs) $(lib_objs) $(DIST_NAME).tar.gz ./src/Makefile.dep ./src/release.cpp ./src/release.hpp
 
 $(DIST_NAME).tar.gz: $(srcs) $(aux)
-	git archive --format=tar.gz --prefix=sellit/ HEAD > menu_chat_server.tar.gz
+	git archive --format=tar.gz --prefix=$(DIST_NAME)/ HEAD > menu_chat_server.tar.gz
 
 .PHONY: dist
 dist: $(DIST_NAME).tar.gz

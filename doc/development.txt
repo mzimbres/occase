@@ -1,3 +1,7 @@
+You will need to enable keyspace notifications in redis.conf.
+
+notify-keyspace-events "KA"
+
 To send the menu to redis.
 
    $ ./menu_dump -o 6 menus/cidades_small:2:1 menus/fipe_veiculos.txt:2:1 | redis-cli -x set menu

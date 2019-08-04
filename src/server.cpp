@@ -12,7 +12,8 @@
 
 #include "logger.hpp"
 #include "listener.hpp"
-#include "release.hpp"
+
+#include <release.hpp>
 
 using namespace rt;
 

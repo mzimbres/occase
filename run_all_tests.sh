@@ -9,7 +9,7 @@
 #########################################################
 
 redis-cli flushall > /dev/null 2>&1
-./menu_dump -o 4 menus/cidades_small2:2:1 menus/cidades_small2:2:1 | redis-cli -x set menu > /dev/null 2>&1
+./menu_dump -o 4 menus/test1/cidades_small2:2:1 menus/test1/cidades_small2:2:1 | redis-cli -x set menu > /dev/null 2>&1
 ./server test.conf > /dev/null 2>&1 &
 server_pid=$!
 

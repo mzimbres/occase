@@ -1,3 +1,10 @@
+prefix = /usr/local
+datarootdir = $(prefix)/share
+datadir = $(datarootdir)
+exec_prefix = $(prefix)
+bindir = $(exec_prefix)/bin
+srcdir = .
+
 boost_inc_dir = /opt/boost_1_70_0/include
 boost_lib_dir = /opt/boost_1_70_0/lib
 
@@ -6,11 +13,11 @@ ext_libs += $(boost_lib_dir)/libboost_program_options.a
 
 DEBUG    = -g -ggdb3
 LDFLAGS  = -lpthread -lfmt
-CPPFLAGS = -I./src -I$(boost_inc_dir) -std=c++17 $(DEBUG) -Wall# -Werror
+CPPFLAGS = -I. -I$(srcdir)/src -I$(boost_inc_dir) -std=c++17 $(DEBUG) -Wall# -Werror
 
 DIST_NAME = menu_chat_server
 
-VPATH = src
+VPATH = $(srcdir)/src
 
 exes =
 exes += publish_tests
@@ -60,12 +67,14 @@ srcs += async_read_resp.hpp
 
 aux = Makefile
 
-release_hdr := $(shell sh -c './src/mkreleasehdr.sh')
+all: release_hdr $(exes)
 
-all: $(exes)
+.PHONY: release_hdr
+release_hdr:
+	$(srcdir)/mkreleasehdr.sh $(srcdir)
 
 Makefile.dep:
-	-$(CXX) -MM ./src/*.cpp > ./src/$@
+	-$(CXX) -MM $(srcdir)/src/*.cpp > $@
 
 -include Makefile.dep
 
@@ -75,7 +84,7 @@ simulation: % : %.o $(client_objs) $(common_objs)
 publish_tests: % : %.o $(client_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
-server: % : %.o $(server_objs) $(common_objs) $(aedis_objs)
+server: % : %.o $(server_objs) $(common_objs) $(aedis_objs) 
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_CONCURRENCY_HINT_1=BOOST_ASIO_CONCURRENCY_HINT_UNSAFE_IO
 
 menu_dump: % : %.o $(menu_dump_objs) $(common_objs)
@@ -86,7 +95,7 @@ aedis: % : %.o $(aedis_objs) $(common_objs)
 
 .PHONY: clean
 clean:
-	rm -f $(exes) $(exe_objs) $(lib_objs) $(DIST_NAME).tar.gz ./src/Makefile.dep ./src/release.cpp ./src/release.hpp
+	rm -f $(exes) $(exe_objs) $(lib_objs) $(DIST_NAME).tar.gz Makefile.dep release.cpp release.hpp
 
 $(DIST_NAME).tar.gz: $(srcs) $(aux)
 	git archive --format=tar.gz --prefix=$(DIST_NAME)/ HEAD > menu_chat_server.tar.gz

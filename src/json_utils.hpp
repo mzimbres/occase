@@ -59,6 +59,8 @@ struct post {
    menu_code_type to;
    std::uint64_t filter;
    long int date = 0;
+   std::vector<std::uint64_t> ex_details;
+   std::vector<std::uint64_t> in_details;
 
    friend
    auto operator<(post const& a, post const& b) noexcept
@@ -80,6 +82,8 @@ void to_json(json& j, post const& e)
            , {"filter", e.filter}
            , {"nick", e.nick}
            , {"date", e.date}
+           , {"ex_details", e.ex_details}
+           , {"in_details", e.in_details}
            };
 }
 
@@ -93,6 +97,8 @@ void from_json(json const& j, post& e)
   e.filter = j.at("filter").get<std::uint64_t>();
   e.nick = j.at("nick").get<std::string>();
   e.date = j.at("date").get<long int>();
+  e.ex_details = j.at("ex_details").get<std::vector<std::uint64_t>>();
+  e.in_details = j.at("in_details").get<std::vector<std::uint64_t>>();
 }
 
 }

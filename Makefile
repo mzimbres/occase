@@ -1,9 +1,15 @@
+pkg_name = menu-chat
 prefix = /usr/local
 datarootdir = $(prefix)/share
 datadir = $(datarootdir)
+docdir = $(datadir)/doc/$(pkg_name)
 exec_prefix = $(prefix)
 bindir = $(exec_prefix)/bin
+binprefix =
 srcdir = .
+
+server_name = menu-chat-server
+tool_name = menu-chat-tool
 
 boost_inc_dir = /opt/boost_1_70_0/include
 boost_lib_dir = /opt/boost_1_70_0/lib
@@ -14,8 +20,6 @@ ext_libs += $(boost_lib_dir)/libboost_program_options.a
 DEBUG    = -g -ggdb3
 LDFLAGS  = -lpthread -lfmt
 CPPFLAGS = -I. -I$(srcdir)/src -I$(boost_inc_dir) -std=c++17 $(DEBUG) -Wall# -Werror
-
-DIST_NAME = menu_chat_server
 
 VPATH = $(srcdir)/src
 
@@ -71,7 +75,7 @@ all: release_hdr $(exes)
 
 .PHONY: release_hdr
 release_hdr:
-	$(srcdir)/mkreleasehdr.sh $(srcdir)
+	$(srcdir)/mkreleasehdr.sh $(srcdir) > /dev/null 2>&1
 
 Makefile.dep:
 	-$(CXX) -MM $(srcdir)/src/*.cpp > $@
@@ -93,19 +97,36 @@ menu_dump: % : %.o $(menu_dump_objs) $(common_objs)
 aedis: % : %.o $(aedis_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
+install: all
+	install server $(bindir)/$(binprefix)$(server_name)
+	install menu_dump $(bindir)/$(binprefix)$(tool_name)
+	install -D $(srcdir)/doc/development.txt $(docdir)/development.txt
+	install -D $(srcdir)/doc/intro.txt $(docdir)/intro.txt
+	install -D $(srcdir)/doc/posts.txt $(docdir)/posts.txt
+	install -D $(srcdir)/menu-chat-server.conf $(docdir)/$(server_name).conf
+
+uninstall: all
+	rm -f $(bindir)/$(binprefix)menu-chat-server
+	rm -f $(bindir)/$(binprefix)menu-chat-tool
+	rm -f $(docdir)/development.txt
+	rm -f $(docdir)/intro.txt
+	rm -f $(docdir)/posts.txt
+	rm -f $(docdir)/$(server_name).conf
+	rmdir $(docdir)
+
 .PHONY: clean
 clean:
-	rm -f $(exes) $(exe_objs) $(lib_objs) $(DIST_NAME).tar.gz Makefile.dep release.cpp release.hpp
+	rm -f $(exes) $(exe_objs) $(lib_objs) $(pkg_name).tar.gz Makefile.dep release.cpp release.hpp
 
-$(DIST_NAME).tar.gz: $(srcs) $(aux)
-	git archive --format=tar.gz --prefix=$(DIST_NAME)/ HEAD > menu_chat_server.tar.gz
+$(pkg_name).tar.gz: $(srcs) $(aux)
+	git archive --format=tar.gz --prefix=$(pkg_name)/ HEAD > menu_chat_server.tar.gz
 
 .PHONY: dist
-dist: $(DIST_NAME).tar.gz
+dist: $(pkg_name).tar.gz
 
 backup_emails = laetitiapozwolski@yahoo.fr mzimbres@gmail.com bobkahnn@gmail.com coolcatlookingforakitty@gmail.com
 
 .PHONY: backup
-backup: $(DIST_NAME).tar.gz
+backup: $(pkg_name).tar.gz
 	echo "Backup" | mutt -s "Backup" -a $< -- $(backup_emails)
 

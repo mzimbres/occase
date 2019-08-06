@@ -119,7 +119,7 @@ clean:
 	rm -f $(exes) $(exe_objs) $(lib_objs) $(pkg_name).tar.gz Makefile.dep release.cpp release.hpp
 
 $(pkg_name).tar.gz: $(srcs) $(aux)
-	git archive --format=tar.gz --prefix=$(pkg_name)/ HEAD > menu_chat_server.tar.gz
+	git archive --format=tar.gz --prefix=$(pkg_name)/ HEAD > $(pkg_name).tar.gz
 
 .PHONY: dist
 dist: $(pkg_name).tar.gz

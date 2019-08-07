@@ -7,6 +7,8 @@ exec_prefix = $(prefix)
 bindir = $(exec_prefix)/bin
 binprefix =
 srcdir = .
+confdir = /etc/menu-chat
+systemddir = /etc/systemd/system
 
 server_name = menu-chat-server
 tool_name = menu-chat-tool
@@ -105,7 +107,8 @@ install: all
 	install -D $(srcdir)/doc/development.txt $(docdir)/development.txt
 	install -D $(srcdir)/doc/intro.txt $(docdir)/intro.txt
 	install -D $(srcdir)/doc/posts.txt $(docdir)/posts.txt
-	install -D $(srcdir)/menu-chat-server.conf $(docdir)/$(server_name).conf
+	install -D $(srcdir)/menu-chat-server.conf $(confdir)/$(server_name).conf
+	install -D $(srcdir)/menu-chat-server.service $(systemddir)/$(server_name).service
 
 uninstall: all
 	rm -f $(bindir)/$(binprefix)menu-chat-server
@@ -113,7 +116,8 @@ uninstall: all
 	rm -f $(docdir)/development.txt
 	rm -f $(docdir)/intro.txt
 	rm -f $(docdir)/posts.txt
-	rm -f $(docdir)/$(server_name).conf
+	rm -f $(confdir)/$(server_name).conf
+	rm -f $(systemddir)/$(server_name).service
 	rmdir $(docdir)
 
 .PHONY: clean

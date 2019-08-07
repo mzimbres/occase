@@ -17,9 +17,11 @@ boost_lib_dir = /opt/boost_1_70_0/lib
 ext_libs =
 ext_libs += $(boost_lib_dir)/libboost_program_options.a
 
-DEBUG    = -g -ggdb3
 LDFLAGS  = -lpthread -lfmt
-CPPFLAGS = -I. -I$(srcdir)/src -I$(boost_inc_dir) -std=c++17 $(DEBUG) -Wall# -Werror
+CPPFLAGS = -I. -I$(srcdir)/src -I$(boost_inc_dir) \
+	   -std=c++17 -Wall -O2 \
+           -Werror=format-security \
+	   -Werror=implicit-function-declaration
 
 VPATH = $(srcdir)/src
 

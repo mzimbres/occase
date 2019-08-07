@@ -57,7 +57,7 @@ void log(loglevel ll, char const* fmt, Args const& ... args)
       return;
 
    auto const prio = to_syslog_prio(ll);
-   syslog(prio, fmt::format(fmt, args...).data());
+   syslog(prio, "%s", fmt::format(fmt, args...).data());
 }
 
 }

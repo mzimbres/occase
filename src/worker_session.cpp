@@ -368,8 +368,6 @@ void worker_session::on_read( boost::system::error_code ec
          , user_id);
       // The connection has been gracefully closed. The only possible
       // pending operations now are the timers.
-      //std::cout << "worker_session::on_read: socket closed gracefully."
-      //          << std::endl;
       timer.cancel();
 
       // We could also shutdown and close the socket but this is

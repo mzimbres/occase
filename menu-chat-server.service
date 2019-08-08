@@ -8,8 +8,6 @@ ExecStart=/usr/local/bin/menu-chat-server /etc/menu-chat/menu-chat-server.conf
 ExecStop=/bin/kill -s INT $MAINPID
 PIDFile=/run/menu-chat-server.pid
 Restart=always
-User=menu-chat
-Group=menu-chat
 
 [Install]
 WantedBy=multi-user.target

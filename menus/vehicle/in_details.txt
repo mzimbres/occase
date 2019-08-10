@@ -1,0 +1,91 @@
+Detalhes
+   Carros
+      Opcionais
+         Airbag
+         Alarme
+         Ar quente
+         Ar condicionado
+         CD Player
+         Direcao hidraulica
+         Freio ABS
+         Player
+         CD Player
+         Banco com regulagem de altura
+         Computador de bordo
+         Desembacador traseiro
+         Encosto de cabeca trazeiro
+         Freio ABS
+         Controle automatico de velocidade
+         Rodas de liga leve
+         Sensor de chuva
+         Sensor de estacionamento
+         Teto solar
+         Retrovisor fotocrômico
+         Travas elétricas
+         Vidros elétricos
+         Volante com regulagen de altura
+         Farol de xenônio
+         Direcao hidráulica
+      Condicoes
+         Único dono
+         IPVA pago
+         Nao aceito troca
+         Veículo financiado
+         Licenciado
+         Garantia de fábrica
+         Veículo de colecionador
+         Todas as revis~oes em concessionária
+         Adaptada para pessoas com deficiência
+         Blindado
+   Motos
+      Opcionais
+         ABS
+         Amortecedor de direcao
+         Bolsa/Baú/Bauleto
+         Computador de bordo
+         Contrapeso no guidon
+         Alarme
+         Escapamento esportivo
+         Faróis de neblina
+         GPS
+         Som
+      Características
+         Automático
+         Único dono
+         IPVA pago
+         Nao aceita troca
+         Licenciado
+         Garantia de fábrica
+         Todas as revisoes em concessionária
+         Blindado
+      Partida
+         Pedal
+         Elétrica
+   Caminhoes
+      Opcionais
+         ABS
+         Ar condicionado
+         Alarme
+         Travas elétricas de portas
+         Vidros elétricos
+      Suplementar
+         Cavalo mecânico
+         Cegonha
+         Chassis
+         Coletor de lixo
+         Comboio
+         Espargidor
+         Gaiola de gás
+         Graneleiro
+         Guíncho Munck
+         Plataforma guincho
+         Poli guindaste
+         Roll on/off
+         Silo
+         Tanque aco
+         Tanque inox
+         Tanque isotérmico
+         Tanque pipa
+         Tora florestal
+         Transbordo canaveiro
+         Trio elétrico

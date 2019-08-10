@@ -3,3 +3,7 @@ Documentation is available in the doc/ directory.
 
 For an introduction refer to the doc/intro.txt file.
 
+To create the details menu and use it in the app, for example
+
+./menu_dump -o 4 menus/vehicle/in_details.txt:3:3 > ~/Public/menu_chat_app/data/in_details_menu.txt
+

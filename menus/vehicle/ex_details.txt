@@ -1,0 +1,165 @@
+Detalhes
+   Carros
+      Condicao
+         Nao informado
+         Novo
+         Usado
+         Troca
+         Repasse
+      Combustível
+         Nao informado
+         Gasolina
+         Alcool
+         Diesel
+         Gás natural
+         Gazolina e álcool
+         Gazolina e gás natural
+         Álcool e gás natural
+         Gazolina álcool e gás natural
+         Gazolina álcool, gás natural e benzina
+         Gazolina e elétrico
+      Câmbio
+         Nao informado
+         Automático
+         Automatizado
+         Automatizado DCT
+         Automático sequêncial
+         Cvt
+         Manual
+         Semi automático
+      Portas
+         Nao informado
+         0 porta
+         2 Portas
+         3 Portas
+         4 Portas
+      Cor
+         Nao informado
+         Amarelo
+         Azul
+         Bege
+         Branco
+         Bronze
+         Cinza
+         Dourado
+         Laranja
+         Marrom
+         Prata
+         Preto
+         Rosa
+         Roxo
+         Verde
+         Vermelho
+         Vinho
+      Anunciante
+         Nao informado
+         Concessionária
+         Loja
+         Pessoa física
+   Motos
+      Condicao
+         Nao informado
+         Novo
+         Usado
+         Troca
+         Repasse
+      Alimentacao
+         Nao informado
+         Carburador
+         Injecao eletrônica
+      Refrigeracao
+         Nao informado
+         Ar
+         Líquida
+      Motor
+         Nao informado
+         2 tempos
+         4 tempos
+         Elétrico de corrent contínua
+      Freio
+         Nao informado
+         Disco/disco
+         Disco/tambor
+         Tambor/disco
+         Tambor/tambor
+      Cor
+         Nao informado
+         Amarelo
+         Azul
+         Bege
+         Branco
+         Bronze
+         Cinza
+         Dourado
+         Laranja
+         Marrom
+         Prata
+         Preto
+         Rosa
+         Roxo
+         Verde
+         Vermelho
+         Vinho
+      Marchas
+         Nao informado
+         Automático
+         2
+         3
+         4
+         5
+         6
+         7
+         8
+   Caminhoes
+      Condicao
+         Nao informado
+         Novo
+         Usado
+         Troca
+         Repasse
+      Tracao
+         Nao informado
+         Bitruck 8 x 2
+         Bitruck 8 x 4
+         Toco 4 x 2
+         Toco 4 x 4
+         Truck 6 x 2
+         Truck 6 x 4
+      Carroceria
+         Nao informado
+         Baú bebidas
+         Baú frigorífico
+         Baú furgao
+         Baú sider
+         Baú Térmico
+         Betoneira
+         Boiadeiro
+         Bomba de concreto
+         Cacamba basculante
+         Cacamba cabine
+         Carga seca
+         Carroceria cabine
+      Transmissao
+         Nao informado
+         Manual
+         Automática
+         Semi automática
+         Sequencial
+      Cor
+         Nao informado
+         Amarelo
+         Azul
+         Bege
+         Branco
+         Bronze
+         Cinza
+         Dourado
+         Laranja
+         Marrom
+         Prata
+         Preto
+         Rosa
+         Roxo
+         Verde
+         Vermelho
+         Vinho

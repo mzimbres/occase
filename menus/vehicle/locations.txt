@@ -1,66 +1,404 @@
 Brasil
-   Acre
-      Porto Velho
-      Cruzeiro do Sul
-      Sena Madureira
-      Tarauaca
-      Feijo
-      Outras
-   Alagoas
-      Maceio
-      Arapiraca
-      Rio Largo
-      Palmeira dos indios
-      Uniao dos Palmares
-      Outras
-   Amapa
-      Macapa
-      Santana
-      Laranjal do Jari
-      Oiapoque
-      Mazagao
-      Outras
-   Amazonas
-      Manaus
-      Parintins
-      Itacoatiara
-      Manacapuru
-      Coari
-      Outras
-   Bahia
-      Salvador
-      Feira de Santana
-      Vitoria da Conquista
-      Camacari
-      Itabuna
-      Outras
-   Ceara
-      Fortaleza
-      Caucaia
-      Juazeiro do Norte
-      Maracanau
-      Sobral
-      Outras
-   Paraiba
-      Joao Pessoa
-   Rio de Janeiro
-      Teresopolis
-      Niteroi
-   Sao Paulo
-      Adamantina
-      Atibaia
-         Vila Santista
-         Jardim Siriema
-      Auriflama
-      Avanhandava
-      Sao Francisco
-      Sao Miguel Arcanjo
-      Sao Paulo (cidade)
-         Mooca
-         Bixiga
-         Vila Leopoldina
-      Sao Pedro
-      Sao Roque
-      Sao Sebastiao
-      Sao Simao
-      Zacarias
+   Centro-Oeste
+      Goiás
+         Goiânia
+         Aparecida de Goiânia
+         Anápolis
+         Rio Verde
+         Águas Lindas de Goiás
+         Luziânia
+         Valparaíso de Goiás
+         Trindade
+         Formosa
+         Novo Gama
+         Senador Canedo
+         Catalão
+         Itumbiara
+         Jataí
+         Planaltina
+         Caldas Novas
+         Santo Antônio do Descoberto
+         Cidade Ocidental
+         Goianésia
+      Mato Grosso
+         Cuiabá
+         Várzea Grande
+         Rondonópolis
+         Sinop
+         Tangará da Serra
+         Cáceres
+         Sorriso
+         Lucas do Rio Verde
+         Primavera do Leste
+         Barra do Garças
+         Alta Floresta
+         Pontes e Lacerda
+         Nova Mutum
+         Campo Verde
+         Juína
+         Colniza
+         Guarantã do Norte
+         Juara
+         Barra do Bugres
+         Peixoto de Azevedo
+      Mato Grosso do Sul
+         Campo Grande
+         Dourados
+         Três Lagoas
+         Corumbá
+         Ponta Porã
+         Sidrolândia
+         Naviraí
+         Nova Andradina
+         Aquidauana
+         Maracaju
+         Paranaíba
+         Amambai
+         Rio Brilhante
+         Coxim
+         Caarapó
+         Miranda
+         São Gabriel do Oeste
+         Jardim
+         Aparecida do Taboado
+         Anastácio
+   Nordeste
+      Alagoas
+         Maceió
+         Arapiraca
+         Rio Largo
+         Palmeira dos Índios
+         União dos Palmares
+         Penedo
+         São Miguel dos Campos
+         Campo Alegre
+         Coruripe
+         Delmiro Gouveia
+         Marechal Deodoro
+         Santana do Ipanema
+         Atalaia
+         Teotônio Vilela
+         Girau do Ponciano
+         Pilar
+         São Luís do Quitunde
+         São Sebatião
+         Maragogi
+         São José da Tapera
+      Bahia
+         Salvador
+         Feira de Santana
+         Vitória da Conquista
+         Camaçari
+         Itabuna
+         Juazeiro
+         Ilhéus
+         Lauro de Freitas
+         Jequié
+         Teixeira de Freitas
+         Alagoinhas
+         Barreiras
+         Porto Seguro
+         Simões Filho
+         Paulo Afonso
+         Eunápolis
+         Santo Antônio de Jesus
+         Valença
+         Candeias
+         Guanambi
+      Ceará
+         Fortaleza
+         Caucaia
+         Juazeiro do Norte
+         Maracanaú
+         Sobral
+         Crato
+         Itapipoca
+         Maranguape
+         Iguatu
+         Quixadá
+         Pacatuba
+         Aquiraz
+         Quixeramobim
+         Canindé
+         Russas
+         Tianguá
+         Crateús
+         Aracati
+         Cascavel
+         Pacajus
+      Maranhao
+         São Luís
+         Imperatriz
+         São José de Ribamar
+         Timon
+         Caxias
+         Codó
+         Paço do Lumiar
+         Açailândia
+         Bacabal
+         Balsas
+         Chapadinha
+         Santa Inês
+         Barra do Corda
+         Pinheiro
+         Santa Luzia
+         Buriticupu
+         Grajaú
+         Itapecuru-Mirim
+         Coroatá
+         Barreirinhas
+      Paraíba
+         João Pessoa
+         Campina Grande
+         Santa Rita
+         Patos
+         Bayeux
+         Sousa
+         Cabedelo
+         Cajazeiras
+         Guarabira
+         Sapé
+         Mamanguape
+         Queimadas
+         São Bento
+         Monteiro
+         Esperança
+         Pombal
+         Catolé do Rocha
+         Alagoa Grande
+         Pedras de Fogo
+         Lagoa Seca
+      Pernambuco
+         Recife
+         Jaboatão dos Guararapes
+         Olinda
+         Caruaru
+         Petrolina
+         Paulista
+         Cabo de Santo Agostinho
+         Camaragibe
+         Garanhuns
+         Vitória de Santo Antão
+         Igarassu
+         São Lourenço da Mata
+         Santa Cruz do Capibaribe
+         Abreu e Lima
+         Ipojuca
+         Serra Talhada
+         Araripina
+         Gravatá
+         Carpina
+         Goiana
+      Piauí
+         Teresina
+         Parnaíba
+         Picos
+         Piripiri
+         Floriano
+         Barras
+         Campo Maior
+         União
+         Altos
+         Esperantina
+         José de Freitas
+         Pedro II
+         Oeiras
+         São Raimundo Nonato
+         Miguel Alves
+         Luís Correia
+         Piracuruca
+         Cocal
+         Batalha
+         Corrente
+      Rio Grande do Norte
+         Natal
+         Mossoró
+         Parnamirim
+         São Gonçalo do Amarante
+         Macaíba
+         Ceará-Mirim
+         Caicó
+         Açu
+         Currais Novos
+         São José de Mipibu
+         Santa Cruz
+         Nova Cruz
+         Apodi
+         João Câmara
+         Canguaretama
+         Touros
+         Macau
+         Pau dos Ferros
+         Extremoz
+         Baraúna
+      Sergipe
+         Aracaju
+         Nossa Senhora do Socorro
+         Lagarto
+         Itabaiana
+         São Cristóvão
+         Estância
+         Tobias Barreto
+         Itabaianinha
+         Simão Dias
+         Nossa Senhora da Glória
+         Poço Redondo
+         Itaporanga d'Ajuda
+         Capela
+         Barra dos Coqueiros
+         Laranjeiras
+         Propriá
+         Canindé de São Francisco
+         Porto da Folha
+         Boquim
+         Nossa Senhora das Dores
+   Norte
+      Acre
+         Rio Branco
+         Cruzeiro do Sul
+         Sena Madureira
+         Tarauacá
+         Feijó
+         Brasileia
+         Senador Guiomard
+         Plácido de Castro
+         Xapuri
+         Mâncio Lima
+      Amapá
+         Macapa
+         Santana
+         Laranjal do Jari
+         Oiapoque
+         Mazagao
+         Outras
+      Amazonas
+         Manaus
+         Parintins
+         Itacoatiara
+         Manacapuru
+         Coari
+         Outras
+      Pará
+         Belém
+         Ananindeua
+         Santarém
+         Marabá
+         Parauapebas
+         Castanhal
+         Abaetetuba
+         Cametá
+         Marituba
+         Bragança
+      Rondônia
+         Porto Velho
+         Ji-Paraná
+         Ariquemes
+         Vilhena
+         Cacoal
+         Rolim de Moura
+         Jaru
+         Guajará-Mirim
+         Machadinho d'Oeste
+         Buritis
+      Roraima
+         Boa Vista
+         Rorainópolis
+         Caracaraí
+         Cantá
+         Mucajaí
+         Alto Alegre
+         Pacaraima
+         Amajari
+         Bonfim
+         Iracema
+      Tocantins
+         Palmas
+         Araguaína
+         Gurupi
+         Porto Nacional
+         Paraíso do Tocantins
+         Colinas do Tocantins
+         Araguatins
+         Guaraí
+         Tocantinópolis
+         Miracema do Tocantins
+   Sudeste
+      Espirito Santo
+         Serra
+         Vila Velha
+         Cariacica
+         Vitória
+         Cachoeiro de Itapemirim
+         Linhares
+         São Mateus
+         Guarapari
+         Colatina
+         Aracruz
+      Minas Gerais
+         Belo Horizonte
+         Uberlândia
+         Contagem
+         Juiz de Fora
+      Rio de Janeiro
+         Rio de Janeiro
+         São Gonçalo
+         Duque de Caxias
+         Nova Iguaçu
+         Niterói
+         Belford Roxo
+         Campos dos Goytacazes
+         São João de Meriti
+         Petrópolis
+         Volta Redonda
+      Sao Paulo
+         Adamantina
+         Atibaia
+            Vila Santista
+            Jardim Siriema
+         Auriflama
+         Avanhandava
+         Sao Francisco
+         Sao Miguel Arcanjo
+         Sao Paulo (cidade)
+            Mooca
+            Bixiga
+            Vila Leopoldina
+         Sao Pedro
+         Sao Roque
+         Sao Sebastiao
+         Sao Simao
+         Zacarias
+   Sul
+      Paraná
+         Curitiba
+         Londrina
+         Maringá
+         Ponta Grossa
+         Cascavel
+         São José dos Pinhais
+         Foz do Iguaçu
+         Colombo
+         Guarapuava
+         Paranaguá
+      Rio Grande do Sul
+         Canoas
+         Pelotas
+         Santa Maria
+         Gravataí
+         Viamão
+         Novo Hamburgo
+         São Leopoldo
+         Rio Grande
+         Alvorada
+         Passo Fundo
+      Santa Catarina
+         Abdon Batista
+         Abelardo Luz
+         Agrolândia
+         Agronômica
+         Água Doce
+         Águas Frias
+         Águas Mornas
+         Águas de Chapecó
+         Alfredo Wagner
+         Alto Bela Vista

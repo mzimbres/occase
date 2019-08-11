@@ -233,15 +233,19 @@ worker_session::send_post( std::shared_ptr<std::string> msg
                          , std::uint32_t hash_code
                          , std::uint64_t filter)
 {
-   if ((menu_filter & filter) != menu_filter)
-      return;
+   if (menu_filter != 0) {
+      if ((menu_filter & filter) == 0)
+         return;
+   }
 
-   auto const match =
-      std::binary_search( std::begin(menu_codes)
-                        , std::end(menu_codes)
-                        , hash_code);
-   if (!match)
-      return;
+   if (!std::empty(menu_codes)) {
+      auto const match =
+         std::binary_search( std::begin(menu_codes)
+                           , std::end(menu_codes)
+                           , hash_code);
+      if (!match)
+         return;
+   }
 
    auto const is_empty = std::empty(msg_queue);
 

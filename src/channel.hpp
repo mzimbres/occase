@@ -170,7 +170,7 @@ public:
    template <class Inserter>
    void retrieve_pub_items(int id, Inserter inserter) const
    {
-      auto const comp = [](auto const& a, auto const& b)
+      auto comp = [](auto const& a, auto const& b)
       { return a < b.id; };
 
       auto const point =
@@ -182,6 +182,21 @@ public:
       std::copy(point, std::end(items), inserter);
    }
 
+   // Removes a post if it exists in the channel.
+   void remove_post(int id)
+   {
+      auto comp = [](auto const& a, auto const& b)
+      { return a.id < b; };
+
+      auto const point =
+         std::lower_bound( std::begin(items)
+                         , std::end(items)
+                         , id
+                         , comp);
+
+      if (point != std::end(items))
+         items.erase(point);
+   }
 };
 
 }

@@ -558,6 +558,25 @@ worker::on_app_subscribe( json const& j
 }
 
 ev_res
+worker::on_app_del_post(json j, std::shared_ptr<worker_session> s)
+{
+   // A post should be deleted from the database and from each worker,
+   // for the later we just broadcast a deleter command. Each channel
+   // should check if the delete command belongs indeed to the user
+   // that wants to delete it.
+
+   j["from"] = s->get_id();
+   auto msg = j.dump();
+
+   // TODO:
+   // - Check the channel is valid before broadcasting the command
+   //   db.post(...).
+   // - Complement the worker_session with the new enum.
+
+   return ev_res::delete_ok;
+}
+
+ev_res
 worker::on_app_publish(json j, std::shared_ptr<worker_session> s)
 {
    // Consider remove the restriction below that the items vector have
@@ -584,7 +603,7 @@ worker::on_app_publish(json j, std::shared_ptr<worker_session> s)
       // the app. Sending a fail ack back to the app is useful to
       // debug it? See redis::request::unsolicited_publish Enable only
       // for debug. But ... It may prevent the traffic of invalid
-      // messages in redis. But invalid messages should never happen.
+      // messages in redis.
       json resp;
       resp["cmd"] = "publish_ack";
       resp["result"] = "fail";
@@ -634,8 +653,6 @@ worker::on_app_chat_msg(json j, std::shared_ptr<worker_session> s)
    // server. This would be a big optimization in the case of small
    // number of workers.
 
-   // Do not thrust the from field in the json command before sending
-   // to the database.
    j["from"] = s->get_id();
    auto msg = j.dump();
    std::initializer_list<std::string> param = {msg};
@@ -685,9 +702,10 @@ ev_res worker::on_app( std::shared_ptr<worker_session> s
       auto const cmd = j.at("cmd").get<std::string>();
 
       if (s->is_logged_in()) {
+         if (cmd == "message")   return on_app_chat_msg(std::move(j), s);
          if (cmd == "subscribe") return on_app_subscribe(j, s);
          if (cmd == "publish")   return on_app_publish(std::move(j), s);
-         if (cmd == "message")   return on_app_chat_msg(std::move(j), s);
+         if (cmd == "delete")    return on_app_del_post(std::move(j), s);
       } else {
          if (cmd == "login")     return on_app_login(j, s);
          if (cmd == "register")  return on_app_register(j, s);

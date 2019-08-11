@@ -33,6 +33,8 @@ enum class ev_res
 , publish_fail
 , chat_msg_ok
 , chat_msg_fail
+, delete_ok
+, delete_fail
 , unknown
 };
 

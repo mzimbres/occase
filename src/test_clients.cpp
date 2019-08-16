@@ -8,27 +8,27 @@ namespace rt
 {
 
 std::vector<std::string> const nicks
-{ "Magraboia"
-, "Jujuba"
-, "Caju"
-, "Lasca Fina"
-, "Kabuff"
-, "Gomes"
-, "Fui lá"
-, "Felino"
-, "Zé Caque"
-, "Noski"
-, "Bezerro"
-, "Palminha"
-, "Rebolo"
-, "Fui e Voltei"
-, "Mijoca"
-, "Brancona"
-, "Mandibula"
-, "Largado"
-, "Mosga"
-, "Victor"
-, "Peste Branda"
+{ "Landau"
+, "Feynman"
+, "Dirac"
+, "Weinberg"
+, "Planck"
+, "Schrödinger"
+, "Euler"
+, "Gauß"
+, "Lattes"
+, "Maxwell"
+, "Newton"
+, "Leibniz"
+, "Ampére"
+, "De Broglie"
+, "Born"
+, "Minkowski"
+, "Glaschow"
+, "Salam"
+, "Gell Mann"
+, "Tomonaga"
+, "Schwinger"
 };
 
 std::string make_login_cmd(rt::cli::login const& user)
@@ -44,8 +44,12 @@ std::string make_login_cmd(rt::cli::login const& user)
 std::string
 make_post_cmd(rt::menu_code_type const& menu_code)
 {
-   rt::post item { -1, {}, "Not an interesting message."
-                 , "Kabuff", menu_code, 0, 0};
+   json sub;
+   sub["msg"] = "Not an interesting message.";
+   sub["nick"] = "Wheeler";
+   sub["avatar"] = "9ac8316ca55e6d888d43092fd73a78d6";
+
+   rt::post item {-1, {}, sub.dump(), menu_code, 0, 0};
    json j;
    j["cmd"] = "publish";
    j["items"] = std::vector<rt::post>{item};
@@ -626,8 +630,13 @@ int publisher2::on_closed(boost::system::error_code ec)
 int publisher2::pub( menu_code_type const& pub_code
                  , std::shared_ptr<client_type> s) const
 {
-   post item {-1, op.user.id, "Not an interesting message."
-             , "Campeao", pub_code, 0, 0};
+   json sub;
+   sub["msg"] = "Not an interesting message.";
+   sub["nick"] = "Wheeler";
+   sub["avatar"] = "";
+
+   post item {-1, op.user.id, sub.dump(), pub_code, 0, 0};
+
    json j_msg;
    j_msg["cmd"] = "publish";
    j_msg["items"] = std::vector<post>{item};

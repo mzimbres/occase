@@ -54,8 +54,7 @@ using menu_code_type = std::array<menu_channel_elem_type, menu_size>;
 struct post {
    int id;
    std::string from;
-   std::string msg;
-   std::string nick;
+   std::string body;
    menu_code_type to;
    std::uint64_t filter;
    long int date = 0;
@@ -77,10 +76,9 @@ void to_json(json& j, post const& e)
 
    j = json{ {"id", e.id}
            , {"from", e.from}
-           , {"msg", e.msg}
+           , {"body", e.body}
            , {"to", e.to}
            , {"filter", e.filter}
-           , {"nick", e.nick}
            , {"date", e.date}
            , {"ex_details", e.ex_details}
            , {"in_details", e.in_details}
@@ -92,10 +90,9 @@ void from_json(json const& j, post& e)
 {
   e.id = j.at("id").get<int>();
   e.from = j.at("from").get<std::string>();
-  e.msg = j.at("msg").get<std::string>();
+  e.body = j.at("body").get<std::string>();
   e.to = j.at("to").get<menu_code_type>();
   e.filter = j.at("filter").get<std::uint64_t>();
-  e.nick = j.at("nick").get<std::string>();
   e.date = j.at("date").get<long int>();
   e.ex_details = j.at("ex_details").get<std::vector<std::uint64_t>>();
   e.in_details = j.at("in_details").get<std::vector<std::uint64_t>>();

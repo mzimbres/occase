@@ -616,9 +616,8 @@ worker::on_app_publish(json j, std::shared_ptr<worker_session> s)
    // It is important to not thrust the *from* field in the json
    // command.
    items.front().from = s->get_id();
-   items.front().date =
-      duration_cast< milliseconds
-                   >(system_clock::now().time_since_epoch()).count();
+   auto const tse = system_clock::now().time_since_epoch();
+   items.front().date = duration_cast<milliseconds>(tse).count();
    post_queue.push({s, items.front()});
    db.request_post_id();
    return ev_res::publish_ok;

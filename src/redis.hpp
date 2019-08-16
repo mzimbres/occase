@@ -13,6 +13,7 @@ enum class request
 , chat_messages
 , ignore
 , post
+, remove_post
 , posts
 , post_id
 , user_id
@@ -189,12 +190,20 @@ public:
       ss_chat_pub.send(std::move(cmd_str));
    }
 
-   // Publishes the message on a redis channel where it is broadcasted
+   // Adds the post in the sorted set containing all posts and
+   // publishes the post on the channel where it is broadcasted
    // to all workers. Completes with
    //
    //    redis::request::post
    //
    void post(std::string const& msg, int id);
+
+   // Removes the post under id from the sorted set and broadcasts the
+   // cmd to the other workers. Completes with
+   //
+   //    redis::request::remove_post
+   //
+   void remove_post(int id, std::string const& cmd);
 
    // Requests a new post id from redis by increasing the last one.
    // Completes with

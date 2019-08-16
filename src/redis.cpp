@@ -120,6 +120,11 @@ facade::on_menu_pub( boost::system::error_code const& ec
       return;
    }
 
+   if (menu_pub_queue.front() == request::remove_post) {
+      assert(!std::empty(data));
+      assert(std::stoi(data.front()) == 1);
+   }
+
    if (menu_pub_queue.front() != request::posts) {
       assert(!std::empty(data));
    }
@@ -225,6 +230,20 @@ void facade::post(std::string const& msg, int id)
    menu_pub_queue.push(request::ignore);
    menu_pub_queue.push(request::ignore);
    menu_pub_queue.push(request::post);
+}
+
+void facade::remove_post( int id, std::string const& msg)
+{
+   auto cmd = multi()
+            + zremrangebyscore(cfg.posts_key, id)
+            + publish(cfg.menu_channel_key, msg)
+            + exec();
+
+   ss_menu_pub.send(std::move(cmd));
+   menu_pub_queue.push(request::ignore);
+   menu_pub_queue.push(request::ignore);
+   menu_pub_queue.push(request::ignore);
+   menu_pub_queue.push(request::remove_post);
 }
 
 void facade::request_post_id()

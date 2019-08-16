@@ -153,19 +153,20 @@ void worker::on_db_posts(std::vector<std::string> const& msgs)
       , id, std::size(msgs));
 
    auto loader = [this](auto const& msg)
-      { on_db_post(msg); };
+      { on_db_channel_msg(msg); };
 
    std::for_each(std::begin(msgs), std::end(msgs), loader);
 }
 
-void worker::on_db_post(std::string const& msg)
+void worker::on_db_channel_msg(std::string const& msg)
 {
+   // This function has two roles, deal with the delete command and
+   // new posts.
    auto const j = json::parse(msg);
-   auto const item = j.get<post>();
-
-   auto const hash_code =
-      to_hash_code( item.to.at(1).at(0)
-                  , menu.back().depth);
+   auto const channel = j.at("to").get<menu_code_type>();
+   auto const hash_code = to_hash_code(
+      channel.at(1).at(0),
+      menu.back().depth);
 
    auto const g = channels.find(hash_code);
    if (g == std::end(channels)) {
@@ -176,6 +177,20 @@ void worker::on_db_post(std::string const& msg)
       log(loglevel::debug, "W{0}: Channel could not be found.", id);
       return;
    }
+
+   if (j.contains("cmd")) {
+      auto const post_id = j.at("id").get<int>();
+      auto const from = j.at("from").get<std::string>();
+      auto const r = g->second.remove_post(id, from);
+      auto const* str = "W{0}: Failed to remove post {1}.";
+      if (r)
+         str = "W{0}: Post {1} successfully removed.";
+
+      log(loglevel::notice, str , id, post_id);
+      return;
+   }
+
+   auto const item = j.get<post>();
 
    if (item.id > last_post_id)
       last_post_id = item.id;
@@ -327,6 +342,7 @@ worker::on_db_chat_msg( std::string const& user_id
    assert(false);
 }
 
+// TODO: Make this function noexcept.
 void
 worker::on_db_event( std::vector<std::string> data
                    , redis::req_item const& req)
@@ -374,7 +390,7 @@ worker::on_db_event( std::vector<std::string> data
 
       case redis::request::unsol_publish:
          assert(std::size(data) == 1);
-         on_db_post(data.back());
+         on_db_channel_msg(data.back());
          break;
 
       default:
@@ -560,18 +576,20 @@ worker::on_app_subscribe( json const& j
 ev_res
 worker::on_app_del_post(json j, std::shared_ptr<worker_session> s)
 {
-   // A post should be deleted from the database and from each worker,
-   // for the later we just broadcast a deleter command. Each channel
-   // should check if the delete command belongs indeed to the user
-   // that wants to delete it.
-
+   // A post should be deleted from the database as well as from each
+   // worker, so that users do not receive posts from products that
+   // are already sold.  To delete from the workers it is enough to
+   // broadcast a delete command. Each channel should check if the
+   // delete command belongs indeed to the user that wants to delete
+   // it.
+   auto const post_id = j.at("id").get<int>();
    j["from"] = s->get_id();
-   auto msg = j.dump();
+   db.remove_post(post_id, j.dump());
 
-   // TODO:
-   // - Check the channel is valid before broadcasting the command
-   //   db.post(...).
-   // - Complement the worker_session with the new enum.
+   json resp;
+   resp["cmd"] = "delete_ack";
+   resp["result"] = "ok";
+   s->send(resp.dump(), true);
 
    return ev_res::delete_ok;
 }

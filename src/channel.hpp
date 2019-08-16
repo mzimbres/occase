@@ -183,7 +183,7 @@ public:
    }
 
    // Removes a post if it exists in the channel.
-   void remove_post(int id)
+   bool remove_post(int id, std::string const& from)
    {
       auto comp = [](auto const& a, auto const& b)
       { return a.id < b; };
@@ -194,8 +194,14 @@ public:
                          , id
                          , comp);
 
-      if (point != std::end(items))
-         items.erase(point);
+      if (point->id != id)
+         return false;
+
+      if (point->from != from)
+         return false;
+
+      items.erase(point);
+      return true;
    }
 };
 

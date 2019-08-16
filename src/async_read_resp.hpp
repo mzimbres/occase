@@ -228,6 +228,14 @@ auto zrangebyscore(std::string const& key, int min, int max)
 }
 
 inline
+auto zremrangebyscore(std::string const& key, int score)
+{
+   auto const s = std::to_string(score);
+   auto par = {key, s, s};
+   return resp_assemble("ZREMRANGEBYSCORE", std::begin(par), std::end(par));
+}
+
+inline
 auto lrange(std::string const& key, int min, int max)
 {
    auto par = { key

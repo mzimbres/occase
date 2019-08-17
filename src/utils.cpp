@@ -112,5 +112,32 @@ std::string pwd_gen::operator()(int pwd_size)
    return pwd;
 }
 
-} // rt
+//_____________________________________________________________
+
+void drop_root_priviledges()
+{
+   if (getuid() != 0)
+      return;
+
+   if (setgid(getgid()) == -1) {
+       log(loglevel::err, "{0}", strerror(errno));
+       return;
+   }
+
+   if (setuid(getuid()) == -1) {
+       log(loglevel::err, "{0}", strerror(errno));
+       return;
+   }
+
+   loglevel ll = loglevel::notice;
+   auto const* s = "Success: Cannot regain root privileges";
+   if (setuid(0) == -1) {
+      s = strerror(errno);
+      ll = loglevel::err;
+   }
+
+   log(ll, s);
+}
+
+}
 

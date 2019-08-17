@@ -271,6 +271,7 @@ int main(int argc, char* argv[])
       set_fd_limits(500000);
 
       listener lst {cfg};
+      drop_root_priviledges();
       lst.run();
 
    } catch (std::exception const& e) {

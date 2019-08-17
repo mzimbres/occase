@@ -41,5 +41,7 @@ public:
    std::string operator()(int size);
 };
 
+void drop_root_priviledges();
+
 }
 

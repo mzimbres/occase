@@ -32,20 +32,8 @@ auto is_menu_empty(menu_elems_array_type const& m)
        || m.back().depth == 0;
 }
 
-inline
-void to_json(json& j, menu_elem const& e)
-{
-  j = json{{"data", e.data}, {"depth", e.depth}, {"version", e.version}};
-}
-
-inline
-void from_json(json const& j, menu_elem& e)
-{
-  e.data = j.at("data").get<std::string>();
-  e.depth = j.at("depth").get<unsigned>();
-  e.version = j.at("version").get<int>();
-}
-
+void to_json(json& j, menu_elem const& e);
+void from_json(json const& j, menu_elem& e);
 
 using channel_code_type = std::vector<int>;
 using menu_channel_elem_type = std::vector<channel_code_type>;
@@ -53,9 +41,7 @@ using menu_code_type = std::array<menu_channel_elem_type, menu_size>;
 
 inline
 auto has_empty_products(menu_code_type const& e)
-{
-   return std::empty(e.back());
-}
+   { return std::empty(e.back()); }
 
 struct post {
    int id;
@@ -66,41 +52,15 @@ struct post {
    long int date = 0;
    std::vector<std::uint64_t> ex_details;
    std::vector<std::uint64_t> in_details;
+   std::vector<int> range_values;
 };
 
 inline
 auto operator<(post const& a, post const& b) noexcept
    { return a.id < b.id; }
 
-inline
-void to_json(json& j, post const& e)
-{
-   // Maybe we should not include the filter field below. The does not
-   // need it.
-
-   j = json{ {"id", e.id}
-           , {"from", e.from}
-           , {"body", e.body}
-           , {"to", e.to}
-           , {"filter", e.filter}
-           , {"date", e.date}
-           , {"ex_details", e.ex_details}
-           , {"in_details", e.in_details}
-           };
-}
-
-inline
-void from_json(json const& j, post& e)
-{
-  e.id = j.at("id").get<int>();
-  e.from = j.at("from").get<std::string>();
-  e.body = j.at("body").get<std::string>();
-  e.to = j.at("to").get<menu_code_type>();
-  e.filter = j.at("filter").get<std::uint64_t>();
-  e.date = j.at("date").get<long int>();
-  e.ex_details = j.at("ex_details").get<std::vector<std::uint64_t>>();
-  e.in_details = j.at("in_details").get<std::vector<std::uint64_t>>();
-}
+void to_json(json& j, post const& e);
+void from_json(json const& j, post& e);
 
 }
 

@@ -39,6 +39,7 @@ exes += simulation
 common_objs += menu.o
 common_objs += utils.o
 common_objs += logger.o
+common_objs += json_utils.o
 
 server_objs =
 server_objs += worker.o

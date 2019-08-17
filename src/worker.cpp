@@ -160,6 +160,10 @@ void worker::on_db_posts(std::vector<std::string> const& msgs)
 
 void worker::on_db_channel_msg(std::string const& msg)
 {
+   // NOTE: Later we may have to improve how we decide if a message is
+   // a post or a command, like deleter, specially the number of
+   // commands that sent from workers to workers increases.
+
    // This function has two roles, deal with the delete command and
    // new posts.
    auto const j = json::parse(msg);
@@ -196,6 +200,15 @@ void worker::on_db_channel_msg(std::string const& msg)
       last_post_id = item.id;
 
    g->second.broadcast(item, ch_cfg.max_posts, menu.at(0).depth);
+
+   // The maximum number of posts that can be stored on the products
+   // channel should be higher than on the specialied channels. I do
+   // not know which number is good enough. TODO move this decision to
+   // the config file.
+   // NOTE: A number that is too high may compromize scalability.
+   product_channel.broadcast(
+      item,
+      cfg.max_posts_on_sub, menu.at(0).depth);
 }
 
 void worker::on_db_user_id(std::string const& id)
@@ -509,50 +522,48 @@ ev_res worker::on_app_subscribe(
 
    s->set_filter(filter);
    s->set_filter(menu_channels.at(0), menu.front().depth);
-
-   auto n_channels = 0;
-   std::vector<post> items;
-
    auto psession = s->get_proxy_session(true);
 
-   auto invalid_channels = 0;
-   auto f = [&, this](auto const& code)
-   {
-      auto const hash_code = to_hash_code(code, menu.at(1).depth);
-      auto const g = channels.find(hash_code);
-      if (g == std::end(channels)) {
-         ++invalid_channels;
-         return;
-      }
+   std::vector<post> items;
 
-      if (invalid_channels != 0) {
+   // If the second channels are empty, the app wants posts from all
+   // channels, otherwise we have to traverse the individual channels.
+   if (has_empty_products(menu_channels)) {
+      product_channel.add_member(psession, ch_cfg.cleanup_rate);
+      product_channel.retrieve_pub_items(app_last_post_id,
+         std::back_inserter(items));
+   } else {
+      auto invalid_count = 0;
+      auto f = [&, this](auto const& code)
+      {
+         auto const hash_code = to_hash_code(code, menu.at(1).depth);
+         auto const g = channels.find(hash_code);
+         if (g == std::end(channels)) {
+            ++invalid_count;
+            return;
+         }
+
+         g->second.add_member(psession, ch_cfg.cleanup_rate);
+      };
+
+      auto const d = std::min( ssize(menu_channels.at(1))
+                             , ch_cfg.max_sub);
+
+      std::for_each( std::cbegin(menu_channels.at(1))
+                   , std::cbegin(menu_channels.at(1)) + d
+                   , f);
+
+      if (invalid_count != 0) {
          log( loglevel::debug
             , "W{0}/on_app_subscribe: Invalid channel(s)."
-            , invalid_channels);
+            , invalid_count);
       }
-
-      g->second.retrieve_pub_items( app_last_post_id
-                                  , std::back_inserter(items));
-
-      g->second.add_member(psession, ch_cfg.cleanup_rate);
-      ++n_channels;
-   };
-
-   auto const d = std::min( ssize(menu_channels.at(1))
-                          , ch_cfg.max_sub);
-
-   std::for_each( std::cbegin(menu_channels.at(1))
-                , std::cbegin(menu_channels.at(1)) + d
-                , f);
+   }
 
    if (ssize(items) > cfg.max_posts_on_sub) {
-      auto comp = [](auto const& a, auto const& b)
-         { return a.id > b.id; };
-
       std::nth_element( std::begin(items)
                       , std::begin(items) + cfg.max_posts_on_sub
-                      , std::end(items)
-                      , comp);
+                      , std::end(items));
 
       items.erase( std::begin(items) + cfg.max_posts_on_sub
                  , std::end(items));
@@ -573,8 +584,7 @@ ev_res worker::on_app_subscribe(
    return ev_res::subscribe_ok;
 }
 
-ev_res
-worker::on_app_del_post(json j, std::shared_ptr<worker_session> s)
+ev_res worker::on_app_del_post(json j, std::shared_ptr<worker_session> s)
 {
    // A post should be deleted from the database as well as from each
    // worker, so that users do not receive posts from products that

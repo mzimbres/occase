@@ -98,6 +98,12 @@ private:
    // Maps a channel hash code into its corresponding channel object.
    std::unordered_map<std::uint64_t, channel> channels;
 
+   // Apps that do not register for any product channels (the seconds
+   // item in the menu) will receive msgs from any channel. This is
+   // the channel that will store the web socket channels for this
+   // case.
+   channel product_channel;
+
    redis::facade db;
 
    menu_elems_array_type menu;

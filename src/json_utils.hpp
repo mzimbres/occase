@@ -51,6 +51,12 @@ using channel_code_type = std::vector<int>;
 using menu_channel_elem_type = std::vector<channel_code_type>;
 using menu_code_type = std::array<menu_channel_elem_type, menu_size>;
 
+inline
+auto has_empty_products(menu_code_type const& e)
+{
+   return std::empty(e.back());
+}
+
 struct post {
    int id;
    std::string from;
@@ -60,13 +66,11 @@ struct post {
    long int date = 0;
    std::vector<std::uint64_t> ex_details;
    std::vector<std::uint64_t> in_details;
-
-   friend
-   auto operator<(post const& a, post const& b) noexcept
-   {
-      return a.id < b.id;
-   }
 };
+
+inline
+auto operator<(post const& a, post const& b) noexcept
+   { return a.id < b.id; }
 
 inline
 void to_json(json& j, post const& e)

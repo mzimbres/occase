@@ -181,7 +181,7 @@ void worker::on_db_channel_msg(std::string const& msg)
    if (j.contains("cmd")) {
       auto const post_id = j.at("id").get<int>();
       auto const from = j.at("from").get<std::string>();
-      auto const r = g->second.remove_post(id, from);
+      auto const r = g->second.remove_post(post_id, from);
       auto const* str = "W{0}: Failed to remove post {1}.";
       if (r)
          str = "W{0}: Post {1} successfully removed.";

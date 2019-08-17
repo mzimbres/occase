@@ -499,9 +499,9 @@ worker::on_app_register( json const& j
    return ev_res::register_ok;
 }
 
-ev_res
-worker::on_app_subscribe( json const& j
-                        , std::shared_ptr<worker_session> s)
+ev_res worker::on_app_subscribe(
+   json const& j,
+   std::shared_ptr<worker_session> s)
 {
    auto const menu_channels = j.at("channels").get<menu_code_type>();
    auto const filter = j.at("filter").get<std::uint64_t>();

@@ -79,7 +79,7 @@ private:
    net::io_context& ioc_;
 
    // This worker id.
-   int const id;
+   int const worker_id;
 
    worker_only_cfg const cfg;
 
@@ -173,10 +173,10 @@ public:
       { return ws_ss_stats_; }
    void shutdown();
    auto get_id() const noexcept
-      { return id;}
+      { return worker_id;}
    worker_stats get_stats() const noexcept;
    auto& get_ioc() const noexcept
-   { return ioc_; }
+      { return ioc_; }
 };
 
 struct worker_arena {

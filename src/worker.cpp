@@ -47,7 +47,7 @@ void add(worker_stats& a, worker_stats const& b) noexcept
 //__________________________________________________________________________
 worker::worker(worker_cfg cfg, int id_, net::io_context& ioc)
 : ioc_ {ioc}
-, id {id_}
+, worker_id {id_}
 , cfg {cfg.worker}
 , ch_cfg {cfg.channel}
 , ws_ss_timeouts_ {cfg.timeouts}
@@ -127,10 +127,10 @@ void worker::create_channels(menu_elems_array_type const& me)
                 , f);
 
    if (created != 0)
-      log(loglevel::info, "W{0}: {1} channels created.", id, created);
+      log(loglevel::info, "W{0}: {1} channels created.", worker_id, created);
 
    if (existed != 0)
-      log(loglevel::info, "W{0}: {1} already existed.", id, existed);
+      log(loglevel::info, "W{0}: {1} already existed.", worker_id, existed);
 }
 
 void worker::on_db_posts(std::vector<std::string> const& msgs)
@@ -150,7 +150,7 @@ void worker::on_db_posts(std::vector<std::string> const& msgs)
       create_channels(menu);
 
    log( loglevel::info, "W{0}: {1} messages received from the database."
-      , id, std::size(msgs));
+      , worker_id, std::size(msgs));
 
    auto loader = [this](auto const& msg)
       { on_db_channel_msg(msg); };
@@ -174,7 +174,7 @@ void worker::on_db_channel_msg(std::string const& msg)
       // happens before we receive the menu and generate the channels.
       // That is why it is important to update the last message id
       // only after this check.
-      log(loglevel::debug, "W{0}: Channel could not be found.", id);
+      log(loglevel::debug, "W{0}: Channel could not be found.", worker_id);
       return;
    }
 
@@ -186,7 +186,7 @@ void worker::on_db_channel_msg(std::string const& msg)
       if (r)
          str = "W{0}: Post {1} successfully removed.";
 
-      log(loglevel::notice, str , id, post_id);
+      log(loglevel::notice, str , worker_id, post_id);
       return;
    }
 
@@ -237,7 +237,7 @@ worker::on_db_user_data(std::vector<std::string> const& data) noexcept
             s->shutdown();
             log( loglevel::debug
                , "W{0}/on_db_user_data: login_ack failed1 for {1}:{2}."
-               , id, s->get_id(), login_queue.front().pwd);
+               , worker_id, s->get_id(), login_queue.front().pwd);
          } else {
             auto const ss = sessions.insert({s->get_id(), s});
             if (!ss.second) {
@@ -449,7 +449,7 @@ void worker::on_db_post_id(std::string const& post_id_str)
 
       log( loglevel::debug
          , "W{0}/on_db_post_id: Sending ack to the database."
-         , id);
+         , worker_id);
 
       std::initializer_list<std::string> param = {ack_str};
 
@@ -654,7 +654,7 @@ void worker::on_session_dtor( std::string const& user_id
    if (!std::empty(msgs)) {
       log( loglevel::debug
          , "W{0}/on_session_dtor: Storing messages from {1} in db."
-         , id, user_id);
+         , worker_id, user_id);
 
       db.store_chat_msg( std::move(user_id)
                        , std::make_move_iterator(std::begin(msgs))
@@ -695,10 +695,10 @@ worker::on_app_chat_msg(json j, std::shared_ptr<worker_session> s)
 void worker::shutdown()
 {
    log( loglevel::notice, "W{0}: Shutting down has been requested."
-      , id);
+      , worker_id);
 
    log( loglevel::notice, "W{0}: {1} sessions will be closed."
-      , id, std::size(sessions));
+      , worker_id, std::size(sessions));
 
    auto f = [](auto o)
    {

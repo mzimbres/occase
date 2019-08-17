@@ -10,8 +10,10 @@ srcdir = .
 confdir = /etc/menu-chat
 systemddir = /etc/systemd/system
 
-server_name = menu-chat-server
-tool_name = menu-chat-tool
+servername = $(pkg_name)-server
+toolname = $(pkg_name)-tool
+monitorname = $(pkg_name)-monitor
+loadtoolname = $(pkg_name)-load-tool
 
 boost_inc_dir = /opt/boost_1_70_0/include
 boost_lib_dir = /opt/boost_1_70_0/lib
@@ -30,7 +32,7 @@ VPATH = $(srcdir)/src
 exes =
 exes += publish_tests
 exes += server
-exes += menu_dump
+exes += menu_tool
 exes += aedis
 exes += simulation
 
@@ -75,7 +77,7 @@ srcs += async_read_resp.hpp
 
 aux = Makefile
 
-all: release_hdr $(exes)
+all: release_hdr $(exes) load-tool
 
 .PHONY: release_hdr
 release_hdr:
@@ -95,34 +97,41 @@ publish_tests: % : %.o $(client_objs) $(common_objs)
 server: % : %.o $(server_objs) $(common_objs) $(aedis_objs) 
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_CONCURRENCY_HINT_1=BOOST_ASIO_CONCURRENCY_HINT_UNSAFE_IO
 
-menu_dump: % : %.o $(menu_dump_objs) $(common_objs)
+menu_tool: % : %.o $(menu_dump_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) -lfmt $(ext_libs)
 
 aedis: % : %.o $(aedis_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
+load-tool: load-tool.sh.in
+	sed s/toolname/$(toolname)/ < $^ > $@
+
 install: all
-	install server $(bindir)/$(binprefix)$(server_name)
-	install menu_dump $(bindir)/$(binprefix)$(tool_name)
+	install server $(bindir)/$(binprefix)$(servername)
+	install menu_tool $(bindir)/$(binprefix)$(toolname)
+	install monitor.sh $(bindir)/$(binprefix)$(monitorname)
+	install load-tool $(bindir)/$(binprefix)$(loadtoolname)
 	install -D $(srcdir)/doc/development.txt $(docdir)/development.txt
 	install -D $(srcdir)/doc/intro.txt $(docdir)/intro.txt
 	install -D $(srcdir)/doc/posts.txt $(docdir)/posts.txt
-	install -D $(srcdir)/menu-chat-server.conf $(confdir)/$(server_name).conf
-	install -D $(srcdir)/menu-chat-server.service $(systemddir)/$(server_name).service
+	install -D $(srcdir)/menu-chat-server.conf $(confdir)/$(servername).conf
+	install -D $(srcdir)/menu-chat-server.service $(systemddir)/$(servername).service
 
 uninstall: all
-	rm -f $(bindir)/$(binprefix)menu-chat-server
-	rm -f $(bindir)/$(binprefix)menu-chat-tool
+	rm -f $(bindir)/$(binprefix)$(servername)
+	rm -f $(bindir)/$(binprefix)$(toolname)
+	rm -f $(bindir)/$(binprefix)$(monitorname)
+	rm -f $(bindir)/$(binprefix)$(loadtoolname)
 	rm -f $(docdir)/development.txt
 	rm -f $(docdir)/intro.txt
 	rm -f $(docdir)/posts.txt
-	rm -f $(confdir)/$(server_name).conf
-	rm -f $(systemddir)/$(server_name).service
+	rm -f $(confdir)/$(servername).conf
+	rm -f $(systemddir)/$(servername).service
 	rmdir $(docdir)
 
 .PHONY: clean
 clean:
-	rm -f $(exes) $(exe_objs) $(lib_objs) $(pkg_name).tar.gz Makefile.dep release.cpp release.hpp
+	rm -f $(exes) $(exe_objs) $(lib_objs) $(pkg_name).tar.gz Makefile.dep release.cpp release.hpp load-tool
 
 $(pkg_name).tar.gz: $(srcs) $(aux)
 	git archive --format=tar.gz --prefix=$(pkg_name)/ HEAD > $(pkg_name).tar.gz

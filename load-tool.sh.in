@@ -1,0 +1,16 @@
+#!/bin/bash
+
+if [ $# -ne 1 ]; then
+   echo "Usage: $0 path-to-menu-dir"
+   exit 1
+fi
+
+depth=3
+version=3
+#dir=/usr/local/share/menus
+dir=$1
+menu1=${dir}/locations.txt:${depth}:${version}
+menu2=${dir}/products.txt:${depth}:${version}
+
+toolname -o 4 $menu1 $menu2 | redis-cli -x set menu
+

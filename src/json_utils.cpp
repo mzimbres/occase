@@ -30,7 +30,7 @@ void to_json(json& j, post const& e)
            , {"date", e.date}
            , {"ex_details", e.ex_details}
            , {"in_details", e.in_details}
-           , {"range_values", e.in_details}
+           , {"range_values", e.range_values}
            };
 }
 

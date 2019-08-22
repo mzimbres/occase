@@ -21,11 +21,17 @@ boost_lib_dir = /opt/boost_1_70_0/lib
 ext_libs =
 ext_libs += $(boost_lib_dir)/libboost_program_options.a
 
-LDFLAGS  = -lpthread -lfmt
-CPPFLAGS = -I. -I$(srcdir)/src -I$(boost_inc_dir) \
-	   -std=c++17 -Wall -O2 \
-           -Werror=format-security \
-	   -Werror=implicit-function-declaration
+LDFLAGS = -lpthread
+LDFLAGS += -lfmt
+#LDFLAGS += $(pkg-config --libs libsodium)
+LDFLAGS += -lsodium
+
+CPPFLAGS = -std=c++17
+CPPFLAGS += -I. -I$(srcdir)/src -I$(boost_inc_dir)
+CPPFLAGS += -Wall -Werror=format-security \
+	    -Werror=implicit-function-declaration
+CPPFLAGS += $(pkg-config --cflags libsodium)
+CPPFLAGS += -O2
 
 VPATH = $(srcdir)/src
 
@@ -35,6 +41,7 @@ exes += server
 exes += menu_tool
 exes += aedis
 exes += simulation
+exes += key_gen
 
 common_objs += menu.o
 common_objs += utils.o
@@ -106,6 +113,9 @@ aedis: % : %.o $(aedis_objs) $(common_objs)
 
 load-tool: load-tool.sh.in
 	sed s/toolname/$(toolname)/ < $^ > $@
+
+key_gen: % : %.o
+	$(CXX) -o $@ $^ $(CPPFLAGS) -lsodium
 
 install: all
 	install server $(bindir)/$(binprefix)$(servername)

@@ -541,6 +541,8 @@ ev_res worker::on_app_subscribe(
          }
 
          g->second.add_member(psession, ch_cfg.cleanup_rate);
+         g->second.retrieve_pub_items(app_last_post_id,
+            std::back_inserter(items));
       };
 
       auto const d = std::min( ssize(menu_channels.at(1))

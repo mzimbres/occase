@@ -7,7 +7,7 @@ namespace rt
 {
 
 void init_libsodium();
-std::string hash(std::string const& input);
+std::string make_hex_digest(std::string const& input);
 
 class pwd_gen {
 private:

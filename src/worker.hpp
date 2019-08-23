@@ -127,11 +127,6 @@ private:
    // Generateds passwords that are sent to the app.
    pwd_gen pwdgen;
 
-   // Before we store the password in the database we hash it.
-   // TODO: Implement a platform independent has function or use from
-   // a package. Use salt.
-   std::hash<std::string> const hash_func {};
-
    void init();
    void create_channels(menu_elems_array_type const& menu);
 

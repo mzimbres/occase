@@ -219,9 +219,8 @@ void worker::on_db_user_id(std::string const& id)
       reg_queue.front().pwd = pwdgen(cfg.pwd_size);
 
       // We store a hashed version of the password in the database.
-      auto const hashed_pwd = hash_func(reg_queue.front().pwd);
-      auto const hashed_pwd_str = std::to_string(hashed_pwd);
-      db.register_user(id, hashed_pwd_str);
+      auto const digest = make_hex_digest(reg_queue.front().pwd);
+      db.register_user(id, digest);
       session->set_id(id);
    } else {
       // The user is not online anymore. The requested id is lost.
@@ -238,10 +237,8 @@ worker::on_db_user_data(std::vector<std::string> const& data) noexcept
       assert(!std::empty(login_queue));
 
       if (auto s = login_queue.front().session.lock()) {
-         // In the db we store only hashed pwds.
-         auto const hashed_pwd = hash_func(login_queue.front().pwd);
-         auto const hashed_pwd_str = std::to_string(hashed_pwd);
-         if (data.back() != hashed_pwd_str) {
+         auto const digest = make_hex_digest(login_queue.front().pwd);
+         if (data.back() != digest) {
             // Incorrect pwd.
             json resp;
             resp["cmd"] = "login_ack";

@@ -60,7 +60,7 @@ std::string pwd_gen::operator()(int pwd_size)
    return pwd;
 }
 
-std::string hash(std::string const& input)
+std::string make_hex_digest(std::string const& input)
 {
   auto const* p1 = reinterpret_cast<unsigned char const*>(input.data());
 

@@ -10,6 +10,7 @@
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
 
+#include "crypto.hpp"
 #include "logger.hpp"
 #include "system.hpp"
 #include "listener.hpp"
@@ -265,6 +266,7 @@ int main(int argc, char* argv[])
       if (cfg.daemonize)
          daemonize();
 
+      init_libsodium();
       logger logg {argv[0], cfg.log_on_stderr};
       log_upto(cfg.loglevel);
       pidfile_mgr pidfile_mgr_ {cfg.pidfile};

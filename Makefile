@@ -23,7 +23,6 @@ ext_libs += $(boost_lib_dir)/libboost_program_options.a
 
 LDFLAGS = -lpthread
 LDFLAGS += -lfmt
-#LDFLAGS += $(pkg-config --libs libsodium)
 LDFLAGS += -lsodium
 
 CPPFLAGS = -std=c++17
@@ -41,10 +40,9 @@ exes += server
 exes += menu_tool
 exes += aedis
 exes += simulation
-exes += key_gen
 
 common_objs += menu.o
-common_objs += utils.o
+common_objs += system.o
 common_objs += logger.o
 common_objs += json_utils.o
 
@@ -55,6 +53,7 @@ server_objs += listener.o
 server_objs += redis.o
 server_objs += stats_server.o
 server_objs += release.o
+server_objs += crypto.o
 
 client_objs =
 client_objs += test_clients.o
@@ -113,9 +112,6 @@ aedis: % : %.o $(aedis_objs) $(common_objs)
 
 load-tool: load-tool.sh.in
 	sed s/toolname/$(toolname)/ < $^ > $@
-
-key_gen: % : %.o
-	$(CXX) -o $@ $^ $(CPPFLAGS) -lsodium
 
 install: all
 	install server $(bindir)/$(binprefix)$(servername)

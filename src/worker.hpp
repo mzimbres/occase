@@ -15,6 +15,7 @@
 #include "menu.hpp"
 #include "utils.hpp"
 #include "redis.hpp"
+#include "crypto.hpp"
 #include "config.hpp"
 #include "channel.hpp"
 #include "json_utils.hpp"

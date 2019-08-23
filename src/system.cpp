@@ -1,4 +1,4 @@
-#include "utils.hpp"
+#include "system.hpp"
 
 #include <fstream>
 #include <cassert>
@@ -14,11 +14,6 @@
 #include <string.h>
 
 #include "logger.hpp"
-
-namespace {
-char const pwdchars[] =
-   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!%&/?#";
-}
 
 namespace rt
 {
@@ -94,25 +89,6 @@ void daemonize()
          close(fd);
    }
 }
-
-//_____________________________________________________________
-
-pwd_gen::pwd_gen()
-: gen {std::random_device{}()}
-, dist {0, sizeof pwdchars - 2}
-{}
-
-std::string pwd_gen::operator()(int pwd_size)
-{
-   std::string pwd;
-   for (auto i = 0; i < pwd_size; ++i) {
-      pwd.push_back(pwdchars[dist(gen)]);
-   }
-
-   return pwd;
-}
-
-//_____________________________________________________________
 
 void drop_root_priviledges()
 {

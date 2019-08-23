@@ -11,6 +11,7 @@
 #include <boost/program_options/variables_map.hpp>
 
 #include "logger.hpp"
+#include "system.hpp"
 #include "listener.hpp"
 
 #include <release.hpp>

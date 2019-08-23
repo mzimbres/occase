@@ -1,3 +1,5 @@
+#include "crypto.hpp"
+
 #include <sodium.h>
 
 #include <array>
@@ -5,11 +7,16 @@
 #include <iostream>
 #include <sstream>
 
+#include "utils.hpp"
+
+namespace {
+constexpr char hextable[] = "0123456789abcdef";
+constexpr char pwdchars[] =
+   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
 //constexpr auto hash_size = crypto_generichash_BYTES;
 constexpr auto hash_size = crypto_generichash_BYTES_MIN;
 using hash_type = std::array<unsigned char, hash_size>;
-
-constexpr char hextable[] = "0123456789abcdef";
 
 char low_to_char(unsigned char a)
 {
@@ -25,15 +32,35 @@ std::string hash_to_string(hash_type const& hash)
 {
   std::string output;
   output.reserve(2 * std::size(hash));
-  for (auto i = 0; i < std::size(hash); ++i) {
-    output.push_back(high_to_char(hash[2 * i]));
-    output.push_back(low_to_char(hash[2 * i]));
+  for (auto i = 0; i < rt::ssize(hash); ++i) {
+    output.push_back(high_to_char(hash[i]));
+    output.push_back(low_to_char(hash[i]));
   }
 
   return output;
 }
 
-std::string hash(std::string const input)
+}
+
+namespace rt
+{
+
+pwd_gen::pwd_gen()
+: gen {std::random_device{}()}
+, dist {0, sizeof pwdchars - 2}
+{}
+
+std::string pwd_gen::operator()(int pwd_size)
+{
+   std::string pwd;
+   for (auto i = 0; i < pwd_size; ++i) {
+      pwd.push_back(pwdchars[dist(gen)]);
+   }
+
+   return pwd;
+}
+
+std::string hash(std::string const& input)
 {
   auto const* p1 = reinterpret_cast<unsigned char const*>(input.data());
 
@@ -44,16 +71,11 @@ std::string hash(std::string const input)
   return hash_to_string(hash);
 }
 
-int main(int argc, char* argv[])
+void init_libsodium()
 {
-   if (argc != 2) {
-     std::cerr << "Usage: " << argv[0] << " string" << std::endl;
-     return 1;
-   }
-
    if (sodium_init() == -1)
-      return 1;
+      throw std::runtime_error("Error: Cannot initialize libsodium.");
+}
 
-   std::cout << "Hash: " << hash(argv[1]) << std::endl;
 }
 

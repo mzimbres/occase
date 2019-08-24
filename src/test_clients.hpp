@@ -13,6 +13,7 @@
 #include "config.hpp"
 #include "json_utils.hpp"
 #include "client_session.hpp"
+#include "session_launcher.hpp"
 
 // Contains the implementation of many test clients.
 
@@ -339,8 +340,8 @@ public:
    auto const& get_login() const noexcept {return op.user;}
 };
 
-// Register n users in the server and return the credentials.
-std::vector<login> test_reg(session_shell_cfg const& cfg, int n);
+std::vector<login>
+test_reg(session_shell_cfg const& cfg, launcher_cfg const& lcfg);
 
 }
 

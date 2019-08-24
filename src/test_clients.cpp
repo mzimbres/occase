@@ -798,15 +798,13 @@ void early_close::send_post(std::shared_ptr<client_type> s) const
 
 //________________________________
 
-std::vector<login> test_reg(session_shell_cfg const& cfg, int n)
+std::vector<login>
+test_reg(session_shell_cfg const& cfg, launcher_cfg const& lcfg)
 {
    boost::asio::io_context ioc;
 
    using client_type = register1;
    using config_type = client_type::options_type;
-
-   std::vector<login> logins {static_cast<std::size_t>(n)};
-   launcher_cfg lcfg {logins, std::chrono::milliseconds {100}, ""};
 
    auto launcher =
       std::make_shared< session_launcher<client_type>
@@ -823,7 +821,7 @@ std::vector<login> test_reg(session_shell_cfg const& cfg, int n)
    auto f = [](auto session)
       { return session->get_mgr().get_login(); };
 
-   logins.clear();
+   std::vector<login> logins;
    std::transform( std::cbegin(sessions), std::cend(sessions)
                  , std::back_inserter(logins), f);
 

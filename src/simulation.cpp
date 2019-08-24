@@ -112,7 +112,7 @@ int main(int argc, char* argv[])
 
          ("auth-timeout,l"
          , po::value<int>(&op.auth_timeout)->default_value(3)
-         , "Time after before which the server should giveup witing for auth cmd.")
+         , "Time before which the server should giveup witing for auth cmd.")
       ;
 
       po::variables_map vm;        
@@ -126,7 +126,13 @@ int main(int argc, char* argv[])
 
       set_fd_limits(500000);
 
-      auto logins = test_reg(op.make_session_cfg(), op.listen_users);
+      launcher_cfg lcfg
+      { std::vector<login>{static_cast<std::size_t>(op.listen_users)}
+      , std::chrono::milliseconds {op.launch_interval}
+      , {}
+      };
+
+      auto logins = test_reg(op.make_session_cfg(), lcfg);
       launch_sessions(op, std::move(logins));
 
       return 0;

@@ -64,19 +64,10 @@ struct options {
       };
    }
 
-   auto make_handshake_laucher_op() const
+   auto make_launcher_empty_cfg(int n_logins) const
    {
       return launcher_cfg
-      { std::vector<login>{300}
-      , std::chrono::milliseconds {launch_interval}
-      , {}
-      };
-   }
-
-   auto make_no_login_cfg() const
-   {
-      return launcher_cfg
-      { std::vector<login>{300}
+      { std::vector<login>{static_cast<std::size_t>(n_logins)}
       , std::chrono::milliseconds {launch_interval}
       , {}
       };
@@ -106,7 +97,10 @@ void test_online(options const& op)
 {
    boost::asio::io_context ioc;
 
-   auto pub_logins = test_reg(op.make_session_cf(), op.n_publishers);
+   auto pub_logins =
+      test_reg( op.make_session_cf()
+              , op.make_launcher_empty_cfg(op.n_publishers));
+
    auto const next = [&pub_logins, &ioc, &op]()
    {
       using client_type = publisher;
@@ -125,7 +119,10 @@ void test_online(options const& op)
    using client_type = replier;
    using config_type = client_type::options_type;
 
-   auto const sub_logins = test_reg(op.make_session_cf(), op.n_repliers);
+   auto const sub_logins =
+      test_reg( op.make_session_cf()
+              , op.make_launcher_empty_cfg(op.n_repliers));
+
    auto const s = std::make_shared< session_launcher<client_type>
                    >( ioc
                     , config_type {{}, op.n_publishers}
@@ -151,7 +148,9 @@ void test_offline(options const& op)
    using config_type1 = client_type1::options_type;
    using session_type1 = session_shell<client_type1>;
 
-   auto const l1 = test_reg(op.make_session_cf(), 1);
+   auto const l1 =
+      test_reg(op.make_session_cf(), op.make_launcher_empty_cfg(1));
+
    auto s1 = 
       std::make_shared<session_type1>( ioc
                                      , op.make_session_cf()
@@ -166,7 +165,8 @@ void test_offline(options const& op)
    using config_type2 = client_type2::options_type;
    using session_type2 = session_shell<replier>;
 
-   auto const l2 = test_reg(op.make_session_cf(), 1);
+   auto const l2 = test_reg( op.make_session_cf()
+                           , op.make_launcher_empty_cfg(1));
    std::make_shared<session_type2>( ioc
                                   , op.make_session_cf()
                                   , config_type2 {l2.front(), 1}
@@ -207,7 +207,7 @@ void read_only_tests(options const& op)
                    >( ioc
                     , config_type1 {}
                     , op.make_session_cf()
-                    , op.make_handshake_laucher_op()
+                    , op.make_launcher_empty_cfg(300)
                     )->run({});
 
    using client_type2 = no_login;
@@ -217,7 +217,7 @@ void read_only_tests(options const& op)
                    >( ioc
                     , config_type2 {}
                     , op.make_session_cf()
-                    , op.make_no_login_cfg()
+                    , op.make_launcher_empty_cfg(300)
                     )->run({});
 
    ioc.run();
@@ -239,7 +239,9 @@ void test_login_error(options const& op)
       // First test: Here we request a user_id from the server and
       // sets a wrong password to see whether the server refuses to
       // login the user.
-      auto l1 = test_reg(op.make_session_cf(), op.n_publishers);
+      auto l1 = test_reg( op.make_session_cf()
+                        , op.make_launcher_empty_cfg(op.n_publishers));
+
       l1.front().pwd = "Kabuf";
 
       boost::asio::io_context ioc;
@@ -271,7 +273,8 @@ void test_early_close(options const& op)
 {
    boost::asio::io_context ioc {1};
 
-   auto const l1 = test_reg(op.make_session_cf(), 1);
+   auto const l1 = test_reg( op.make_session_cf()
+                           , op.make_launcher_empty_cfg(1));
 
    {
       using client_type = early_close;

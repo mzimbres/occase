@@ -178,14 +178,15 @@ private:
    options_type op;
 
    bool server_echo = false;
-   int post_id = -1;
    int user_msg_counter;
 
-   std::stack<menu_code_type> pub_stack;
+   std::stack<std::pair<int, menu_code_type>> pub_stack;
 
    int send_post(std::shared_ptr<client_type> s) const;
 
    int handle_msg(std::shared_ptr<client_type> s);
+
+   int send_delete(std::shared_ptr<client_type> s);
 
 public:
    publisher(options_type op_)

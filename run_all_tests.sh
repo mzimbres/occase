@@ -25,7 +25,7 @@ sleep 3
 
 # It looks like this test is influenced by to first test and be run
 # separately.
-#./publish_tests --test 2 --handshake-timeout 3
+./publish_tests --test 2 --handshake-timeout 3
 ./publish_tests --test 4
 ./publish_tests --test 5
 

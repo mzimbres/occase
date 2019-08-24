@@ -426,7 +426,7 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
       assert(!std::empty(pub_codes));
 
       auto pusher = [this](auto const& o)
-         { pub_stack.push(o); };
+         { pub_stack.push({-1, o}); };
 
       std::for_each(std::begin(pub_codes), std::end(pub_codes), pusher);
 
@@ -452,7 +452,7 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
       if (res != "ok")
          throw std::runtime_error("publisher::publish_ack");
 
-      post_id = j.at("id").get<int>();
+      pub_stack.top().first = j.at("id").get<int>();
       //std::cout << op.user << " publish_ack " << post_id << std::endl;
       return handle_msg(s);
    }
@@ -480,7 +480,7 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
       // Since we send only one publish at time items should contain
       // only one item now.
 
-      if (post_id != items.front().id)
+      if (pub_stack.top().first != items.front().id)
          throw std::runtime_error("publisher::publish2");
 
       //std::cout << op.user << " publish echo " << post_id << std::endl;
@@ -501,8 +501,8 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
             throw std::runtime_error("publisher::on_read5");
 
          auto const post_id2 = j.at("post_id").get<int>();
-         if (post_id != post_id2) {
-            std::cout << op.user << " " << post_id << " != " << post_id2
+         if (pub_stack.top().first != post_id2) {
+            std::cout << op.user << " " << pub_stack.top().first << " != " << post_id2
                       << " " << msg << std::endl;
             throw std::runtime_error("publisher::on_read6");
          }
@@ -514,14 +514,7 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
       }
    }
 
-   std::cout << "Error: publisher ===> " << cmd << std::endl;
-   throw std::runtime_error("publisher::on_read4");
-   return -1;
-}
-
-int publisher::handle_msg(std::shared_ptr<client_type> s)
-{
-   if (server_echo && post_id != -1 && user_msg_counter == 0) {
+   if (cmd == "delete_ack") {
       pub_stack.pop();
       if (std::empty(pub_stack)) {
          std::cout << "User " << op.user << " ok. (Publisher)."
@@ -530,11 +523,26 @@ int publisher::handle_msg(std::shared_ptr<client_type> s)
       }
 
       server_echo = false;
-      post_id = -1;
       user_msg_counter = op.n_repliers;
       //std::cout << "=====> " << op.user << " " << post_id
       //          << " " << user_msg_counter <<  std::endl;
       return send_post(s);
+   }
+
+   std::cout << "Error: publisher ===> " << cmd << std::endl;
+   throw std::runtime_error("publisher::on_read4");
+   return -1;
+}
+
+int publisher::handle_msg(std::shared_ptr<client_type> s)
+{
+   if (server_echo && pub_stack.top().first != -1 && user_msg_counter == 0) {
+      // We are done with this post and can delete it from the server.
+      json j_sub;
+      j_sub["cmd"] = "delete";
+      j_sub["id"] = pub_stack.top().first;
+      j_sub["to"] = pub_stack.top().second;
+      s->send_msg(j_sub.dump());
    }
 
    return 1;
@@ -555,7 +563,7 @@ int publisher::on_closed(boost::system::error_code ec)
 
 int publisher::send_post(std::shared_ptr<client_type> s) const
 {
-   auto const str = make_post_cmd(pub_stack.top());
+   auto const str = make_post_cmd(pub_stack.top().second);
    s->send_msg(str);
    return 1;
 }

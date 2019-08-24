@@ -119,7 +119,7 @@ public:
    // database and sent to the user next time he reconnects.
    void send(std::string msg, bool persist);
    void send_post( std::shared_ptr<std::string> msg
-                 , std::uint32_t hash_code
+                 , std::uint64_t hash_code
                  , std::uint64_t filter);
    void shutdown();
 
@@ -127,7 +127,7 @@ public:
       { user_id = std::move(id); };
    void set_filter(std::uint64_t filter)
       { menu_filter = filter; }
-   void set_filter(menu_channel_elem_type const& o, int depth);
+   void set_filter(std::vector<std::uint64_t> const& codes);
    auto const& get_id() const noexcept
       { return user_id;}
    auto is_logged_in() const noexcept

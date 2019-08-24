@@ -38,10 +38,7 @@ void from_json(json const& j, menu_elem& e);
 using channel_code_type = std::vector<int>;
 using menu_channel_elem_type = std::vector<channel_code_type>;
 using menu_code_type = std::array<menu_channel_elem_type, menu_size>;
-
-inline
-auto has_empty_products(menu_code_type const& e)
-   { return std::empty(e.back()); }
+using menu_code_type2 = std::array<std::vector<std::uint64_t>, menu_size>;
 
 struct post {
    int id;

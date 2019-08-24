@@ -68,6 +68,16 @@ auto create_channels(menu_elems_array_type const& menus)
    return menu_code_type {c0, c1};
 }
 
+auto create_channels2(menu_elems_array_type const& menus)
+{
+   auto const max = std::numeric_limits<int>::max();
+   auto const c0 = menu_elems_to_codes(menus.at(0));
+   auto const c1 = menu_elems_to_codes(menus.at(1));
+   auto const r0 = menu_to_channel_codes(c0, menus.at(0).depth, max);
+   auto const r1 = menu_to_channel_codes(c1, menus.at(1).depth, max);
+   return menu_code_type2 {r0, r1};
+}
+
 /* This function receives input in the form
  *
  *   _________menu_1__________     __________menu_2________   etc.
@@ -169,7 +179,7 @@ int replier::on_read( std::string msg
       json j_sub;
       j_sub["cmd"] = "subscribe";
       j_sub["last_post_id"] = 0;
-      j_sub["channels"] = menu_codes;
+      j_sub["channels"] = create_channels2(menus);
       j_sub["filter"] = 0;
       s->send_msg(j_sub.dump());
       return 1;
@@ -290,12 +300,11 @@ int simulator::on_read( std::string msg
          throw std::runtime_error("simulator::login_ack");
 
       menus = j.at("menus").get<menu_elems_array_type>();
-      auto const menu_codes = create_channels(menus);
 
       json j_sub;
       j_sub["cmd"] = "subscribe";
       j_sub["last_post_id"] = 0;
-      j_sub["channels"] = menu_codes;
+      j_sub["channels"] = create_channels2(menus);
       j_sub["filter"] = 0;
       s->send_msg(j_sub.dump());
       return 1;
@@ -433,7 +442,7 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
       json j_sub;
       j_sub["cmd"] = "subscribe";
       j_sub["last_post_id"] = 0;
-      j_sub["channels"] = menu_codes;
+      j_sub["channels"] = create_channels2(menus);
       j_sub["filter"] = 0;
       s->send_msg(j_sub.dump());
       return 1;

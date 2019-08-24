@@ -381,5 +381,12 @@ menu_channel_elem_type menu_elems_to_codes(menu_elem const& elem);
 std::vector<int>
 read_versions(menu_elems_array_type const& elems);
 
+// Converts a vector of menu codes into a vector of channel hash codes
+// sorts the vector and returns it.
+std::vector<std::uint64_t>
+menu_to_channel_codes( menu_channel_elem_type const& o
+                     , int depth
+                     , int max);
+
 }
 

@@ -513,19 +513,38 @@ ev_res worker::on_app_subscribe(
    json const& j,
    std::shared_ptr<worker_session> s)
 {
-   auto const menu_channels = j.at("channels").get<menu_code_type>();
+   auto const codes = j.at("channels").get<menu_code_type2>();
+
+   // TODO: Use the limits on the size of these arrays to avoid
+   // traversing them whole.
+   auto const b0 =
+      std::is_sorted( std::cbegin(codes.at(0))
+                    , std::cend(codes.at(0)));
+
+   auto const b1 =
+      std::is_sorted( std::cbegin(codes.at(1))
+                    , std::cend(codes.at(1)));
+
+   if (!b0 || !b1) {
+      json resp;
+      resp["cmd"] = "subscribe_ack";
+      resp["result"] = "fail";
+      s->send(resp.dump(), false);
+   }
+
    auto const filter = j.at("filter").get<std::uint64_t>();
    auto const app_last_post_id = j.at("last_post_id").get<int>();
 
    s->set_filter(filter);
-   s->set_filter(menu_channels.at(0), menu.front().depth);
+   s->set_filter(codes.at(0));
+
    auto psession = s->get_proxy_session(true);
 
    std::vector<post> items;
 
    // If the second channels are empty, the app wants posts from all
    // channels, otherwise we have to traverse the individual channels.
-   if (has_empty_products(menu_channels)) {
+   if (std::empty(codes.back())) {
       product_channel.add_member(psession, ch_cfg.cleanup_rate);
       product_channel.retrieve_pub_items(app_last_post_id,
          std::back_inserter(items));
@@ -533,8 +552,7 @@ ev_res worker::on_app_subscribe(
       auto invalid_count = 0;
       auto f = [&, this](auto const& code)
       {
-         auto const hash_code = to_hash_code(code, menu.at(1).depth);
-         auto const g = channels.find(hash_code);
+         auto const g = channels.find(code);
          if (g == std::end(channels)) {
             ++invalid_count;
             return;
@@ -545,11 +563,11 @@ ev_res worker::on_app_subscribe(
             std::back_inserter(items));
       };
 
-      auto const d = std::min( ssize(menu_channels.at(1))
+      auto const d = std::min( ssize(codes.at(1))
                              , ch_cfg.max_sub);
 
-      std::for_each( std::cbegin(menu_channels.at(1))
-                   , std::cbegin(menu_channels.at(1)) + d
+      std::for_each( std::cbegin(codes.at(1))
+                   , std::cbegin(codes.at(1)) + d
                    , f);
 
       if (invalid_count != 0) {

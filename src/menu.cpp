@@ -352,5 +352,25 @@ read_versions(menu_elems_array_type const& elems)
    return vs;
 }
 
+std::vector<std::uint64_t>
+menu_to_channel_codes( menu_channel_elem_type const& o
+                     , int depth
+                     , int max)
+{
+   auto const max_channels = std::min(ssize(o), max);
+
+   auto f = [depth](auto const& e)
+      { return to_hash_code(e, depth); };
+
+   std::vector<std::uint64_t> ret;
+   std::transform( std::cbegin(o)
+                 , std::cbegin(o) + max_channels
+                 , std::back_inserter(ret)
+                 , f);
+
+   std::sort(std::begin(ret), std::end(ret));
+   return ret;
+}
+
 }
 

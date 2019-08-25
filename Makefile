@@ -40,11 +40,13 @@ exes += server
 exes += menu_tool
 exes += aedis
 exes += simulation
+exes += imgserver
 
 common_objs += menu.o
 common_objs += system.o
 common_objs += logger.o
 common_objs += json_utils.o
+common_objs += crypto.o
 
 server_objs =
 server_objs += worker.o
@@ -53,7 +55,6 @@ server_objs += listener.o
 server_objs += redis.o
 server_objs += stats_server.o
 server_objs += release.o
-server_objs += crypto.o
 
 client_objs =
 client_objs += test_clients.o
@@ -102,6 +103,9 @@ publish_tests: % : %.o $(client_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
 server: % : %.o $(server_objs) $(common_objs) $(aedis_objs) 
+	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_CONCURRENCY_HINT_1=BOOST_ASIO_CONCURRENCY_HINT_UNSAFE_IO
+
+imgserver: % : %.o $(common_objs) $(aedis_objs) 
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_CONCURRENCY_HINT_1=BOOST_ASIO_CONCURRENCY_HINT_UNSAFE_IO
 
 menu_tool: % : %.o $(menu_dump_objs) $(common_objs)

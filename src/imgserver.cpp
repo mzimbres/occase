@@ -32,13 +32,18 @@ public:
 private:
     tcp::socket socket_;
     beast::flat_buffer buffer_{8192};
-    http::request<http::dynamic_body> request_;
+    http::request<http::file_body> request_;
     http::response<http::dynamic_body> response_;
     net::basic_waitable_timer<std::chrono::steady_clock> deadline_{
         socket_.get_executor(), std::chrono::seconds(60)};
 
    void read_request()
    {
+      beast::error_code ec;
+      request_.body().open("/tmp/img.jpg", beast::file_mode::write, ec);
+      if (ec)
+         std::cout << ec.message() << std::endl;
+
       auto self = shared_from_this();
 
       auto f = [self](auto ec, auto bytes_transferred)
@@ -60,10 +65,12 @@ private:
 
       switch (request_.method()) {
       case http::verb::post:
+      {
          std::cout << "====> I have received a post." << std::endl;
          response_.result(http::status::ok);
          response_.set(http::field::server, "Beast");
          create_response();
+      }
       break;
 
       default:

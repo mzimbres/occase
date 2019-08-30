@@ -293,7 +293,7 @@ void test_early_close(options const& op)
    // websocket session in the server dies and the messages that could
    // not be sent back to the client are sent to the db. Only after
    // that we want to log in and retrieve the messages.
-   std::this_thread::sleep_for(std::chrono::seconds {3});
+   std::this_thread::sleep_for(std::chrono::seconds {10});
 
    {
       using client_type = msg_pull;

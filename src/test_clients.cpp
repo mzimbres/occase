@@ -336,7 +336,6 @@ int simulator::on_read( std::string msg
 
       if (type == "chat" || type == "chat_redirected") {
          // Used only by the app. Not in the tests.
-         std::cout << msg << std::endl;
          auto const post_id = j.at("post_id").get<long long>();
          auto const from = j.at("from").get<std::string>();
 

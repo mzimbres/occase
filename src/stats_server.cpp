@@ -9,174 +9,18 @@
 #include "config.hpp"
 #include "logger.hpp"
 #include "worker.hpp"
+#include "http_session.hpp"
 
 namespace rt {
 
-// Traverses all workers collecting statistics.
-class http_session
-   : public std::enable_shared_from_this<http_session> {
-private:
-   tcp::socket socket_;
-   beast::flat_buffer buffer_{8192};
-   http::request<http::dynamic_body> request_;
-   http::response<http::dynamic_body> response_;
-   net::steady_timer deadline_;
-   std::vector<std::shared_ptr<worker_arena>> const& warenas_;
-   worker_stats stats {};
-
-   void read_request()
-   {
-      auto self = shared_from_this();
-      auto handler = [self](beast::error_code ec, std::size_t n)
-      {
-         boost::ignore_unused(n);
-
-         if (!ec)
-             self->process_request();
-      };
-
-      http::async_read(socket_, buffer_, request_, handler);
-   }
-
-   void collect_from(int i)
-   {
-      auto self = shared_from_this();
-      auto handler = [i, self]()
-         { self->collect_stats_handler(i); };
-
-      warenas_.at(i)->worker_.get_ioc().post(handler);
-   }
-
-   void process_request()
-   {
-      response_.version(request_.version());
-      response_.keep_alive(false);
-
-      switch(request_.method()) {
-      case http::verb::get:
-      {
-         response_.result(http::status::ok);
-         response_.set(http::field::server, "Beast");
-         // Now we need the data that is running on other io_contexts.
-         // Remember the worker is not thread safe. We have to update
-         // inside the io_context queue. 
-         collect_from(0);
-      }
-      break;
-
-      default:
-      {
-         // We return responses indicating an error if
-         // we do not recognize the request method.
-         response_.result(http::status::bad_request);
-         response_.set(http::field::content_type, "text/plain");
-         beast::ostream(response_.body())
-             << "Invalid request-method '"
-             << request_.method_string().to_string()
-             << "'";
-         write_response();
-      }
-      break;
-      }
-
-   }
-
-   void collect_stats_handler(int i)
-   {
-      add(stats, warenas_.at(i)->worker_.get_stats());
-
-      ++i;
-      if (i == ssize(warenas_)) {
-         // The stats data is not thread safe, but we do not need a
-         // mutext to synchronize access as we are not creating races.
-         // It is accessed in sequence by each thread.
-         auto self = shared_from_this();
-         auto next = [self]()
-         {
-            self->create_response();
-            self->write_response();
-         };
-            
-
-         net::post(socket_.get_executor(), next);
-      } else {
-         collect_from(i);
-      }
-   }
-
-   void create_response()
-   {
-      if (request_.target() == "/stats") {
-         response_.set(http::field::content_type, "text/csv");
-         boost::beast::ostream(response_.body())
-             << stats
-             << "\n";
-
-      } else {
-         response_.result(http::status::not_found);
-         response_.set(http::field::content_type, "text/plain");
-         beast::ostream(response_.body()) << "File not found\r\n";
-      }
-   }
-
-   void write_response()
-   {
-      auto self = shared_from_this();
-
-      response_.set(http::field::content_length, response_.body().size());
-
-      auto handler = [self](beast::error_code ec, std::size_t)
-      {
-         self->socket_.shutdown(tcp::socket::shutdown_send, ec);
-         self->deadline_.cancel();
-      };
-
-      http::async_write(socket_, response_, handler);
-   }
-
-   // Check whether we have spent enough time on this connection.
-   void check_deadline()
-   {
-       auto self = shared_from_this();
-
-       auto handler = [self](boost::beast::error_code ec)
-       {
-           if (!ec)
-              self->socket_.close(ec);
-       };
-
-       deadline_.async_wait(handler);
-   }
-
-public:
-   http_session( tcp::socket socket
-               , std::vector<std::shared_ptr<worker_arena>> const& warenas)
-   : socket_ {std::move(socket)}
-   , deadline_ { socket_.get_executor()
-               , std::chrono::seconds(60)}
-   , warenas_ {warenas}
-   { }
-
-   void start()
-   {
-       read_request();
-       check_deadline();
-   }
-};
-
-stats_server::stats_server(
-                 stats_server_cfg const& cfg
-               , std::vector<std::shared_ptr<worker_arena>> const& warenas
-               , net::io_context& ioc)
+stats_server::stats_server(stats_server_cfg const& cfg, net::io_context& ioc)
 : acceptor_ {ioc, { net::ip::tcp::v4()
                   , static_cast<unsigned short>(std::stoi(cfg.port))}}
-, socket_ {ioc}
-, warenas_ {warenas}
-{
-   run();
-}
+{ }
 
-void stats_server::on_accept(beast::error_code const& ec)
+void stats_server::on_accept( worker const& w
+                            , boost::system::error_code ec
+                            , net::ip::tcp::socket socket)
 {
    if (ec) {
       if (ec == net::error::operation_aborted) {
@@ -187,24 +31,23 @@ void stats_server::on_accept(beast::error_code const& ec)
 
       log(loglevel::debug, "stats: on_accept: {1}", ec.message());
    } else {
-      std::make_shared<http_session>( std::move(socket_)
-                                    , warenas_)->start();
+      std::make_shared<http_session>(std::move(socket), w)->start();
    }
 
-   do_accept();
+   do_accept(w);
 }
 
-void stats_server::do_accept()
+void stats_server::do_accept(worker const& w)
 {
-   auto handler = [this](beast::error_code const& ec)
-      { on_accept(ec); };
+   auto handler = [this, &w](auto const& ec, auto socket)
+      { on_accept(w, ec, std::move(socket)); };
 
-   acceptor_.async_accept(socket_, handler);
+   acceptor_.async_accept(acceptor_.get_executor(), handler);
 }
 
-void stats_server::run()
+void stats_server::run(worker const& w)
 {
-   do_accept();
+   do_accept(w);
 }
 
 void stats_server::shutdown()

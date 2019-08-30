@@ -11,24 +11,41 @@
 #include "worker_session.hpp"
 #include "stats_server.hpp"
 
+#include <sys/types.h>
+#include <sys/socket.h>
+
 namespace rt
 {
 
-listener::listener(listener_cfg const& cfg)
+listener::listener(listener_cfg const& cfg, int i)
 : signals {ioc, SIGINT, SIGTERM}
-, acceptor {ioc, {net::ip::tcp::v4(), cfg.port}}
+, acceptor {ioc}
+, worker_ {cfg.worker, i, ioc}
+, sserver {cfg.stats, ioc}
 {
+   tcp::endpoint endpoint {tcp::v4(), cfg.port};
+   acceptor.open(endpoint.protocol());
+
+   int one = 1;
+   auto const ret =
+      setsockopt( acceptor.native_handle()
+                , SOL_SOCKET
+                , SO_REUSEPORT
+                , &one, sizeof(one));
+
+   if (ret == -1) {
+      log( loglevel::err
+         , "Unable to set socket option SO_REUSEPORT: {0}"
+         , strerror(errno));
+   }
+
+   acceptor.bind(endpoint);
+   acceptor.listen();
+
    log( loglevel::info, "Binding server to {}"
       , acceptor.local_endpoint());
 
-   auto arena_gen = [&cfg, i = -1]() mutable
-      { return std::make_shared<worker_arena>(cfg.worker, ++i); };
-
-   std::generate_n( std::back_inserter(warenas)
-                  , cfg.number_of_workers
-                  , arena_gen);
-
-   sserver = std::make_unique<stats_server>(cfg.stats, warenas, ioc);
+   sserver.run(worker_);
 }
 
 void listener::on_signal(boost::system::error_code const& ec, int n)
@@ -53,7 +70,8 @@ void listener::on_signal(boost::system::error_code const& ec, int n)
       , n);
 
    acceptor.cancel();
-   sserver->shutdown();
+   sserver.shutdown();
+   worker_.shutdown();
 }
 
 void listener::run()
@@ -67,7 +85,6 @@ void listener::run()
       return;
 
    do_accept();
-
    ioc.run();
 }
 
@@ -76,8 +93,7 @@ void listener::do_accept()
    auto handler = [this](auto const& ec, auto socket)
       { on_accept(ec, std::move(socket)); };
 
-   auto const n = next % std::size(warenas);
-   acceptor.async_accept(warenas[n]->ioc_, handler);
+   acceptor.async_accept(ioc, handler);
 }
 
 void listener::on_accept( boost::system::error_code ec
@@ -91,10 +107,7 @@ void listener::on_accept( boost::system::error_code ec
 
       log(loglevel::debug, "listener::on_accept: {0}", ec.message());
    } else {
-      auto const n = next % std::size(warenas);
-      std::make_shared< worker_session
-                      >(std::move(peer), warenas[n]->worker_)->accept();
-      ++next;
+      std::make_shared<worker_session>(std::move(peer), worker_)->accept();
    }
 
    do_accept();

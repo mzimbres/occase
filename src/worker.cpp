@@ -53,7 +53,7 @@ worker::worker(worker_cfg cfg, int id_, net::io_context& ioc)
 , ws_ss_timeouts_ {cfg.timeouts}
 , db {cfg.db, ioc, id_}
 {
-   net::post(ioc_, [this]() {init();});
+   init();
 }
 
 void worker::init()
@@ -305,6 +305,7 @@ void worker::on_db_register()
 
       // It would be a bug if this id were already in the map since we
       // have just registered it.
+      // FIXME: Whey this assert has been triggered some times?
       assert(new_user.second);
 
       json resp;
@@ -773,58 +774,6 @@ worker_stats worker::get_stats() const noexcept
    wstats.db_chat_queue_size = db.get_chat_queue_size();
 
    return wstats;
-}
-
-//________________________________________________________________________
-
-worker_arena::worker_arena(worker_cfg const& cfg, int i)
-: id_ {i}
-, signals_ {ioc_, SIGINT, SIGTERM}
-, worker_ {cfg, i, ioc_}
-, thread_ { std::thread {[this](){ run();}} }
-{
-   auto handler = [this](auto const& ec, auto n)
-      { on_signal(ec, n); };
-
-   signals_.async_wait(handler);
-}
-
-worker_arena::~worker_arena()
-{
-   thread_.join();
-}
-
-void worker_arena::on_signal(boost::system::error_code const& ec, int n)
-{
-   if (ec) {
-      if (ec == net::error::operation_aborted) {
-         // No signal occurred, the handler was canceled. We just
-         // leave.
-         return;
-      }
-
-      log( loglevel::crit
-         , "W{0}/worker_arena::on_signal: Unhandled error '{1}'"
-         , id_, ec.message());
-
-      return;
-   }
-
-   log( loglevel::notice
-      , "W{0}/worker_arena::on_signal: Signal {1} has been captured."
-      , id_, n);
-
-   worker_.shutdown();
-}
-
-void worker_arena::run() noexcept
-{
-   try {
-      ioc_.run();
-   } catch (std::exception const& e) {
-      log( loglevel::notice
-         , "W{0}/worker_arena::run: {1}", id_, e.what());
-   }
 }
 
 }

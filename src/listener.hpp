@@ -48,16 +48,15 @@ private:
    net::io_context ioc {1};
    net::signal_set signals;
    net::ip::tcp::acceptor acceptor;
-   std::vector<std::shared_ptr<worker_arena>> warenas;
-   std::unique_ptr<stats_server> sserver;
-   long long next = 0;
+   worker worker_;
+   stats_server sserver;
 
    void do_accept();
    void on_accept( boost::system::error_code ec
                  , net::ip::tcp::socket peer);
 
 public:
-   listener(listener_cfg const& cg);
+   listener(listener_cfg const& cg, int i);
    void run();
    void on_signal(boost::system::error_code const& ec, int n);
 };

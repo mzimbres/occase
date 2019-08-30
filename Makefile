@@ -55,6 +55,7 @@ server_objs += listener.o
 server_objs += redis.o
 server_objs += stats_server.o
 server_objs += release.o
+server_objs += http_session.o
 
 client_objs =
 client_objs += test_clients.o
@@ -109,7 +110,7 @@ imgserver: % : %.o $(common_objs) $(aedis_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_CONCURRENCY_HINT_1=BOOST_ASIO_CONCURRENCY_HINT_UNSAFE_IO
 
 menu_tool: % : %.o $(menu_dump_objs) $(common_objs)
-	$(CXX) -o $@ $^ $(CPPFLAGS) -lfmt $(ext_libs)
+	$(CXX) -o $@ $^ $(CPPFLAGS) -lfmt $(ext_libs) $(LDFLAGS)
 
 aedis: % : %.o $(aedis_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)

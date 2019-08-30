@@ -273,7 +273,16 @@ int main(int argc, char* argv[])
 
       set_fd_limits(500000);
 
-      listener lst {cfg};
+      //auto arena_gen = [&cfg, i = -1]() mutable
+      //   { return std::make_shared<worker_arena>(cfg.worker, ++i); };
+ 
+      //std::vector<std::shared_ptr<listener>> warenas;
+
+      //std::generate_n( std::back_inserter(warenas)
+      //               , cfg.number_of_workers
+      //               , arena_gen);
+
+      listener lst {cfg, 0};
       drop_root_priviledges();
       lst.run();
 

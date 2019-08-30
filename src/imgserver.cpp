@@ -11,15 +11,16 @@
 
 #include "config.hpp"
 #include "crypto.hpp"
+#include "logger.hpp"
 
 namespace rt
 {
 
-class http_conn : public std::enable_shared_from_this<http_conn>
-{
+class http_conn : public std::enable_shared_from_this<http_conn> {
 public:
-    http_conn(tcp::socket socket)
+    http_conn(tcp::socket socket, std::string name)
     : socket_(std::move(socket))
+    , filename {name}
     { }
 
     // Initiate the asynchronous operations associated with the connection.
@@ -36,11 +37,17 @@ private:
     http::response<http::dynamic_body> response_;
     net::basic_waitable_timer<std::chrono::steady_clock> deadline_{
         socket_.get_executor(), std::chrono::seconds(60)};
+    std::string filename;
 
    void read_request()
    {
       beast::error_code ec;
-      request_.body().open("/tmp/img.jpg", beast::file_mode::write, ec);
+
+      auto const path = "/tmp/" + filename + ".jpg";
+      std::cout << filename << std::endl;
+      request_.body().open( path.data()
+                          , beast::file_mode::write
+                          , ec);
       if (ec)
          std::cout << ec.message() << std::endl;
 
@@ -139,20 +146,57 @@ private:
     }
 };
 
-void http_server(tcp::acceptor& acceptor, tcp::socket& socket)
-{
-   auto f = [&](beast::error_code ec)
+class listener {
+private:
+   net::io_context ioc {1};
+   tcp::acceptor acceptor;
+   pwd_gen pwdgen;
+
+public:
+   listener(unsigned short port)
+   : acceptor {ioc, {net::ip::tcp::v4(), port}}
+   {}
+
+   void run()
    {
-      if (!ec)
-         std::make_shared<http_conn>(std::move(socket))->start();
+      do_accept();
+      ioc.run();
+   }
 
-      http_server(acceptor, socket);
-   };
+   void do_accept()
+   {
+      auto handler = [this](auto const& ec, auto socket)
+         { on_accept(ec, std::move(socket)); };
 
-   std::cout << "====> Accepting." << std::endl;
+      acceptor.async_accept(ioc, handler);
+   }
 
-   acceptor.async_accept(socket, f);
-}
+   void on_accept( boost::system::error_code ec
+                 , net::ip::tcp::socket socket)
+   {
+      if (ec) {
+         if (ec == net::error::operation_aborted) {
+            log( loglevel::info
+               , "imgserver: Stopping accepting connections");
+            return;
+         }
+
+         log(loglevel::debug, "imgserver: on_accept: {1}", ec.message());
+      } else {
+         std::make_shared<http_conn
+                         >( std::move(socket)
+                          , pwdgen(10)
+                          )->start();
+      }
+
+      do_accept();
+   }
+
+   void shutdown()
+   {
+      acceptor.cancel();
+   }
+};
 
 }
 
@@ -172,12 +216,9 @@ int main(int argc, char* argv[])
 
       init_libsodium();
 
-      auto port = static_cast<unsigned short>(std::atoi(argv[1]));
-      net::io_context ioc{1};
-      tcp::acceptor acceptor{ioc, {net::ip::tcp::v4(), port}};
-      tcp::socket socket{ioc};
-      http_server(acceptor, socket);
-      ioc.run();
+      auto const port = static_cast<unsigned short>(std::atoi(argv[1]));
+      listener lst {port};
+      lst.run();
    } catch(std::exception const& e) {
       std::cerr << "Error: " << e.what() << std::endl;
       return EXIT_FAILURE;

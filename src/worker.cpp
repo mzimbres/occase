@@ -199,16 +199,14 @@ void worker::on_db_channel_msg(std::string const& msg)
    if (item.id > last_post_id)
       last_post_id = item.id;
 
-   g->second.broadcast(item, ch_cfg.max_posts, menu.at(0).depth);
+   g->second.broadcast(item, menu.at(0).depth);
 
    // The maximum number of posts that can be stored on the products
    // channel should be higher than on the specialied channels. I do
    // not know which number is good enough. TODO move this decision to
    // the config file.
    // NOTE: A number that is too high may compromize scalability.
-   product_channel.broadcast(
-      item,
-      cfg.max_posts_on_sub, menu.at(0).depth);
+   product_channel.broadcast(item, menu.at(0).depth);
 }
 
 void worker::on_db_user_id(std::string const& id)

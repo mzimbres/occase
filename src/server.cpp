@@ -100,12 +100,6 @@ auto get_server_op(int argc, char* argv[])
      " no publish activity is observed. Incremented on every publication"
      " on the channel.")
 
-   ( "max-msgs-per-channels"
-   , po::value<int>(&cfg.worker.channel.max_posts)->default_value(32)
-   , "Max number of messages stored per channel. Posting on a"
-     " channel that reached this number of messages will cause old"
-     " messages to be removed.")
-
    ( "max-channels-subscribe"
    , po::value<int>(&cfg.worker.channel.max_sub)->default_value(1024)
    , "The maximum number of channels the user is allowed to subscribe to."

@@ -66,9 +66,6 @@ struct channel_cfg {
    // activity is observed.
    int cleanup_rate; 
 
-   // Max number of messages stored in the each channel.
-   int max_posts; 
-
    // The maximum number of channels a user is allowed to subscribe
    // to. Remaining channels will be ignored.
    int max_sub; 
@@ -78,11 +75,7 @@ class channel {
 private:
    int insertions_on_inactivity = 0;
    std::vector<std::weak_ptr<proxy_session>> members;
-
-   // For long living servers we need a limit on how big the number of
-   // publish items can grow. For that it is more convenient to use a
-   // deque.
-   std::deque<post> items;
+   std::vector<post> items;
 
    template <class F>
    auto cleanup_traversal(F f)
@@ -114,7 +107,7 @@ private:
       return n - begin + 1;
    }
 
-   void store_item(post item, int max_posts)
+   void store_item(post item)
    {
       // We have to ensure this vector stays ordered according to
       // publish ids. Most of the time there will be no problem, but
@@ -128,14 +121,10 @@ private:
       std::rotate( std::upper_bound(std::begin(items), prev, *prev)
                  , prev
                  , std::end(items));
-
-      // Limits the container size.
-      if (ssize(items) > max_posts)
-         items.pop_front();
    }
 
 public:
-   void broadcast(post item, int max_posts, int hash_depth)
+   void broadcast(post item, int hash_depth)
    {
       json j_pub;
       j_pub["cmd"] = "post";
@@ -147,7 +136,7 @@ public:
 
       auto const filter = item.filter;
       auto msg = std::make_shared<std::string>(j_pub.dump());
-      store_item(std::move(item), max_posts);
+      store_item(std::move(item));
 
       auto f = [msg, filter, hash_code](auto session)
          { session->send_post(msg, hash_code, filter); };

@@ -1,14 +1,14 @@
 #!/bin/bash
 
-if [ $# -ne 1 ]; then
-   echo "Usage: $0 path-to-menu-dir"
+if [ $# -ne 3 ]; then
+   echo "Usage: $0 path-to-menu-dir depth version"
    exit 1
 fi
 
-depth=3
-version=3
-#dir=/usr/local/share/menus
 dir=$1
+depth=$2
+version=$3
+
 menu1=${dir}/locations.txt:${depth}:${version}
 menu2=${dir}/products.txt:${depth}:${version}
 

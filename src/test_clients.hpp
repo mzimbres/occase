@@ -112,6 +112,29 @@ public:
    auto const& get_login() const noexcept {return op.user;}
 };
 
+// Waits for the specified number of posts and leaves.
+class leave_after_n_posts {
+public:
+   struct options_type {
+      login user;
+      int n_posts;
+   };
+
+private:
+   using client_type = session_shell<leave_after_n_posts>;
+   options_type op;
+
+public:
+   leave_after_n_posts(options_type op_)
+   : op(op_) { }
+
+   int on_read(std::string msg, std::shared_ptr<client_type> s);
+   int on_closed(boost::system::error_code ec);
+   int on_handshake(std::shared_ptr<client_type> s);
+   int on_connect() const noexcept { return 1;}
+   auto const& get_login() const noexcept {return op.user;}
+};
+
 class simulator {
 public:
    struct options_type {

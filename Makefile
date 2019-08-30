@@ -117,6 +117,7 @@ aedis: % : %.o $(aedis_objs) $(common_objs)
 
 load-tool: load-tool.sh.in
 	sed s/toolname/$(toolname)/ < $^ > $@
+	chmod +x $@
 
 install: all
 	install server $(bindir)/$(binprefix)$(servername)

@@ -8,8 +8,8 @@
 # Test 1
 #########################################################
 
-redis-cli flushall > /dev/null 2>&1
-./menu_tool -o 4 menus/test1/cidades_small2:2:1 menus/test1/cidades_small2:2:1 | redis-cli -x set menu > /dev/null 2>&1
+redis-cli flushall
+./load-tool menus/test1 3 1
 ./server test.conf > /dev/null 2>&1 &
 server_pid=$!
 
@@ -17,9 +17,26 @@ server_pid=$!
 # tests.
 sleep 3
 
-# This test must come first as it requires the client to receive a
-# specific number of messages.
-./publish_tests --test 1 --publishers 300 --listeners 20  --launch-interval 10
+./publish_tests --test 1\
+                --publishers 1\
+                --listeners 1\
+                --post-listeners 100\
+                --launch-interval 10
+
+# Be aware of the fact that there is a limit on the size of user
+# pending messages, see redis-offline-chat-msgs
+./publish_tests --test 1\
+                --publishers 1\
+                --listeners 100\
+                --post-listeners 100\
+                --launch-interval 10
+
+# After the introduction of the delete command it should not be a
+# problem to run test 1 many times.
+./publish_tests --test 1\
+                --publishers 300\
+                --listeners 20\
+                --launch-interval 100
 
 ./publish_tests --test 3 --launch-interval 10
 

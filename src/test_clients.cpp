@@ -286,6 +286,65 @@ replier::ack_chat( std::string to, long long post_id
    s->send_msg(j.dump());
 }
 
+//_______________________________________
+
+int
+leave_after_n_posts::on_read( std::string msg
+                            , std::shared_ptr<client_type> s)
+{
+   auto const j = json::parse(msg);
+
+   auto const cmd = j.at("cmd").get<std::string>();
+   if (cmd == "login_ack") {
+      auto const res = j.at("result").get<std::string>();
+      if (res != "ok")
+         throw std::runtime_error("leave_after_n_posts::login_ack");
+
+      json j_sub;
+      j_sub["cmd"] = "subscribe";
+      j_sub["last_post_id"] = 0;
+      j_sub["channels"] = menu_code_type2 {};
+      j_sub["filter"] = 0;
+      s->send_msg(j_sub.dump());
+      return 1;
+   }
+
+   if (cmd == "subscribe_ack") {
+      auto const res = j.at("result").get<std::string>();
+      if (res != "ok")
+         throw std::runtime_error("leave_after_n_posts::subscribe_ack");
+
+      return 1;
+   }
+
+   if (cmd == "post") {
+      if (--op.n_posts == 0) {
+         std::cout << "User " << op.user << " ok. (leave_after_n_posts)."
+                   << std::endl;
+         return -1;
+      }
+
+      return 1;
+   }
+
+   std::cout << j << std::endl;
+   throw std::runtime_error("leave_after_n_posts::inexistent");
+   return -1;
+}
+
+int leave_after_n_posts::on_handshake(std::shared_ptr<client_type> s)
+{
+   auto const str = make_login_cmd(op.user);
+   s->send_msg(str);
+   return 1;
+}
+
+int leave_after_n_posts::on_closed(boost::system::error_code ec)
+{
+   throw std::runtime_error("leave_after_n_posts::on_closed");
+   return -1;
+};
+
 //______________
 
 int simulator::on_read( std::string msg

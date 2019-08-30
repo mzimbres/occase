@@ -31,6 +31,7 @@ struct options {
    std::string port {"8080"};
    int n_publishers = 10;
    int n_repliers = 10;
+   int n_leave_after_n_posts = 10;
    int handshake_tm = 3;
    int launch_interval = 100;
    int auth_timeout = 3;
@@ -55,7 +56,7 @@ struct options {
       };
    }
 
-   auto make_sub_cfg(std::vector<login> logins) const
+   auto make_cfg(std::vector<login> logins) const
    {
       return launcher_cfg
       { logins
@@ -97,42 +98,65 @@ void test_online(options const& op)
 {
    boost::asio::io_context ioc;
 
-   auto pub_logins =
+   // Last we start the publishers.
+   auto logins1 =
       test_reg( op.make_session_cf()
               , op.make_launcher_empty_cfg(op.n_publishers));
 
-   auto const next = [&pub_logins, &ioc, &op]()
+   auto next1 = [&logins1, &ioc, &op]()
    {
       using client_type = publisher;
       using config_type = client_type::options_type;
 
-      auto const s2 = std::make_shared< session_launcher<publisher>
+      auto const s = std::make_shared<session_launcher<publisher>
                       >( ioc
                        , config_type {{}, op.n_repliers}
                        , op.make_session_cf()
-                       , op.make_pub_cfg(pub_logins)
+                       , op.make_pub_cfg(logins1)
                        );
 
-      s2->run({});
+      s->run({});
    };
 
-   using client_type = replier;
-   using config_type = client_type::options_type;
-
-   auto const sub_logins =
+   // Afterwards we start the repliers.
+   auto const logins2 =
       test_reg( op.make_session_cf()
               , op.make_launcher_empty_cfg(op.n_repliers));
 
-   auto const s = std::make_shared< session_launcher<client_type>
+   auto next2 = [next1, &logins2, &ioc, &op]()
+   {
+      using client_type = replier;
+      using config_type = client_type::options_type;
+
+      auto const s = std::make_shared<session_launcher<client_type>
+                      >( ioc
+                       , config_type {{}, op.n_publishers}
+                       , op.make_session_cf()
+                       , op.make_cfg(logins2)
+                       );
+      
+      // When finished launching the listeners we begin to launch the
+      // publishers.
+      s->set_on_end(next1);
+      s->run({});
+   };
+
+   // And first we start the leave after n posts sessions.
+   auto const logins3 =
+      test_reg( op.make_session_cf()
+              , op.make_launcher_empty_cfg(op.n_leave_after_n_posts));
+
+   using client_type = leave_after_n_posts;
+   using config_type = client_type::options_type;
+
+   auto const s = std::make_shared<session_launcher<client_type>
                    >( ioc
                     , config_type {{}, op.n_publishers}
                     , op.make_session_cf()
-                    , op.make_sub_cfg(sub_logins)
+                    , op.make_cfg(logins3)
                     );
    
-   // When finished launching the listeners we begin to launch the
-   // publishers.
-   s->set_on_end(next);
+   s->set_on_end(next2);
    s->run({});
 
    ioc.run();
@@ -335,6 +359,10 @@ int main(int argc, char* argv[])
          ("listeners,c"
          , po::value<int>(&op.n_repliers)->default_value(10)
          , "Number of listeners.")
+
+         ("post-listeners,y"
+         , po::value<int>(&op.n_leave_after_n_posts)->default_value(10)
+         , "Number of listeners that will leave after receiving n posts.")
 
          ("launch-interval,g"
          , po::value<int>(&op.launch_interval)->default_value(100)

@@ -18,157 +18,107 @@ namespace rt
 
 class http_conn : public std::enable_shared_from_this<http_conn> {
 public:
-    http_conn(tcp::socket socket)
-    : socket_(std::move(socket))
-    { }
+   http_conn(tcp::socket socket)
+   : socket_(std::move(socket))
+   { }
 
-    // Initiate the asynchronous operations associated with the connection.
-    void start()
-    {
-        read_request();
-        check_deadline();
-    }
-
-    void read_header()
-    {
-    }
-
-private:
-    tcp::socket socket_;
-    beast::flat_buffer buffer_{8192};
-    http::request_parser<http::empty_body> req0;
-    http::request<http::file_body> request_;
-    http::response<http::dynamic_body> response_;
-    net::basic_waitable_timer<std::chrono::steady_clock> deadline_{
-        socket_.get_executor(), std::chrono::seconds(60)};
-
-   void read_request()
+   void run()
    {
-      http::read_header(socket_, buffer_, req0);
-      //-------------------------------------
+      auto self = shared_from_this();
+      auto f = [self](auto ec, auto n)
+         { self->on_read_header(ec, n); };
 
-      switch (req0.get().method()) {
-         case http::verb::post:
-         {
-            //std::cout << req0.get().base()["filename"] << std::endl;
-            auto const iter = req0.get().find("filename");
-            if (iter != std::end(req0.get()))
-                std::cout << "Image name: " << iter->value() << std::endl;
+      http::async_read_header(socket_, buffer_, header_parser, f);
 
-            http::request_parser<http::file_body> req1{std::move(req0)};
-            beast::error_code ec;
-            auto const path = "/tmp/jajaja.jpg";
-            req1.get().body().open(path, beast::file_mode::write, ec);
-
-            if (ec)
-               std::cout << ec.message() << std::endl;
-
-            auto self = shared_from_this();
-
-            //auto f = [self](auto ec, auto bytes_transferred)
-            //{
-            //   std::ignore = bytes_transferred;
-
-            //   if(!ec)
-            //      self->process_request();
-            //};
-
-            http::read(socket_, buffer_, req1);
-            process_request();
-
-            //// Finish reading the message
-            //read(stream, buffer, req1);
-
-            //// Call the handler. It can take ownership
-            //// if desired, since we are calling release()
-            //handler(req1.release());
-            break;
-
-         }
-         default:
-         {
-         }
-      }
-      //-------------------------------------
-
+      check_deadline();
    }
 
-    // Determine what needs to be done with the request message.
-   void process_request()
+private:
+   using body_parser_type = http::request_parser<http::file_body>;
+
+   tcp::socket socket_;
+   beast::flat_buffer buffer_{8192};
+   http::request_parser<http::empty_body> header_parser;
+   http::request<http::file_body> request_;
+   http::response<http::dynamic_body> response_;
+   net::basic_waitable_timer<std::chrono::steady_clock> deadline_{
+       socket_.get_executor(), std::chrono::seconds(60)};
+
+   void on_read_header(boost::system::error_code ec, std::size_t n)
    {
       response_.version(request_.version());
       response_.keep_alive(false);
 
-      switch (request_.method()) {
+      switch (header_parser.get().method()) {
       case http::verb::post:
       {
-         std::cout << "====> I have received a post." << std::endl;
-         response_.result(http::status::ok);
-         response_.set(http::field::server, "Beast");
-         create_response();
+         if (header_parser.get().target() == "/image") {
+            std::string filename;
+            auto const iter = header_parser.get().find("filename");
+            if (iter != std::end(header_parser.get()))
+               filename = iter->value().data();
+
+            std::cout << "Image name: " << filename << std::endl;
+
+            body_parser_type body_parser{std::move(header_parser)};
+
+            beast::error_code ec;
+            auto const path = "/tmp/" + filename;
+            body_parser.get().body().open( path.c_str()
+                                         , beast::file_mode::write, ec);
+
+            if (ec) {
+               std::cout << ec.message() << std::endl;
+            }
+
+            http::read(socket_, buffer_, body_parser);
+            response_.result(http::status::ok);
+            response_.set(http::field::server, "Beast");
+         } else {
+            response_.result(http::status::not_found);
+            response_.set(http::field::content_type, "text/plain");
+            beast::ostream(response_.body()) << "File not found\r\n";
+         }
       }
       break;
-
       default:
-         // We return responses indicating an error if
-         // we do not recognize the request method.
+      {
          response_.result(http::status::bad_request);
          response_.set(http::field::content_type, "text/plain");
-         beast::ostream(response_.body())
-         << "Invalid request-method '"
-         << std::string(request_.method_string())
-         << "'";
+      }
       break;
       }
 
       write_response();
    }
 
-   void create_response()
+   void write_response()
    {
-      if (request_.target() == "/image") {
-         response_.set(http::field::content_type, "text/html");
-         beast::ostream(response_.body()) << "";
-      } else if (request_.target() == "/expiration") {
-         response_.set(http::field::content_type, "text/html");
-         beast::ostream(response_.body()) << "";
-      } else {
-         response_.result(http::status::not_found);
-         response_.set(http::field::content_type, "text/plain");
-         beast::ostream(response_.body()) << "File not found\r\n";
-      }
+      response_.set(http::field::content_length, response_.body().size());
+
+      auto self = shared_from_this();
+
+      auto f = [self](auto ec, auto)
+      {
+          self->socket_.shutdown(tcp::socket::shutdown_send, ec);
+          self->deadline_.cancel();
+      };
+
+      http::async_write(socket_, response_, f);
    }
 
-    void write_response()
-    {
-        auto self = shared_from_this();
+   void check_deadline()
+   {
+       auto self = shared_from_this();
 
-        response_.set(http::field::content_length, response_.body().size());
+       auto f = [self](beast::error_code ec)
+       {
+           if (!ec)
+               self->socket_.close(ec);
+       };
 
-        http::async_write(
-            socket_,
-            response_,
-            [self](beast::error_code ec, std::size_t)
-            {
-                self->socket_.shutdown(tcp::socket::shutdown_send, ec);
-                self->deadline_.cancel();
-            });
-    }
-
-    void check_deadline()
-    {
-        auto self = shared_from_this();
-
-        deadline_.async_wait(
-            [self](beast::error_code ec)
-            {
-                if(!ec)
-                {
-                    // Close socket to cancel any outstanding operation.
-                    self->socket_.close(ec);
-                }
-            });
-    }
+       deadline_.async_wait(f);
+   }
 };
 
 class listener {
@@ -207,7 +157,7 @@ public:
 
          log(loglevel::debug, "imgserver: on_accept: {1}", ec.message());
       } else {
-         std::make_shared<http_conn>(std::move(socket))->start();
+         std::make_shared<http_conn>(std::move(socket))->run();
       }
 
       do_accept();

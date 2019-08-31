@@ -17,10 +17,10 @@
 namespace rt
 {
 
-listener::listener(listener_cfg const& cfg, int i)
+listener::listener(listener_cfg const& cfg)
 : signals {ioc, SIGINT, SIGTERM}
 , acceptor {ioc}
-, worker_ {cfg.worker, i, ioc}
+, worker_ {cfg.worker, ioc}
 , sserver {cfg.stats, ioc}
 {
    tcp::endpoint endpoint {tcp::v4(), cfg.port};

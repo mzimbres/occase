@@ -56,7 +56,7 @@ private:
                  , net::ip::tcp::socket peer);
 
 public:
-   listener(listener_cfg const& cg, int i);
+   listener(listener_cfg const& cg);
    void run();
    void on_signal(boost::system::error_code const& ec, int n);
 };

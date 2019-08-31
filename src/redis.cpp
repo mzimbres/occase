@@ -7,13 +7,12 @@
 namespace rt::redis
 {
 
-facade::facade(config const& cfg, net::io_context& ioc, int wid)
-: worker_id {wid}
-, cfg(cfg.cfg)
-, ss_menu_sub {cfg.ss_cfg, ioc, fmt::format("W{0}/db-menu_sub", wid)}
-, ss_menu_pub {cfg.ss_cfg, ioc, fmt::format("W{0}/db-menu_pub", wid)}
-, ss_chat_sub {cfg.ss_cfg, ioc, fmt::format("W{0}/db-chat_sub", wid)}
-, ss_chat_pub {cfg.ss_cfg, ioc, fmt::format("W{0}/db-chat_pub", wid)}
+facade::facade(config const& cfg, net::io_context& ioc)
+: cfg(cfg.cfg)
+, ss_menu_sub {cfg.ss_cfg, ioc, fmt::format("db-menu_sub")}
+, ss_menu_pub {cfg.ss_cfg, ioc, fmt::format("db-menu_pub")}
+, ss_chat_sub {cfg.ss_cfg, ioc, fmt::format("db-chat_sub")}
+, ss_chat_pub {cfg.ss_cfg, ioc, fmt::format("db-chat_pub")}
 , worker_handler([](auto const& data, auto const& req) {})
 {
    // Sets on connection handlers.
@@ -71,9 +70,9 @@ void facade::on_menu_sub( boost::system::error_code const& ec
                         , std::vector<std::string> data)
 {
    if (ec) {
-      log( loglevel::debug, "W{0}/facade::on_menu_sub: {1}."
-         , worker_id, ec.message());
-
+      log( loglevel::debug
+         , "facade::on_menu_sub: {0}."
+         , ec.message());
       return;
    }
 
@@ -114,8 +113,9 @@ facade::on_menu_pub( boost::system::error_code const& ec
                    , std::vector<std::string> data)
 {
    if (ec) {
-      log( loglevel::debug, "W{0}/facade::on_menu_pub: {1}."
-         , worker_id, ec.message());
+      log( loglevel::debug
+         , "facade::on_menu_pub: {0}."
+         , ec.message());
 
       return;
    }
@@ -146,8 +146,9 @@ facade::on_user_pub( boost::system::error_code const& ec
                    , std::vector<std::string> data)
 {
    if (ec) {
-      log( loglevel::debug, "W{0}/facade::on_user_sub: {1}."
-         , worker_id, ec.message());
+      log( loglevel::debug
+         , "facade::on_user_sub: {0}."
+         , ec.message());
       return;
    }
 
@@ -174,8 +175,9 @@ facade::on_user_sub( boost::system::error_code const& ec
                    , std::vector<std::string> data)
 {
    if (ec) {
-      log( loglevel::debug, "W{0}/facade::on_user_sub: {1}."
-         , worker_id, ec.message());
+      log( loglevel::debug
+         , "facade::on_user_sub: {0}."
+         , ec.message());
 
       return;
    }
@@ -274,8 +276,9 @@ void facade::retrieve_user_data(std::string const& user)
 
 void facade::retrieve_posts(int begin)
 {
-   log( loglevel::debug, "W{0}/facade::retrieve_posts({1})."
-      , worker_id, begin);
+   log( loglevel::debug
+      , "facade::retrieve_posts({0})."
+      , begin);
 
    ss_menu_pub.send(zrangebyscore(cfg.posts_key, begin, -1));
    menu_pub_queue.push(request::posts);

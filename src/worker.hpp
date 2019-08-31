@@ -71,16 +71,11 @@ struct worker_stats {
    int db_chat_queue_size = 0;
 };
 
-void add(worker_stats& a, worker_stats const& b) noexcept;
-
 std::ostream& operator<<(std::ostream& os, worker_stats const& stats);
 
 class worker {
 private:
    net::io_context& ioc_;
-
-   // This worker id.
-   int const worker_id;
 
    worker_only_cfg const cfg;
 
@@ -159,7 +154,7 @@ private:
    void on_db_user_data(std::vector<std::string> const& data) noexcept;
 
 public:
-   worker(worker_cfg cfg, int id_, net::io_context& ioc);
+   worker(worker_cfg cfg, net::io_context& ioc);
 
    void on_session_dtor( std::string const& id
                        , std::vector<std::string> msgs);
@@ -174,8 +169,6 @@ public:
    auto const& get_ws_stats() const noexcept
       { return ws_ss_stats_; }
    void shutdown();
-   auto get_id() const noexcept
-      { return worker_id;}
    worker_stats get_stats() const noexcept;
    auto& get_ioc() const noexcept
       { return ioc_; }

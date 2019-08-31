@@ -62,15 +62,7 @@ auto get_server_op(int argc, char* argv[])
 
    ( "stats-server-base-port"
    , po::value<std::string>(&cfg.stats.port)->default_value("9090")
-   , "The statistics server base port. Each worker will have its own.")
-
-   ( "workers"
-   , po::value<int>(&cfg.number_of_workers)->default_value(1)
-   , "The number of worker threads, each"
-     " one consuming one thread and having its own io_context."
-     " For example, in a CPU with 8 cores this number should lie"
-     " around 5. Memory consumption should be considered since "
-     " each thread has it own non-shared data structure.")
+   , "The statistics server base port.")
 
    ( "login-timeout"
    , po::value<int>(&cfg.login_timeout)->default_value(2)
@@ -267,16 +259,7 @@ int main(int argc, char* argv[])
 
       set_fd_limits(500000);
 
-      //auto arena_gen = [&cfg, i = -1]() mutable
-      //   { return std::make_shared<worker_arena>(cfg.worker, ++i); };
- 
-      //std::vector<std::shared_ptr<listener>> warenas;
-
-      //std::generate_n( std::back_inserter(warenas)
-      //               , cfg.number_of_workers
-      //               , arena_gen);
-
-      listener lst {cfg, 0};
+      listener lst {cfg};
       drop_root_priviledges();
       lst.run();
 

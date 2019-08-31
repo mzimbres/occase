@@ -94,9 +94,6 @@ public:
       std::function<void (std::vector<std::string>, req_item const&)>;
 
 private:
-   // The worker id this facade corresponds to.
-   int worker_id;
-
    db_cfg const cfg;
 
    // The Session used to subscribe to menu messages. No commands
@@ -140,7 +137,7 @@ private:
    void on_chat_pub_conn();
 
 public:
-   facade(config const& cfg, net::io_context& ioc, int wid);
+   facade(config const& cfg, net::io_context& ioc);
 
    // Incomming message will complete on this handler with
    // one of the possible codes defined in redis::request.

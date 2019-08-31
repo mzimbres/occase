@@ -137,6 +137,8 @@ private:
                         , std::shared_ptr<worker_session> s);
    ev_res on_app_del_post( json j
                          , std::shared_ptr<worker_session> s);
+   ev_res on_app_filenames( json j
+                          , std::shared_ptr<worker_session> s);
 
    // Handlers for events we receive from the database.
    void on_db_chat_msg( std::string const& user_id

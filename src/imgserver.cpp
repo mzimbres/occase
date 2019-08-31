@@ -18,9 +18,8 @@ namespace rt
 
 class http_conn : public std::enable_shared_from_this<http_conn> {
 public:
-    http_conn(tcp::socket socket, std::string name)
+    http_conn(tcp::socket socket)
     : socket_(std::move(socket))
-    , filename {name}
     { }
 
     // Initiate the asynchronous operations associated with the connection.
@@ -30,38 +29,68 @@ public:
         check_deadline();
     }
 
+    void read_header()
+    {
+    }
+
 private:
     tcp::socket socket_;
     beast::flat_buffer buffer_{8192};
+    http::request_parser<http::empty_body> req0;
     http::request<http::file_body> request_;
     http::response<http::dynamic_body> response_;
     net::basic_waitable_timer<std::chrono::steady_clock> deadline_{
         socket_.get_executor(), std::chrono::seconds(60)};
-    std::string filename;
 
    void read_request()
    {
-      beast::error_code ec;
+      http::read_header(socket_, buffer_, req0);
+      //-------------------------------------
 
-      auto const path = "/tmp/" + filename + ".jpg";
-      std::cout << filename << std::endl;
-      request_.body().open( path.data()
-                          , beast::file_mode::write
-                          , ec);
-      if (ec)
-         std::cout << ec.message() << std::endl;
+      switch (req0.get().method()) {
+         case http::verb::post:
+         {
+            //std::cout << req0.get().base()["filename"] << std::endl;
+            auto const iter = req0.get().find("filename");
+            if (iter != std::end(req0.get()))
+                std::cout << "Image name: " << iter->value() << std::endl;
 
-      auto self = shared_from_this();
+            http::request_parser<http::file_body> req1{std::move(req0)};
+            beast::error_code ec;
+            auto const path = "/tmp/jajaja.jpg";
+            req1.get().body().open(path, beast::file_mode::write, ec);
 
-      auto f = [self](auto ec, auto bytes_transferred)
-      {
-         std::ignore = bytes_transferred;
+            if (ec)
+               std::cout << ec.message() << std::endl;
 
-         if(!ec)
-            self->process_request();
-      };
+            auto self = shared_from_this();
 
-      http::async_read(socket_, buffer_, request_, f);
+            //auto f = [self](auto ec, auto bytes_transferred)
+            //{
+            //   std::ignore = bytes_transferred;
+
+            //   if(!ec)
+            //      self->process_request();
+            //};
+
+            http::read(socket_, buffer_, req1);
+            process_request();
+
+            //// Finish reading the message
+            //read(stream, buffer, req1);
+
+            //// Call the handler. It can take ownership
+            //// if desired, since we are calling release()
+            //handler(req1.release());
+            break;
+
+         }
+         default:
+         {
+         }
+      }
+      //-------------------------------------
+
    }
 
     // Determine what needs to be done with the request message.
@@ -97,13 +126,9 @@ private:
 
    void create_response()
    {
-      // Later we will generate a filename send it to S3 and return
-      // the filename to the app.
-      constexpr auto* url = "https://avatarfiles.alphacoders.com/116/116803.jpg";
-
       if (request_.target() == "/image") {
          response_.set(http::field::content_type, "text/html");
-         beast::ostream(response_.body()) << url;
+         beast::ostream(response_.body()) << "";
       } else if (request_.target() == "/expiration") {
          response_.set(http::field::content_type, "text/html");
          beast::ostream(response_.body()) << "";
@@ -150,7 +175,6 @@ class listener {
 private:
    net::io_context ioc {1};
    tcp::acceptor acceptor;
-   pwd_gen pwdgen;
 
 public:
    listener(unsigned short port)
@@ -183,10 +207,7 @@ public:
 
          log(loglevel::debug, "imgserver: on_accept: {1}", ec.message());
       } else {
-         std::make_shared<http_conn
-                         >( std::move(socket)
-                          , pwdgen(10)
-                          )->start();
+         std::make_shared<http_conn>(std::move(socket))->start();
       }
 
       do_accept();

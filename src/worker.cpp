@@ -612,6 +612,27 @@ ev_res worker::on_app_del_post(json j, std::shared_ptr<worker_session> s)
 }
 
 ev_res
+worker::on_app_filenames(json j, std::shared_ptr<worker_session> s)
+{
+   //auto const n = j.at("quantity").get<int>();
+   auto const n = 5;
+
+   auto f = [this, n]()
+      { return pwdgen(n); };
+
+   std::vector<std::string> names;
+   std::generate_n(std::back_inserter(names), n, f);
+
+   json resp;
+   resp["cmd"] = "filenames_ack";
+   resp["result"] = "ok";
+   resp["names"] = names;
+   s->send(resp.dump(), true);
+
+   return ev_res::delete_ok;
+}
+
+ev_res
 worker::on_app_publish(json j, std::shared_ptr<worker_session> s)
 {
    // Consider remove the restriction below that the items vector have
@@ -736,13 +757,21 @@ ev_res worker::on_app( std::shared_ptr<worker_session> s
       auto const cmd = j.at("cmd").get<std::string>();
 
       if (s->is_logged_in()) {
-         if (cmd == "message")   return on_app_chat_msg(std::move(j), s);
-         if (cmd == "subscribe") return on_app_subscribe(j, s);
-         if (cmd == "publish")   return on_app_publish(std::move(j), s);
-         if (cmd == "delete")    return on_app_del_post(std::move(j), s);
+         if (cmd == "message")
+            return on_app_chat_msg(std::move(j), s);
+         if (cmd == "subscribe")
+            return on_app_subscribe(j, s);
+         if (cmd == "publish")
+            return on_app_publish(std::move(j), s);
+         if (cmd == "delete")
+            return on_app_del_post(std::move(j), s);
+         if (cmd == "filenames")
+            return on_app_filenames(std::move(j), s);
       } else {
-         if (cmd == "login")     return on_app_login(j, s);
-         if (cmd == "register")  return on_app_register(j, s);
+         if (cmd == "login")
+            return on_app_login(j, s);
+         if (cmd == "register")
+            return on_app_register(j, s);
       }
    } catch (std::exception const& e) {
       log(loglevel::debug, "worker::on_app: {0}.", e.what());

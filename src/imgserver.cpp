@@ -129,7 +129,7 @@ private:
             if (pos == std::string::npos)
                return;
 
-            auto const tmp = filename.substr(1, pos - 1);
+            auto const tmp = filename.substr(0, pos);
 
             // Workaround while body_parser_req_type does not offer a move
             // operator=

@@ -17,34 +17,48 @@ server_pid=$!
 # tests.
 sleep 3
 
-./publish_tests --test 1\
-                --publishers 1\
-                --listeners 1\
-                --post-listeners 100\
-                --launch-interval 10
+for (( i = 0 ; i < 1 ; ++i )); do
+   echo "Starting test 1-a-$i"
+   ./publish_tests --test 1\
+                   --publishers 1\
+                   --listeners 1\
+                   --post-listeners 100\
+                   --launch-interval 10 > /dev/null
+done
 
 # Be aware of the fact that there is a limit on the size of user
 # pending messages, see redis-offline-chat-msgs
-./publish_tests --test 1\
-                --publishers 1\
-                --listeners 100\
-                --post-listeners 100\
-                --launch-interval 10
+for (( i = 0 ; i < 1 ; ++i )); do
+   echo "Starting test 1-b-$i"
+   ./publish_tests --test 1\
+                   --publishers 1\
+                   --listeners 100\
+                   --post-listeners 100\
+                   --launch-interval 10 > /dev/null
+done
 
-# After the introduction of the delete command it should not be a
-# problem to run test 1 many times.
-./publish_tests --test 1\
-                --publishers 300\
-                --listeners 20\
-                --launch-interval 100
+for (( i = 0 ; i < 1 ; ++i )); do
+   echo "Starting test 1-c-$i"
+   ./publish_tests --test 1\
+                   --publishers 3\
+                   --listeners 2\
+                   --post-listeners 100\
+                   --launch-interval 10 > /dev/null
+done
 
-./publish_tests --test 3 --launch-interval 10
+for (( i = 0 ; i < 1 ; ++i )); do
+   echo "Starting test 3-$i"
+   ./publish_tests --test 3 --launch-interval 10 > /dev/null
+done
 
-# It looks like this test is influenced by to first test and be run
-# separately.
-./publish_tests --test 2 --handshake-timeout 3
-./publish_tests --test 4
-./publish_tests --test 5
+echo "Starting test 2"
+./publish_tests --test 2 --handshake-timeout 3 > /dev/null
+
+echo "Starting test 4"
+./publish_tests --test 4 > /dev/null
+
+echo "Starting test 5"
+./publish_tests --test 5 /dev/null
 
 kill -9 $server_pid
 

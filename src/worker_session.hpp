@@ -87,7 +87,7 @@ private:
 
    std::uint64_t menu_filter = 0;
 
-   static constexpr auto menu_codes_size = 16;
+   static constexpr auto menu_codes_size = 32;
 
    using menu_codes_type =
       boost::container::static_vector< std::uint64_t

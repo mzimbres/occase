@@ -656,7 +656,7 @@ int publisher2::on_read(std::string msg, std::shared_ptr<client_type> s)
       auto f = [s, this](auto const& o)
          { pub(o, s); };
 
-      // Sending the publishes without waiting for the acks is the
+      // Sending the publishes without waiting for the acks is not the
       // expected way to use the server. At the moment however nothing
       // prevents it. The typical way of doing this it to put the
       // codes on a stack and send the next message as the ack of the

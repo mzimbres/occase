@@ -46,7 +46,7 @@ struct server_cfg {
 
 namespace po = boost::program_options;
 
-auto get_server_op(int argc, char* argv[])
+auto get_cfg(int argc, char* argv[])
 {
    std::vector<std::string> ips;
    server_cfg cfg;
@@ -265,7 +265,7 @@ auto get_server_op(int argc, char* argv[])
 int main(int argc, char* argv[])
 {
    try {
-      auto const cfg = get_server_op(argc, argv);
+      auto const cfg = get_cfg(argc, argv);
       if (cfg.help)
          return 0;
 

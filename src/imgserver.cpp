@@ -1,13 +1,18 @@
-#include <boost/beast/core.hpp>
-#include <boost/beast/http.hpp>
-#include <boost/beast/version.hpp>
-#include <boost/asio.hpp>
 #include <chrono>
 #include <cstdlib>
 #include <ctime>
 #include <iostream>
+#include <fstream>
 #include <memory>
 #include <string>
+
+#include <boost/program_options/options_description.hpp>
+#include <boost/program_options/parsers.hpp>
+#include <boost/program_options/variables_map.hpp>
+#include <boost/beast/core.hpp>
+#include <boost/beast/http.hpp>
+#include <boost/beast/version.hpp>
+#include <boost/asio.hpp>
 
 #include "config.hpp"
 #include "crypto.hpp"
@@ -16,8 +21,7 @@
 namespace rt
 {
 
-beast::string_view
-mime_type(beast::string_view path)
+beast::string_view mime_type(beast::string_view path)
 {
     using beast::iequals;
     auto const ext = [&path]
@@ -71,25 +75,27 @@ public:
    }
 
 private:
-   using body_file_type = http::file_body;
-   using body_parser_req_type = http::request_parser<body_file_type>;
+   using file_body_type = http::file_body;
+   using req_body_parser_type = http::request_parser<file_body_type>;
+   using req_header_parser_type = http::request_parser<http::empty_body>;
+
+   using resp_body_type = http::response<file_body_type>;
 
    tcp::socket socket;
    beast::flat_buffer buffer {8192};
 
    // We first read the header. This is needed on post to know in
    // advance the file name.
-   http::request_parser<http::empty_body> header_parser;
+   req_header_parser_type header_parser;
 
    // We have to use a std::unique_ptr here while beast does not offer
-   // correct move semantics for body_parser_req_type
-   std::unique_ptr<body_parser_req_type> body_parser;
+   // correct move semantics for req_body_parser_type
+   std::unique_ptr<req_body_parser_type> body_parser;
 
    http::response<http::dynamic_body> resp;
 
    // We we receive a get request we need a file_body response.
-   using body_resp_type = http::response<body_file_type>;
-   std::unique_ptr<body_resp_type> file_body_resp;
+   std::unique_ptr<resp_body_type> file_body_resp;
    
    net::basic_waitable_timer<std::chrono::steady_clock> deadline;
    std::string doc_root;
@@ -131,10 +137,10 @@ private:
 
             auto const tmp = filename.substr(0, pos);
 
-            // Workaround while body_parser_req_type does not offer a move
+            // Workaround while req_body_parser_type does not offer a move
             // operator=
             body_parser =
-               std::make_unique<body_parser_req_type>(std::move(header_parser));
+               std::make_unique<req_body_parser_type>(std::move(header_parser));
 
             beast::error_code ec;
             auto const path = doc_root + "/" + tmp + ".jpg";
@@ -178,7 +184,7 @@ private:
             }
 
             auto const size = std::size(body);
-            file_body_resp = std::make_unique<body_resp_type>(
+            file_body_resp = std::make_unique<resp_body_type>(
                std::piecewise_construct,
                std::make_tuple(std::move(body)),
                std::make_tuple(http::status::ok,
@@ -294,29 +300,78 @@ public:
 
 }
 
+struct server_cfg {
+   bool help;
+   unsigned short port;
+   std::string doc_root;
+};
+
+namespace po = boost::program_options;
+
+auto get_cfg(int argc, char* argv[])
+{
+   server_cfg cfg;
+   std::string conf_file;
+
+   po::options_description desc("Options");
+   desc.add_options()
+   ("help,h"
+   , "Produces help message")
+
+   ("doc-root"
+   , po::value<std::string>(&cfg.doc_root)->default_value("/tmp/imgs")
+   , "Directory where image will be written to and read from.")
+
+   ("config"
+   , po::value<std::string>(&conf_file)
+   , "The file containing the configuration.")
+
+   ( "port"
+   , po::value<unsigned short>(&cfg.port)->default_value(8888)
+   , "Server listening port.")
+   ;
+
+   po::positional_options_description pos;
+   pos.add("config", -1);
+
+   po::variables_map vm;        
+   po::store(po::command_line_parser(argc, argv).
+         options(desc).positional(pos).run(), vm);
+   po::notify(vm);    
+
+   if (!std::empty(conf_file)) {
+      std::ifstream ifs {conf_file};
+      if (ifs) {
+         po::store(po::parse_config_file(ifs, desc, true), vm);
+         notify(vm);
+      }
+   }
+
+   if (vm.count("help")) {
+      std::cout << desc << "\n";
+      return server_cfg {true};
+   }
+
+   return cfg;
+}
+
+using namespace rt;
+
 int main(int argc, char* argv[])
 {
-   using namespace rt;
-
    try {
-      if (argc != 2) {
-         std::cerr << "Usage: " << argv[0] << " <port>\n";
-         std::cerr << "  For IPv4, try:\n";
-         std::cerr << "    receiver 80\n";
-         std::cerr << "  For IPv6, try:\n";
-         std::cerr << "    receiver 80\n";
-         return EXIT_FAILURE;
-      }
+      auto const cfg = get_cfg(argc, argv);
+      if (cfg.help)
+         return 0;
 
-      std::string doc_root = "/tmp/imgs";
       init_libsodium();
 
-      auto const port = static_cast<unsigned short>(std::atoi(argv[1]));
-      listener lst {port, doc_root};
+      listener lst {cfg.port, cfg.doc_root};
       lst.run();
    } catch(std::exception const& e) {
-      std::cerr << "Error: " << e.what() << std::endl;
-      return EXIT_FAILURE;
+      log(loglevel::notice, e.what());
+      log(loglevel::notice, "Exiting with status 1 ...");
+      return 1;
    }
 }
 

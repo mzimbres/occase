@@ -1,14 +1,13 @@
 #pragma once
 
 #include <memory>
-#include <vector>
-#include <thread>
 
 #include <boost/asio.hpp>
 #include <boost/asio/signal_set.hpp>
 
-#include "config.hpp"
 #include "worker.hpp"
+#include "config.hpp"
+#include "acceptor_mgr.hpp"
 #include "stats_server.hpp"
 #include "worker_session.hpp"
 
@@ -47,18 +46,15 @@ class listener {
 private:
    net::io_context ioc {1};
    net::signal_set signals;
-   net::ip::tcp::acceptor acceptor;
    worker worker_;
    stats_server sserver;
+   acceptor_mgr acceptor;
 
-   void do_accept();
-   void on_accept( boost::system::error_code ec
-                 , net::ip::tcp::socket peer);
+   void on_signal(boost::system::error_code const& ec, int n);
 
 public:
    listener(listener_cfg const& cg);
    void run();
-   void on_signal(boost::system::error_code const& ec, int n);
 };
 
 }

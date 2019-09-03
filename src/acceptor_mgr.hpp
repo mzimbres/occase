@@ -1,0 +1,29 @@
+#pragma once
+
+#include <boost/asio.hpp>
+
+#include "config.hpp"
+
+namespace rt
+{
+
+class worker;
+
+class acceptor_mgr {
+private:
+   net::ip::tcp::acceptor acceptor;
+
+   void do_accept(worker& w);
+   void on_accept( worker& w
+                 , boost::system::error_code ec
+                 , net::ip::tcp::socket peer);
+
+public:
+   acceptor_mgr(unsigned short port, net::io_context& ioc);
+   void run(worker& w);
+   void shutdown();
+};
+
+}
+
+

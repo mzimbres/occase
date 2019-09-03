@@ -56,6 +56,7 @@ server_objs += redis.o
 server_objs += stats_server.o
 server_objs += release.o
 server_objs += http_session.o
+server_objs += acceptor_mgr.o
 
 client_objs =
 client_objs += test_clients.o

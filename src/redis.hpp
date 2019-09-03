@@ -21,7 +21,7 @@ enum class request
 , register_user
 , get_chat_msgs
 , menu_connect
-, unsol_publish
+, channel_post
 };
 
 struct req_item {
@@ -30,7 +30,7 @@ struct req_item {
 };
 
 struct db_cfg {
-   // The name of the channel where *publish* commands will be sent.
+   // The name of the channel where *publish* commands are be sent.
    std::string menu_channel_key;
 
    // Key in redis holding the menu in json format.
@@ -96,14 +96,13 @@ public:
 private:
    db_cfg const cfg;
 
-   // The Session used to subscribe to menu messages. No commands
-   // should be posted here (with the exception of subscribe and
-   // unsubscribe).
+   // The Session used to subscribe to posts. No commands should be
+   // posted here (with the exception of subscribe and unsubscribe).
    session ss_menu_sub;
 
-   // The session that deals with the publication of menu commands AND
-   // the registration of users On startup it will also be used to
-   // retrieve menu messages to load the workers.
+   // The session that deals with the publication of posts and the
+   // registration of users. On startup it will also be used to
+   // retrieve posts to load the workers.
    session ss_menu_pub;
    std::queue<request> menu_pub_queue;
 

@@ -44,7 +44,6 @@ facade::facade(config const& cfg, net::io_context& ioc)
 void facade::on_menu_sub_conn()
 {
    ss_menu_sub.send(subscribe(cfg.menu_channel_key));
-   ss_menu_sub.send(subscribe(cfg.notify_prefix + cfg.menu_key));
 }
 
 void facade::on_menu_pub_conn()
@@ -70,9 +69,7 @@ void facade::on_menu_sub( boost::system::error_code const& ec
                         , std::vector<std::string> data)
 {
    if (ec) {
-      log( loglevel::debug
-         , "facade::on_menu_sub: {0}."
-         , ec.message());
+      log(loglevel::debug, "facade::on_menu_sub: {0}.", ec.message());
       return;
    }
 
@@ -84,18 +81,9 @@ void facade::on_menu_sub( boost::system::error_code const& ec
    assert(std::size(data) == 3);
 
    if (data[1] == cfg.menu_channel_key) {
-      // This is a menu message.
       std::swap(data.front(), data.back());
       data.resize(1);
-      worker_handler(std::move(data), {request::unsol_publish, {}});
-      return;
-   }
-
-   auto const key = cfg.notify_prefix + cfg.menu_key;
-   if (data[1] == key) {
-      // A menu update has been received.
-      ss_menu_pub.send(get(cfg.menu_key));
-      menu_pub_queue.push(request::menu);
+      worker_handler(std::move(data), {request::channel_post, {}});
       return;
    }
 }
@@ -146,9 +134,7 @@ facade::on_user_pub( boost::system::error_code const& ec
                    , std::vector<std::string> data)
 {
    if (ec) {
-      log( loglevel::debug
-         , "facade::on_user_sub: {0}."
-         , ec.message());
+      log(loglevel::debug, "facade::on_user_sub: {0}.", ec.message());
       return;
    }
 
@@ -175,10 +161,7 @@ facade::on_user_sub( boost::system::error_code const& ec
                    , std::vector<std::string> data)
 {
    if (ec) {
-      log( loglevel::debug
-         , "facade::on_user_sub: {0}."
-         , ec.message());
-
+      log(loglevel::debug, "facade::on_user_sub: {0}.", ec.message());
       return;
    }
 

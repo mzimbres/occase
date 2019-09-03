@@ -56,42 +56,15 @@ void worker::init()
 void worker::on_db_menu(std::string const& data)
 {
    auto const j_menu = json::parse(data);
-   auto const is_empty = is_menu_empty(menu);
+
+   assert(is_menu_empty(menu));
+
+   // We have to save the menu and retrieve the menu messages from the
+   // database. Only after that we will bind and listen for websocket
+   // connections.
+
    menu = j_menu.at("menus").get<menu_elems_array_type>();
-
-   if (is_empty) {
-      // The menu vector is empty. This happens only when the server
-      // is started. We have to save the menu and retrieve the menu
-      // messages from the database. It is important that the channels
-      // are not created now since we did not retrieve the messages
-      // from the database yet but we are already subscribed to the
-      // menu channel.
-      //
-      // That means we will begin to receive messages and send them to
-      // the users. Since these messages will be more recent then the
-      // ones we are about to retrieve from the database, they will
-      // update their last message counter. Then if they disconnect
-      // and connect again the old messages will never be sent to
-      // them. This is a very unlikely situation since the retrieval
-      // of messages is fast.
-      //
-      // The channel creation will be delegated to the
-      // *retrieve_posts* handler.
-
-      // We may wish to check whether the menu received above is valid
-      // before we proceed with the retrieval of the menu messages.
-      // For example check if the menu have the correct number of
-      // elements and the correct depth for each element.
-      db.retrieve_posts(0);
-      return;
-   }
-
-   // The menu is not empty which means we have received a new menu
-   // and should update the old. We only have to create the additional
-   // channels and there is no need to retrieve messages from the
-   // database. The new menu may contain additional channels that
-   // should be created here.
-   create_channels(menu);
+   db.retrieve_posts(0);
 }
 
 void worker::create_channels(menu_elems_array_type const& me)
@@ -114,73 +87,57 @@ void worker::create_channels(menu_elems_array_type const& me)
                 , std::cend(menu_channels)
                 , f);
 
-   if (created != 0)
-      log(loglevel::info, "Channels created: {0}", created);
+   log(loglevel::info, "Channels created: {0}", created);
 
-   if (existed != 0)
-      log(loglevel::info, "Channels that already existed: {0}", existed);
+   assert(created != 0);
+   assert(existed == 0);
 }
 
 void worker::on_db_posts(std::vector<std::string> const& msgs)
 {
-   // This function has two roles.
-   //
-   // 1. Create the channels if they do not already exist. This
-   //    happens only when the server is started and the menu is
-   //    retrieved for the first time. If the channels arealdy exist,
-   //    that means a connection to the database that has been
-   //    restablished and we requested all messages that we may have
-   //    missed while we were offline.
-   //
-   // 2. Fill the channels with the menu messages.
+   // This function fills the channels with the posts.
+   assert(std::empty(channels));
 
-   if (std::empty(channels))
-      create_channels(menu);
+   create_channels(menu);
 
    log( loglevel::info
       , "Number of messages received from the database: {0}"
       , std::size(msgs));
 
    auto loader = [this](auto const& msg)
-      { on_db_channel_msg(msg); };
+      { on_db_channel_post(msg); };
 
    std::for_each(std::begin(msgs), std::end(msgs), loader);
 
-   // We can begin now to accept websocket connections.
-
-   // TODO: At the moment this function can be called more than once,
-   // when the acceptor is already listening for new connections. This
-   // is because we subscribed to notifications on changes to the menu
-   // in the database. In such cases trying to listen again will cause
-   // an error that may be ignore. Later however we should remove
-   // subscription to menu since we are not going to push menu updates
-   // to the user.
+   // We can begin to accept websocket connections.
    acceptor.run(*this, cfg.port);
 }
 
-void worker::on_db_channel_msg(std::string const& msg)
+void worker::on_db_channel_post(std::string const& msg)
 {
    // NOTE: Later we may have to improve how we decide if a message is
-   // a post or a command, like deleter, specially the number of
+   // a post or a command, like deleter, specially if the number of
    // commands that sent from workers to workers increases.
 
    // This function has two roles, deal with the delete command and
    // new posts.
    auto const j = json::parse(msg);
    auto const channel = j.at("to").get<menu_code_type>();
-   auto const hash_code = to_hash_code(
-      channel.at(1).at(0),
-      menu.back().depth);
+   auto const hash_code =
+      to_hash_code( channel.at(1).at(0)
+                  , menu.back().depth);
 
    auto const g = channels.find(hash_code);
    if (g == std::end(channels)) {
-      // This can happen if the subscription to the menu channel
-      // happens before we receive the menu and generate the channels.
-      // That is why it is important to update the last message id
-      // only after this check.
-      log( loglevel::debug
-         , "Channel could not be found: {0}"
-         , hash_code);
+      // This happens if the subscription to the posts channel happens
+      // before we receive the menu and generate the channels.  That
+      // is why it is important to update the last message id only
+      // after this check.
+      //
+      // We could in principle insert the post, but I am afraid this
+      // could result in duplicated posts after we receive those from
+      // the database.
+      log(loglevel::debug, "Channel could not be found: {0}", hash_code);
       return;
    }
 
@@ -402,9 +359,9 @@ worker::on_db_event( std::vector<std::string> data
          on_db_menu_connect();
          break;
 
-      case redis::request::unsol_publish:
+      case redis::request::channel_post:
          assert(std::size(data) == 1);
-         on_db_channel_msg(data.back());
+         on_db_channel_post(data.back());
          break;
 
       default:
@@ -511,9 +468,9 @@ worker::on_app_register( json const& j
    return ev_res::register_ok;
 }
 
-ev_res worker::on_app_subscribe(
-   json const& j,
-   std::shared_ptr<worker_session> s)
+ev_res
+worker::on_app_subscribe( json const& j
+                        , std::shared_ptr<worker_session> s)
 {
    auto const codes = j.at("channels").get<menu_code_type2>();
 
@@ -574,7 +531,7 @@ ev_res worker::on_app_subscribe(
 
       if (invalid_count != 0) {
          log( loglevel::debug
-            , "W{0}/on_app_subscribe: Invalid channel(s)."
+            , "worker::on_app_subscribe: Invalid channels {0}."
             , invalid_count);
       }
    }

@@ -10,7 +10,6 @@ listener::listener(listener_cfg const& cfg)
 : signals {ioc, SIGINT, SIGTERM}
 , worker_ {cfg.worker, ioc}
 , sserver {cfg.stats, ioc}
-, acceptor {cfg.port, ioc}
 { }
 
 void listener::on_signal(boost::system::error_code const& ec, int n)
@@ -34,7 +33,6 @@ void listener::on_signal(boost::system::error_code const& ec, int n)
         " Stopping listening for new connections"
       , n);
 
-   acceptor.shutdown();
    sserver.shutdown();
    worker_.shutdown();
 }
@@ -46,7 +44,6 @@ void listener::run()
 
    signals.async_wait(handler);
 
-   acceptor.run(worker_);
    sserver.run(worker_);
 
    ioc.run();

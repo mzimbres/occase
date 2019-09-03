@@ -57,7 +57,7 @@ auto get_server_op(int argc, char* argv[])
    , "The pidfile.")
 
    ( "port"
-   , po::value<unsigned short>(&cfg.port)->default_value(8080)
+   , po::value<unsigned short>(&cfg.worker.worker.port)->default_value(8080)
    , "Server listening port.")
 
    ( "stats-server-base-port"

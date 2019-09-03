@@ -19,8 +19,8 @@ private:
                  , net::ip::tcp::socket peer);
 
 public:
-   acceptor_mgr(unsigned short port, net::io_context& ioc);
-   void run(worker& w);
+   acceptor_mgr(net::io_context& ioc);
+   void run(worker& w, unsigned short port);
    void shutdown();
 };
 

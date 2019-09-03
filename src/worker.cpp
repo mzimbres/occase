@@ -39,6 +39,7 @@ worker::worker(worker_cfg cfg, net::io_context& ioc)
 , ch_cfg {cfg.channel}
 , ws_ss_timeouts_ {cfg.timeouts}
 , db {cfg.db, ioc}
+, acceptor {ioc}
 {
    init();
 }
@@ -144,6 +145,17 @@ void worker::on_db_posts(std::vector<std::string> const& msgs)
       { on_db_channel_msg(msg); };
 
    std::for_each(std::begin(msgs), std::end(msgs), loader);
+
+   // We can begin now to accept websocket connections.
+
+   // TODO: At the moment this function can be called more than once,
+   // when the acceptor is already listening for new connections. This
+   // is because we subscribed to notifications on changes to the menu
+   // in the database. In such cases trying to listen again will cause
+   // an error that may be ignore. Later however we should remove
+   // subscription to menu since we are not going to push menu updates
+   // to the user.
+   acceptor.run(*this, cfg.port);
 }
 
 void worker::on_db_channel_msg(std::string const& msg)
@@ -737,6 +749,8 @@ void worker::shutdown()
    log( loglevel::notice
       , "Number of sessions that will be closed: {0}"
       , std::size(sessions));
+
+   acceptor.shutdown();
 
    auto f = [](auto o)
    {

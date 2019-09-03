@@ -10,9 +10,16 @@
 namespace rt
 {
 
-acceptor_mgr::acceptor_mgr( unsigned short port
-                          , net::io_context& ioc)
+acceptor_mgr::acceptor_mgr(net::io_context& ioc)
 : acceptor {ioc}
+{ }
+
+void acceptor_mgr::shutdown()
+{
+   acceptor.cancel();
+}
+
+void acceptor_mgr::run(worker& w, unsigned short port)
 {
    tcp::endpoint endpoint {tcp::v4(), port};
    acceptor.open(endpoint.protocol());
@@ -31,25 +38,18 @@ acceptor_mgr::acceptor_mgr( unsigned short port
    }
 
    acceptor.bind(endpoint);
-   acceptor.listen();
 
-   log( loglevel::info, "Binding server to {}"
-      , acceptor.local_endpoint());
-}
+   boost::system::error_code ec;
+   acceptor.listen(net::socket_base::max_listen_connections, ec);
 
-void acceptor_mgr::shutdown()
-{
-   acceptor.cancel();
-}
+   if (ec) {
+      log(loglevel::debug, "acceptor_mgr::run: {0}.", ec.message());
+   } else {
+      log( loglevel::info, "acceptor_mgr:run: Listening on {}"
+         , acceptor.local_endpoint());
 
-void acceptor_mgr::run(worker& w)
-{
-   if (!acceptor.is_open()) {
-      log(loglevel::crit, "acceptor_mgr::run: acceptor not open.");
-      return;
+      do_accept(w);
    }
-
-   do_accept(w);
 }
 
 void acceptor_mgr::do_accept(worker& w)

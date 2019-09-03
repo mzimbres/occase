@@ -1,13 +1,10 @@
 #pragma once
 
-#include <memory>
-
 #include <boost/asio.hpp>
 #include <boost/asio/signal_set.hpp>
 
 #include "worker.hpp"
 #include "config.hpp"
-#include "acceptor_mgr.hpp"
 #include "stats_server.hpp"
 #include "worker_session.hpp"
 
@@ -21,7 +18,6 @@ struct listener_cfg {
    worker_cfg worker;
    stats_server_cfg stats;
    int number_of_workers;
-   unsigned short port;
    std::string pidfile;
 
    int login_timeout;
@@ -48,7 +44,6 @@ private:
    net::signal_set signals;
    worker worker_;
    stats_server sserver;
-   acceptor_mgr acceptor;
 
    void on_signal(boost::system::error_code const& ec, int n);
 

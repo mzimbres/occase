@@ -19,6 +19,7 @@
 #include "config.hpp"
 #include "channel.hpp"
 #include "json_utils.hpp"
+#include "acceptor_mgr.hpp"
 #include "worker_session.hpp"
 
 namespace rt
@@ -31,6 +32,9 @@ struct worker_only_cfg {
 
    // The size of the password sent to the app when it registers.
    int pwd_size; 
+
+   // Websocket port.
+   unsigned short port;
 };
 
 struct worker_cfg {
@@ -119,8 +123,11 @@ private:
    // pubsub menu channel.
    int last_post_id = 0;
 
-   // Generateds passwords that are sent to the app.
+   // Generates passwords that are sent to the app.
    pwd_gen pwdgen;
+
+   // Accepts websocket connections.
+   acceptor_mgr acceptor;
 
    void init();
    void create_channels(menu_elems_array_type const& menu);

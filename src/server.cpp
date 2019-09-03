@@ -13,20 +13,44 @@
 #include "crypto.hpp"
 #include "logger.hpp"
 #include "system.hpp"
-#include "listener.hpp"
+#include "worker.hpp"
 
 #include <release.hpp>
 
 using namespace rt;
+
+struct server_cfg {
+   bool help = false;
+   bool log_on_stderr = false;
+   bool daemonize = false;
+   std::string pidfile;
+   std::string loglevel;
+
+   worker_cfg worker;
+
+   int login_timeout;
+   int handshake_timeout;
+   int pong_timeout;
+   int close_frame_timeout;
+
+   auto get_timeouts() const noexcept
+   {
+      return ws_timeouts
+      { std::chrono::seconds {login_timeout}
+      , std::chrono::seconds {handshake_timeout}
+      , std::chrono::seconds {pong_timeout}
+      , std::chrono::seconds {close_frame_timeout}
+      };
+   }
+};
 
 namespace po = boost::program_options;
 
 auto get_server_op(int argc, char* argv[])
 {
    std::vector<std::string> ips;
-   listener_cfg cfg;
+   server_cfg cfg;
    int conn_retry_interval = 500;
-   std::string redis_db = "0";
    std::string log_on_stderr = "no";
    std::string conf_file;
    std::string daemonize;
@@ -57,11 +81,11 @@ auto get_server_op(int argc, char* argv[])
    , "The pidfile.")
 
    ( "port"
-   , po::value<unsigned short>(&cfg.worker.worker.port)->default_value(8080)
+   , po::value<unsigned short>(&cfg.worker.core.port)->default_value(8080)
    , "Server listening port.")
 
    ( "stats-server-base-port"
-   , po::value<std::string>(&cfg.stats.port)->default_value("9090")
+   , po::value<std::string>(&cfg.worker.stats.port)->default_value("9090")
    , "The statistics server base port.")
 
    ( "login-timeout"
@@ -104,12 +128,12 @@ auto get_server_op(int argc, char* argv[])
      " info, debug.")
 
    ( "max-posts-on-subscribe"
-   , po::value<int>(&cfg.worker.worker.max_posts_on_sub)->default_value(50)
+   , po::value<int>(&cfg.worker.core.max_posts_on_sub)->default_value(50)
    , "The maximum number of messages that is allowed to be sent to "
      "the user when he subscribes to his channels.")
 
    ( "password-size"
-   , po::value<int>(&cfg.worker.worker.pwd_size)->default_value(10)
+   , po::value<int>(&cfg.worker.core.pwd_size)->default_value(10)
    , "The size of the password sent to the app.")
 
    ( "redis-server-address"
@@ -131,10 +155,6 @@ auto get_server_op(int argc, char* argv[])
        default_value(10000)
    , "The maximum allowed size of pipelined commands in the redis "
      " session.")
-
-   ( "redis-database"
-   , po::value<std::string>(&redis_db)->default_value("0")
-   , "The redis database to use: 0, 1, 2 etc.")
 
    ( "redis-key-menu"
    , po::value<std::string>(&cfg.worker.db.cfg.menu_key)->
@@ -219,19 +239,19 @@ auto get_server_op(int argc, char* argv[])
 
    if (vm.count("help")) {
       std::cout << desc << "\n";
-      return listener_cfg {true};
+      return server_cfg {true};
    }
 
    if (vm.count("git-sha1")) {
       std::cout << GIT_SHA1 << "\n";
-      return listener_cfg {true};
+      return server_cfg {true};
    }
 
    cfg.log_on_stderr = log_on_stderr == "yes";
    cfg.daemonize = daemonize == "yes";
 
    cfg.worker.db.cfg.chat_msg_prefix += ":";
-   cfg.worker.db.cfg.notify_prefix += redis_db + "__:";
+   cfg.worker.db.cfg.notify_prefix += "0__:";
    cfg.worker.db.cfg.user_notify_prefix = cfg.worker.db.cfg.notify_prefix
                                       + cfg.worker.db.cfg.chat_msg_prefix;
 
@@ -259,9 +279,9 @@ int main(int argc, char* argv[])
 
       set_fd_limits(500000);
 
-      listener lst {cfg};
+      worker w {cfg.worker};
       drop_root_priviledges();
-      lst.run();
+      w.run();
 
    } catch (std::exception const& e) {
       log(loglevel::notice, e.what());

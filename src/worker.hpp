@@ -19,13 +19,14 @@
 #include "config.hpp"
 #include "channel.hpp"
 #include "json_utils.hpp"
+#include "stats_server.hpp"
 #include "acceptor_mgr.hpp"
 #include "worker_session.hpp"
 
 namespace rt
 {
 
-struct worker_only_cfg {
+struct core_cfg {
    // The maximum number of channels that is allowed to be sent to the
    // user on subscribe.
    int max_posts_on_sub; 
@@ -39,12 +40,13 @@ struct worker_only_cfg {
 
 struct worker_cfg {
    redis::config db;
-   ws_ss_timeouts timeouts;
-   worker_only_cfg worker;
+   ws_timeouts timeouts;
+   core_cfg core;
    channel_cfg channel;
+   stats_server_cfg stats;
 };
 
-struct ws_ss_stats {
+struct ws_stats {
    int number_of_sessions {0};
 };
 
@@ -79,16 +81,16 @@ std::ostream& operator<<(std::ostream& os, worker_stats const& stats);
 
 class worker {
 private:
-   net::io_context& ioc_;
+   net::io_context ioc {1};
 
-   worker_only_cfg const cfg;
+   core_cfg const cfg;
 
    // There are hundreds of thousends of channels typically, so we
    // store the configuration only once here.
    channel_cfg const ch_cfg;
 
-   ws_ss_timeouts const ws_ss_timeouts_;
-   ws_ss_stats ws_ss_stats_;
+   ws_timeouts const ws_timeouts_;
+   ws_stats ws_stats_;
 
    // Maps a user id in to a websocket session.
    std::unordered_map< std::string
@@ -104,6 +106,7 @@ private:
    // case.
    channel product_channel;
 
+   // Facade to redis.
    redis::facade db;
 
    menu_elems_array_type menu;
@@ -128,6 +131,12 @@ private:
 
    // Accepts websocket connections.
    acceptor_mgr acceptor;
+
+   // Provides some statistics about the server.
+   stats_server sserver;
+
+   // Signal handler.
+   net::signal_set signal_set;
 
    void init();
    void create_channels(menu_elems_array_type const& menu);
@@ -162,8 +171,10 @@ private:
    void on_db_register();
    void on_db_user_data(std::vector<std::string> const& data) noexcept;
 
+   void on_signal(boost::system::error_code const& ec, int n);
+
 public:
-   worker(worker_cfg cfg, net::io_context& ioc);
+   worker(worker_cfg cfg);
 
    void on_session_dtor( std::string const& id
                        , std::vector<std::string> msgs);
@@ -172,15 +183,17 @@ public:
                 , std::string msg) noexcept;
 
    auto const& get_timeouts() const noexcept
-      { return ws_ss_timeouts_;}
+      { return ws_timeouts_;}
    auto& get_ws_stats() noexcept
-      { return ws_ss_stats_;}
+      { return ws_stats_;}
    auto const& get_ws_stats() const noexcept
-      { return ws_ss_stats_; }
+      { return ws_stats_; }
    void shutdown();
    worker_stats get_stats() const noexcept;
    auto& get_ioc() const noexcept
-      { return ioc_; }
+      { return ioc; }
+
+   void run();
 };
 
 }

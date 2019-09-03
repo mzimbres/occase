@@ -40,7 +40,7 @@ enum class ev_res
 , unknown
 };
 
-struct ws_ss_timeouts {
+struct ws_timeouts {
    std::chrono::seconds login {2};
    std::chrono::seconds handshake {2};
    std::chrono::seconds pong {2};

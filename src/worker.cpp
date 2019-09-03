@@ -33,14 +33,20 @@ std::ostream& operator<<(std::ostream& os, worker_stats const& stats)
    return os;
 }
 
-worker::worker(worker_cfg cfg, net::io_context& ioc)
-: ioc_ {ioc}
-, cfg {cfg.worker}
+worker::worker(worker_cfg cfg)
+: cfg {cfg.core}
 , ch_cfg {cfg.channel}
-, ws_ss_timeouts_ {cfg.timeouts}
+, ws_timeouts_ {cfg.timeouts}
 , db {cfg.db, ioc}
 , acceptor {ioc}
+, sserver {cfg.stats, ioc}
+, signal_set {ioc, SIGINT, SIGTERM}
 {
+   auto f = [this](auto const& ec, auto n)
+      { on_signal(ec, n); };
+
+   signal_set.async_wait(f);
+
    init();
 }
 
@@ -111,6 +117,7 @@ void worker::on_db_posts(std::vector<std::string> const& msgs)
 
    // We can begin to accept websocket connections.
    acceptor.run(*this, cfg.port);
+   sserver.run(*this);
 }
 
 void worker::on_db_channel_post(std::string const& msg)
@@ -708,6 +715,7 @@ void worker::shutdown()
       , std::size(sessions));
 
    acceptor.shutdown();
+   sserver.shutdown();
 
    auto f = [](auto o)
    {
@@ -751,11 +759,40 @@ ev_res worker::on_app( std::shared_ptr<worker_session> s
    return ev_res::unknown;
 }
 
+void worker::on_signal(boost::system::error_code const& ec, int n)
+{
+   if (ec) {
+      if (ec == net::error::operation_aborted) {
+         // No signal occurred, the handler was canceled. We just
+         // leave.
+         return;
+      }
+
+      log( loglevel::crit
+         , "listener::on_signal: Unhandled error '{0}'"
+         , ec.message());
+
+      return;
+   }
+
+   log( loglevel::notice
+      , "Signal {0} has been captured. "
+        " Stopping listening for new connections"
+      , n);
+
+   shutdown();
+}
+
+void worker::run()
+{
+   ioc.run();
+}
+
 worker_stats worker::get_stats() const noexcept
 {
    worker_stats wstats {};
 
-   wstats.number_of_sessions = ws_ss_stats_.number_of_sessions;
+   wstats.number_of_sessions = ws_stats_.number_of_sessions;
    wstats.worker_post_queue_size = ssize(post_queue);
    wstats.worker_reg_queue_size = ssize(reg_queue);
    wstats.worker_login_queue_size = ssize(login_queue);

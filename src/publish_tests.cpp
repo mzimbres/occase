@@ -7,6 +7,7 @@
 #include <utility>
 #include <sstream>
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 
 #include <boost/asio/signal_set.hpp>
@@ -27,6 +28,7 @@ using namespace rt::cli;
 namespace po = boost::program_options;
 
 struct options {
+   std::string menu; // In json format.
    std::string host {"127.0.0.1"};
    std::string port {"8080"};
    int n_publishers = 10;
@@ -110,7 +112,7 @@ void test_online(options const& op)
 
       auto const s = std::make_shared<session_launcher<publisher>
                       >( ioc
-                       , config_type {{}, op.n_repliers}
+                       , config_type {{}, op.n_repliers, op.menu}
                        , op.make_session_cf()
                        , op.make_pub_cfg(logins1)
                        );
@@ -339,10 +341,15 @@ void test_early_close(options const& op)
 int main(int argc, char* argv[])
 {
    try {
+      std::string menu_file;
       options op;
       po::options_description desc("Options");
       desc.add_options()
          ("help,h", "Produces the help message.")
+
+         ( "menu,m"
+         , po::value<std::string>(&menu_file)
+         , "File with menu in json format.")
 
          ( "port,p"
          , po::value<std::string>(&op.port)->default_value("8080")
@@ -390,6 +397,15 @@ int main(int argc, char* argv[])
          std::cout << desc << "\n";
          return 0;
       }
+
+      if (std::empty(menu_file)) {
+         std::cerr << "Menu option cannot be empty." << std::endl;
+         return 1;
+      }
+
+      using iter_type = std::istreambuf_iterator<char>;
+      std::ifstream ifs {menu_file};
+      op.menu = std::string {iter_type {ifs}, {}};
 
       set_fd_limits(500000);
 

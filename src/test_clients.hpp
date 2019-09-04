@@ -193,6 +193,7 @@ public:
    struct options_type {
       login user;
       int n_repliers;
+      std::string menu;
    };
 
 private:

@@ -486,7 +486,8 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
       if (res != "ok")
          throw std::runtime_error("publisher::login_ack");
 
-      auto const menus = j.at("menus").get<menu_elems_array_type>();
+      auto const j_menu = json::parse(op.menu);
+      auto const menus = j_menu.at("menus").get<menu_elems_array_type>();
       auto const menu_codes = create_channels(menus);
       auto const pub_codes = channel_codes(menu_codes, menus);
 

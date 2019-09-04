@@ -23,6 +23,7 @@ for (( i = 0 ; i < 1 ; ++i )); do
                    --publishers 1\
                    --listeners 1\
                    --post-listeners 100\
+                   --menu menus/test1/json.txt\
                    --launch-interval 10 > /dev/null
 done
 
@@ -34,6 +35,7 @@ for (( i = 0 ; i < 1 ; ++i )); do
                    --publishers 1\
                    --listeners 100\
                    --post-listeners 100\
+                   --menu menus/test1/json.txt\
                    --launch-interval 10 > /dev/null
 done
 
@@ -43,22 +45,29 @@ for (( i = 0 ; i < 1 ; ++i )); do
                    --publishers 3\
                    --listeners 2\
                    --post-listeners 100\
+                   --menu menus/test1/json.txt\
                    --launch-interval 10 > /dev/null
 done
 
 for (( i = 0 ; i < 1 ; ++i )); do
    echo "Starting test 3-$i"
-   ./publish_tests --test 3 --launch-interval 10 > /dev/null
+   ./publish_tests --test 3\
+                   --menu menus/test1/json.txt\
+                   --launch-interval 10 > /dev/null
 done
 
 echo "Starting test 2"
-./publish_tests --test 2 --handshake-timeout 3 > /dev/null
+./publish_tests --test 2\
+                --menu menus/test1/json.txt\
+                --handshake-timeout 3 > /dev/null
 
 echo "Starting test 4"
-./publish_tests --test 4 > /dev/null
+./publish_tests --test 4\
+                --menu menus/test1/json.txt > /dev/null
 
 echo "Starting test 5"
-./publish_tests --test 5 /dev/null
+./publish_tests --test 5\
+                --menu menus/test1/json.txt >/dev/null
 
 kill -9 $server_pid
 

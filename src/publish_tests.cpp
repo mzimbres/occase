@@ -132,7 +132,7 @@ void test_online(options const& op)
 
       auto const s = std::make_shared<session_launcher<client_type>
                       >( ioc
-                       , config_type {{}, op.n_publishers}
+                       , config_type {{}, op.n_publishers, op.menu}
                        , op.make_session_cf()
                        , op.make_cfg(logins2)
                        );
@@ -180,7 +180,8 @@ void test_offline(options const& op)
    auto s1 = 
       std::make_shared<session_type1>( ioc
                                      , op.make_session_cf()
-                                     , config_type1 {l1.front()});
+                                     , config_type1
+                                       {l1.front(), op.menu});
    s1->run();
    ioc.run();
    auto post_ids = s1->get_mgr().get_post_ids();
@@ -193,9 +194,11 @@ void test_offline(options const& op)
 
    auto const l2 = test_reg( op.make_session_cf()
                            , op.make_launcher_empty_cfg(1));
+
    std::make_shared<session_type2>( ioc
                                   , op.make_session_cf()
-                                  , config_type2 {l2.front(), 1}
+                                  , config_type2
+                                    {l2.front(), 1, op.menu}
                                   )->run();
    ioc.restart();
    ioc.run();

@@ -161,7 +161,8 @@ int replier::on_read( std::string msg
       if (res != "ok")
          throw std::runtime_error("replier::login_ack");
 
-      menus = j.at("menus").get<menu_elems_array_type>();
+      auto const j_menu = json::parse(op.menu);
+      menus = j_menu.at("menus").get<menu_elems_array_type>();
       assert(std::size(menus) == 2);
 
       auto const menu_codes_0 = menu_elems_to_codes(menus.at(0));
@@ -358,12 +359,10 @@ int simulator::on_read( std::string msg
       if (res != "ok")
          throw std::runtime_error("simulator::login_ack");
 
-      menus = j.at("menus").get<menu_elems_array_type>();
-
       json j_sub;
       j_sub["cmd"] = "subscribe";
       j_sub["last_post_id"] = 0;
-      j_sub["channels"] = create_channels2(menus);
+      j_sub["channels"] = create_channels2(menu_elems_array_type {});
       j_sub["filter"] = 0;
       s->send_msg(j_sub.dump());
       return 1;
@@ -648,7 +647,8 @@ int publisher2::on_read(std::string msg, std::shared_ptr<client_type> s)
       if (res != "ok")
          throw std::runtime_error("publisher2::login_ack");
 
-      auto const menus = j.at("menus").get<menu_elems_array_type>();
+      auto const j_menu = json::parse(op.menu);
+      auto const menus = j_menu.at("menus").get<menu_elems_array_type>();
       auto const menu_codes = create_channels(menus);
       auto const pub_codes = channel_codes(menu_codes, menus);
 

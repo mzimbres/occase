@@ -83,6 +83,7 @@ public:
    struct options_type {
       login user;
       int n_publishers;
+      std::string menu;
    };
 
 private:
@@ -148,7 +149,6 @@ private:
    options_type op;
    int counter = 0;
 
-   menu_elems_array_type menus;
    std::string nick;
 
    void send_chat_msg( std::string user, long long id
@@ -231,6 +231,7 @@ class publisher2 {
 public:
    struct options_type {
       login user;
+      std::string menu;
    };
 
 private:

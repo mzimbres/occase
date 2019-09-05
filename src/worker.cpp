@@ -152,11 +152,8 @@ void worker::on_db_channel_post(std::string const& msg)
       auto const post_id = j.at("id").get<int>();
       auto const from = j.at("from").get<std::string>();
       auto const r = g->second.remove_post(post_id, from);
-      auto const* str = "Failed to remove post: {0}.";
-      if (r)
-         str = "Post successfully removed: {0}";
-
-      log(loglevel::notice, str, post_id);
+      if (!r) 
+         log(loglevel::notice, "Failed to remove post: {0}.", post_id);
       return;
    }
 

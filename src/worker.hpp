@@ -57,15 +57,9 @@ struct post_queue_item {
    post item;
 };
 
-struct reg_queue_item {
+struct pwd_queue_item {
    std::weak_ptr<worker_session> session;
    std::string pwd;
-};
-
-struct login_queue_item {
-   std::weak_ptr<worker_session> session;
-   std::string pwd;
-   bool send_menu;
 };
 
 struct worker_stats {
@@ -117,10 +111,10 @@ private:
 
    // Queue with sessions waiting for a user id that are retrieved
    // from redis.
-   std::queue<reg_queue_item> reg_queue;
+   std::queue<pwd_queue_item> reg_queue;
 
    // Queue of users waiting to be checked for login.
-   std::queue<login_queue_item> login_queue;
+   std::queue<pwd_queue_item> login_queue;
 
    // The last post id that this channel has received from reidis
    // pubsub menu channel.

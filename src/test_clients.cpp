@@ -37,7 +37,6 @@ std::string make_login_cmd(rt::cli::login const& user)
    j["cmd"] = "login";
    j["user"] = user.id;
    j["password"] = user.pwd;
-   j["menu_versions"] = std::vector<int> {};
    return j.dump();
 }
 

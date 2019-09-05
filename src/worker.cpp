@@ -246,9 +246,6 @@ worker::on_db_user_data(std::vector<std::string> const& data) noexcept
             json resp;
             resp["cmd"] = "login_ack";
             resp["result"] = "ok";
-            if (login_queue.front().send_menu)
-               resp["menus"] = menu;
-
             s->send(resp.dump(), false);
          }
       } else {
@@ -444,23 +441,11 @@ worker::on_app_login( json const& j
    auto const user = j.at("user").get<std::string>();
    s->set_id(user);
 
-   auto const menu_versions =
-      j.at("menu_versions").get<std::vector<int>>();
-
-   // Cache this value?
-   auto const server_versions = read_versions(menu);
-
-   auto const needs_new_menu =
-      std::lexicographical_compare( std::begin(menu_versions)
-                                  , std::end(menu_versions)
-                                  , std::begin(server_versions)
-                                  , std::end(server_versions));
-
    auto const pwd = j.at("password").get<std::string>();
 
    // We do not have to serialize the calls to retrieve_user_data
    // since this will be done by the db object.
-   login_queue.push({s, pwd, needs_new_menu});
+   login_queue.push({s, pwd});
    db.retrieve_user_data(s->get_id());
 
    return ev_res::login_ok;

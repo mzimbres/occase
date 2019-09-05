@@ -17,39 +17,39 @@ server_pid=$!
 # tests.
 sleep 3
 
-for (( i = 0 ; i < 1 ; ++i )); do
+for (( i = 0 ; i < 10 ; ++i )); do
    echo "Starting test 1-a-$i"
    ./publish_tests --test 1\
                    --publishers 1\
                    --listeners 1\
-                   --post-listeners 100\
+                   --post-listeners 1\
                    --menu menus/test1/json.txt\
                    --launch-interval 10 > /dev/null
 done
 
 # Be aware of the fact that there is a limit on the size of user
 # pending messages, see redis-offline-chat-msgs
-for (( i = 0 ; i < 1 ; ++i )); do
+for (( i = 0 ; i < 10 ; ++i )); do
    echo "Starting test 1-b-$i"
    ./publish_tests --test 1\
                    --publishers 1\
                    --listeners 100\
-                   --post-listeners 100\
+                   --post-listeners 1\
                    --menu menus/test1/json.txt\
                    --launch-interval 10 > /dev/null
 done
 
-for (( i = 0 ; i < 1 ; ++i )); do
+for (( i = 0 ; i < 10 ; ++i )); do
    echo "Starting test 1-c-$i"
    ./publish_tests --test 1\
-                   --publishers 3\
+                   --publishers 1\
                    --listeners 2\
-                   --post-listeners 100\
+                   --post-listeners 1\
                    --menu menus/test1/json.txt\
                    --launch-interval 10 > /dev/null
 done
 
-for (( i = 0 ; i < 1 ; ++i )); do
+for (( i = 0 ; i < 10 ; ++i )); do
    echo "Starting test 3-$i"
    ./publish_tests --test 3\
                    --menu menus/test1/json.txt\
@@ -69,5 +69,5 @@ echo "Starting test 5"
 ./publish_tests --test 5\
                 --menu menus/test1/json.txt >/dev/null
 
-kill -9 $server_pid
+#kill -9 $server_pid
 

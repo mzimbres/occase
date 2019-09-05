@@ -176,17 +176,22 @@ void worker::on_db_user_id(std::string const& id)
 {
    assert(!std::empty(reg_queue));
 
-   if (auto session = reg_queue.front().session.lock()) {
-      reg_queue.front().pwd = pwdgen(cfg.pwd_size);
+   while (!std::empty(reg_queue)) {
+      if (auto session = reg_queue.front().session.lock()) {
+         reg_queue.front().pwd = pwdgen(cfg.pwd_size);
 
-      // We store a hashed version of the password in the database.
-      auto const digest = make_hex_digest(reg_queue.front().pwd);
-      db.register_user(id, digest);
-      session->set_id(id);
-   } else {
-      // The user is not online anymore. The requested id is lost.
-      // Very unlikely to happen since the communication with redis is
-      // very fast.
+         // A hashed version of the password is stored in the
+         // database.
+         auto const digest = make_hex_digest(reg_queue.front().pwd);
+         db.register_user(id, digest);
+         session->set_id(id);
+         return;
+      }
+
+      // The user is not online anymore. We try with the next element
+      // in the queue, if all of them are also not online anymore the
+      // requested id is lost. Very unlikely to happen since the
+      // communication with redis is very fast.
       reg_queue.pop();
    }
 }
@@ -274,13 +279,14 @@ void worker::on_db_register()
       resp["result"] = "ok";
       resp["id"] = id;
       resp["password"] = reg_queue.front().pwd;
-      resp["menus"] = menu;
       session->send(resp.dump(), false);
    } else {
       // The user is not online anymore. The requested id is lost.
    }
 
    reg_queue.pop();
+   if (!std::empty(reg_queue))
+      db.request_user_id();
 }
 
 void
@@ -452,8 +458,11 @@ ev_res
 worker::on_app_register( json const& j
                        , std::shared_ptr<worker_session> s)
 {
+   auto const empty = std::empty(reg_queue);
    reg_queue.push({s, {}});
-   db.request_user_id();
+   if (empty)
+      db.request_user_id();
+
    return ev_res::register_ok;
 }
 

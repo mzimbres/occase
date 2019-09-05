@@ -2,6 +2,7 @@
 #include <chrono>
 #include <thread>
 #include <memory>
+#include <limits>
 #include <vector>
 #include <string>
 #include <utility>
@@ -95,6 +96,34 @@ public:
   }
   ~timer() { }
 };
+
+// This function is meant only to start session that do nothing but
+// log on the server to receive events.
+void start_leave_after_n_posts(options const& op)
+{
+   boost::asio::io_context ioc;
+
+   auto const logins =
+      test_reg( op.make_session_cf()
+              , op.make_launcher_empty_cfg(op.n_leave_after_n_posts));
+
+   using client_type = leave_after_n_posts;
+   using config_type = client_type::options_type;
+
+   auto const n = std::numeric_limits<int>::max();
+   auto const s = std::make_shared<session_launcher<client_type>
+                   >( ioc
+                    , config_type {{}, n}
+                    , op.make_session_cf()
+                    , op.make_cfg(logins)
+                    );
+   
+   s->run({});
+
+   ioc.run();
+
+   std::cout << "Test ok: Start leave after n posts." << std::endl;
+}
 
 void test_online(options const& op)
 {
@@ -419,6 +448,7 @@ int main(int argc, char* argv[])
          case 3: read_only_tests(op); break;
          case 4: test_login_error(op); break;
          case 5: test_early_close(op); break;
+         case 6: start_leave_after_n_posts(op); break;
          default:
             std::cerr << "Invalid test." << std::endl;
       }

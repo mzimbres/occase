@@ -30,7 +30,7 @@ CPPFLAGS += -I. -I$(srcdir)/src -I$(boost_inc_dir)
 CPPFLAGS += -Wall -Werror=format-security \
 	    -Werror=implicit-function-declaration
 CPPFLAGS += $(pkg-config --cflags libsodium)
-CPPFLAGS += -g #-O2
+CPPFLAGS += -O2
 
 VPATH = $(srcdir)/src
 

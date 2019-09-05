@@ -361,7 +361,7 @@ int simulator::on_read( std::string msg
       json j_sub;
       j_sub["cmd"] = "subscribe";
       j_sub["last_post_id"] = 0;
-      j_sub["channels"] = create_channels2(menu_elems_array_type {});
+      j_sub["channels"] = menu_code_type2 {};
       j_sub["filter"] = 0;
       s->send_msg(j_sub.dump());
       return 1;

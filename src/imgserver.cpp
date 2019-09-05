@@ -66,6 +66,7 @@ public:
    void run()
    {
       auto self = shared_from_this();
+
       auto f = [self](auto ec, auto n)
          { self->on_read_header(ec, n); };
 
@@ -100,6 +101,87 @@ private:
    net::basic_waitable_timer<std::chrono::steady_clock> deadline;
    std::string doc_root;
 
+   void post_handler()
+   {
+      std::string const target = header_parser.get().target().data();
+      auto const filename = target.substr(1);
+      bool is_valid = true; // Prove signaure here.
+      if (is_valid) {
+         body_parser = std::make_unique< req_body_parser_type
+                                       >(std::move(header_parser));
+
+         beast::error_code ec;
+         auto const path = doc_root + "/" + filename + ".jpg";
+         std::cout << "Path: " << path << std::endl;
+         body_parser->get().body().open( path.data()
+                                       , beast::file_mode::write, ec);
+
+         if (ec) {
+            std::cout << ec.message() << std::endl;
+            resp.result(http::status::not_found);
+            resp.set(http::field::content_type, "text/plain");
+            beast::ostream(resp.body()) << "Error\r\n";
+            resp.set(http::field::content_length, resp.body().size());
+            write_response();
+         }
+
+         auto self = shared_from_this();
+         auto f = [self](auto ec, auto n)
+            { self->on_read_body(ec, n); };
+
+         http::async_read(socket, buffer, *body_parser, f);
+      } else {
+         resp.result(http::status::not_found);
+         resp.set(http::field::content_type, "text/plain");
+         beast::ostream(resp.body()) << "File not found\r\n";
+         resp.set(http::field::content_length, resp.body().size());
+         write_response();
+      }
+   }
+
+   void get_handler()
+   {
+      std::cout << "Got a get req" << std::endl;
+      std::string const filename = header_parser.get().target().data();
+
+      if (std::empty(filename)) {
+      } else {
+         beast::error_code ec;
+         auto const path = doc_root + filename;
+         std::cout << "Path get: " << path << std::endl;
+         http::file_body::value_type body;
+         body.open(path.data(), beast::file_mode::scan, ec);
+
+         if (ec) { // TODO: Handle this.
+            std::cout << ec.message() << std::endl;
+            return;
+         }
+
+         auto const size = std::size(body);
+         file_body_resp = std::make_unique<resp_body_type>(
+            std::piecewise_construct,
+            std::make_tuple(std::move(body)),
+            std::make_tuple(http::status::ok,
+               header_parser.get().version())
+         );
+
+         file_body_resp->set(http::field::server, BOOST_BEAST_VERSION_STRING);
+         file_body_resp->set(http::field::content_type, mime_type(path));
+         file_body_resp->content_length(size);
+         file_body_resp->keep_alive(header_parser.keep_alive());
+
+         auto self = shared_from_this();
+
+         auto f = [self](auto ec, auto)
+         {
+             self->socket.shutdown(tcp::socket::shutdown_send, ec);
+             self->deadline.cancel();
+         };
+
+         http::async_write(socket, *file_body_resp, f);
+      }
+   }
+
    void on_read_body(boost::system::error_code ec, std::size_t n)
    {
       if (ec) {
@@ -114,6 +196,7 @@ private:
          resp.set(http::field::server, "Beast");
       }
 
+      resp.set(http::field::content_length, resp.body().size());
       write_response();
    }
 
@@ -123,95 +206,13 @@ private:
       resp.keep_alive(false);
 
       switch (header_parser.get().method()) {
-      case http::verb::post:
-      {
-         if (header_parser.get().target() == "/image") {
-            std::string filename;
-            auto const iter = header_parser.get().find("filename");
-            if (iter != std::end(header_parser.get()))
-               filename = iter->value().data();
-
-            auto const pos = filename.find('.');
-            if (pos == std::string::npos)
-               return;
-
-            auto const tmp = filename.substr(0, pos);
-
-            // Workaround while req_body_parser_type does not offer a move
-            // operator=
-            body_parser =
-               std::make_unique<req_body_parser_type>(std::move(header_parser));
-
-            beast::error_code ec;
-            auto const path = doc_root + "/" + tmp + ".jpg";
-            std::cout << "Path: " << path << std::endl;
-            body_parser->get().body().open( path.data()
-                                          , beast::file_mode::write, ec);
-
-            if (ec) { // TODO: Handle this.
-               std::cout << ec.message() << std::endl;
-            }
-
-            auto self = shared_from_this();
-            auto f = [self](auto ec, auto n)
-               { self->on_read_body(ec, n); };
-
-            http::async_read(socket, buffer, *body_parser, f);
-         } else {
-            resp.result(http::status::not_found);
-            resp.set(http::field::content_type, "text/plain");
-            beast::ostream(resp.body()) << "File not found\r\n";
-            write_response();
-         }
-      }
-      break;
-      case http::verb::get:
-      {
-         std::cout << "Got a get req" << std::endl;
-         std::string const filename = header_parser.get().target().data();
-
-         if (std::empty(filename)) {
-         } else {
-            beast::error_code ec;
-            auto const path = doc_root + filename;
-            std::cout << "Path get: " << path << std::endl;
-            http::file_body::value_type body;
-            body.open(path.data(), beast::file_mode::scan, ec);
-
-            if (ec) { // TODO: Handle this.
-               std::cout << ec.message() << std::endl;
-               return;
-            }
-
-            auto const size = std::size(body);
-            file_body_resp = std::make_unique<resp_body_type>(
-               std::piecewise_construct,
-               std::make_tuple(std::move(body)),
-               std::make_tuple(http::status::ok,
-                  header_parser.get().version())
-            );
-
-            file_body_resp->set(http::field::server, BOOST_BEAST_VERSION_STRING);
-            file_body_resp->set(http::field::content_type, mime_type(path));
-            file_body_resp->content_length(size);
-            file_body_resp->keep_alive(header_parser.keep_alive());
-
-            auto self = shared_from_this();
-
-            auto f = [self](auto ec, auto)
-            {
-                self->socket.shutdown(tcp::socket::shutdown_send, ec);
-                self->deadline.cancel();
-            };
-
-            http::async_write(socket, *file_body_resp, f);
-         }
-      }
-      break;
+      case http::verb::post: post_handler(); break;
+      case http::verb::get: get_handler(); break;
       default:
       {
          resp.result(http::status::bad_request);
          resp.set(http::field::content_type, "text/plain");
+         resp.set(http::field::content_length, resp.body().size());
          write_response();
       }
       break;
@@ -221,8 +222,6 @@ private:
 
    void write_response()
    {
-      resp.set(http::field::content_length, resp.body().size());
-
       auto self = shared_from_this();
 
       auto f = [self](auto ec, auto)

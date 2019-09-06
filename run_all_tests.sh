@@ -69,5 +69,5 @@ echo "Starting test 5"
 ./publish_tests --test 5\
                 --menu menus/test1/json.txt >/dev/null
 
-#kill -9 $server_pid
+kill -9 $server_pid
 

@@ -522,6 +522,7 @@ worker::on_app_subscribe( json const& j
       resp["cmd"] = "subscribe_ack";
       resp["result"] = "fail";
       s->send(resp.dump(), false);
+      return ev_res::subscribe_fail;
    }
 
    auto const filter = j.at("filter").get<std::uint64_t>();

@@ -75,28 +75,39 @@ void worker::on_db_menu(std::string const& data)
 
 void worker::create_channels(menu_elems_array_type const& me)
 {
-   auto const menu_channels = menu_elems_to_codes(me.back());
+   assert(std::empty(channel_hashes));
+   assert(std::empty(channels));
 
-   auto created = 0;
-   auto existed = 0;
-   auto f = [&, this](auto const& code)
-   {
-      auto const hash_code = to_hash_code(code, me.back().depth);
+   channel_hashes.clear();
+   channels.clear();
 
-      if (channels.insert({hash_code, {}}).second)
-         ++created;
-      else
-         ++existed;
-   };
+   // Channels are created only for the second menu element.
+   auto const hashes = menu_elems_to_codes(me.back());
 
-   std::for_each( std::cbegin(menu_channels)
-                , std::cend(menu_channels)
-                , f);
+   // Reserver the exact amount of memory that will be needed. The
+   // vector with hashes will also hold the sentinel to make linear
+   // searches faster.
+   channel_hashes.reserve(std::size(hashes) + 1);
+   channels.reserve(std::size(hashes));
 
-   log(loglevel::info, "Channels created: {0}", created);
+   auto f = [&](auto const& code)
+      { return to_hash_code(code, me.back().depth); };
 
-   assert(created != 0);
-   assert(existed == 0);
+   std::transform( std::cbegin(hashes)
+                 , std::cend(hashes)
+                 , std::back_inserter(channel_hashes)
+                 , f);
+
+   channels.resize(std::size(channel_hashes));
+
+   std::sort(std::begin(channel_hashes), std::end(channel_hashes));
+
+   // Inserts an alement that will be used as sentinel.
+   channel_hashes.push_back(0);
+
+   log( loglevel::info
+      , "Number of channels created: {0}"
+      , std::size(channels));
 }
 
 void worker::on_db_posts(std::vector<std::string> const& msgs)
@@ -122,20 +133,40 @@ void worker::on_db_posts(std::vector<std::string> const& msgs)
 
 void worker::on_db_channel_post(std::string const& msg)
 {
-   // NOTE: Later we may have to improve how we decide if a message is
-   // a post or a command, like deleter, specially if the number of
-   // commands that sent from workers to workers increases.
-
    // This function has two roles, deal with the delete command and
    // new posts.
+   //
+   // NOTE: Later we may have to improve how we decide if a message is
+   // a post or a command, like delete, specially if the number of
+   // commands that are sent from workers to workers increases.
+
    auto const j = json::parse(msg);
    auto const channel = j.at("to").get<menu_code_type>();
-   auto const hash_code =
+
+   // The channel above has the form
+   //
+   //      ____menu_1____    ____menu_2____
+   //     |              |  |              |
+   //    [[[1, 2, 3, ...]], [[a, b, c, ...]]]
+   //
+   // We want to convert the second code [a, b, c] to its hash.
+   //
+   auto const hash =
       to_hash_code( channel.at(1).at(0)
                   , menu.back().depth);
 
-   auto const g = channels.find(hash_code);
-   if (g == std::end(channels)) {
+   // Now we perform a binary search of the channel hash code
+   // calculated above in the channel_hashes to determine in which
+   // channel it shall be published. Notice we exclude the sentinel
+   // from the search.
+   auto const cend = std::cend(channel_hashes);
+   auto const match =
+      std::lower_bound( std::cbegin(channel_hashes)
+                      , std::prev(cend)
+                      , hash);
+
+   // TODO: Will the last condition be evaluated if match is end? 
+   if (match == std::prev(cend) || *match > hash) {
       // This happens if the subscription to the posts channel happens
       // before we receive the menu and generate the channels.  That
       // is why it is important to update the last message id only
@@ -144,16 +175,21 @@ void worker::on_db_channel_post(std::string const& msg)
       // We could in principle insert the post, but I am afraid this
       // could result in duplicated posts after we receive those from
       // the database.
-      log(loglevel::debug, "Channel could not be found: {0}", hash_code);
+      log(loglevel::debug, "Channel could not be found: {0}", hash);
       return;
    }
+
+   // The channel has been found, we can now calculate the offset in
+   // the channels array.
+   auto const i = std::distance(std::cbegin(channel_hashes), match);
 
    if (j.contains("cmd")) {
       auto const post_id = j.at("id").get<int>();
       auto const from = j.at("from").get<std::string>();
-      auto const r = g->second.remove_post(post_id, from);
+      auto const r = channels[i].remove_post(post_id, from);
       if (!r) 
          log(loglevel::notice, "Failed to remove post: {0}.", post_id);
+
       return;
    }
 
@@ -162,14 +198,8 @@ void worker::on_db_channel_post(std::string const& msg)
    if (item.id > last_post_id)
       last_post_id = item.id;
 
-   g->second.broadcast(item, menu.at(0).depth);
-
-   // The maximum number of posts that can be stored on the products
-   // channel should be higher than on the specialied channels. I do
-   // not know which number is good enough. TODO move this decision to
-   // the config file.
-   // NOTE: A number that is too high may compromize scalability.
-   product_channel.broadcast(item, menu.at(0).depth);
+   channels[i].broadcast(item, menu.at(0).depth);
+   none_channel.broadcast(item, menu.at(0).depth);
 }
 
 void worker::on_db_user_id(std::string const& id)
@@ -472,8 +502,13 @@ worker::on_app_subscribe( json const& j
 {
    auto const codes = j.at("channels").get<menu_code_type2>();
 
-   // TODO: Use the limits on the size of these arrays to avoid
-   // traversing them whole.
+   // The codes above have the form
+   //
+   //      ____menu_1_____    ____menu_2__ 
+   //     |               |  |            |
+   //    [[a, b, c, d, ...], [e, f, g, ...]]
+   //
+
    auto const b0 =
       std::is_sorted( std::cbegin(codes.at(0))
                     , std::cend(codes.at(0)));
@@ -493,6 +528,7 @@ worker::on_app_subscribe( json const& j
    auto const app_last_post_id = j.at("last_post_id").get<int>();
 
    s->set_filter(filter);
+
    s->set_filter(codes.at(0));
 
    auto psession = s->get_proxy_session(true);
@@ -501,46 +537,80 @@ worker::on_app_subscribe( json const& j
 
    // If the second channels are empty, the app wants posts from all
    // channels, otherwise we have to traverse the individual channels.
-   if (std::empty(codes.back())) {
-      product_channel.add_member(psession, ch_cfg.cleanup_rate);
-      product_channel.retrieve_pub_items(app_last_post_id,
-         std::back_inserter(items));
+   if (std::empty(codes.at(1))) {
+      none_channel.add_member(psession, ch_cfg.cleanup_rate);
+      none_channel.get_posts( app_last_post_id
+                            , std::back_inserter(items)
+                            , cfg.max_posts_on_sub);
    } else {
+      // We will use the following algorithm
+      // 1. Search the first channel the user subscribed to.
+      // 2. Begin a linear search skipping the channels the user did
+      // not subscribed to.
+      //
+      // NOTICE: Remember to skip the sentinel.
+      auto const cend = std::cend(channel_hashes);
+      auto match =
+         std::lower_bound( std::cbegin(channel_hashes)
+                         , std::prev(cend)
+                         , codes.at(1).front());
+
       auto invalid_count = 0;
-      auto f = [&, this](auto const& code)
-      {
-         auto const g = channels.find(code);
-         if (g == std::end(channels)) {
-            ++invalid_count;
-            return;
-         }
+      if (match == std::prev(cend) || *match > codes.at(1).front()) {
+         invalid_count = 1;
+      } else {
+         auto f = [&, this](auto const& code)
+         {
+            // Sets the sentinel
+            channel_hashes.back() = code;
 
-         g->second.add_member(psession, ch_cfg.cleanup_rate);
-         g->second.retrieve_pub_items(app_last_post_id,
-            std::back_inserter(items));
-      };
+            // Linear search with sentinel.
+            while (*match != code)
+               ++match;
 
-      auto const d = std::min( ssize(codes.at(1))
-                             , ch_cfg.max_sub);
+            if (match == std::prev(cend)) {
+               ++invalid_count;
+               return;
+            }
 
-      std::for_each( std::cbegin(codes.at(1))
-                   , std::cbegin(codes.at(1)) + d
-                   , f);
+            auto const i =
+               std::distance(std::cbegin(channel_hashes), match);
+
+            channels[i].add_member(psession, ch_cfg.cleanup_rate);
+
+            channels[i].get_posts( app_last_post_id
+                                 , std::back_inserter(items)
+                                 , cfg.max_posts_on_sub);
+         };
+
+         // There is a limit on how many channels the app is allowed
+         // to subscribe to.
+         auto const d = std::min( ssize(codes.at(1))
+                                , ch_cfg.max_sub);
+
+         std::for_each( std::cbegin(codes.at(1))
+                      , std::cbegin(codes.at(1)) + d
+                      , f);
+      }
+
+      // When there are too many posts in the database, the operation
+      // below may become too expensive to and we may want to avoid
+      // it. We may want to impose a limit on how big the items array
+      // may get.
+      if (ssize(items) > cfg.max_posts_on_sub) {
+         std::nth_element( std::begin(items)
+                         , std::begin(items) + cfg.max_posts_on_sub
+                         , std::end(items));
+
+         items.erase( std::begin(items) + cfg.max_posts_on_sub
+                    , std::end(items));
+      }
 
       if (invalid_count != 0) {
          log( loglevel::debug
             , "worker::on_app_subscribe: Invalid channels {0}."
             , invalid_count);
       }
-   }
-
-   if (ssize(items) > cfg.max_posts_on_sub) {
-      std::nth_element( std::begin(items)
-                      , std::begin(items) + cfg.max_posts_on_sub
-                      , std::end(items));
-
-      items.erase( std::begin(items) + cfg.max_posts_on_sub
-                 , std::end(items));
    }
 
    json resp;
@@ -602,31 +672,31 @@ worker::on_app_filenames(json j, std::shared_ptr<worker_session> s)
 ev_res
 worker::on_app_publish(json j, std::shared_ptr<worker_session> s)
 {
-   // Consider remove the restriction below that the items vector have
-   // size one.
    auto items = j.at("items").get<std::vector<post>>();
 
    // Before we request a new pub id, we have to check that the post
    // is valid and will not be refused later. This prevents the pub
    // items from being incremented on an invalid message. May be
    // overkill since we do not expect the app to contain so severe
-   // bugs. Also, the session at this point has been authenticated and
-   // can be thrusted.
+   // bugs but we have care for server exploitation.
 
-   // The channel code has the form [[[1, 2]], [[2, 3, 4]], [[1, 2]]]
+   // The channel code has the form [[[1, 2]], [[2, 3, 4]]]
    // where each array in the outermost array refers to one menu.
-   auto const hash_code =
+   auto const hash =
       to_hash_code( items.front().to.at(1).at(0)
                   , menu.back().depth);
 
-   auto const g = channels.find(hash_code);
-   if (g == std::end(channels) || std::size(items) != 1) {
+   auto const cend = std::cend(channel_hashes);
+   auto const match =
+      std::lower_bound( std::cbegin(channel_hashes)
+                      , std::prev(cend)
+                      , hash);
+
+   if (match == std::prev(cend) || std::size(items) != 1) {
       // This is a non-existing channel. Perhaps the json command was
       // sent with the wrong information signaling a logic error in
       // the app. Sending a fail ack back to the app is useful to
-      // debug it? See redis::request::unsolicited_publish Enable only
-      // for debug. But ... It may prevent the traffic of invalid
-      // messages in redis.
+      // debug it. See redis::request::unsolicited_publish.
       json resp;
       resp["cmd"] = "publish_ack";
       resp["result"] = "fail";
@@ -639,6 +709,7 @@ worker::on_app_publish(json j, std::shared_ptr<worker_session> s)
    // It is important to not thrust the *from* field in the json
    // command.
    items.front().from = s->get_id();
+
    auto const tse = system_clock::now().time_since_epoch();
    items.front().date = duration_cast<milliseconds>(tse).count();
    post_queue.push({s, items.front()});

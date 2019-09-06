@@ -1,9 +1,9 @@
 #pragma once
 
+#include <deque>
 #include <string>
 #include <memory>
 #include <vector>
-#include <deque>
 #include <algorithm>
 
 #include "menu.hpp"
@@ -50,16 +50,13 @@ namespace rt
  *      average memory used will be only half of the memory allocated.
  *      This happens because vectors allocate doubling the current
  *      size.  This is nice to avoid reallocations very often, but
- *      given that we may have hundreds of thousands of vectors. There
- *      will be too much memory wasted. To deal with that we have to
- *      release excess memory once a stable number of users has been
- *      reached, letting only a small margin for growth. A std::deque
- *      could be also an option but memory would be more fragmented,
- *      which is not good for traversal.
+ *      given that we may have thousands of vectors. There will be too
+ *      much memory wasted. To deal with that we have to release
+ *      excess memory once a stable number of users has been reached,
+ *      letting only a small margin for growth. A std::deque could be
+ *      also an option but memory would be more fragmented, which is
+ *      not good for traversal.
  */
-
-// TODO: Consider using a ring buffer to store posts instead of a
-// std::deque
 
 struct channel_cfg {
    // The frequency the channel will be cleaned up if no publish
@@ -72,6 +69,8 @@ struct channel_cfg {
 };
 
 class channel {
+public:
+   using inserter_type = std::back_insert_iterator<std::vector<post>>;
 private:
    int insertions_on_inactivity = 0;
    std::vector<std::weak_ptr<proxy_session>> members;
@@ -156,19 +155,22 @@ public:
    }
 
    // Copies all items that are newer than id to inserter.
-   template <class Inserter>
-   void retrieve_pub_items(int id, Inserter inserter) const
+   void get_posts(int id, inserter_type inserter, long int max) const
    {
       auto comp = [](auto const& a, auto const& b)
-      { return a < b.id; };
+         { return a < b.id; };
 
       auto const point =
-         std::upper_bound( std::begin(items)
-                         , std::end(items)
+         std::upper_bound( std::cbegin(items)
+                         , std::cend(items)
                          , id
                          , comp);
 
-      std::copy(point, std::end(items), inserter);
+      // The number of posts that the app did not yet received from
+      // this channel.
+      auto const n = std::distance(point, std::cend(items));
+      auto const d = std::min(n, max);
+      std::copy(point, point + d, inserter);
    }
 
    // Removes a post if it exists in the channel.

@@ -91,14 +91,18 @@ private:
                      , std::weak_ptr<worker_session>
                      > sessions;
 
-   // Maps a channel hash code into its corresponding channel object.
-   std::unordered_map<std::uint64_t, channel> channels;
+   // The channels are stored in a vector and the channel hash codes
+   // separately in another vector. The last element in the
+   // channel_hashes is used as sentinel to perform fast linear
+   // searches.
+   std::vector<std::uint64_t> channel_hashes;
+   std::vector<channel> channels;
 
    // Apps that do not register for any product channels (the seconds
-   // item in the menu) will receive msgs from any channel. This is
+   // item in the menu) will receive posts from any channel. This is
    // the channel that will store the web socket channels for this
    // case.
-   channel product_channel;
+   channel none_channel;
 
    // Facade to redis.
    redis::facade db;

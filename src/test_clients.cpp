@@ -79,8 +79,8 @@ auto create_channels2(menu_elems_array_type const& menus)
 
 /* This function receives input in the form
  *
- *   _________menu_1__________     __________menu_2________   etc.
- *  |                         |   |                        |
+ *   _________menu_1__________    ___________menu_2________
+ *  |                         |  |                         |
  * [[[1, 2, 3], [3, 4, 1], ...], [[a, b, c], [d, e, f], ...]]
  *
  * The menu_1 may refer to regions of a country and menu_2 to a

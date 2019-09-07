@@ -125,6 +125,12 @@ private:
    using client_type = session_shell<leave_after_n_posts>;
    options_type op;
 
+   // Used to avoid parsing the messages. This improves performance
+   // when testing thousends of clients.
+   bool start_counting = false;
+
+   int check_counter();
+
 public:
    leave_after_n_posts(options_type op_)
    : op(op_) { }

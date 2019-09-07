@@ -292,6 +292,9 @@ int
 leave_after_n_posts::on_read( std::string msg
                             , std::shared_ptr<client_type> s)
 {
+   if (start_counting)
+      return check_counter();
+
    auto const j = json::parse(msg);
 
    auto const cmd = j.at("cmd").get<std::string>();
@@ -318,18 +321,24 @@ leave_after_n_posts::on_read( std::string msg
    }
 
    if (cmd == "post") {
-      if (--op.n_posts == 0) {
-         std::cout << "User " << op.user << " ok. (leave_after_n_posts)."
-                   << std::endl;
-         return -1;
-      }
-
-      return 1;
+      start_counting = true;
+      return check_counter();
    }
 
    std::cout << j << std::endl;
    throw std::runtime_error("leave_after_n_posts::inexistent");
    return -1;
+}
+
+int leave_after_n_posts::check_counter()
+{
+   if (--op.n_posts == 0) {
+      std::cout << "User " << op.user << " ok. (leave_after_n_posts)."
+                << std::endl;
+      return -1;
+   }
+
+   return 1;
 }
 
 int leave_after_n_posts::on_handshake(std::shared_ptr<client_type> s)

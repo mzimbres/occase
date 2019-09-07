@@ -22,7 +22,7 @@ for (( i = 0 ; i < 10 ; ++i )); do
    ./publish_tests --test 1\
                    --publishers 1\
                    --listeners 1\
-                   --post-listeners 1\
+                   --post-listeners 500\
                    --menu menus/test1/json.txt\
                    --launch-interval 10 > /dev/null
 done
@@ -34,7 +34,7 @@ for (( i = 0 ; i < 10 ; ++i )); do
    ./publish_tests --test 1\
                    --publishers 1\
                    --listeners 100\
-                   --post-listeners 1\
+                   --post-listeners 500\
                    --menu menus/test1/json.txt\
                    --launch-interval 10 > /dev/null
 done
@@ -44,7 +44,7 @@ for (( i = 0 ; i < 10 ; ++i )); do
    ./publish_tests --test 1\
                    --publishers 1\
                    --listeners 2\
-                   --post-listeners 1\
+                   --post-listeners 500\
                    --menu menus/test1/json.txt\
                    --launch-interval 10 > /dev/null
 done

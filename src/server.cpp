@@ -26,6 +26,8 @@ struct server_cfg {
    std::string pidfile;
    std::string loglevel;
 
+   int number_of_fds = -1;
+
    worker_cfg worker;
 
    int login_timeout;
@@ -135,6 +137,11 @@ auto get_cfg(int argc, char* argv[])
    ( "password-size"
    , po::value<int>(&cfg.worker.core.pwd_size)->default_value(10)
    , "The size of the password sent to the app.")
+
+   ( "number-of-fds"
+   , po::value<int>(&cfg.number_of_fds)->default_value(-1)
+   , "If provided, the server will try to increase the number of file "
+     "descriptors to this value, via setrlimit.")
 
    ( "redis-server-address"
    , po::value<std::string>(&cfg.worker.db.ss_cfg.host)->
@@ -277,7 +284,8 @@ int main(int argc, char* argv[])
       log_upto(cfg.loglevel);
       pidfile_mgr pidfile_mgr_ {cfg.pidfile};
 
-      set_fd_limits(500000);
+      if (cfg.number_of_fds != -1)
+         set_fd_limits(cfg.number_of_fds);
 
       worker w {cfg.worker};
       drop_root_priviledges();

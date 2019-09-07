@@ -102,7 +102,7 @@ void worker::create_channels(menu_elems_array_type const& me)
 
    std::sort(std::begin(channel_hashes), std::end(channel_hashes));
 
-   // Inserts an alement that will be used as sentinel.
+   // Inserts an element that will be used as sentinel.
    channel_hashes.push_back(0);
 
    log( loglevel::info
@@ -112,10 +112,12 @@ void worker::create_channels(menu_elems_array_type const& me)
 
 void worker::on_db_posts(std::vector<std::string> const& msgs)
 {
-   // This function fills the channels with the posts.
-   assert(std::empty(channels));
-
-   create_channels(menu);
+   // Create the channels only if its empty since this function is
+   // also called when the connection to redis is lost and
+   // restablished. 
+   auto const empty = std::empty(channels);
+   if (empty)
+      create_channels(menu);
 
    log( loglevel::info
       , "Number of messages received from the database: {0}"
@@ -126,9 +128,13 @@ void worker::on_db_posts(std::vector<std::string> const& msgs)
 
    std::for_each(std::begin(msgs), std::end(msgs), loader);
 
-   // We can begin to accept websocket connections.
-   acceptor.run(*this, cfg.port);
-   sserver.run(*this);
+   if (empty) {
+      // We can begin to accept websocket connections. NOTICE: It may
+      // be better to use acceptor::is_open to determine if the run
+      // functions should be called instead of empty.
+      acceptor.run(*this, cfg.port);
+      sserver.run(*this);
+   }
 }
 
 void worker::on_db_channel_post(std::string const& msg)
@@ -301,7 +307,6 @@ void worker::on_db_register()
 
       // It would be a bug if this id were already in the map since we
       // have just registered it.
-      // FIXME: Whey this assert has been triggered some times?
       assert(new_user.second);
 
       json resp;
@@ -350,7 +355,8 @@ worker::on_db_chat_msg( std::string const& user_id
    assert(false);
 }
 
-// TODO: Make this function noexcept.
+// Keep the switch cases in the same sequence declared in the enum to
+// improve performance.
 void
 worker::on_db_event( std::vector<std::string> data
                    , redis::req_item const& req)

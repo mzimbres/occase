@@ -64,7 +64,7 @@ std::pair<std::string, std::string> split(std::string data)
 void session::run()
 {
    auto addr = split(cfg.sentinels.front());
-   std::cout << addr.first << " -- " << addr.second << std::endl;
+   //std::cout << addr.first << " -- " << addr.second << std::endl;
 
    // Calling sync resolve to avoid starting a new thread.
    boost::system::error_code ec;
@@ -142,7 +142,8 @@ void session::on_connect( boost::system::error_code const& ec
    start_reading_resp();
 
    // Consumes any messages that have been eventually posted while the
-   // connection was not established.
+   // connection was not established, or consumes msgs when a
+   // connection to redis is restablished.
    if (!std::empty(msg_queue)) {
       log( loglevel::debug
          , "{0}/on_connect: Number of messages {1}."

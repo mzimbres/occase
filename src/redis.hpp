@@ -11,17 +11,17 @@ namespace rt::redis
 enum class request
 { menu
 , chat_messages
-, ignore
 , post
-, remove_post
 , posts
 , post_id
 , user_id
 , user_data
 , register_user
-, get_chat_msgs
 , menu_connect
 , channel_post
+, remove_post
+, get_chat_msgs
+, ignore
 };
 
 struct req_item {

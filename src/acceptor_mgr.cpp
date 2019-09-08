@@ -19,7 +19,10 @@ void acceptor_mgr::shutdown()
    acceptor.cancel();
 }
 
-void acceptor_mgr::run(worker& w, unsigned short port)
+void
+acceptor_mgr::run( worker& w
+                 , unsigned short port
+                 , int max_listen_connections)
 {
    tcp::endpoint endpoint {tcp::v4(), port};
    acceptor.open(endpoint.protocol());
@@ -40,13 +43,15 @@ void acceptor_mgr::run(worker& w, unsigned short port)
    acceptor.bind(endpoint);
 
    boost::system::error_code ec;
-   acceptor.listen(net::socket_base::max_listen_connections, ec);
+   acceptor.listen(max_listen_connections, ec);
 
    if (ec) {
       log(loglevel::debug, "acceptor_mgr::run: {0}.", ec.message());
    } else {
       log( loglevel::info, "acceptor_mgr:run: Listening on {}"
          , acceptor.local_endpoint());
+      log( loglevel::info, "acceptor_mgr:run: TCP backlog set to {}"
+         , max_listen_connections);
 
       do_accept(w);
    }

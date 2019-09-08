@@ -86,6 +86,10 @@ auto get_cfg(int argc, char* argv[])
    , po::value<unsigned short>(&cfg.worker.core.port)->default_value(8080)
    , "Server listening port.")
 
+   ( "max-listen-connections"
+   , po::value<int>(&cfg.worker.core.max_listen_connections)->default_value(511)
+   , "The size of the tcp backlog.")
+
    ( "stats-server-base-port"
    , po::value<std::string>(&cfg.worker.stats.port)->default_value("9090")
    , "The statistics server base port.")
@@ -232,8 +236,7 @@ auto get_cfg(int argc, char* argv[])
    pos.add("config", -1);
 
    po::variables_map vm;        
-   po::store(po::command_line_parser(argc, argv).
-         options(desc).positional(pos).run(), vm);
+   po::store(po::command_line_parser(argc, argv).options(desc).positional(pos).run(), vm);
    po::notify(vm);    
 
    if (!std::empty(conf_file)) {

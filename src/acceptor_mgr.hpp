@@ -20,7 +20,9 @@ private:
 
 public:
    acceptor_mgr(net::io_context& ioc);
-   void run(worker& w, unsigned short port);
+   void run( worker& w
+           , unsigned short port
+           , int max_listen_connections);
    void shutdown();
 };
 

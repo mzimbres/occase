@@ -36,6 +36,9 @@ struct core_cfg {
 
    // Websocket port.
    unsigned short port;
+
+   // The size of the tcp backlog.
+   int max_listen_connections;
 };
 
 struct worker_cfg {

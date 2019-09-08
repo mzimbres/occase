@@ -131,8 +131,11 @@ void worker::on_db_posts(std::vector<std::string> const& msgs)
    if (empty) {
       // We can begin to accept websocket connections. NOTICE: It may
       // be better to use acceptor::is_open to determine if the run
-      // functions should be called instead of empty.
-      acceptor.run(*this, cfg.port);
+      // functions should be called instead of using empty.
+      acceptor.run( *this
+                  , cfg.port
+                  , cfg.max_listen_connections);
+
       sserver.run(*this);
    }
 }

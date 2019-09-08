@@ -39,6 +39,7 @@ struct options {
    int launch_interval = 100;
    int auth_timeout = 3;
    int test = 2;
+   int n_leave_after_sub_ack = 1;
 
    auto make_session_cf() const
    {
@@ -123,6 +124,38 @@ void start_leave_after_n_posts(options const& op)
    ioc.run();
 
    std::cout << "Test ok: Start leave after n posts." << std::endl;
+}
+
+// Will be used to bechmark the number of subscribes the server can
+// deal with e.g. per second.
+void start_leave_after_sub_ack(options const& op)
+{
+   boost::asio::io_context ioc;
+
+   auto const n = op.n_leave_after_sub_ack;
+   auto const logins =
+      test_reg( op.make_session_cf()
+              , op.make_launcher_empty_cfg(n));
+
+   using client_type = leave_after_sub_ack;
+   using config_type = client_type::options_type;
+
+   auto const j_menu = json::parse(op.menu);
+   auto const menus = j_menu.at("menus").get<menu_elems_array_type>();
+   auto const channels = create_channels2(menus);
+
+   auto const s = std::make_shared<session_launcher<client_type>
+                   >( ioc
+                    , config_type {{}, channels}
+                    , op.make_session_cf()
+                    , op.make_cfg(logins)
+                    );
+   
+   s->run({});
+
+   ioc.run();
+
+   std::cout << "Test ok: Start leave after n subscribe acks." << std::endl;
 }
 
 void test_online(options const& op)
@@ -411,6 +444,10 @@ int main(int argc, char* argv[])
          , po::value<int>(&op.n_leave_after_n_posts)->default_value(10)
          , "Number of listeners that will leave after receiving n posts.")
 
+         ("n-after-sub,x"
+         , po::value<int>(&op.n_leave_after_sub_ack)->default_value(100)
+         , "The number of sessions started in test 7.")
+
          ("launch-interval,g"
          , po::value<int>(&op.launch_interval)->default_value(100)
          , "Interval used to launch test clients.")
@@ -426,7 +463,7 @@ int main(int argc, char* argv[])
 
          ("test,r"
          , po::value<int>(&op.test)->default_value(1)
-         , "Which test to run: 1, 2, 3, 4, 5.")
+         , "Which test to run: 1, 2, 3, 4, 5, 6, 7.")
       ;
 
       po::variables_map vm;        
@@ -457,6 +494,7 @@ int main(int argc, char* argv[])
          case 4: test_login_error(op); break;
          case 5: test_early_close(op); break;
          case 6: start_leave_after_n_posts(op); break;
+         case 7: start_leave_after_sub_ack(op); break;
          default:
             std::cerr << "Invalid test." << std::endl;
       }

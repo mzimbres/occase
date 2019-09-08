@@ -21,6 +21,7 @@ namespace rt::cli
 {
 
 menu_code_type create_channels(menu_elems_array_type const& menus);
+menu_code_type2 create_channels2(menu_elems_array_type const& menus);
 
 template <class Mgr>
 class session_shell;
@@ -106,6 +107,30 @@ private:
 
 public:
    replier(options_type op_)
+   : op(op_) { }
+
+   int on_read(std::string msg, std::shared_ptr<client_type> s);
+   int on_closed(boost::system::error_code ec);
+   int on_handshake(std::shared_ptr<client_type> s);
+   int on_connect() const noexcept { return 1;}
+   auto const& get_login() const noexcept {return op.user;}
+};
+
+// Will close the session right after the subscribe ack.
+class leave_after_sub_ack {
+public:
+   struct options_type {
+      login user;
+      menu_code_type2 channels;
+   };
+
+private:
+   using client_type = session_shell<leave_after_sub_ack>;
+
+   options_type op;
+
+public:
+   leave_after_sub_ack(options_type op_)
    : op(op_) { }
 
    int on_read(std::string msg, std::shared_ptr<client_type> s);

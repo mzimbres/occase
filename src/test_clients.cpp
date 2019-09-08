@@ -54,16 +54,6 @@ std::string make_post_cmd(rt::menu_code_type const& menu_code)
    return j.dump();
 }
 
-auto create_channels2(menu_elems_array_type const& menus)
-{
-   auto const max = std::numeric_limits<int>::max();
-   auto const c0 = menu_elems_to_codes(menus.at(0));
-   auto const c1 = menu_elems_to_codes(menus.at(1));
-   auto const r0 = menu_to_channel_codes(c0, menus.at(0).depth, max);
-   auto const r1 = menu_to_channel_codes(c1, menus.at(1).depth, max);
-   return menu_code_type2 {r0, r1};
-}
-
 /* This function receives input in the form
  *
  *   _________menu_1__________    ___________menu_2________
@@ -140,7 +130,17 @@ menu_code_type create_channels(menu_elems_array_type const& menus)
 {
    auto const c0 = menu_elems_to_codes(menus.at(0));
    auto const c1 = menu_elems_to_codes(menus.at(1));
-   return menu_code_type {c0, c1};
+   return {c0, c1};
+}
+
+menu_code_type2 create_channels2(menu_elems_array_type const& menus)
+{
+   auto const max = std::numeric_limits<int>::max();
+   auto const c0 = menu_elems_to_codes(menus.at(0));
+   auto const c1 = menu_elems_to_codes(menus.at(1));
+   auto const r0 = menu_to_channel_codes(c0, menus.at(0).depth, max);
+   auto const r1 = menu_to_channel_codes(c1, menus.at(1).depth, max);
+   return {r0, r1};
 }
 
 int replier::on_read( std::string msg
@@ -279,6 +279,56 @@ replier::ack_chat( std::string to, long long post_id
 
    s->send_msg(j.dump());
 }
+
+//_______________________________________
+
+int
+leave_after_sub_ack::on_read( std::string msg
+                            , std::shared_ptr<client_type> s)
+{
+   auto const j = json::parse(msg);
+
+   auto const cmd = j.at("cmd").get<std::string>();
+   if (cmd == "login_ack") {
+      auto const res = j.at("result").get<std::string>();
+      if (res != "ok")
+         throw std::runtime_error("leave_after_sub_ack::login_ack");
+
+      json j_sub;
+      j_sub["cmd"] = "subscribe";
+      j_sub["last_post_id"] = 0;
+      j_sub["channels"] = op.channels;
+      j_sub["filter"] = 0;
+      s->send_msg(j_sub.dump());
+      return 1;
+   }
+
+   if (cmd == "subscribe_ack") {
+      auto const res = j.at("result").get<std::string>();
+      if (res != "ok")
+         throw std::runtime_error("leave_after_sub_ack::subscribe_ack");
+
+      std::cout << "User " << op.user << ": ok" << std::endl;
+      return -1;
+   }
+
+   std::cout << j << std::endl;
+   throw std::runtime_error("leave_after_sub_ack::inexistent");
+   return -1;
+}
+
+int leave_after_sub_ack::on_handshake(std::shared_ptr<client_type> s)
+{
+   auto const str = make_login_cmd(op.user);
+   s->send_msg(str);
+   return 1;
+}
+
+int leave_after_sub_ack::on_closed(boost::system::error_code ec)
+{
+   throw std::runtime_error("leave_after_sub_ack::on_closed");
+   return -1;
+};
 
 //_______________________________________
 

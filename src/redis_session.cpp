@@ -14,6 +14,7 @@
 
 #include <fmt/format.h>
 
+#include "utils.hpp"
 #include "logger.hpp"
 #include "config.hpp"
 
@@ -48,22 +49,9 @@ void session::on_resolve( boost::system::error_code const& ec
    net::async_connect(socket, results, handler);
 }
 
-// Splits a string in the form ip:port in two strings.
-std::pair<std::string, std::string> split(std::string data)
-{
-   auto const pos = data.find_first_of(':');
-   if (pos == std::string::npos)
-      return {};
-
-   if (1 + pos == std::size(data))
-      return {};
-
-   return {data.substr(0, pos), data.substr(pos + 1)};
-}
-
 void session::run()
 {
-   auto addr = split(cfg.sentinels.front());
+   //auto addr = split(cfg.sentinels.front());
    //std::cout << addr.first << " -- " << addr.second << std::endl;
 
    // Calling sync resolve to avoid starting a new thread.
@@ -137,7 +125,10 @@ void session::on_connect( boost::system::error_code const& ec
       return;
    }
 
-   log(loglevel::debug, "{0}/on_connect: Success.", id);
+   log( loglevel::info
+      , "{0}/on_connect: Success connecting to {1}"
+      , id
+      , endpoint);
 
    start_reading_resp();
 
@@ -146,7 +137,7 @@ void session::on_connect( boost::system::error_code const& ec
    // connection to redis is restablished.
    if (!std::empty(msg_queue)) {
       log( loglevel::debug
-         , "{0}/on_connect: Number of messages {1}."
+         , "{0}/on_connect: Number of messages {1}"
          , id, std::size(msg_queue));
       do_write();
    }
@@ -170,7 +161,7 @@ void session::on_conn_closed(boost::system::error_code ec)
          return;
       }
 
-      log( loglevel::warning, "{0}/on_conn_closed: {1}."
+      log( loglevel::warning, "{0}/on_conn_closed: {1}"
          , id, ec.message());
 
       return;

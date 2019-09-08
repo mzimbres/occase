@@ -12,5 +12,8 @@ auto ssize(C const& c)
    return static_cast<int>(size);
 }
 
+// Splits a string in the form ip:port in two strings.
+std::pair<std::string, std::string> split(std::string data);
+
 }
 

@@ -81,8 +81,16 @@ struct db_cfg {
    int max_offline_chat_msgs {100};
 };
 
+// We will use two redis instances, one will hold posts, user logins,
+// post id counter, chat message counters, the other will deal only
+// with the storage of user messages when the user is offline. I think
+// this way we can avoid redis cluster since the amount of data in the
+// two cases are expected to be small. We can also use different
+// backup strategies, for the first case backup is very important, for
+// the second, not so much.
 struct config {
-   session_cfg ss_cfg;
+   session_cfg ss_cfg1;
+   session_cfg ss_cfg2;
    db_cfg cfg;
 };
 

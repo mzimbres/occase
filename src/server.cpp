@@ -10,6 +10,7 @@
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
 
+#include "utils.hpp"
 #include "crypto.hpp"
 #include "logger.hpp"
 #include "system.hpp"
@@ -57,6 +58,9 @@ auto get_cfg(int argc, char* argv[])
    std::string conf_file;
    std::string daemonize;
    std::string version;
+   std::string redis_host1;
+   std::string redis_host2;
+   std::vector<std::string> sentinels;
 
    po::options_description desc("Options");
    desc.add_options()
@@ -147,22 +151,20 @@ auto get_cfg(int argc, char* argv[])
    , "If provided, the server will try to increase the number of file "
      "descriptors to this value, via setrlimit.")
 
-   ( "redis-server-address"
-   , po::value<std::string>(&cfg.worker.db.ss_cfg.host)->
-       default_value("127.0.0.1")
-   , "Address of the redis server.")
+   ( "redis-host1"
+   , po::value<std::string>(&redis_host1)->default_value("127.0.0.1:6379")
+   , "Address of the first redis server in the format ip:port.")
+
+   ( "redis-host2"
+   , po::value<std::string>(&redis_host2)->default_value("127.0.0.1:6379")
+   , "Address of the second redis server in the format ip:port.")
 
    ( "redis-sentinels"
-   , po::value<std::vector<std::string>>(&cfg.worker.db.ss_cfg.sentinels)
+   , po::value<std::vector<std::string>>(&sentinels)
    , "A list of sentinel addresses in the form ip1:port1 ip2:port2.")
 
-   ( "redis-server-port"
-   , po::value<std::string>(&cfg.worker.db.ss_cfg.port)->
-       default_value("6379")
-   , "Port where redis server is listening.")
-
    ( "redis-max-pipeline-size"
-   , po::value<int>(&cfg.worker.db.ss_cfg.max_pipeline_size)->
+   , po::value<int>(&cfg.worker.db.ss_cfg1.max_pipeline_size)->
        default_value(10000)
    , "The maximum allowed size of pipelined commands in the redis "
      " session.")
@@ -200,8 +202,7 @@ auto get_cfg(int argc, char* argv[])
    , "Redis key used to store posts (in a sorted set).")
 
    ( "redis-key-user-data-prefix"
-   , po::value<std::string>(&cfg.worker.db.cfg.user_data_prefix_key)->
-        default_value("id")
+   , po::value<std::string>(&cfg.worker.db.cfg.user_data_prefix_key)->default_value("id")
    , "The prefix to every id holding user data (password for example).")
 
    ("redis-conn-retry-interval"
@@ -211,25 +212,21 @@ auto get_cfg(int argc, char* argv[])
    )
 
    ("redis-user-msg-exp_time"
-   , po::value<int>(&cfg.worker.db.cfg.chat_msg_exp_time)->
-        default_value(7 * 24 * 60 * 60)
+   , po::value<int>(&cfg.worker.db.cfg.chat_msg_exp_time)->default_value(7 * 24 * 60 * 60)
    , "Expiration time in seconds for redis user message keys."
      " After the time has elapsed the keys will be deleted.")
 
    ( "redis-offline-chat-msgs"
-   , po::value<int>(&cfg.worker.db.cfg.max_offline_chat_msgs)->
-        default_value(100)
+   , po::value<int>(&cfg.worker.db.cfg.max_offline_chat_msgs)->default_value(100)
    , "The maximum number of messages a user is allowed to accumulate "
-     " (when he is offline)."
-   )
+     " (when he is offline).")
 
    ( "redis-key-menu-channel"
    , po::value<std::string>(&cfg.worker.db.cfg.menu_channel_key)->
         default_value("menu_channel")
    , "The name of the redis channel where publish commands "
      "are be broadcasted to all workers connected to this channel. "
-     "Which may or may not be on the same machine."
-   )
+     "Which may or may not be on the same machine.")
    ;
 
    po::positional_options_description pos;
@@ -265,8 +262,21 @@ auto get_cfg(int argc, char* argv[])
    cfg.worker.db.cfg.user_notify_prefix = cfg.worker.db.cfg.notify_prefix
                                       + cfg.worker.db.cfg.chat_msg_prefix;
 
-   cfg.worker.db.ss_cfg.conn_retry_interval =
-      std::chrono::milliseconds {conn_retry_interval};
+
+   std::chrono::milliseconds tmp {conn_retry_interval};
+   cfg.worker.db.ss_cfg1.conn_retry_interval = tmp;
+   cfg.worker.db.ss_cfg2.conn_retry_interval = tmp;
+
+   auto const host1 = split(redis_host1);
+   cfg.worker.db.ss_cfg1.host = host1.first;
+   cfg.worker.db.ss_cfg1.port = host1.second;
+
+   auto const host2 = split(redis_host2);
+   cfg.worker.db.ss_cfg2.host = host2.first;
+   cfg.worker.db.ss_cfg2.port = host2.second;
+
+   cfg.worker.db.ss_cfg1.sentinels = sentinels;
+   cfg.worker.db.ss_cfg2.sentinels = sentinels;
 
    cfg.worker.timeouts = cfg.get_timeouts();
    return cfg;

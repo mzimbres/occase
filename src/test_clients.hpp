@@ -20,6 +20,8 @@
 namespace rt::cli
 {
 
+menu_code_type create_channels(menu_elems_array_type const& menus);
+
 template <class Mgr>
 class session_shell;
 

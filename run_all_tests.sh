@@ -17,34 +17,14 @@ server_pid=$!
 # tests.
 sleep 3
 
+# Be aware of the fact that there is a limit on the size of user
+# pending messages, see redis-offline-chat-msgs
 for (( i = 0 ; i < 10 ; ++i )); do
    echo "Starting test 1-a-$i"
    ./publish_tests --test 1\
                    --publishers 1\
                    --listeners 1\
-                   --post-listeners 500\
-                   --menu menus/test1/json.txt\
-                   --launch-interval 10 > /dev/null
-done
-
-# Be aware of the fact that there is a limit on the size of user
-# pending messages, see redis-offline-chat-msgs
-for (( i = 0 ; i < 10 ; ++i )); do
-   echo "Starting test 1-b-$i"
-   ./publish_tests --test 1\
-                   --publishers 1\
-                   --listeners 100\
-                   --post-listeners 500\
-                   --menu menus/test1/json.txt\
-                   --launch-interval 10 > /dev/null
-done
-
-for (( i = 0 ; i < 10 ; ++i )); do
-   echo "Starting test 1-c-$i"
-   ./publish_tests --test 1\
-                   --publishers 1\
-                   --listeners 2\
-                   --post-listeners 500\
+                   --post-listeners 5\
                    --menu menus/test1/json.txt\
                    --launch-interval 10 > /dev/null
 done

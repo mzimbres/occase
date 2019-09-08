@@ -40,8 +40,7 @@ std::string make_login_cmd(rt::cli::login const& user)
    return j.dump();
 }
 
-std::string
-make_post_cmd(rt::menu_code_type const& menu_code)
+std::string make_post_cmd(rt::menu_code_type const& menu_code)
 {
    json sub;
    sub["msg"] = "Not an interesting message.";
@@ -53,18 +52,6 @@ make_post_cmd(rt::menu_code_type const& menu_code)
    j["cmd"] = "publish";
    j["items"] = std::vector<rt::post>{item};
    return j.dump();
-}
-
-
-/* Collects the channel codes from all menus and returns the array
- * containing them. The ouput array is described in the documentation
- * of channel_codes below.
- */
-auto create_channels(menu_elems_array_type const& menus)
-{
-   auto const c0 = menu_elems_to_codes(menus.at(0));
-   auto const c1 = menu_elems_to_codes(menus.at(1));
-   return menu_code_type {c0, c1};
 }
 
 auto create_channels2(menu_elems_array_type const& menus)
@@ -148,6 +135,13 @@ channel_codes( menu_code_type const& channels
 
 namespace rt::cli
 {
+
+menu_code_type create_channels(menu_elems_array_type const& menus)
+{
+   auto const c0 = menu_elems_to_codes(menus.at(0));
+   auto const c1 = menu_elems_to_codes(menus.at(1));
+   return menu_code_type {c0, c1};
+}
 
 int replier::on_read( std::string msg
                     , std::shared_ptr<client_type> s)

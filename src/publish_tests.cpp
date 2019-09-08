@@ -180,12 +180,20 @@ void test_online(options const& op)
    using client_type = leave_after_n_posts;
    using config_type = client_type::options_type;
 
+
+   auto const j_menu = json::parse(op.menu);
+   auto const menu = j_menu.at("menus").get<menu_elems_array_type>();
+   auto const menu_codes = create_channels(menu);
+   auto const n = ssize(menu_codes.at(0))
+                * ssize(menu_codes.at(1))
+                * op.n_publishers;
+
    auto const s = std::make_shared<session_launcher<client_type>
-                   >( ioc
-                    , config_type {{}, op.n_publishers}
-                    , op.make_session_cf()
-                    , op.make_cfg(logins3)
-                    );
+                  >( ioc
+                   , config_type {{}, n}
+                   , op.make_session_cf()
+                   , op.make_cfg(logins3)
+                   );
    
    s->set_on_end(next2);
    s->run({});

@@ -133,12 +133,12 @@ public:
          to_hash_code( item.to.at(0).at(0)
                      , hash_depth);
 
-      auto const filter = item.filter;
+      auto const features = item.features;
       auto msg = std::make_shared<std::string>(j_pub.dump());
       store_item(std::move(item));
 
-      auto f = [msg, filter, hash_code](auto session)
-         { session->send_post(msg, hash_code, filter); };
+      auto f = [msg, features, hash_code](auto session)
+         { session->send_post(msg, hash_code, features); };
 
       cleanup_traversal(f);
       insertions_on_inactivity = 0;

@@ -174,7 +174,7 @@ int replier::on_read( std::string msg
       j_sub["cmd"] = "subscribe";
       j_sub["last_post_id"] = 0;
       j_sub["channels"] = create_channels2(menus);
-      j_sub["filter"] = 0;
+      j_sub["any_of_features"] = 0;
       s->send_msg(j_sub.dump());
       return 1;
    }
@@ -298,7 +298,7 @@ leave_after_sub_ack::on_read( std::string msg
       j_sub["cmd"] = "subscribe";
       j_sub["last_post_id"] = 0;
       j_sub["channels"] = op.channels;
-      j_sub["filter"] = 0;
+      j_sub["any_of_features"] = 0;
       s->send_msg(j_sub.dump());
       return 1;
    }
@@ -351,7 +351,7 @@ leave_after_n_posts::on_read( std::string msg
       j_sub["cmd"] = "subscribe";
       j_sub["last_post_id"] = 0;
       j_sub["channels"] = menu_code_type2 {};
-      j_sub["filter"] = 0;
+      j_sub["any_of_features"] = 0;
       s->send_msg(j_sub.dump());
       return 1;
    }
@@ -415,7 +415,7 @@ int simulator::on_read( std::string msg
       j_sub["cmd"] = "subscribe";
       j_sub["last_post_id"] = 0;
       j_sub["channels"] = menu_code_type2 {};
-      j_sub["filter"] = 0;
+      j_sub["any_of_features"] = 0;
       s->send_msg(j_sub.dump());
       return 1;
    }
@@ -553,7 +553,7 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
       j_sub["cmd"] = "subscribe";
       j_sub["last_post_id"] = 0;
       j_sub["channels"] = create_channels2(menus);
-      j_sub["filter"] = 0;
+      j_sub["any_of_features"] = 0;
       s->send_msg(j_sub.dump());
       return 1;
    }

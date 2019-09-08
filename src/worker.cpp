@@ -82,7 +82,7 @@ void worker::create_channels(menu_elems_array_type const& me)
    channels.clear();
 
    // Channels are created only for the second menu element.
-   auto const hashes = menu_elems_to_codes(me.back());
+   auto const hashes = menu_elems_to_codes(me.at(idx::b));
 
    // Reserver the exact amount of memory that will be needed. The
    // vector with hashes will also hold the sentinel to make linear
@@ -91,7 +91,7 @@ void worker::create_channels(menu_elems_array_type const& me)
    channels.reserve(std::size(hashes));
 
    auto f = [&](auto const& code)
-      { return to_hash_code(code, me.back().depth); };
+      { return to_hash_code(code, me.at(idx::b).depth); };
 
    std::transform( std::cbegin(hashes)
                  , std::cend(hashes)
@@ -161,8 +161,8 @@ void worker::on_db_channel_post(std::string const& msg)
    // We want to convert the second code [a, b, c] to its hash.
    //
    auto const hash =
-      to_hash_code( channel.at(1).at(0)
-                  , menu.back().depth);
+      to_hash_code( channel.at(idx::b).front()
+                  , menu.at(idx::b).depth);
 
    // Now we perform a binary search of the channel hash code
    // calculated above in the channel_hashes to determine in which
@@ -207,8 +207,8 @@ void worker::on_db_channel_post(std::string const& msg)
    if (item.id > last_post_id)
       last_post_id = item.id;
 
-   channels[i].broadcast(item, menu.at(0).depth);
-   none_channel.broadcast(item, menu.at(0).depth);
+   channels[i].broadcast(item, menu.at(idx::a).depth);
+   none_channel.broadcast(item, menu.at(idx::a).depth);
 }
 
 void worker::on_db_user_id(std::string const& id)
@@ -519,12 +519,12 @@ worker::on_app_subscribe( json const& j
    //
 
    auto const b0 =
-      std::is_sorted( std::cbegin(codes.at(0))
-                    , std::cend(codes.at(0)));
+      std::is_sorted( std::cbegin(codes.at(idx::a))
+                    , std::cend(codes.at(idx::a)));
 
    auto const b1 =
-      std::is_sorted( std::cbegin(codes.at(1))
-                    , std::cend(codes.at(1)));
+      std::is_sorted( std::cbegin(codes.at(idx::b))
+                    , std::cend(codes.at(idx::b)));
 
    if (!b0 || !b1) {
       json resp;
@@ -534,12 +534,14 @@ worker::on_app_subscribe( json const& j
       return ev_res::subscribe_fail;
    }
 
-   auto const filter = j.at("filter").get<std::uint64_t>();
+   auto const any_of_features =
+      j.at("any_of_features").get<std::uint64_t>();
+
    auto const app_last_post_id = j.at("last_post_id").get<int>();
 
-   s->set_filter(filter);
+   s->set_any_of_features(any_of_features);
 
-   s->set_filter(codes.at(0));
+   s->set_filter(codes.at(idx::a));
 
    auto psession = s->get_proxy_session(true);
 
@@ -547,7 +549,7 @@ worker::on_app_subscribe( json const& j
 
    // If the second channels are empty, the app wants posts from all
    // channels, otherwise we have to traverse the individual channels.
-   if (std::empty(codes.at(1))) {
+   if (std::empty(codes.at(idx::b))) {
       none_channel.add_member(psession, ch_cfg.cleanup_rate);
       none_channel.get_posts( app_last_post_id
                             , std::back_inserter(items)
@@ -563,10 +565,10 @@ worker::on_app_subscribe( json const& j
       auto match =
          std::lower_bound( std::cbegin(channel_hashes)
                          , std::prev(cend)
-                         , codes.at(1).front());
+                         , codes.at(idx::b).front());
 
       auto invalid_count = 0;
-      if (match == std::prev(cend) || *match > codes.at(1).front()) {
+      if (match == std::prev(cend) || *match > codes.at(idx::b).front()) {
          invalid_count = 1;
       } else {
          auto f = [&, this](auto const& code)
@@ -595,11 +597,11 @@ worker::on_app_subscribe( json const& j
 
          // There is a limit on how many channels the app is allowed
          // to subscribe to.
-         auto const d = std::min( ssize(codes.at(1))
+         auto const d = std::min( ssize(codes.at(idx::b))
                                 , ch_cfg.max_sub);
 
-         std::for_each( std::cbegin(codes.at(1))
-                      , std::cbegin(codes.at(1)) + d
+         std::for_each( std::cbegin(codes.at(idx::b))
+                      , std::cbegin(codes.at(idx::b)) + d
                       , f);
       }
 
@@ -693,8 +695,8 @@ worker::on_app_publish(json j, std::shared_ptr<worker_session> s)
    // The channel code has the form [[[1, 2]], [[2, 3, 4]]]
    // where each array in the outermost array refers to one menu.
    auto const hash =
-      to_hash_code( items.front().to.at(1).at(0)
-                  , menu.back().depth);
+      to_hash_code( items.front().to.at(idx::b).front()
+                  , menu.at(idx::b).depth);
 
    auto const cend = std::cend(channel_hashes);
    auto const match =

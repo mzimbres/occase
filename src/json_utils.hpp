@@ -40,12 +40,25 @@ using menu_channel_elem_type = std::vector<channel_code_type>;
 using menu_code_type = std::array<menu_channel_elem_type, menu_size>;
 using menu_code_type2 = std::array<std::vector<std::uint64_t>, menu_size>;
 
+namespace idx
+{
+   // These indexes determine the menu index that will be used as
+   // channel. The rule is to use as channel the one where the user
+   // will perform less subscription. For example, the user is not
+   // likely to subscribe to thpusends of locations, on the other hand
+   // it may be interested on hundreds of car models, specially if the
+   // menu is really fine grained. Invert the indexes 0 and depending
+   // on that.
+   constexpr auto a = 0;
+   constexpr auto b = 1; // Used as channel
+}
+
 struct post {
    int id;
    std::string from;
    std::string body;
    menu_code_type to;
-   std::uint64_t filter;
+   std::uint64_t features;
    long int date = 0;
    std::vector<std::uint64_t> ex_details;
    std::vector<std::uint64_t> in_details;

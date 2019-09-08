@@ -165,7 +165,6 @@ void worker_session::on_close(boost::system::error_code ec)
       if (ec == net::error::operation_aborted) {
          // This can be caused for example if the client shuts down
          // the socket before receiving (and replying) the close frame
-         //std::cout << "worker_session::on_close: aborted." << std::endl;
          return;
       }
 
@@ -174,8 +173,6 @@ void worker_session::on_close(boost::system::error_code ec)
       //fail(ec, "close");
       return;
    }
-
-   // TODO: Set a timeout for the received close.
 }
 
 void worker_session::do_close()
@@ -231,10 +228,10 @@ void worker_session::send(std::string msg, bool persist)
 void
 worker_session::send_post( std::shared_ptr<std::string> msg
                          , std::uint64_t hash_code
-                         , std::uint64_t filter)
+                         , std::uint64_t features)
 {
-   if (menu_filter != 0) {
-      if ((menu_filter & filter) == 0)
+   if (any_of_features != 0) {
+      if ((any_of_features & features) == 0)
          return;
    }
 

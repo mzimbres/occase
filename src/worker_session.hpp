@@ -85,7 +85,7 @@ private:
 
    std::string user_id;
 
-   std::uint64_t menu_filter = 0;
+   std::uint64_t any_of_features = 0;
 
    static constexpr auto menu_codes_size = 32;
 
@@ -122,13 +122,18 @@ public:
    void send(std::string msg, bool persist);
    void send_post( std::shared_ptr<std::string> msg
                  , std::uint64_t hash_code
-                 , std::uint64_t filter);
+                 , std::uint64_t features);
    void shutdown();
 
    void set_id(std::string id)
       { user_id = std::move(id); };
-   void set_filter(std::uint64_t filter)
-      { menu_filter = filter; }
+
+   // Sets the any_of filter, used to filter posts sent with send_post
+   // above. If the filter is non-null the post features will be
+   // required to contain at least one bit set that is also set in the
+   // argument passed here.
+   void set_any_of_features(std::uint64_t o)
+      { any_of_features = o; }
    void set_filter(std::vector<std::uint64_t> const& codes);
    auto const& get_id() const noexcept
       { return user_id;}

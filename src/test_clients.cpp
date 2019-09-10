@@ -152,6 +152,16 @@ menu_code_type2 create_channels2(menu_elems_array_type const& menus)
    return {r0, r1};
 }
 
+std::string make_sub_payload(menu_code_type2 const& channels)
+{
+   json j_sub;
+   j_sub["cmd"] = "subscribe";
+   j_sub["last_post_id"] = 0;
+   j_sub["channels"] = channels;
+   j_sub["any_of_features"] = 0;
+   return j_sub.dump();
+}
+
 int replier::on_read( std::string msg
                     , std::shared_ptr<client_type> s)
 {
@@ -163,7 +173,6 @@ int replier::on_read( std::string msg
 
       auto const j_menu = json::parse(op.menu);
       menus = j_menu.at("menus").get<menu_elems_array_type>();
-      assert(std::size(menus) == 2);
 
       auto const menu_codes_0 = menu_elems_to_codes(menus.at(0));
       auto const menu_codes_1 = menu_elems_to_codes(menus.at(1));
@@ -172,17 +181,10 @@ int replier::on_read( std::string msg
                        * std::size(menu_codes_0)
                        * std::size(menu_codes_1);
 
-      menu_code_type menu_codes {menu_codes_0, menu_codes_1};
-
       //std::cout << "Sub: User " << op.user << " expects: " << to_receive_posts
       //          << std::endl;
 
-      json j_sub;
-      j_sub["cmd"] = "subscribe";
-      j_sub["last_post_id"] = 0;
-      j_sub["channels"] = create_channels2(menus);
-      j_sub["any_of_features"] = 0;
-      s->send_msg(j_sub.dump());
+      s->send_msg(make_sub_payload(create_channels2(menus)));
       return 1;
    }
 
@@ -295,13 +297,7 @@ leave_after_sub_ack::on_read( std::string msg
    auto const cmd = j.at("cmd").get<std::string>();
    if (cmd == "login_ack") {
       check_result(j, "ok", "leave_after_sub_ack::login_ack");
-
-      json j_sub;
-      j_sub["cmd"] = "subscribe";
-      j_sub["last_post_id"] = 0;
-      j_sub["channels"] = op.channels;
-      j_sub["any_of_features"] = 0;
-      s->send_msg(j_sub.dump());
+      s->send_msg(make_sub_payload(op.channels));
       return 1;
    }
 
@@ -344,12 +340,7 @@ leave_after_n_posts::on_read( std::string msg
    if (cmd == "login_ack") {
       check_result(j, "ok", "leave_after_n_posts::login_ack");
 
-      json j_sub;
-      j_sub["cmd"] = "subscribe";
-      j_sub["last_post_id"] = 0;
-      j_sub["channels"] = menu_code_type2 {};
-      j_sub["any_of_features"] = 0;
-      s->send_msg(j_sub.dump());
+      s->send_msg(make_sub_payload({}));
       return 1;
    }
 
@@ -402,13 +393,7 @@ int simulator::on_read( std::string msg
    auto const cmd = j.at("cmd").get<std::string>();
    if (cmd == "login_ack") {
       check_result(j, "ok", "simulator::login_ack");
-
-      json j_sub;
-      j_sub["cmd"] = "subscribe";
-      j_sub["last_post_id"] = 0;
-      j_sub["channels"] = menu_code_type2 {};
-      j_sub["any_of_features"] = 0;
-      s->send_msg(j_sub.dump());
+      s->send_msg(make_sub_payload({}));
       return 1;
    }
 
@@ -536,12 +521,7 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
 
       std::for_each(std::begin(pub_codes), std::end(pub_codes), pusher);
 
-      json j_sub;
-      j_sub["cmd"] = "subscribe";
-      j_sub["last_post_id"] = 0;
-      j_sub["channels"] = create_channels2(menus);
-      j_sub["any_of_features"] = 0;
-      s->send_msg(j_sub.dump());
+      s->send_msg(make_sub_payload(create_channels2(menus)));
       return 1;
    }
 

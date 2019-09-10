@@ -19,7 +19,7 @@ sleep 3
 
 # Be aware of the fact that there is a limit on the size of user
 # pending messages, see redis-offline-chat-msgs
-for (( i = 0 ; i < 10 ; ++i )); do
+for (( i = 0 ; i < 2 ; ++i )); do
    echo "Starting test 1-a-$i"
    ./publish_tests --test 1\
                    --publishers 1\
@@ -29,7 +29,7 @@ for (( i = 0 ; i < 10 ; ++i )); do
                    --launch-interval 10 > /dev/null
 done
 
-for (( i = 0 ; i < 10 ; ++i )); do
+for (( i = 0 ; i < 2 ; ++i )); do
    echo "Starting test 3-$i"
    ./publish_tests --test 3\
                    --menu menus/test1/json.txt\

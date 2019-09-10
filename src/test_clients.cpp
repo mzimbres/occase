@@ -121,6 +121,15 @@ channel_codes( menu_code_type const& channels
    return ret;
 }
 
+void check_result( json const& j
+                 , char const* expected
+                 , char const* error)
+{
+   auto const res = j.at("result").get<std::string>();
+   if (res != expected)
+      throw std::runtime_error(error);
+}
+
 }
 
 namespace rt::cli
@@ -150,9 +159,7 @@ int replier::on_read( std::string msg
 
    auto const cmd = j.at("cmd").get<std::string>();
    if (cmd == "login_ack") {
-      auto const res = j.at("result").get<std::string>();
-      if (res != "ok")
-         throw std::runtime_error("replier::login_ack");
+      check_result(j, "ok", "replier::login_ack");
 
       auto const j_menu = json::parse(op.menu);
       menus = j_menu.at("menus").get<menu_elems_array_type>();
@@ -180,10 +187,7 @@ int replier::on_read( std::string msg
    }
 
    if (cmd == "subscribe_ack") {
-      auto const res = j.at("result").get<std::string>();
-      if (res != "ok")
-         throw std::runtime_error("replier::subscribe_ack");
-
+      check_result(j, "ok", "replier::subscribe_ack");
       return 1;
    }
 
@@ -290,9 +294,7 @@ leave_after_sub_ack::on_read( std::string msg
 
    auto const cmd = j.at("cmd").get<std::string>();
    if (cmd == "login_ack") {
-      auto const res = j.at("result").get<std::string>();
-      if (res != "ok")
-         throw std::runtime_error("leave_after_sub_ack::login_ack");
+      check_result(j, "ok", "leave_after_sub_ack::login_ack");
 
       json j_sub;
       j_sub["cmd"] = "subscribe";
@@ -304,10 +306,7 @@ leave_after_sub_ack::on_read( std::string msg
    }
 
    if (cmd == "subscribe_ack") {
-      auto const res = j.at("result").get<std::string>();
-      if (res != "ok")
-         throw std::runtime_error("leave_after_sub_ack::subscribe_ack");
-
+      check_result(j, "ok", "leave_after_sub_ack::subscribe_ack");
       std::cout << "User " << op.user << ": ok" << std::endl;
       return -1;
    }
@@ -343,9 +342,7 @@ leave_after_n_posts::on_read( std::string msg
 
    auto const cmd = j.at("cmd").get<std::string>();
    if (cmd == "login_ack") {
-      auto const res = j.at("result").get<std::string>();
-      if (res != "ok")
-         throw std::runtime_error("leave_after_n_posts::login_ack");
+      check_result(j, "ok", "leave_after_n_posts::login_ack");
 
       json j_sub;
       j_sub["cmd"] = "subscribe";
@@ -357,10 +354,7 @@ leave_after_n_posts::on_read( std::string msg
    }
 
    if (cmd == "subscribe_ack") {
-      auto const res = j.at("result").get<std::string>();
-      if (res != "ok")
-         throw std::runtime_error("leave_after_n_posts::subscribe_ack");
-
+      check_result(j, "ok", "leave_after_n_posts::subscribe_ack");
       return 1;
    }
 
@@ -407,9 +401,7 @@ int simulator::on_read( std::string msg
 
    auto const cmd = j.at("cmd").get<std::string>();
    if (cmd == "login_ack") {
-      auto const res = j.at("result").get<std::string>();
-      if (res != "ok")
-         throw std::runtime_error("simulator::login_ack");
+      check_result(j, "ok", "simulator::login_ack");
 
       json j_sub;
       j_sub["cmd"] = "subscribe";
@@ -421,10 +413,7 @@ int simulator::on_read( std::string msg
    }
 
    if (cmd == "subscribe_ack") {
-      auto const res = j.at("result").get<std::string>();
-      if (res != "ok")
-         throw std::runtime_error("simulator::subscribe_ack");
-
+      check_result(j, "ok", "simulator::subscribe_ack");
       return 1;
    }
 
@@ -533,9 +522,7 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
 
    auto const cmd = j.at("cmd").get<std::string>();
    if (cmd == "login_ack") {
-      auto const res = j.at("result").get<std::string>();
-      if (res != "ok")
-         throw std::runtime_error("publisher::login_ack");
+      check_result(j, "ok", "publisher::login_ack");
 
       auto const j_menu = json::parse(op.menu);
       auto const menus = j_menu.at("menus").get<menu_elems_array_type>();
@@ -559,18 +546,12 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
    }
 
    if (cmd == "subscribe_ack") {
-      auto const res = j.at("result").get<std::string>();
-      if (res != "ok")
-         throw std::runtime_error("publisher::subscribe_ack");
-
+      check_result(j, "ok", "publisher::subscribe_ack");
       return send_post(s);
    }
 
    if (cmd == "publish_ack") {
-      auto const res = j.at("result").get<std::string>();
-      if (res != "ok")
-         throw std::runtime_error("publisher::publish_ack");
-
+      check_result(j, "ok", "publisher::publish_ack");
       pub_stack.top().first = j.at("id").get<int>();
       //std::cout << op.user << " publish_ack " << post_id << std::endl;
       return handle_msg(s);
@@ -695,9 +676,7 @@ int publisher2::on_read(std::string msg, std::shared_ptr<client_type> s)
 
    auto const cmd = j.at("cmd").get<std::string>();
    if (cmd == "login_ack") {
-      auto const res = j.at("result").get<std::string>();
-      if (res != "ok")
-         throw std::runtime_error("publisher2::login_ack");
+      check_result(j, "ok", "publisher2::login_ack");
 
       auto const j_menu = json::parse(op.menu);
       auto const menus = j_menu.at("menus").get<menu_elems_array_type>();
@@ -723,9 +702,7 @@ int publisher2::on_read(std::string msg, std::shared_ptr<client_type> s)
    }
 
    if (cmd == "publish_ack") {
-      auto const res = j.at("result").get<std::string>();
-      if (res != "ok")
-         throw std::runtime_error("publisher2::publish_ack");
+      check_result(j, "ok", "publisher2::publish_ack");
 
       auto const post_id = j.at("id").get<int>();
       post_ids.push_back(post_id);
@@ -780,10 +757,7 @@ int msg_pull::on_read(std::string msg, std::shared_ptr<client_type> s)
 
    auto const cmd = j.at("cmd").get<std::string>();
    if (cmd == "login_ack") {
-      auto const res = j.at("result").get<std::string>();
-      if (res != "ok")
-         throw std::runtime_error("msg_pull::login_ack");
-
+      check_result(j, "ok", "msg_pull::login_ack");
       return 1;
    }
 
@@ -808,9 +782,7 @@ int msg_pull::on_read(std::string msg, std::shared_ptr<client_type> s)
    }
 
    if (cmd == "publish_ack") {
-      auto const res = j.at("result").get<std::string>();
-      if (res != "ok")
-         throw std::runtime_error("msg_pull::publish_ack");
+      check_result(j, "ok", "msg_pull::publish_ack");
 
       //auto const post_id = j.at("id").get<int>();
       //std::cout << op.user << " publish_ack " << post_id << std::endl;
@@ -836,9 +808,7 @@ int register1::on_read(std::string msg, std::shared_ptr<client_type> s)
 
    auto const cmd = j.at("cmd").get<std::string>();
    if (cmd == "register_ack") {
-      auto const res = j.at("result").get<std::string>();
-      if (res != "ok")
-         throw std::runtime_error("register1::login_ack");
+      check_result(j, "ok", "register1::login_ack");
 
       op.user.id = j.at("id").get<std::string>();
       op.user.pwd = j.at("password").get<std::string>();
@@ -868,10 +838,7 @@ int login_err::on_read(std::string msg, std::shared_ptr<client_type> s)
 
    auto const cmd = j.at("cmd").get<std::string>();
    if (cmd == "login_ack") {
-      auto const res = j.at("result").get<std::string>();
-      if (res != "fail")
-         throw std::runtime_error("login_err::login_ack");
-
+      check_result(j, "fail", "login_err::on_read1");
       return 1;
    }
 
@@ -896,10 +863,7 @@ int early_close::on_read(std::string msg, std::shared_ptr<client_type> s)
 
    auto const cmd = j.at("cmd").get<std::string>();
    if (cmd == "login_ack") {
-      auto const res = j.at("result").get<std::string>();
-      if (res != "ok")
-         throw std::runtime_error("early_close::login_ack");
-
+      check_result(j, "ok", "early_close::login_ack");
       send_post(s);
       return 1;
    }

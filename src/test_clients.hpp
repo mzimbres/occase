@@ -10,7 +10,7 @@
 #include <stdexcept>
 
 #include "menu.hpp"
-#include "config.hpp"
+#include "net.hpp"
 #include "json_utils.hpp"
 #include "client_session.hpp"
 #include "session_launcher.hpp"

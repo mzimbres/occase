@@ -14,9 +14,9 @@
 
 #include <fmt/format.h>
 
+#include "net.hpp"
 #include "utils.hpp"
 #include "logger.hpp"
-#include "config.hpp"
 
 namespace rt::redis
 {

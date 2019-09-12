@@ -57,7 +57,6 @@ auto get_cfg(int argc, char* argv[])
    std::string log_on_stderr = "no";
    std::string conf_file;
    std::string daemonize;
-   std::string version;
    std::string redis_host1;
    std::string redis_host2;
    std::vector<std::string> sentinels;

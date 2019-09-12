@@ -2,7 +2,7 @@
 
 #include <boost/asio.hpp>
 
-#include "config.hpp"
+#include "net.hpp"
 
 namespace rt
 {

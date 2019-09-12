@@ -17,7 +17,7 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/steady_timer.hpp>
 
-#include "config.hpp"
+#include "net.hpp"
 #include "json_utils.hpp"
 
 namespace rt::cli

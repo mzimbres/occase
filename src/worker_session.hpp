@@ -13,7 +13,7 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/container/static_vector.hpp>
 
-#include "config.hpp"
+#include "net.hpp"
 #include "json_utils.hpp"
 
 namespace rt

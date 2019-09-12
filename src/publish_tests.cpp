@@ -16,9 +16,9 @@
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
 
-#include "system.hpp"
-#include "config.hpp"
+#include "net.hpp"
 #include "menu.hpp"
+#include "system.hpp"
 #include "test_clients.hpp"
 #include "client_session.hpp"
 #include "session_launcher.hpp"

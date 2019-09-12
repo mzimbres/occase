@@ -16,7 +16,7 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/steady_timer.hpp>
 
-#include "config.hpp"
+#include "net.hpp"
 #include "async_read_resp.hpp"
 
 namespace rt::redis

@@ -30,7 +30,7 @@ CPPFLAGS += -I. -I$(srcdir)/src -I$(boost_inc_dir)
 CPPFLAGS += -Wall -Werror=format-security \
 	    -Werror=implicit-function-declaration
 CPPFLAGS += $(pkg-config --cflags libsodium)
-CPPFLAGS += -O2
+CPPFLAGS += -g #-O2
 
 VPATH = $(srcdir)/src
 
@@ -58,6 +58,9 @@ server_objs += http_session.o
 server_objs += acceptor_mgr.o
 server_objs += utils.o
 
+imgserver_objs =
+imgserver_objs += img_session.o
+
 client_objs =
 client_objs += test_clients.o
 
@@ -71,6 +74,7 @@ exe_objs = $(addsuffix .o, $(exes))
 
 lib_objs =
 lib_objs += $(server_objs)
+lib_objs += $(imgserver_objs)
 lib_objs += $(client_objs)
 lib_objs += $(aedis_objs)
 lib_objs += $(menu_dump_objs)
@@ -107,7 +111,7 @@ publish_tests: % : %.o $(client_objs) $(common_objs)
 server: % : %.o $(server_objs) $(common_objs) $(aedis_objs) 
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_CONCURRENCY_HINT_1=BOOST_ASIO_CONCURRENCY_HINT_UNSAFE
 
-imgserver: % : %.o $(common_objs) $(aedis_objs) 
+imgserver: % : %.o $(imgserver_objs) $(common_objs) $(aedis_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_CONCURRENCY_HINT_1=BOOST_ASIO_CONCURRENCY_HINT_UNSAFE
 
 menu_tool: % : %.o $(menu_dump_objs) $(common_objs)
@@ -115,6 +119,9 @@ menu_tool: % : %.o $(menu_dump_objs) $(common_objs)
 
 aedis: % : %.o $(aedis_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
+
+resize: % : %.o 
+	$(CXX) -o $@ $^ $(CPPFLAGS)
 
 load-tool: load-tool.sh.in
 	sed s/toolname/$(toolname)/ < $^ > $@

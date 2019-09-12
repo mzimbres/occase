@@ -81,8 +81,8 @@ void img_session::run()
 
 void img_session::post_handler()
 {
-   std::string const target = header_parser.get().target().data();
-   auto const filename = target.substr(1);
+   auto const path = path_cat(doc_root, header_parser.get().target());
+   std::cout << "Path: " << path << std::endl;
 
    auto is_valid = true; // TODO: Prove signature here.
    if (!is_valid) {
@@ -102,9 +102,6 @@ void img_session::post_handler()
                                  >(std::move(header_parser));
 
    beast::error_code ec;
-   auto const path = doc_root + "/" + filename + ".jpg";
-   std::cout << "Path: " << path << std::endl;
-
    body_parser->get().body().open( path.data()
                                  , beast::file_mode::write, ec);
 
@@ -122,16 +119,13 @@ void img_session::post_handler()
    auto f = [self](auto ec, auto n)
       { self->on_read_post_body(ec, n); };
 
+   header_parser.body_limit(1000000);
    http::async_read(socket, buffer, *body_parser, f);
 }
 
 void img_session::get_handler()
 {
-   auto const target = header_parser.get().target();
-
-   auto const base = doc_root;
-
-   auto const path = path_cat(base, target);
+   auto const path = path_cat(doc_root, header_parser.get().target());
 
    std::cout << "Http get: " << path << std::endl;
 
@@ -184,6 +178,8 @@ void
 img_session::on_read_post_body( boost::system::error_code ec
                               , std::size_t n)
 {
+   std::cout << "===> size: " << n << std::endl;
+
    if (ec) {
       // TODO: Use the correct code.
       resp.result(http::status::bad_request);

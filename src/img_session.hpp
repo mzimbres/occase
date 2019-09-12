@@ -6,6 +6,9 @@ namespace rt
 {
 
 class img_session : public std::enable_shared_from_this<img_session> {
+public:
+   using arg_type = std::string const&;
+
 private:
    using file_body_type = http::file_body;
    using req_body_parser_type = http::request_parser<file_body_type>;
@@ -40,8 +43,8 @@ private:
    void check_deadline();
 public:
 
-   img_session(tcp::socket socket, std::string docroot);
-   void run();
+   img_session(tcp::socket socket, arg_type docroot);
+   void accept();
 };
 
 }

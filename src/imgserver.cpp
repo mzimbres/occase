@@ -19,61 +19,7 @@
 #include "logger.hpp"
 #include "system.hpp"
 #include "img_session.hpp"
-
-namespace rt
-{
-
-class listener {
-private:
-   net::io_context ioc {1};
-   tcp::acceptor acceptor;
-   std::string doc_root;
-
-public:
-   listener(unsigned short port, std::string docroot)
-   : acceptor {ioc, {net::ip::tcp::v4(), port}}
-   , doc_root {std::move(docroot)}
-   {}
-
-   void run()
-   {
-      do_accept();
-      ioc.run();
-   }
-
-   void do_accept()
-   {
-      auto handler = [this](auto const& ec, auto socket)
-         { on_accept(ec, std::move(socket)); };
-
-      acceptor.async_accept(ioc, handler);
-   }
-
-   void on_accept( boost::system::error_code ec
-                 , net::ip::tcp::socket socket)
-   {
-      if (ec) {
-         if (ec == net::error::operation_aborted) {
-            log( loglevel::info
-               , "imgserver: Stopping accepting connections");
-            return;
-         }
-
-         log(loglevel::debug, "imgserver: on_accept: {1}", ec.message());
-      } else {
-         std::make_shared<img_session>(std::move(socket), doc_root)->run();
-      }
-
-      do_accept();
-   }
-
-   void shutdown()
-   {
-      acceptor.cancel();
-   }
-};
-
-}
+#include "acceptor_mgr.hpp"
 
 struct server_cfg {
    bool help = false;
@@ -189,9 +135,11 @@ int main(int argc, char* argv[])
       if (cfg.number_of_fds != -1)
          set_fd_limits(cfg.number_of_fds);
 
-      listener lst {cfg.port, cfg.doc_root};
+      net::io_context ioc {1};
+      acceptor_mgr<img_session> lst {ioc};
+      lst.run(cfg.doc_root, cfg.port, cfg.max_listen_connections);
       drop_root_priviledges();
-      lst.run();
+      ioc.run();
    } catch(std::exception const& e) {
       log(loglevel::notice, e.what());
       log(loglevel::notice, "Exiting with status 1 ...");

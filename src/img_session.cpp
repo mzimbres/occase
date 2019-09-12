@@ -62,13 +62,13 @@ beast::string_view mime_type(beast::string_view path)
     return "application/text";
 }
 
-img_session::img_session(tcp::socket socket, std::string docroot)
+img_session::img_session(tcp::socket socket, arg_type docroot)
 : socket(std::move(socket))
 , deadline {socket.get_executor(), std::chrono::seconds(60)}
-, doc_root {std::move(docroot)}
+, doc_root {docroot}
 { }
 
-void img_session::run()
+void img_session::accept()
 {
    auto self = shared_from_this();
    auto f = [self](auto ec, auto n)

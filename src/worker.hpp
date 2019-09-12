@@ -131,7 +131,7 @@ private:
    pwd_gen pwdgen;
 
    // Accepts websocket connections.
-   acceptor_mgr acceptor;
+   acceptor_mgr<worker_session> acceptor;
 
    // Provides some statistics about the server.
    stats_server sserver;

@@ -57,6 +57,9 @@ struct proxy_session {
 
 class worker_session :
    public std::enable_shared_from_this<worker_session> {
+public:
+   using arg_type = worker&;
+
 private:
    enum class ping_pong
    { ping_sent
@@ -111,8 +114,7 @@ private:
 
 public:
 
-   explicit
-   worker_session(net::ip::tcp::socket socket, worker& w);
+   explicit worker_session(net::ip::tcp::socket socket, arg_type w);
    ~worker_session();
 
    void accept();

@@ -56,7 +56,7 @@ auto get_cfg(int argc, char* argv[])
    , "The file containing the configuration.")
 
    ( "port"
-   , po::value<unsigned short>(&cfg.port)->default_value(8888)
+   , po::value<unsigned short>(&cfg.port)->default_value(81)
    , "Server listening port.")
 
    ("log-on-stderr"

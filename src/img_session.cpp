@@ -70,6 +70,8 @@ img_session::img_session(tcp::socket socket, arg_type docroot)
 
 void img_session::accept()
 {
+   std::cout << "Accept" << std::endl;
+
    auto self = shared_from_this();
    auto f = [self](auto ec, auto n)
       { self->on_read_header(ec, n); };
@@ -198,6 +200,7 @@ img_session::on_read_post_body( boost::system::error_code ec
 
 void img_session::on_read_header(boost::system::error_code ec, std::size_t n)
 {
+   std::cout << "on_read_header" << std::endl;
    resp.version(header_parser.get().version());
    resp.keep_alive(false);
 

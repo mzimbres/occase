@@ -76,6 +76,7 @@ void img_session::accept()
    auto f = [self](auto ec, auto n)
       { self->on_read_header(ec, n); };
 
+   header_parser.body_limit(10000000);
    http::async_read_header(socket, buffer, header_parser, f);
 
    check_deadline();
@@ -121,7 +122,6 @@ void img_session::post_handler()
    auto f = [self](auto ec, auto n)
       { self->on_read_post_body(ec, n); };
 
-   header_parser.body_limit(1000000);
    http::async_read(socket, buffer, *body_parser, f);
 }
 
@@ -200,6 +200,9 @@ img_session::on_read_post_body( boost::system::error_code ec
 
 void img_session::on_read_header(boost::system::error_code ec, std::size_t n)
 {
+   for (auto const& field : header_parser.get())
+      std::cout << field.name() << " = " << field.value() << "\n";
+
    std::cout << "on_read_header" << std::endl;
    resp.version(header_parser.get().version());
    resp.keep_alive(false);

@@ -60,8 +60,6 @@ struct post {
    menu_code_type to;
    std::uint64_t features;
    long int date = 0;
-   std::vector<std::uint64_t> ex_details;
-   std::vector<std::uint64_t> in_details;
    std::vector<int> range_values;
 };
 

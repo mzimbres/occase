@@ -46,8 +46,10 @@ std::string make_post_cmd(rt::menu_code_type const& menu_code)
    sub["msg"] = "Not an interesting message.";
    sub["nick"] = "Wheeler";
    sub["avatar"] = "9ac8316ca55e6d888d43092fd73a78d6";
+   sub["ex_details"] = std::vector<std::uint64_t>{};
+   sub["in_details"] = std::vector<std::uint64_t>{};
 
-   rt::post item {-1, {}, sub.dump(), menu_code, 0, 0};
+   rt::post item {-1, {}, sub.dump(), menu_code, 0, 0, {}};
    json j;
    j["cmd"] = "publish";
    j["items"] = std::vector<rt::post>{item};
@@ -719,8 +721,10 @@ int publisher2::pub( menu_code_type const& pub_code
    sub["msg"] = "Not an interesting message.";
    sub["nick"] = "Wheeler";
    sub["avatar"] = "";
+   sub["ex_details"] = std::vector<std::uint64_t>{};
+   sub["in_details"] = std::vector<std::uint64_t>{};
 
-   post item {-1, op.user.id, sub.dump(), pub_code, 0, 0};
+   post item {-1, op.user.id, sub.dump(), pub_code, 0, 0, {}};
 
    json j_msg;
    j_msg["cmd"] = "publish";

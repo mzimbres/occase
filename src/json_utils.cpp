@@ -28,8 +28,6 @@ void to_json(json& j, post const& e)
            , {"to", e.to}
            , {"features", e.features}
            , {"date", e.date}
-           , {"ex_details", e.ex_details}
-           , {"in_details", e.in_details}
            , {"range_values", e.range_values}
            };
 }
@@ -42,8 +40,6 @@ void from_json(json const& j, post& e)
   e.to = j.at("to").get<menu_code_type>();
   e.features = j.at("features").get<std::uint64_t>();
   e.date = j.at("date").get<long int>();
-  e.ex_details = j.at("ex_details").get<std::vector<std::uint64_t>>();
-  e.in_details = j.at("in_details").get<std::vector<std::uint64_t>>();
   e.range_values = j.at("range_values").get<std::vector<int>>();
 }
 

@@ -13,6 +13,17 @@ using json = nlohmann::json;
 namespace rt
 {
 
+// The sizes used to generate image paths.
+namespace sz
+{
+
+constexpr std::size_t a = 5;
+constexpr std::size_t b = 2;
+constexpr std::size_t c = 2;
+constexpr std::size_t img_filename_min_size = a + b + c;
+
+}
+
 constexpr auto menu_size = 2;
 
 struct menu_elem {

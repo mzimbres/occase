@@ -2,16 +2,22 @@
 
 #include <iostream>
 
+#include "json_utils.hpp"
+
 namespace rt
 {
 
-beast::string_view get_filename(beast::string_view path)
+// Can be used to get the filename or the file extension.
+// s = "/" for file name.
+// s = "." for file extension.
+std::pair<beast::string_view, beast::string_view>
+get_filename(beast::string_view path, char const* s)
 {
-   auto const pos = path.rfind("/");
+   auto const pos = path.rfind(s);
    if (pos == std::string::npos)
       return {};
 
-   return path.substr(pos);
+   return {path.substr(0, pos), path.substr(pos + 1)};
 }
 
 std::string path_cat(beast::string_view base, beast::string_view path)
@@ -21,10 +27,47 @@ std::string path_cat(beast::string_view base, beast::string_view path)
 
    std::string result(base);
    char constexpr path_separator = '/';
-   if(result.back() == path_separator)
+   if (result.back() == path_separator)
       result.resize(result.size() - 1);
+
    result.append(path.data(), path.size());
    return result;
+}
+
+std::string make_img_path(beast::string_view target)
+{
+   auto const split1 = get_filename(target, ".");
+   if (std::empty(split1.second))
+      return {};
+   
+   std::string const ext = split1.second.data();
+
+   auto const split2 = get_filename(split1.first, "/");
+   if (std::empty(split2.second))
+      return {};
+
+   std::string const filename = split2.second.data();
+
+   auto const n = std::size(filename) - std::size(ext) - 1;
+   if (n < sz::img_filename_min_size)
+      return {};
+
+   if (std::empty(split2.first))
+      return {};
+
+   std::string path;
+   path.append(split2.first.data(), 0, std::size(split2.first));
+
+   path.push_back('/');
+   path.append(filename, 0, sz::a);
+   path.push_back('/');
+   path.append(filename, sz::a, sz::b);
+   path.push_back('/');
+   path.append(filename, sz::b, sz::c);
+   path.push_back('/');
+   path += filename;
+
+   return path;
 }
 
 beast::string_view mime_type(beast::string_view path)
@@ -84,7 +127,10 @@ void img_session::accept()
 
 void img_session::post_handler()
 {
-   auto const path = path_cat(doc_root, header_parser.get().target());
+   auto const target = header_parser.get().target();
+   std::cout << make_img_path(target) << std::endl;
+
+   auto const path = path_cat(doc_root, target);
    std::cout << "Path: " << path << std::endl;
 
    auto is_valid = true; // TODO: Prove signature here.

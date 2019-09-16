@@ -664,7 +664,7 @@ ev_res
 worker::on_app_filenames(json j, std::shared_ptr<worker_session> s)
 {
    //auto const n = j.at("quantity").get<int>();
-   auto const n = 5;
+   auto const n = sz::img_filename_min_size;
 
    auto f = [this, n]()
       { return pwdgen(n); };

@@ -138,7 +138,7 @@ int main(int argc, char* argv[])
       net::io_context ioc {1};
       acceptor_mgr<img_session> lst {ioc};
       lst.run(cfg.doc_root, cfg.port, cfg.max_listen_connections);
-      drop_root_priviledges();
+      //drop_root_priviledges();
       ioc.run();
    } catch(std::exception const& e) {
       log(loglevel::notice, e.what());

@@ -1,8 +1,38 @@
 #include "img_session.hpp"
 
+#include <fstream>
 #include <iostream>
+#include <filesystem>
+
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include "json_utils.hpp"
+
+namespace {
+void rec_mkdir(const char *dir)
+{
+   char tmp[256];
+   char *p = NULL;
+   size_t len;
+
+   snprintf(tmp, sizeof(tmp),"%s",dir);
+   len = strlen(tmp);
+
+   if (tmp[len - 1] == '/')
+      tmp[len - 1] = 0;
+
+   for (p = tmp + 1; *p; p++)
+      if (*p == '/') {
+         *p = 0;
+         mkdir(tmp, 0777);
+         *p = '/';
+      }
+
+   mkdir(tmp, 0777);
+}
+}
 
 namespace rt
 {
@@ -34,21 +64,20 @@ std::string path_cat(beast::string_view base, beast::string_view path)
    return result;
 }
 
-std::string make_img_path(beast::string_view target)
+std::pair<std::string, std::string>
+make_img_path(beast::string_view target)
 {
    auto const split1 = get_filename(target, ".");
    if (std::empty(split1.second))
       return {};
    
-   std::string const ext = split1.second.data();
-
    auto const split2 = get_filename(split1.first, "/");
    if (std::empty(split2.second))
       return {};
 
    std::string const filename = split2.second.data();
 
-   auto const n = std::size(filename) - std::size(ext) - 1;
+   auto const n = std::size(filename) - std::size(split1.second) - 1;
    if (n < sz::img_filename_min_size)
       return {};
 
@@ -65,9 +94,8 @@ std::string make_img_path(beast::string_view target)
    path.push_back('/');
    path.append(filename, sz::b, sz::c);
    path.push_back('/');
-   path += filename;
 
-   return path;
+   return {path, filename};
 }
 
 beast::string_view mime_type(beast::string_view path)
@@ -128,10 +156,13 @@ void img_session::accept()
 void img_session::post_handler()
 {
    auto const target = header_parser.get().target();
-   std::cout << make_img_path(target) << std::endl;
+   auto const split = make_img_path(target);
+   auto const dirs = doc_root + split.first;
+   auto const real_path = doc_root + split.first + split.second;
 
-   auto const path = path_cat(doc_root, target);
-   std::cout << "Path: " << path << std::endl;
+   std::cout << "Path: " << real_path << std::endl;
+
+   rec_mkdir(dirs.data());
 
    auto is_valid = true; // TODO: Prove signature here.
    if (!is_valid) {
@@ -151,7 +182,7 @@ void img_session::post_handler()
                                  >(std::move(header_parser));
 
    beast::error_code ec;
-   body_parser->get().body().open( path.data()
+   body_parser->get().body().open( real_path.data()
                                  , beast::file_mode::write, ec);
 
    if (ec) {
@@ -173,7 +204,9 @@ void img_session::post_handler()
 
 void img_session::get_handler()
 {
-   auto const path = path_cat(doc_root, header_parser.get().target());
+   auto const target = header_parser.get().target();
+   auto const split = make_img_path(target);
+   auto const path = doc_root + split.first + split.second;
 
    std::cout << "Http get: " << path << std::endl;
 

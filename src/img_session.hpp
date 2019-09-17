@@ -5,9 +5,14 @@
 namespace rt
 {
 
+struct img_session_cfg {
+   std::string doc_root;
+   std::string img_key;
+};
+
 class img_session : public std::enable_shared_from_this<img_session> {
 public:
-   using arg_type = std::string const&;
+   using arg_type = img_session_cfg const&;
 
 private:
    using file_body_type = http::file_body;
@@ -33,7 +38,7 @@ private:
    std::unique_ptr<resp_body_type> file_body_resp;
    
    net::basic_waitable_timer<std::chrono::steady_clock> deadline;
-   std::string doc_root;
+   img_session_cfg const& cfg;
 
    void post_handler();
    void get_handler();
@@ -43,7 +48,7 @@ private:
    void check_deadline();
 public:
 
-   img_session(tcp::socket socket, arg_type docroot);
+   img_session(tcp::socket socket, arg_type arg);
    void accept();
 };
 

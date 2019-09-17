@@ -133,10 +133,10 @@ beast::string_view mime_type(beast::string_view path)
     return "application/text";
 }
 
-img_session::img_session(tcp::socket socket, arg_type docroot)
+img_session::img_session(tcp::socket socket, arg_type arg)
 : socket(std::move(socket))
 , deadline {socket.get_executor(), std::chrono::seconds(60)}
-, doc_root {docroot}
+, cfg {arg}
 { }
 
 void img_session::accept()
@@ -157,8 +157,9 @@ void img_session::post_handler()
 {
    auto const target = header_parser.get().target();
    auto const split = make_img_path(target);
-   auto const dirs = doc_root + split.first;
-   auto const real_path = doc_root + split.first + split.second;
+   auto const dirs = cfg.doc_root + split.first;
+   auto const& filename = split.second;
+   auto const real_path = cfg.doc_root + split.first + filename;
 
    std::cout << "Path: " << real_path << std::endl;
 
@@ -206,7 +207,7 @@ void img_session::get_handler()
 {
    auto const target = header_parser.get().target();
    auto const split = make_img_path(target);
-   auto const path = doc_root + split.first + split.second;
+   auto const path = cfg.doc_root + split.first + split.second;
 
    std::cout << "Http get: " << path << std::endl;
 
@@ -267,7 +268,7 @@ img_session::on_read_post_body( boost::system::error_code ec
       resp.set(http::field::content_type, "text/plain");
       beast::ostream(resp.body()) << "File not found\r\n";
       std::cout << "Error: " << ec.message() << std::endl;
-      std::cout << "docroot: " << doc_root << std::endl;
+      std::cout << "docroot: " << cfg.doc_root << std::endl;
    } else {
       resp.result(http::status::ok);
       resp.set(http::field::server, "Beast");

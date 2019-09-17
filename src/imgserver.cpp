@@ -24,11 +24,11 @@
 struct server_cfg {
    bool help = false;
    unsigned short port;
-   std::string doc_root;
    bool log_on_stderr = false;
    bool daemonize = false;
    std::string pidfile;
    std::string loglevel;
+   rt::img_session_cfg cfg;
    int number_of_fds = -1;
    int max_listen_connections;
 };
@@ -48,7 +48,7 @@ auto get_cfg(int argc, char* argv[])
    , "Produces help message")
 
    ("doc-root"
-   , po::value<std::string>(&cfg.doc_root)->default_value("/www/data")
+   , po::value<std::string>(&cfg.cfg.doc_root)->default_value("/www/data")
    , "Directory where image will be written to and read from.")
 
    ("config"
@@ -81,6 +81,10 @@ auto get_cfg(int argc, char* argv[])
    ("daemonize"
    , po::value<std::string>(&daemonize)->default_value("no")
    , "Runs the server in the backgroud as daemon process.")
+
+   ("img-key"
+   , po::value<std::string>(&cfg.cfg.img_key)
+   , "See websocket server for information.")
 
    ( "max-listen-connections"
    , po::value<int>(&cfg.max_listen_connections)->default_value(511)
@@ -137,7 +141,7 @@ int main(int argc, char* argv[])
 
       net::io_context ioc {1};
       acceptor_mgr<img_session> lst {ioc};
-      lst.run(cfg.doc_root, cfg.port, cfg.max_listen_connections);
+      lst.run(cfg.cfg, cfg.port, cfg.max_listen_connections);
       //drop_root_priviledges();
       ioc.run();
    } catch(std::exception const& e) {

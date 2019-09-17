@@ -663,11 +663,12 @@ ev_res worker::on_app_del_post(json j, std::shared_ptr<worker_session> s)
 ev_res
 worker::on_app_filenames(json j, std::shared_ptr<worker_session> s)
 {
-   //auto const n = j.at("quantity").get<int>();
    auto const n = sz::img_filename_min_size;
-
    auto f = [this, n]()
-      { return pwdgen(n); };
+   {
+      auto const filename = pwdgen(n);
+      return filename + make_hex_digest(filename, cfg.img_key);
+   };
 
    std::vector<std::string> names;
    std::generate_n(std::back_inserter(names), n, f);

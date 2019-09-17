@@ -39,6 +39,10 @@ struct core_cfg {
 
    // The size of the tcp backlog.
    int max_listen_connections;
+
+   // The key used to generate authenticated filenames that will be
+   // user in the image server.
+   std::string img_key;
 };
 
 struct worker_cfg {

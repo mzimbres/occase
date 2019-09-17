@@ -9,6 +9,10 @@ namespace rt
 void init_libsodium();
 std::string make_hex_digest(std::string const& input);
 
+std::string
+make_hex_digest( std::string const& input
+               , std::string const& key);
+
 class pwd_gen {
 private:
    std::mt19937 gen;

@@ -41,6 +41,7 @@ exes += menu_tool
 exes += aedis
 exes += simulation
 exes += imgserver
+exes += img_key_gen
 
 common_objs += menu.o
 common_objs += system.o
@@ -114,13 +115,13 @@ imgserver: % : %.o $(imgserver_objs) $(common_objs) $(aedis_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_CONCURRENCY_HINT_1=BOOST_ASIO_CONCURRENCY_HINT_UNSAFE
 
 menu_tool: % : %.o $(menu_dump_objs) $(common_objs)
-	$(CXX) -o $@ $^ $(CPPFLAGS) -lfmt $(ext_libs) $(LDFLAGS)
+	$(CXX) -o $@ $^ $(CPPFLAGS) $(ext_libs) $(LDFLAGS)
 
 aedis: % : %.o $(aedis_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
-resize: % : %.o 
-	$(CXX) -o $@ $^ $(CPPFLAGS)
+img_key_gen: % : %.o  $(common_objs)
+	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS)
 
 load-tool: load-tool.sh.in
 	sed s/toolname/$(toolname)/ < $^ > $@

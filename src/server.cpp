@@ -10,6 +10,8 @@
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
 
+#include <sodium.h>
+
 #include "utils.hpp"
 #include "crypto.hpp"
 #include "logger.hpp"
@@ -21,7 +23,7 @@
 using namespace rt;
 
 struct server_cfg {
-   bool help = false;
+   int help = 0; // 0: continue, 1: help, -1: error.
    bool log_on_stderr = false;
    bool daemonize = false;
    std::string pidfile;
@@ -145,6 +147,8 @@ auto get_cfg(int argc, char* argv[])
    , po::value<int>(&cfg.worker.core.pwd_size)->default_value(10)
    , "The size of the password sent to the app.")
 
+   ("img-key", po::value<std::string>(&cfg.worker.core.img_key))
+
    ( "number-of-fds"
    , po::value<int>(&cfg.number_of_fds)->default_value(-1)
    , "If provided, the server will try to increase the number of file "
@@ -245,12 +249,17 @@ auto get_cfg(int argc, char* argv[])
 
    if (vm.count("help")) {
       std::cout << desc << "\n";
-      return server_cfg {true};
+      return server_cfg {1};
    }
 
    if (vm.count("git-sha1")) {
       std::cout << GIT_SHA1 << "\n";
-      return server_cfg {true};
+      return server_cfg {1};
+   }
+
+   if (std::size(cfg.worker.core.img_key) != crypto_generichash_KEYBYTES) {
+      std::cerr << "Image key has the wrong size." << "\n";
+      return server_cfg {-1};
    }
 
    cfg.log_on_stderr = log_on_stderr == "yes";
@@ -285,8 +294,11 @@ int main(int argc, char* argv[])
 {
    try {
       auto const cfg = get_cfg(argc, argv);
-      if (cfg.help)
+      if (cfg.help == 1)
          return 0;
+
+      if (cfg.help == -1)
+         return 1;
 
       if (cfg.daemonize)
          daemonize();

@@ -62,13 +62,31 @@ std::string pwd_gen::operator()(int pwd_size)
 
 std::string make_hex_digest(std::string const& input)
 {
-  auto const* p1 = reinterpret_cast<unsigned char const*>(input.data());
+   auto const* p1 = reinterpret_cast<unsigned char const*>(input.data());
 
-  hash_type hash;
-  crypto_generichash(hash.data(), std::size(hash),
-     p1, std::size(input), nullptr, 0);
+   hash_type hash;
+   crypto_generichash(hash.data(), std::size(hash),
+      p1, std::size(input), nullptr, 0);
 
-  return hash_to_string(hash);
+   return hash_to_string(hash);
+}
+
+std::string
+make_hex_digest( std::string const& input
+               , std::string const& key)
+{
+   if (std::size(key) != crypto_generichash_KEYBYTES)
+      return {};
+
+   auto const* p1 = reinterpret_cast<unsigned char const*>(input.data());
+   auto const* p2 = reinterpret_cast<unsigned char const*>(key.data());
+
+   hash_type hash;
+   crypto_generichash( hash.data(), std::size(hash)
+                     , p1, std::size(input)
+                     , p2, std::size(key));
+
+   return hash_to_string(hash);
 }
 
 void init_libsodium()

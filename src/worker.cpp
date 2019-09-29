@@ -667,7 +667,8 @@ worker::on_app_filenames(json j, std::shared_ptr<worker_session> s)
    auto f = [this, n]()
    {
       auto const filename = pwdgen(n);
-      return filename + make_hex_digest(filename, cfg.img_key);
+      auto const digest = make_hex_digest(filename, cfg.img_key);
+      return digest + "/" + filename;
    };
 
    std::vector<std::string> names;

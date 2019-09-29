@@ -10,14 +10,33 @@
 
 #include "json_utils.hpp"
 
+/* The http target used by apps to post images has the following form.
+ *
+ *    a/b.c
+ *
+ * The different parts have the following meaning.
+ *
+ * a: The hex digest produces by the ws server that uses as input b
+ *    and a key that is known only by the ws and the image server. If
+ *    a and b do not belong to each other the image has not been
+ *    authorized by the server to be posted.
+ *
+ * b: The is the file name produced by the ws server. It is randonly
+ *    generated.
+ * 
+ * c: The file extension. 
+ *
+ */
+
 namespace {
-void rec_mkdir(const char *dir)
+
+void create_dir(const char *dir)
 {
    char tmp[256];
    char *p = NULL;
    size_t len;
 
-   snprintf(tmp, sizeof(tmp),"%s",dir);
+   snprintf(tmp, sizeof(tmp), "%s", dir);
    len = strlen(tmp);
 
    if (tmp[len - 1] == '/')
@@ -32,16 +51,22 @@ void rec_mkdir(const char *dir)
 
    mkdir(tmp, 0777);
 }
+
 }
 
 namespace rt
 {
 
-// Can be used to get the filename or the file extension.
-// s = "/" for file name.
-// s = "." for file extension.
+/* Can be used to get the filename or the file extension.
+*
+*    s = "/" for file name.
+*    s = "." for file extension.
+*
+* For example foo.bar will result in "foo" and "bar".
+*/
+
 std::pair<beast::string_view, beast::string_view>
-get_filename(beast::string_view path, char const* s)
+split(beast::string_view path, char const* s)
 {
    auto const pos = path.rfind(s);
    if (pos == std::string::npos)
@@ -50,52 +75,22 @@ get_filename(beast::string_view path, char const* s)
    return {path.substr(0, pos), path.substr(pos + 1)};
 }
 
-std::string path_cat(beast::string_view base, beast::string_view path)
+/* This function receives as input the filename as specified above in
+ * the form a/b.c, that means B and returns the path where it should
+ * be stored, which will be a string with the form.
+ *
+ *    d/e/f
+ */
+std::string make_img_path(beast::string_view filename)
 {
-   if (base.empty())
-      return std::string(path);
-
-   std::string result(base);
-   char constexpr path_separator = '/';
-   if (result.back() == path_separator)
-      result.resize(result.size() - 1);
-
-   result.append(path.data(), path.size());
-   return result;
-}
-
-std::pair<std::string, std::string>
-make_img_path(beast::string_view target)
-{
-   auto const split1 = get_filename(target, ".");
-   if (std::empty(split1.second))
-      return {};
-   
-   auto const split2 = get_filename(split1.first, "/");
-   if (std::empty(split2.second))
-      return {};
-
-   std::string const filename = split2.second.data();
-
-   auto const n = std::size(filename) - std::size(split1.second) - 1;
-   if (n < sz::img_filename_min_size)
-      return {};
-
-   if (std::empty(split2.first))
-      return {};
-
    std::string path;
-   path.append(split2.first.data(), 0, std::size(split2.first));
+   path.append(filename.data(), 0, sz::a);
+   path.push_back('/');
+   path.append(filename.data(), sz::a, sz::b);
+   path.push_back('/');
+   path.append(filename.data(), sz::b, sz::c);
 
-   path.push_back('/');
-   path.append(filename, 0, sz::a);
-   path.push_back('/');
-   path.append(filename, sz::a, sz::b);
-   path.push_back('/');
-   path.append(filename, sz::b, sz::c);
-   path.push_back('/');
-
-   return {path, filename};
+   return path;
 }
 
 beast::string_view mime_type(beast::string_view path)
@@ -153,21 +148,51 @@ void img_session::accept()
    check_deadline();
 }
 
+struct splited_target {
+   beast::string_view digest;
+   beast::string_view filename;
+   beast::string_view extension;
+};
+
+splited_target make_splited_target(beast::string_view const target)
+{
+   // Splits the target in the form [A, B.C].
+   auto const pair1 = split(target, "/");
+
+   // Splits the filename from the extension, we end up with [B, C]
+   auto const pair2 = split(pair1.second, ".");
+
+   return {pair1.first, pair2.first, pair2.second};
+}
+
+auto is_valid(splited_target const& st)
+{
+   // TODO: Prove signature here.
+   return !std::empty(st.digest) &&
+          !std::empty(st.filename) &&
+          !std::empty(st.extension);
+}
+
 void img_session::post_handler()
 {
-   auto const target = header_parser.get().target();
-   auto const split = make_img_path(target);
-   auto const dirs = cfg.doc_root + split.first;
-   auto const& filename = split.second;
-   auto const real_path = cfg.doc_root + split.first + filename;
+   auto const st = make_splited_target(header_parser.get().target());
 
-   std::cout << "Path: " << real_path << std::endl;
+   auto path = cfg.doc_root
+            + "/"
+            + make_img_path(st.filename);
 
-   rec_mkdir(dirs.data());
+   std::cout << "Dir: " << path << std::endl;
 
-   auto is_valid = true; // TODO: Prove signature here.
-   if (!is_valid) {
-      // The filename does not contain a valid signature.
+   create_dir(path.data());
+
+   path += "/";
+   path.append(st.filename.data(), std::size(st.filename));
+   path += ".";
+   path.append(st.extension.data(), std::size(st.extension));
+
+   std::cout << "Path: " << path << std::endl;
+
+   if (!is_valid(st)) {
       resp.result(http::status::bad_request);
       resp.set(http::field::content_type, "text/plain");
       beast::ostream(resp.body()) << "Invalid signature.\r\n";
@@ -183,7 +208,7 @@ void img_session::post_handler()
                                  >(std::move(header_parser));
 
    beast::error_code ec;
-   body_parser->get().body().open( real_path.data()
+   body_parser->get().body().open( path.data()
                                  , beast::file_mode::write, ec);
 
    if (ec) {
@@ -205,9 +230,18 @@ void img_session::post_handler()
 
 void img_session::get_handler()
 {
-   auto const target = header_parser.get().target();
-   auto const split = make_img_path(target);
-   auto const path = cfg.doc_root + split.first + split.second;
+   std::cout << "Http get target: " << header_parser.get().target() << std::endl;
+
+   auto const st = make_splited_target(header_parser.get().target());
+
+   auto path = cfg.doc_root
+            + "/"
+            + make_img_path(st.filename)
+            + "/";
+
+   path.append(st.filename.data(), std::size(st.filename));
+   path += ".";
+   path.append(st.extension.data(), std::size(st.extension));
 
    std::cout << "Http get: " << path << std::endl;
 

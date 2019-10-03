@@ -41,8 +41,14 @@ struct db_cfg {
 
    // The prefix of chat message keys. The complete key will be a
    // composition of this prefix and the user id separate by a ":"
-   // e.g. msg:mzimbres@gmail.com.
+   // e.g. msg:102 where 102 is the user id, acquired on registration.
    std::string chat_msg_prefix;
+
+   // This prefix will be used to form the channel where presence
+   // messages sent to the user will be published e.g. prefix:102.
+   // We use channel for presence since it does not have to be
+   // persisted.
+   std::string presence_channel_prefix = "pc:";
 
    // Redis keyspace notification prefix. When a key is touched redis
    // sendd us a notification. This is how a worker gets notified that
@@ -193,6 +199,12 @@ public:
 
       ss_chat_pub.send(std::move(cmd_str));
    }
+
+   // Sends presence to the user with id id. Completes with
+   //
+   //    redis::request::presence
+   //
+   void send_presence(std::string id, std::string msg);
 
    // Adds the post in the sorted set containing all posts and
    // publishes the post on the channel where it is broadcasted

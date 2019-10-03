@@ -37,6 +37,8 @@ enum class ev_res
 , delete_fail
 , filenames_ok
 , filenames_fail
+, presence_ok
+, presence_fail
 , unknown
 };
 

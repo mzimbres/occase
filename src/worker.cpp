@@ -782,6 +782,23 @@ worker::on_app_chat_msg(json j, std::shared_ptr<worker_session> s)
    return ev_res::chat_msg_ok;
 }
 
+ev_res
+worker::on_app_presence(json j, std::shared_ptr<worker_session> s)
+{
+   // Consider searching the sessions map if the user in this worker
+   // and send him his message directly to avoid overloading the redis
+   // server. This would be a big optimization in the case of small
+   // number of workers.
+
+   j["from"] = s->get_id();
+   auto msg = j.dump();
+   std::initializer_list<std::string> param = {msg};
+   auto const to = j.at("to").get<std::string>();
+   db.send_presence(to, msg);
+
+   return ev_res::presence_ok;
+}
+
 void worker::shutdown()
 {
    log(loglevel::notice, "Shutdown has been requested.");
@@ -812,16 +829,18 @@ ev_res worker::on_app( std::shared_ptr<worker_session> s
       auto const cmd = j.at("cmd").get<std::string>();
 
       if (s->is_logged_in()) {
+         if (cmd == "presence")
+            return on_app_presence(std::move(j), s);
          if (cmd == "message")
             return on_app_chat_msg(std::move(j), s);
          if (cmd == "subscribe")
             return on_app_subscribe(j, s);
+         if (cmd == "filenames")
+            return on_app_filenames(std::move(j), s);
          if (cmd == "publish")
             return on_app_publish(std::move(j), s);
          if (cmd == "delete")
             return on_app_del_post(std::move(j), s);
-         if (cmd == "filenames")
-            return on_app_filenames(std::move(j), s);
       } else {
          if (cmd == "login")
             return on_app_login(j, s);

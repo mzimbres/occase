@@ -154,6 +154,8 @@ private:
                           , std::shared_ptr<worker_session> s);
    ev_res on_app_chat_msg( json j
                          , std::shared_ptr<worker_session> s);
+   ev_res on_app_presence( json j
+                         , std::shared_ptr<worker_session> s);
    ev_res on_app_publish( json j
                         , std::shared_ptr<worker_session> s);
    ev_res on_app_del_post( json j

@@ -275,5 +275,15 @@ void facade::disconnect()
    ss_chat_pub.close();
 }
 
+void facade::send_presence(std::string id, std::string msg)
+{
+   // The channel on which presence messages are sent has the
+   // following form.
+
+   auto const channel = cfg.presence_channel_prefix + id;
+   ss_chat_pub.send(publish(channel, msg));
+   chat_pub_queue.push({request::ignore, {}});
+}
+
 }
 

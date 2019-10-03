@@ -349,6 +349,7 @@ void worker_session::handle_ev(ev_res r)
       case ev_res::chat_msg_fail:
       case ev_res::delete_fail:
       case ev_res::filenames_fail:
+      case ev_res::presence_fail:
       case ev_res::unknown:
       {
          timer.cancel();

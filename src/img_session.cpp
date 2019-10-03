@@ -167,32 +167,34 @@ splited_target make_splited_target(beast::string_view const target)
 
 auto is_valid(splited_target const& st)
 {
-   // TODO: Prove signature here.
-   return !std::empty(st.digest) &&
-          !std::empty(st.filename) &&
-          !std::empty(st.extension);
+   if (std::size(st.filename) < sz::img_filename_min_size)
+      return false;
+
+   // TODO: Prove signature and sizes here.
+   return !std::empty(st.digest) && !std::empty(st.extension);
 }
 
 void img_session::post_handler()
 {
+   std::string path;
+
    auto const st = make_splited_target(header_parser.get().target());
+   if (is_valid(st)) {
+      path = cfg.doc_root + "/" + make_img_path(st.filename);
 
-   auto path = cfg.doc_root
-            + "/"
-            + make_img_path(st.filename);
+      std::cout << "Dir: " << path << std::endl;
 
-   std::cout << "Dir: " << path << std::endl;
+      create_dir(path.data());
 
-   create_dir(path.data());
-
-   path += "/";
-   path.append(st.filename.data(), std::size(st.filename));
-   path += ".";
-   path.append(st.extension.data(), std::size(st.extension));
+      path += "/";
+      path.append(st.filename.data(), std::size(st.filename));
+      path += ".";
+      path.append(st.extension.data(), std::size(st.extension));
+   }
 
    std::cout << "Path: " << path << std::endl;
 
-   if (!is_valid(st)) {
+   if (std::empty(path)) {
       resp.result(http::status::bad_request);
       resp.set(http::field::content_type, "text/plain");
       beast::ostream(resp.body()) << "Invalid signature.\r\n";
@@ -230,20 +232,19 @@ void img_session::post_handler()
 
 void img_session::get_handler()
 {
-   std::cout << "Http get target: " << header_parser.get().target() << std::endl;
+   std::cout << "Get target: " << header_parser.get().target() << std::endl;
+
+   std::string path;
 
    auto const st = make_splited_target(header_parser.get().target());
+   if (is_valid(st)) {
+      path = cfg.doc_root + "/" + make_img_path(st.filename) + "/";
+      path.append(st.filename.data(), std::size(st.filename));
+      path += ".";
+      path.append(st.extension.data(), std::size(st.extension));
+   }
 
-   auto path = cfg.doc_root
-            + "/"
-            + make_img_path(st.filename)
-            + "/";
-
-   path.append(st.filename.data(), std::size(st.filename));
-   path += ".";
-   path.append(st.extension.data(), std::size(st.extension));
-
-   std::cout << "Http get: " << path << std::endl;
+   std::cout << "Path: " << path << std::endl;
 
    if (std::empty(path)) {
       resp.result(http::status::not_found);

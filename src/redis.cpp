@@ -134,7 +134,7 @@ facade::on_user_pub( boost::system::error_code const& ec
                    , std::vector<std::string> data)
 {
    if (ec) {
-      log(loglevel::debug, "facade::on_user_sub: {0}.", ec.message());
+      log(loglevel::debug, "facade::on_user_pub: {0}.", ec.message());
       return;
    }
 
@@ -165,16 +165,40 @@ facade::on_user_sub( boost::system::error_code const& ec
       return;
    }
 
-   if (data.back() != "rpush")
+   //std::cout << "==> ";
+   //for (auto const& m : data)
+   //   std::cout << m << " ";
+   //std::cout << std::endl;
+
+   // Notifications that arrive here have the form.
+   //
+   //    message pc:6 {"cmd":"presence","from":"5","to":"6","type":"writing"} 
+   //    message __keyspace@0__:chat:6 rpush 
+   //    message __keyspace@0__:chat:6 expire 
+   //    message __keyspace@0__:chat:6 del 
+   //
+   // We are only interested in rpush and presence messages whose
+   // prefix is given by cfg.presence_channel_prefix.
+
+   if (data.back() == "rpush" && data.front() == "message") {
+      assert(std::size(data) == 3);
+      auto const pos = std::size(cfg.user_notify_prefix);
+      auto const user_id = data[1].substr(pos);
+      assert(!std::empty(user_id));
+      retrieve_chat_msgs(user_id);
       return;
+   }
 
-   assert(data.front() == "message");
-   assert(std::size(data) == 3);
-
-   auto const pos = std::size(cfg.user_notify_prefix);
-   auto user_id = data[1].substr(pos);
-   assert(!std::empty(user_id));
-   retrieve_chat_msgs(user_id);
+   auto const size = std::size(cfg.presence_channel_prefix);
+   auto const r = data[1].compare(0, size, cfg.presence_channel_prefix);
+   if (data.front() == "message" && r == 0) {
+      assert(std::size(data) == 3);
+      auto const user_id = data[1].substr(size);
+      std::swap(data.front(), data.back());
+      data.resize(1);
+      worker_handler(std::move(data), {request::presence, user_id});
+      return;
+   }
 }
 
 void facade::retrieve_chat_msgs(std::string const& user_id)
@@ -193,14 +217,16 @@ void facade::retrieve_chat_msgs(std::string const& user_id)
    chat_pub_queue.push({request::ignore, {}});
 }
 
-void facade::subscribe_to_chat_msgs(std::string const& id)
+void facade::on_user_online(std::string const& id)
 {
    ss_chat_sub.send(subscribe(cfg.user_notify_prefix + id));
+   ss_chat_sub.send(subscribe(cfg.presence_channel_prefix + id));
 }
 
-void facade::unsubscribe_to_chat_msgs(std::string const& id)
+void facade::on_user_offline(std::string const& id)
 {
    ss_chat_sub.send(unsubscribe(cfg.user_notify_prefix + id));
+   ss_chat_sub.send(unsubscribe(cfg.presence_channel_prefix + id));
 }
 
 void facade::post(std::string const& msg, int id)

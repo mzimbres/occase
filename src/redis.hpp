@@ -21,6 +21,7 @@ enum class request
 , channel_post
 , remove_post
 , get_chat_msgs
+, presence
 , ignore
 };
 
@@ -47,13 +48,13 @@ struct db_cfg {
    // This prefix will be used to form the channel where presence
    // messages sent to the user will be published e.g. prefix:102.
    // We use channel for presence since it does not have to be
-   // persisted.
+   // persisted. TODO: Read this value from the config file.
    std::string presence_channel_prefix = "pc:";
 
    // Redis keyspace notification prefix. When a key is touched redis
    // sendd us a notification. This is how a worker gets notified that
    // it has to retrieve messages from the database for this user.
-   std::string notify_prefix {"__keyspace@"};
+   std::string const notify_prefix {"__keyspace@"};
 
    // Keyspace notification prefix including the message prefix e.g.
    //
@@ -165,19 +166,24 @@ public:
    //
    void retrieve_menu();
 
-   // Instructs redis to notify us upon any change to the given
-   // user_id. Once a notification arrives the server proceeds with
-   // the retrieval of the message, which may be more than one by the
-   // time we get to it. User messages will complete on workers
-   // callback with
+   // Instructs redis to notify the worker on new messages to the
+   // user.  Once a notification arrives the server proceeds with the
+   // retrieval of the message, which may be more than one by the time
+   // we get to it. User messages will complete on workers callback
+   // with
    // 
    //    redis::request::chat_messages
    //
-   void subscribe_to_chat_msgs(std::string const& user_id);
+   // Additionaly, this function also subscribes the worker to
+   // presence messages, which complete with
+   // 
+   //    redis::request::presence
+   //
+   void on_user_online(std::string const& user_id);
 
    // Usubscribe to the notifications to the key. On completion it
    // passes no event to the worker.
-   void unsubscribe_to_chat_msgs(std::string const& user_id);
+   void on_user_offline(std::string const& user_id);
 
    // Used to asynchronously store messages on redis. On completion it
    // passes no event to the worker.

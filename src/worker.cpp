@@ -281,7 +281,7 @@ worker::on_db_user_data(std::vector<std::string> const& data) noexcept
                ss.first->second = s;
             }
 
-            db.subscribe_to_chat_msgs(s->get_id());
+            db.on_user_online(s->get_id());
             db.retrieve_chat_msgs(s->get_id());
 
             json resp;
@@ -305,7 +305,7 @@ void worker::on_db_register()
    assert(!std::empty(reg_queue));
    if (auto session = reg_queue.front().session.lock()) {
       auto const& id = session->get_id();
-      db.subscribe_to_chat_msgs(id);
+      db.on_user_online(id);
       auto const new_user = sessions.insert({id, session});
 
       // It would be a bug if this id were already in the map since we
@@ -325,6 +325,28 @@ void worker::on_db_register()
    reg_queue.pop();
    if (!std::empty(reg_queue))
       db.request_user_id();
+}
+
+void worker::on_db_presence(std::string const& user_id, std::string msg)
+{
+   auto const match = sessions.find(user_id);
+   if (match == std::end(sessions)) {
+      // If the user went offline, we should not be receiving this
+      // message. However there may be a timespan where this can
+      // happen wo I will simply log.
+      log(loglevel::warning, "Receiving presence after unsubscribe.");
+      return;
+   }
+
+   if (auto s = match->second.lock()) {
+      s->send(std::move(msg), false);
+      return;
+   }
+   
+   // The user went offline but the session was not removed from
+   // the map. This is perhaps not a bug but undesirable as we
+   // do not have garbage collector for expired sessions.
+   assert(false);
 }
 
 void
@@ -408,6 +430,11 @@ worker::on_db_event( std::vector<std::string> data
       case redis::request::channel_post:
          assert(std::size(data) == 1);
          on_db_channel_post(data.back());
+         break;
+
+      case redis::request::presence:
+         assert(std::size(data) == 1);
+         on_db_presence(req.user_id, data.front());
          break;
 
       default:
@@ -739,7 +766,8 @@ void worker::on_session_dtor( std::string const& user_id
       return;
 
    sessions.erase(match);
-   db.unsubscribe_to_chat_msgs(user_id);
+
+   db.on_user_offline(user_id);
 
    if (!std::empty(msgs)) {
       log( loglevel::debug

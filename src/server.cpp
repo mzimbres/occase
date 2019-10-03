@@ -266,9 +266,10 @@ auto get_cfg(int argc, char* argv[])
    cfg.daemonize = daemonize == "yes";
 
    cfg.worker.db.cfg.chat_msg_prefix += ":";
-   cfg.worker.db.cfg.notify_prefix += "0__:";
-   cfg.worker.db.cfg.user_notify_prefix = cfg.worker.db.cfg.notify_prefix
-                                      + cfg.worker.db.cfg.chat_msg_prefix;
+   cfg.worker.db.cfg.user_notify_prefix
+      = cfg.worker.db.cfg.notify_prefix
+      + "0__:"
+      + cfg.worker.db.cfg.chat_msg_prefix;
 
 
    std::chrono::milliseconds tmp {conn_retry_interval};

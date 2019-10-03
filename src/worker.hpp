@@ -168,6 +168,7 @@ private:
                       , std::vector<std::string> msgs);
    void on_db_menu(std::string const& data);
    void on_db_channel_post(std::string const& data);
+   void on_db_presence(std::string const& user_id, std::string data);
    void on_db_posts(std::vector<std::string> const& msgs);
    void on_db_event( std::vector<std::string> resp
                    , redis::req_item const& cmd);

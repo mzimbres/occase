@@ -13,4 +13,6 @@ menu1=${dir}/locations.txt:${depth}:${version}
 menu2=${dir}/products.txt:${depth}:${version}
 
 toolname -o 4 $menu1 $menu2 | redis-cli -x set menu
+toolname -o 4 $menu1 > menu0.txt
+toolname -o 4 $menu2 > menu1.txt
 

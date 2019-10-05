@@ -233,6 +233,9 @@ int replier::on_read( std::string msg
       }
    }
 
+   if (cmd == "presence")
+      return 1;
+
    std::cout << j << std::endl;
    throw std::runtime_error("replier::inexistent");
    return -1;
@@ -309,6 +312,9 @@ leave_after_sub_ack::on_read( std::string msg
       return -1;
    }
 
+   if (cmd == "presence")
+      return 1;
+
    std::cout << j << std::endl;
    throw std::runtime_error("leave_after_sub_ack::inexistent");
    return -1;
@@ -355,6 +361,9 @@ leave_after_n_posts::on_read( std::string msg
       start_counting = true;
       return check_counter();
    }
+
+   if (cmd == "presence")
+      return 1;
 
    std::cout << j << std::endl;
    throw std::runtime_error("leave_after_n_posts::inexistent");
@@ -448,6 +457,9 @@ int simulator::on_read( std::string msg
          return 1;
       }
    }
+
+   if (cmd == "presence")
+      return 1;
 
    std::cout << j << std::endl;
    throw std::runtime_error("simulator::inexistent");

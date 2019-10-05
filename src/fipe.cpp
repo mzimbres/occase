@@ -38,13 +38,16 @@ struct range {
    table_field field;
 };
 
+// The indentation sze returned by this function depends on the order
+// configured in next_field. Both function have to be changed
+// together.
 auto calc_indent(table_field field)
 {
    if (field == table_field::tipo)        return 0;
    if (field == table_field::marca)       return 1;
    if (field == table_field::modelo1)     return 2;
-   if (field == table_field::modelo2)     return 3;
-   if (field == table_field::ano)         return 4;
+   if (field == table_field::modelo2)     return 4;
+   if (field == table_field::ano)         return 3;
    if (field == table_field::combustivel) return 5;
    if (field == table_field::preco)       return 6;
    return 0;
@@ -54,9 +57,9 @@ auto next_field(table_field field)
 {
    if (field == table_field::tipo)         return table_field::marca;
    if (field == table_field::marca)        return table_field::modelo1;
-   if (field == table_field::modelo1)      return table_field::modelo2;
-   if (field == table_field::modelo2)      return table_field::ano;
-   if (field == table_field::ano)          return table_field::combustivel;
+   if (field == table_field::modelo1)      return table_field::ano;
+   if (field == table_field::modelo2)      return table_field::combustivel;
+   if (field == table_field::ano)          return table_field::modelo2;
    if (field == table_field::combustivel)  return table_field::preco;
    return table_field::fipe_codigo;
 }

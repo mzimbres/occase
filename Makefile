@@ -132,7 +132,7 @@ install: all
 	install menu_tool $(bindir)/$(binprefix)$(toolname)
 	install monitor.sh $(bindir)/$(binprefix)$(monitorname)
 	install load-tool $(bindir)/$(binprefix)$(loadtoolname)
-	install -D $(srcdir)/doc/development.txt $(docdir)/development.txt
+	install -D $(srcdir)/doc/management.txt $(docdir)/management.txt
 	install -D $(srcdir)/doc/intro.txt $(docdir)/intro.txt
 	install -D $(srcdir)/doc/posts.txt $(docdir)/posts.txt
 	install -D $(srcdir)/menu-chat-server.conf $(confdir)/$(servername).conf
@@ -143,7 +143,7 @@ uninstall: all
 	rm -f $(bindir)/$(binprefix)$(toolname)
 	rm -f $(bindir)/$(binprefix)$(monitorname)
 	rm -f $(bindir)/$(binprefix)$(loadtoolname)
-	rm -f $(docdir)/development.txt
+	rm -f $(docdir)/management.txt
 	rm -f $(docdir)/intro.txt
 	rm -f $(docdir)/posts.txt
 	rm -f $(confdir)/$(servername).conf

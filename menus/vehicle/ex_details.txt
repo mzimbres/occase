@@ -6,18 +6,6 @@ Detalhes
          Usado
          Troca
          Repasse
-      Combustível
-         Nao informado
-         Gasolina
-         Alcool
-         Diesel
-         Gás natural
-         Gazolina e álcool
-         Gazolina e gás natural
-         Álcool e gás natural
-         Gazolina álcool e gás natural
-         Gazolina álcool, gás natural e benzina
-         Gazolina e elétrico
       Câmbio
          Nao informado
          Automático

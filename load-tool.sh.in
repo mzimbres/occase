@@ -1,18 +1,22 @@
 #!/bin/bash
 
-if [ $# -ne 3 ]; then
-   echo "Usage: $0 path-to-menu-dir depth version"
+if [ $# -ne 1 ]; then
+   echo "Usage: $0 path"
    exit 1
 fi
 
 dir=$1
-depth=$2
-version=$3
+depth=3
+version=3
 
-menu1=${dir}/locations.txt:${depth}:${version}
-menu2=${dir}/products.txt:${depth}:${version}
+menu0=${dir}/locations.txt:${depth}:${version}
+menu1=${dir}/products.txt:${depth}:${version}
+menu2=${dir}/ex_details.txt:${depth}:${version}
+menu3=${dir}/in_details.txt:${depth}:${version}
 
-toolname -o 4 $menu1 $menu2 | redis-cli -x set menu
-toolname -o 4 $menu1 > menu0.txt
-toolname -o 4 $menu2 > menu1.txt
+toolname -o 4 $menu0 $menu1 > menu.txt
+toolname -o 4 $menu0 > menu0.txt
+toolname -o 4 $menu1 > menu1.txt
+toolname -o 4 $menu2 > ex_details_menu.txt
+toolname -o 4 $menu3 > in_details_menu.txt
 

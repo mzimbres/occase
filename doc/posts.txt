@@ -3,15 +3,14 @@ Posts
 
 A *post* is the central idea behind the menu-chat. To understand how
 they work we have to first introduce the concept of a *menu*. First, a
-menu is composed of one or more menu entries, say
+menu is composed of two entries (though it is flexible to deal with
+more)
 
-   menu = entry1 x entry2 x entry3 x ...
+   menu = entry1 x entry2
 
 An entry aggregates related information in a tree like structure
 similar to how chapters, sections, subsections etc. are used to
-structure a book. For example, a menu with two entries could be the
-one shown below, where the first entry contains information about
-locations and the second about cars
+structure a book. For example
 
        Location            |                  Car
                            |                                                                     
@@ -53,9 +52,7 @@ World                      | Car
    
 Some important things to notice
 
-   1. A deployment can use as many menu entries as it likes, though
-      there are technical difficults as the size of each individual
-      entry grows. We will address this later.
+   1. A deployment can use as many menu entries as it likes.
 
    2. The *Location* menu entry has depth 4 whereas the entry *cars*
       has depth 6. Sometimes it is convenient to omit the root node

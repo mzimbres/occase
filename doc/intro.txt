@@ -1,71 +1,68 @@
-Introduction
-------------
-
 The best way to understand what the *menu chat* is all about is to
 play with it for a while. It is composed of two parts
 
-  1. The backend server, refered to as the menu-chat-server.
-  2. The app, refered to as the menu-chat-app.
+  1. A realtime database used for chat messages and posts.
+  2. A http server that the app uses to post images.
+  3. Redis, that is used as message broker and database.
+  4. The app, refered to as the menu-chat-app.
 
-The databased used by the chat server is redis. A typical deployment
-looks like
-                                                                    
+If we disregard images a typical deployment looks like this
                                                                     
          App1     App2    App3     App4    App5     App6          
            \       /        \       /        \       /            
             \     /          \     /          \     /             
              \   /            \   /            \   /              
               \ /              \ /              \ /               
-            Server1          Server2          Server3             
+             rtdb1            rtdb2            rtdb3              
                 \               |               /                 
                  \              |              /                  
                   \             |             /                   
                    \__________Redis__________/                    
 
+The apps and the rtdb are connected via a websocket connection that is
+never closed by the server.  When app1 wants to send a chat message to
+app5 we have to following sequence of operations
 
-In a typical deployment each of the servers are directly exposed to
-the public internet.  There is one main reasons for why no proxy
-servers or load balancers are expected to be used to intermediate the
-connection between the apps and the servers
+  1. Apps log in the rtdb, that may not be same instance.
+  2. Rtdb subscribe to notifications of messages that may be sent to
+     the apps.
+  3. App1 sends a message to rtdb1 that in turn send it to redis,
+     where it is stored in the apps queue.
+  4. If app5 is connected, redis sends a notification to App5 that
+     there is a new message.
+  5. Rtdb5 retrieves the message from redis and sends it the app.
 
-  1. The servers and the apps communicate via websocket and the
-     connection is expected to last for a long time.
-
-  2. Each server is expected to deal with many hundreds of thausends
-     of simultaneous connections.
-
-  3. Avoid a single point of failure.
-
-In such an arrangement it would be easy to saturate any proxy server
-and/or load balancer (unless using a load balancer at ip level, which
-may be expensive). The system has no single point of failure and is
-meant to be easy and cheap to operate and deploy.
+The rtdb is a single threaded process, there is no limits on how many
+such services can be instantiated.
 
 App
 ---
 
-Since we have no proxies or load balancers the apps will stablish a
-websocket connection directly with the menu-chat-servers. There are
-basicaly two kinds of messages that are exchanged between the server
-and the apps
+The following types of messages are sent from the app to the server.
 
   1. Posts
   2. Chat messages.
+  3. Presence.
+  4. Requests for filenames.
 
-Servers
--------
+In the case of posts we have the following
 
-The servers, whose C++ code is contained in this repository, are fully
-event driven and follow the share-nothing, one io_context per code
-model to make efficient use of hardware resources. Client connections
-are distrubuted among the io_contexts in a round-robin fashion.
+  1. The app request filenames from the rtdb.
+  2. The app uses the filenames to post the images to the image
+     server. It will check if the filenames are valid.
+  3. When finished posting images, a post is sent to rtdb with the
+     links to the images.
 
-One may ask why let the websocket connections in 1. last for a long
-time instead of close it as soon as there is no more messages to be
-sent to the app. The answer to this has to do with the realtime nature
-of the application. Everytime an app connects to the server it will
-subscribe to the post channels that is an expensive operation.
+This is a squetsh of arquitecture behind images
 
-Redis
------
+
+                                        app1
+                                         /
+                                        /
+         HTTP                          /                               
+  app ---------- Img-Server ------- CDN----- app2
+                                       \                 
+                                        \                
+                                         \               
+                                        app3             
 

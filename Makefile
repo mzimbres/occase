@@ -30,7 +30,7 @@ CPPFLAGS += -I. -I$(srcdir)/src -I$(boost_inc_dir)
 CPPFLAGS += -Wall -Werror=format-security \
 	    -Werror=implicit-function-declaration
 CPPFLAGS += $(pkg-config --cflags libsodium)
-CPPFLAGS += -g #-O2
+CPPFLAGS += #-O2
 
 VPATH = $(srcdir)/src
 
@@ -91,11 +91,11 @@ srcs += async_read_resp.hpp
 
 aux = Makefile
 
-all: release_hdr $(exes) load-tool
+all: $(exes) load-tool
 
-.PHONY: release_hdr
-release_hdr:
-	$(srcdir)/mkreleasehdr.sh $(srcdir) > /dev/null 2>&1
+#.PHONY: release_hdr
+#release_hdr:
+#	$(srcdir)/mkreleasehdr.sh $(srcdir) > /dev/null 2>&1
 
 Makefile.dep:
 	-$(CXX) -MM $(srcdir)/src/*.cpp > $@

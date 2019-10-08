@@ -128,33 +128,33 @@ load-tool: load-tool.sh.in
 	chmod +x $@
 
 install: all
-	install server $(bindir)/$(binprefix)$(servername)
-	install menu_tool $(bindir)/$(binprefix)$(toolname)
-	install monitor.sh $(bindir)/$(binprefix)$(monitorname)
-	install load-tool $(bindir)/$(binprefix)$(loadtoolname)
-	install -D $(srcdir)/doc/management.txt $(docdir)/management.txt
-	install -D $(srcdir)/doc/intro.txt $(docdir)/intro.txt
-	install -D $(srcdir)/doc/posts.txt $(docdir)/posts.txt
-	install -D $(srcdir)/menu-chat-server.conf $(confdir)/$(servername).conf
-	install -D $(srcdir)/menu-chat-server.service $(systemddir)/$(servername).service
+	install -D server $(DESTDIR)$(bindir)/$(binprefix)$(servername)
+	install -D menu_tool $(DESTDIR)$(bindir)/$(binprefix)$(toolname)
+	install -D monitor.sh $(DESTDIR)$(bindir)/$(binprefix)$(monitorname)
+	install -D load-tool $(DESTDIR)$(bindir)/$(binprefix)$(loadtoolname)
+	install -D $(DESTDIR)$(srcdir)/doc/management.txt $(docdir)/management.txt
+	install -D $(DESTDIR)$(srcdir)/doc/intro.txt $(docdir)/intro.txt
+	install -D $(DESTDIR)$(srcdir)/doc/posts.txt $(docdir)/posts.txt
+	install -D $(DESTDIR)$(srcdir)/menu-chat-server.conf $(confdir)/$(servername).conf
+	install -D $(DESTDIR)$(srcdir)/menu-chat-server.service $(systemddir)/$(servername).service
 
 uninstall: all
-	rm -f $(bindir)/$(binprefix)$(servername)
-	rm -f $(bindir)/$(binprefix)$(toolname)
-	rm -f $(bindir)/$(binprefix)$(monitorname)
-	rm -f $(bindir)/$(binprefix)$(loadtoolname)
-	rm -f $(docdir)/management.txt
-	rm -f $(docdir)/intro.txt
-	rm -f $(docdir)/posts.txt
-	rm -f $(confdir)/$(servername).conf
-	rm -f $(systemddir)/$(servername).service
-	rmdir $(docdir)
+	rm -f $(DESDIR)$(bindir)/$(binprefix)$(servername)
+	rm -f $(DESDIR)$(bindir)/$(binprefix)$(toolname)
+	rm -f $(DESDIR)$(bindir)/$(binprefix)$(monitorname)
+	rm -f $(DESDIR)$(bindir)/$(binprefix)$(loadtoolname)
+	rm -f $(DESDIR)$(docdir)/management.txt
+	rm -f $(DESDIR)$(docdir)/intro.txt
+	rm -f $(DESDIR)$(docdir)/posts.txt
+	rm -f $(DESDIR)$(confdir)/$(servername).conf
+	rm -f $(DESDIR)$(systemddir)/$(servername).service
+	rmdir $(DESDIR)$(docdir)
 
 .PHONY: clean
 clean:
 	rm -f $(exes) $(exe_objs) $(lib_objs) $(pkg_name).tar.gz Makefile.dep release.cpp release.hpp load-tool
 
-$(pkg_name).tar.gz: $(srcs) $(aux)
+$(pkg_name).tar.gz:
 	git archive --format=tar.gz --prefix=$(pkg_name)/ HEAD > $(pkg_name).tar.gz
 
 .PHONY: dist

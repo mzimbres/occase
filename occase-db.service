@@ -4,9 +4,9 @@ After=network.target redis.service sentinel.service
 
 [Service]
 Type=forking
-ExecStart=/usr/local/bin/menu-chat-server /etc/menu-chat/menu-chat-server.conf
+ExecStart=/usr/local/bin/occase /etc/occase/occase-db.conf
 ExecStop=/bin/kill -s INT $MAINPID
-PIDFile=/run/menu-chat-server.pid
+PIDFile=/run/occase-db.pid
 Restart=always
 
 [Install]

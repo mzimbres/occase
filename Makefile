@@ -1,4 +1,4 @@
-pkg_name = menu-chat
+pkg_name = occase
 prefix = /usr/local
 datarootdir = $(prefix)/share
 datadir = $(datarootdir)
@@ -7,10 +7,10 @@ exec_prefix = $(prefix)
 bindir = $(exec_prefix)/bin
 binprefix =
 srcdir = .
-confdir = /etc/menu-chat
+confdir = /etc/$(pkg_name)
 systemddir = /etc/systemd/system
 
-servername = $(pkg_name)-server
+servername = $(pkg_name)-db
 toolname = $(pkg_name)-tool
 monitorname = $(pkg_name)-monitor
 loadtoolname = $(pkg_name)-load-tool
@@ -36,7 +36,7 @@ VPATH = $(srcdir)/src
 
 exes =
 exes += publish_tests
-exes += server
+exes += db
 exes += menu_tool
 exes += aedis
 exes += simulation
@@ -49,14 +49,14 @@ common_objs += logger.o
 common_objs += json_utils.o
 common_objs += crypto.o
 
-server_objs =
-server_objs += worker.o
-server_objs += worker_session.o
-server_objs += redis.o
-server_objs += stats_server.o
-server_objs += release.o
-server_objs += http_session.o
-server_objs += utils.o
+db_objs =
+db_objs += worker.o
+db_objs += worker_session.o
+db_objs += redis.o
+db_objs += stats_server.o
+db_objs += release.o
+db_objs += http_session.o
+db_objs += utils.o
 
 imgserver_objs =
 imgserver_objs += img_session.o
@@ -73,7 +73,7 @@ menu_dump_objs += fipe.o
 exe_objs = $(addsuffix .o, $(exes))
 
 lib_objs =
-lib_objs += $(server_objs)
+lib_objs += $(db_objs)
 lib_objs += $(imgserver_objs)
 lib_objs += $(client_objs)
 lib_objs += $(aedis_objs)
@@ -108,7 +108,7 @@ simulation: % : %.o $(client_objs) $(common_objs)
 publish_tests: % : %.o $(client_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
-server: % : %.o $(server_objs) $(common_objs) $(aedis_objs) 
+db: % : %.o $(db_objs) $(common_objs) $(aedis_objs) 
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_CONCURRENCY_HINT_1=BOOST_ASIO_CONCURRENCY_HINT_UNSAFE
 
 imgserver: % : %.o $(imgserver_objs) $(common_objs) $(aedis_objs)
@@ -128,17 +128,17 @@ load-tool: load-tool.sh.in
 	chmod +x $@
 
 install: all
-	install -D server $(DESTDIR)$(bindir)/$(binprefix)$(servername)
+	install -D db $(DESTDIR)$(bindir)/$(binprefix)$(servername)
 	install -D menu_tool $(DESTDIR)$(bindir)/$(binprefix)$(toolname)
 	install -D monitor.sh $(DESTDIR)$(bindir)/$(binprefix)$(monitorname)
 	install -D load-tool $(DESTDIR)$(bindir)/$(binprefix)$(loadtoolname)
 	install -D $(DESTDIR)$(srcdir)/doc/management.txt $(docdir)/management.txt
 	install -D $(DESTDIR)$(srcdir)/doc/intro.txt $(docdir)/intro.txt
 	install -D $(DESTDIR)$(srcdir)/doc/posts.txt $(docdir)/posts.txt
-	install -D $(DESTDIR)$(srcdir)/menu-chat-server.conf $(confdir)/$(servername).conf
-	install -D $(DESTDIR)$(srcdir)/menu-chat-server.service $(systemddir)/$(servername).service
+	install -D $(DESTDIR)$(srcdir)/$(servername).conf $(confdir)/$(servername).conf
+	install -D $(DESTDIR)$(srcdir)/$(servername).service $(systemddir)/$(servername).service
 
-uninstall: all
+uninstall:
 	rm -f $(DESDIR)$(bindir)/$(binprefix)$(servername)
 	rm -f $(DESDIR)$(bindir)/$(binprefix)$(toolname)
 	rm -f $(DESDIR)$(bindir)/$(binprefix)$(monitorname)

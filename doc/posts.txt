@@ -1,7 +1,7 @@
 Posts
 -----
 
-A *post* is the central idea behind the menu-chat. To understand how
+A *post* is the central idea behind the occase. To understand how
 they work we have to first introduce the concept of a *menu*. First, a
 menu is composed of two entries (though it is flexible to deal with
 more)

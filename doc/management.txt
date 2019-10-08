@@ -8,7 +8,7 @@ Starting the server
    OK
    debian2[0]$ cat menu.txt | redis-cli -x set menu
    OK
-   debian2[0]$ sudo systemctl restart menu-chat-server.service
+   debian2[0]$ sudo systemctl restart occase-server.service
 
 To send the menu to redis.
 

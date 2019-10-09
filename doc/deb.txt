@@ -1,0 +1,10 @@
+How to make the debian package. 
+
+$ mkdir pkg && cd pkg
+$ mv xxx/occase-1.0.0-1.tar.gz .
+$ tar -xvvzf occase-1.0.0-1.tar.gz .
+$ ln occase-1.0.0-1.tar.gz occase_1.0.0.orig.tar.gz
+$ cd occase-1.0.0
+$ debmake
+$ debuild --no-sign
+

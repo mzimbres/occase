@@ -1,0 +1,8 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: occase
+Source: http://www.occase.de
+
+Files:     *
+Copyright: Marcelo Zimbres
+License:   Marcelo Zimbres
+

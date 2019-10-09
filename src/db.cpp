@@ -17,8 +17,7 @@
 #include "logger.hpp"
 #include "system.hpp"
 #include "worker.hpp"
-
-#include <release.hpp>
+#include "release.hpp"
 
 using namespace rt;
 

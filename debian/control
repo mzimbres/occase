@@ -1,0 +1,14 @@
+Source: occase
+Section: database
+Priority: optional
+Maintainer: Marcelo Zimbres <mzimbres@gmail.com>
+Build-Depends: debhelper (>=11~)
+Standards-Version: 4.1.4
+Homepage: http://www.occase.de
+
+Package: occase
+Architecture: any
+Multi-Arch: foreign
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Description: Realtime database for the occase app
+ This is the realtime database used for the occase app.

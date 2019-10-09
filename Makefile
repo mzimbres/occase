@@ -1,5 +1,9 @@
 pkg_name = occase
-prefix = /usr/local
+pkg_version = 1.0.0
+pkg_revision = 1
+tarball_name = $(pkg_name)-$(pkg_version)-$(pkg_revision)
+tarball_dir = $(pkg_name)-$(pkg_version)
+prefix = /usr
 datarootdir = $(prefix)/share
 datadir = $(datarootdir)
 docdir = $(datadir)/doc/$(pkg_name)
@@ -8,7 +12,7 @@ bindir = $(exec_prefix)/bin
 binprefix =
 srcdir = .
 confdir = /etc/$(pkg_name)
-systemddir = /etc/systemd/system
+systemddir = /lib/systemd/system
 
 servername = $(pkg_name)-db
 toolname = $(pkg_name)-tool
@@ -26,13 +30,13 @@ LDFLAGS += -lfmt
 LDFLAGS += -lsodium
 
 CPPFLAGS = -std=c++17
-CPPFLAGS += -I. -I$(srcdir)/src -I$(boost_inc_dir)
+CPPFLAGS += -I. -I$./src -I$(boost_inc_dir)
 CPPFLAGS += -Wall -Werror=format-security \
 	    -Werror=implicit-function-declaration
 CPPFLAGS += $(pkg-config --cflags libsodium)
 CPPFLAGS += #-O2
 
-VPATH = $(srcdir)/src
+VPATH = ./src
 
 exes =
 exes += publish_tests
@@ -54,7 +58,6 @@ db_objs += worker.o
 db_objs += worker_session.o
 db_objs += redis.o
 db_objs += stats_server.o
-db_objs += release.o
 db_objs += http_session.o
 db_objs += utils.o
 
@@ -98,7 +101,7 @@ all: $(exes) load-tool
 #	$(srcdir)/mkreleasehdr.sh $(srcdir) > /dev/null 2>&1
 
 Makefile.dep:
-	-$(CXX) -MM $(srcdir)/src/*.cpp > $@
+	-$(CXX) -MM ./src/*.cpp > $@
 
 -include Makefile.dep
 
@@ -132,11 +135,11 @@ install: all
 	install -D menu_tool $(DESTDIR)$(bindir)/$(binprefix)$(toolname)
 	install -D monitor.sh $(DESTDIR)$(bindir)/$(binprefix)$(monitorname)
 	install -D load-tool $(DESTDIR)$(bindir)/$(binprefix)$(loadtoolname)
-	install -D $(DESTDIR)$(srcdir)/doc/management.txt $(docdir)/management.txt
-	install -D $(DESTDIR)$(srcdir)/doc/intro.txt $(docdir)/intro.txt
-	install -D $(DESTDIR)$(srcdir)/doc/posts.txt $(docdir)/posts.txt
-	install -D $(DESTDIR)$(srcdir)/$(servername).conf $(confdir)/$(servername).conf
-	install -D $(DESTDIR)$(srcdir)/$(servername).service $(systemddir)/$(servername).service
+	install -D doc/management.txt $(DESTDIR)$(docdir)/management.txt
+	install -D doc/intro.txt $(DESTDIR)$(docdir)/intro.txt
+	install -D doc/posts.txt $(DESTDIR)$(docdir)/posts.txt
+	install -D $(servername).conf $(DESTDIR)$(confdir)/$(servername).conf
+	install -D $(servername).service $(DESTDIR)$(systemddir)/$(servername).service
 
 uninstall:
 	rm -f $(DESDIR)$(bindir)/$(binprefix)$(servername)
@@ -152,17 +155,17 @@ uninstall:
 
 .PHONY: clean
 clean:
-	rm -f $(exes) $(exe_objs) $(lib_objs) $(pkg_name).tar.gz Makefile.dep release.cpp release.hpp load-tool
+	rm -f $(exes) $(exe_objs) $(lib_objs) $(pkg_name).tar.gz Makefile.dep load-tool
 
-$(pkg_name).tar.gz:
-	git archive --format=tar.gz --prefix=$(pkg_name)/ HEAD > $(pkg_name).tar.gz
+$(tarball_name).tar.gz:
+	git archive --format=tar.gz --prefix=$(tarball_dir)/ HEAD > $(tarball_name).tar.gz
 
 .PHONY: dist
-dist: $(pkg_name).tar.gz
+dist: $(tarball_name).tar.gz
 
 backup_emails = laetitiapozwolski@yahoo.fr mzimbres@gmail.com bobkahnn@gmail.com coolcatlookingforakitty@gmail.com
 
 .PHONY: backup
-backup: $(pkg_name).tar.gz
+backup: $(tarball_name).tar.gz
 	echo "Backup" | mutt -s "Backup" -a $< -- $(backup_emails)
 

@@ -35,9 +35,9 @@ struct options {
    int n_publishers = 10;
    int n_repliers = 10;
    int n_leave_after_n_posts = 10;
-   int handshake_tm = 3;
+   int handshake_tm = 6;
    int launch_interval = 100;
-   int auth_timeout = 3;
+   int auth_timeout = 6;
    int test = 2;
    int n_leave_after_sub_ack = 1;
 
@@ -297,17 +297,7 @@ void test_offline(options const& op)
 
 void read_only_tests(options const& op)
 {
-   using client_type1 = only_tcp_conn;
-   using config_type1 = only_tcp_conn::options_type;
-
    boost::asio::io_context ioc {1};
-
-   std::make_shared< session_launcher<client_type1>
-                   >( ioc
-                    , config_type1 {}
-                    , op.make_session_cf()
-                    , op.make_launcher_empty_cfg(300)
-                    )->run({});
 
    using client_type2 = no_login;
    using config_type2 = no_login::options_type;
@@ -320,9 +310,6 @@ void read_only_tests(options const& op)
                     )->run({});
 
    ioc.run();
-
-   std::cout << "Test ok: Only tcp, no ws handshake (timeout test)."
-             << std::endl;
 
    std::cout << "Test ok: No register/login (timeout test)."
              << std::endl;
@@ -453,13 +440,13 @@ int main(int argc, char* argv[])
          , "Interval used to launch test clients.")
 
          ("handshake-timeout,k"
-         , po::value<int>(&op.handshake_tm)->default_value(3)
+         , po::value<int>(&op.handshake_tm)->default_value(6)
          , "Time before which the server should have given "
            "up on the handshake in seconds.")
 
          ("auth-timeout,l"
          , po::value<int>(&op.auth_timeout)->default_value(3)
-         , "Time after before which the server should giveup witing for auth cmd.")
+         , "Time the server waits for the auth cmd.")
 
          ("test,r"
          , po::value<int>(&op.test)->default_value(1)

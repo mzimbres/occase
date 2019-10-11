@@ -26,30 +26,6 @@ menu_code_type2 create_channels2(menu_elems_array_type const& menus);
 template <class Mgr>
 class session_shell;
 
-// Does no proceed with the websocket handshake after stablishing the
-// tcp connection. The server should drop such clients.
-struct only_tcp_conn {
-   using client_type = session_shell<only_tcp_conn>;
-
-   struct options_type {
-      login user;
-   };
-
-   only_tcp_conn(options_type) noexcept { }
-   auto on_read(std::string msg, std::shared_ptr<client_type> s) const 
-      { throw std::runtime_error("Error."); return 1; }
-   auto on_closed(boost::system::error_code ec) const 
-      { throw std::runtime_error("Error."); return 1; }
-   auto on_write(std::shared_ptr<client_type> s) const
-      { throw std::runtime_error("Error."); return 1; }
-   auto on_handshake(std::shared_ptr<client_type> s) const 
-      { throw std::runtime_error("Error."); return 1; }
-   auto on_connect() const noexcept
-      { return -1; }
-   auto get_login() const noexcept
-      {return login {};}
-};
-
 // Stablishes the websocket connection but does not proceed with a
 // login or register command. The server should drop the connection.
 class no_login {

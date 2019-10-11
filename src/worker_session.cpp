@@ -14,7 +14,7 @@
 namespace rt
 {
 
-worker_session::worker_session(net::ip::tcp::socket socket, worker& w)
+worker_session::worker_session(tcp::socket socket, worker& w)
 : ws(std::move(socket))
 , timer( ws.get_executor()
        , std::chrono::steady_clock::time_point::max())
@@ -60,6 +60,24 @@ worker_session::~worker_session()
 
 void worker_session::accept()
 {
+   using timeout_type = websocket::stream_base::timeout;
+
+   timeout_type wstm
+   { worker_.get_timeouts().handshake
+   , worker_.get_timeouts().pong
+   , false
+   };
+
+   ws.set_option(wstm);
+
+   auto f = [](websocket::response_type& res)
+   {
+       res.set( http::field::server
+              , std::string(BOOST_BEAST_VERSION_STRING) + " occase");
+   };
+
+   ws.set_option(websocket::stream_base::decorator(f));
+
    auto const handler0 = [this](auto kind, auto payload)
    {
       if (kind == beast::websocket::frame_type::close) {
@@ -68,36 +86,12 @@ void worker_session::accept()
          //std::cout << "Ping frame received." << std::endl;
       } else if (kind == beast::websocket::frame_type::pong) {
          //std::cout << "Pong frame received." << std::endl;
-         pp_state = ping_pong::pong_received;
       }
 
       boost::ignore_unused(payload);
    };
 
    ws.control_callback(handler0);
-
-   timer.expires_after(worker_.get_timeouts().handshake);
-
-   auto const handler1 = [p = shared_from_this()](auto ec)
-   {
-      if (ec) {
-         if (ec == net::error::operation_aborted)
-            return;
-
-         log( loglevel::debug
-            , "worker_session::accept: {0}."
-            , ec.message());
-
-         return;
-      }
-
-      assert(!p->ws.is_open());
-
-      p->ws.next_layer().shutdown(net::ip::tcp::socket::shutdown_both, ec);
-      p->ws.next_layer().close(ec);
-   };
-
-   timer.async_wait(handler1);
 
    auto handler2 = [p = shared_from_this()](auto ec)
       { p->on_accept(ec); };
@@ -108,13 +102,13 @@ void worker_session::accept()
 void worker_session::on_accept(boost::system::error_code ec)
 {
    if (ec) {
-      if (ec == net::error::operation_aborted) {
+      if (ec == beast::error::timeout) {
          // The handshake lasted too long and the timer fired.
          return;
       }
 
       auto const err = ec.message();
-      auto ed = ws.next_layer().remote_endpoint(ec).address().to_string();
+      auto ed = ws.next_layer().socket().remote_endpoint(ec).address().to_string();
       if (ec)
          ed = ec.message();
 
@@ -134,7 +128,7 @@ void worker_session::on_accept(boost::system::error_code ec)
    auto const handler = [p = shared_from_this()](auto const& ec)
    {
       if (ec) {
-         if (ec == net::error::operation_aborted)
+         if (ec == net::error::operation_aborted) 
             return;
 
          log( loglevel::debug
@@ -144,7 +138,7 @@ void worker_session::on_accept(boost::system::error_code ec)
          return;
       }
 
-      p->do_close();
+      p->shutdown();
    };
 
    timer.async_wait(handler);
@@ -175,39 +169,16 @@ void worker_session::on_close(boost::system::error_code ec)
    }
 }
 
-void worker_session::do_close()
+void worker_session::shutdown()
 {
    if (closing)
       return;
 
+   log(loglevel::debug, "worker_session::shutdown: {0}.", user_id);
+
    closing = true;
 
-   // First we set the close frame timeout so that if the peer does
-   // not reply with his close frame we do not wait forever. This
-   // timer can only be canceled when on_read is called with closed.
-   timer.expires_after(worker_.get_timeouts().close);
-
-   auto const handler0 = [p = shared_from_this()](auto ec)
-   {
-      if (ec) {
-         if (ec == net::error::operation_aborted) {
-            // The close frame has been received on time.
-            return;
-         }
-
-         log( loglevel::debug, "worker_session::on_close0: {0}."
-            , ec.message());
-
-         return;
-      }
-
-      p->ws.next_layer().shutdown(net::ip::tcp::socket::shutdown_both, ec);
-      p->ws.next_layer().close(ec);
-   };
-
-   timer.async_wait(handler0);
-
-   auto const handler = [p = shared_from_this()](auto ec)
+   auto handler = [p = shared_from_this()](auto ec)
       { p->on_close(ec); };
 
    beast::websocket::close_reason reason {};
@@ -252,96 +223,9 @@ worker_session::send_post( std::shared_ptr<std::string> msg
       do_write(*msg_queue.front().menu_msg);
 }
 
-void worker_session::shutdown()
-{
-   // TODO: We can call do_close directly here since it is also async.
-   log(loglevel::debug, "worker_session::shutdown: {0}.", user_id);
-
-   auto const handler = [p = shared_from_this()]()
-      { p->do_close(); };
-
-   net::post(handler);
-}
-
-void worker_session::do_pong_wait()
-{
-   timer.expires_after(worker_.get_timeouts().pong);
-
-   auto const handler = [p = shared_from_this()](auto ec)
-   {
-      if (ec) {
-         if (ec == net::error::operation_aborted) {
-            // Either the deadline has moved or the timer has been
-            // canceled.
-            return;
-         }
-
-         log( loglevel::debug
-            , "worker_session::do_pong_wait: {0}."
-            , ec.message());
-
-         return;
-      }
-
-      // The timer expired.
-      if (p->pp_state == ping_pong::ping_sent) {
-         // We did not receive the pong. We can shutdown and close the
-         // socket.
-         log( loglevel::debug
-            , "worker_session::do_pong_wait1: Sessions has expired.");
-
-         p->ws.next_layer().shutdown(net::ip::tcp::socket::shutdown_both, ec);
-         p->ws.next_layer().close(ec);
-         return;
-      }
-
-      // The pong was received on time. We can initiate a new ping.
-      p->do_ping();
-   };
-
-   timer.async_wait(handler);
-}
-
-void worker_session::do_ping()
-{
-   auto const handler = [p = shared_from_this()](auto ec)
-   {
-      if (ec) {
-         if (ec == net::error::operation_aborted) {
-            // A closed frame has been sent or received before
-            // the ping was sent. We have nothing to do except
-            // perhaps for seting ping_state to an irrelevant
-            // state.
-            p->pp_state = ping_pong::unset;
-            return;
-         }
-
-         log( loglevel::debug
-            , "worker_session::do_ping: {0}."
-            , ec.message());
-
-         return;
-      }
-
-      // Sets the ping state to "ping sent".
-      p->pp_state = ping_pong::ping_sent;
-
-      // Inititates a wait on the pong.
-      p->do_pong_wait();
-   };
-
-   ws.async_ping({}, handler);
-}
-
 void worker_session::handle_ev(ev_res r)
 {
    switch (r) {
-      case ev_res::login_ok:
-      case ev_res::register_ok:
-      {
-         do_ping();
-      }
-      break;
       case ev_res::register_fail:
       case ev_res::login_fail:
       case ev_res::subscribe_fail:
@@ -353,7 +237,7 @@ void worker_session::handle_ev(ev_res r)
       case ev_res::unknown:
       {
          timer.cancel();
-         do_close();
+         shutdown();
       }
       break;
       default:

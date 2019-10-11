@@ -6,11 +6,7 @@
 #include <atomic>
 #include <cstdint>
 
-#include <boost/beast/core.hpp>
-#include <boost/beast/websocket.hpp>
 #include <boost/asio/steady_timer.hpp>
-#include <boost/asio/bind_executor.hpp>
-#include <boost/asio/ip/tcp.hpp>
 #include <boost/container/static_vector.hpp>
 
 #include "net.hpp"
@@ -63,13 +59,7 @@ public:
    using arg_type = worker&;
 
 private:
-   enum class ping_pong
-   { ping_sent
-   , pong_received
-   , unset
-   };
-
-   beast::websocket::stream<net::ip::tcp::socket> ws;
+   websocket::stream<beast::tcp_stream> ws;
    net::steady_timer timer;
    beast::multi_buffer buffer;
 
@@ -83,7 +73,6 @@ private:
 
    std::deque<msg_entry> msg_queue;
 
-   ping_pong pp_state = ping_pong::unset;
    bool closing = false;
 
    std::shared_ptr<proxy_session> psession;
@@ -109,14 +98,11 @@ private:
    void on_write( boost::system::error_code ec
                 , std::size_t bytes_transferred);
    void handle_ev(ev_res r);
-   void do_ping();
-   void do_pong_wait();
-   void do_close();
    void do_send(msg_entry entry);
 
 public:
 
-   explicit worker_session(net::ip::tcp::socket socket, arg_type w);
+   explicit worker_session(tcp::socket socket, arg_type w);
    ~worker_session();
 
    void accept();

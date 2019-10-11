@@ -157,7 +157,13 @@ void session_shell<Mgr>::on_read( boost::system::error_code ec
          return;
       }
 
-      //std::cout << "Leaving on read 4." << std::endl;
+      if (ec == net::error::not_connected) {
+         // A shutdown operation can cause this.
+         timer.cancel();
+         return;
+      }
+
+      //std::cout << "Leaving on read 4: " << ec.message() << std::endl;
       return;
    }
 
@@ -310,7 +316,7 @@ void session_shell<Mgr>::on_handshake(boost::system::error_code ec)
 
    // This timer is used by the login test to see if the server times
    // out the connection when we do not send any command after the
-   // handshake. I will be canceled on the on_read when it completes
+   // handshake. It will be canceled on the on_read when it completes
    // with beast::websocket::error::closed, since the server is
    // expected to gracefully close the connection.  The timer is also
    // being used to test the acknowledge of the first message sent to

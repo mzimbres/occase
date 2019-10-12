@@ -7,9 +7,9 @@
 #include <algorithm>
 
 #include "menu.hpp"
-#include "db_session.hpp"
-#include "json_utils.hpp"
 #include "utils.hpp"
+#include "json_utils.hpp"
+#include "db_plain_session.hpp"
 
 namespace rt
 {
@@ -71,6 +71,7 @@ struct channel_cfg {
 class channel {
 public:
    using inserter_type = std::back_insert_iterator<std::vector<post>>;
+
 private:
    int insertions_on_inactivity = 0;
    std::vector<std::weak_ptr<proxy_session>> members;

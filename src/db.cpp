@@ -18,6 +18,7 @@
 #include "system.hpp"
 #include "worker.hpp"
 #include "release.hpp"
+#include "db_plain_session.hpp"
 
 using namespace rt;
 
@@ -293,9 +294,9 @@ int main(int argc, char* argv[])
       if (cfg.number_of_fds != -1)
          set_fd_limits(cfg.number_of_fds);
 
-      worker w {cfg.worker};
+      worker<db_plain_session> db {cfg.worker};
       drop_root_priviledges();
-      w.run();
+      db.run();
 
    } catch (std::exception const& e) {
       log(loglevel::notice, e.what());

@@ -16,8 +16,6 @@ namespace rt
 
 worker_session::worker_session(tcp::socket socket, worker& w)
 : ws(std::move(socket))
-, timer( ws.get_executor()
-       , std::chrono::steady_clock::time_point::max())
 , worker_(w)
 {
    ++worker_.get_ws_stats().number_of_sessions;
@@ -65,7 +63,7 @@ void worker_session::accept()
    timeout_type wstm
    { worker_.get_timeouts().handshake
    , worker_.get_timeouts().pong
-   , false
+   , true
    };
 
    ws.set_option(wstm);
@@ -80,15 +78,14 @@ void worker_session::accept()
 
    auto const handler0 = [this](auto kind, auto payload)
    {
-      if (kind == beast::websocket::frame_type::close) {
-         //std::cout << "Close frame received." << std::endl;
-      } else if (kind == beast::websocket::frame_type::ping) {
-         //std::cout << "Ping frame received." << std::endl;
-      } else if (kind == beast::websocket::frame_type::pong) {
-         //std::cout << "Pong frame received." << std::endl;
-      }
-
       boost::ignore_unused(payload);
+
+      if (kind == beast::websocket::frame_type::close) {
+      } else if (kind == beast::websocket::frame_type::ping) {
+      } else if (kind == beast::websocket::frame_type::pong) {
+         if (++pong_counter > 1 && !is_logged_in())
+            shutdown();
+      }
    };
 
    ws.control_callback(handler0);
@@ -120,28 +117,6 @@ void worker_session::on_accept(boost::system::error_code ec)
       return;
    }
 
-   // The cancelling of this timer should happen when either
-   // 1. The session is autheticated or a register is performed.
-   // 2. The user requests a register.
-   timer.expires_after(worker_.get_timeouts().login);
-
-   auto const handler = [p = shared_from_this()](auto const& ec)
-   {
-      if (ec) {
-         if (ec == net::error::operation_aborted) 
-            return;
-
-         log( loglevel::debug
-            , "worker_session::on_accept2: {0}."
-            , ec.message());
-
-         return;
-      }
-
-      p->shutdown();
-   };
-
-   timer.async_wait(handler);
    do_read();
 }
 
@@ -236,7 +211,6 @@ void worker_session::handle_ev(ev_res r)
       case ev_res::presence_fail:
       case ev_res::unknown:
       {
-         timer.cancel();
          shutdown();
       }
       break;
@@ -254,13 +228,7 @@ void worker_session::on_read( boost::system::error_code ec
       log( loglevel::debug
          , "worker_session::on_read: Gracefully closed {0}."
          , user_id);
-      // The connection has been gracefully closed. The only possible
-      // pending operations now are the timers.
-      timer.cancel();
 
-      // We could also shutdown and close the socket but this is
-      // redundant since the socket destructor will be called anyway
-      // when we release the last reference upon return.
       return;
    }
 

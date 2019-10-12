@@ -250,50 +250,6 @@ session_shell<Mgr>::on_connect( boost::system::error_code ec
    if (ec)
       return fail(ec, "resolve");
 
-   if (mgr.on_connect() == -1) {
-      // The -1 means we are are testing if the server will timeout
-      // our connection if the handshake lasts too long. So here we
-      // wont proceed with the handshake 
-      
-      // It looks like we do not need the following code to receive
-      // the event that the connection was closed by the server.
-
-      timer.expires_after(op.handshake_timeout);
-
-      auto handler = [p = this->shared_from_this()](auto ec)
-      {
-         if (ec) {
-            if (ec == net::error::operation_aborted) {
-               // The timer has been successfully canceled.
-               //std::cout << "Timer successfully canceled." << std::endl;
-               return;
-            }
-         }
-         throw std::runtime_error("session_shell<Mgr>::on_timer: fail.");
-      };
-
-      timer.async_wait(handler);
-
-      // Now we post the handler that will cancel the timer when the
-      // server gives up the handshake by closing the connection.
-      auto handler2 = [p = this->shared_from_this()](auto ec, auto n)
-      {
-         if (ec == net::error::eof) {
-            p->timer.cancel();
-            //std::cout << "Timer canceled, thanks." << std::endl;
-            return;
-         }
-
-         std::cout << "Unexpected error." << std::endl;
-         std::cout << "Bytes transferred: " << n << std::endl;
-      };
-
-      receive_buffer.resize(32);
-      ws.next_layer().async_receive( net::buffer(receive_buffer)
-                                   , 0, handler2);
-      return;
-   }
-
    auto handler = [p = this->shared_from_this()](auto ec)
       { p->on_handshake(ec); };
 

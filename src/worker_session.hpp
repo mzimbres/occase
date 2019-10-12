@@ -60,8 +60,11 @@ public:
 
 private:
    websocket::stream<beast::tcp_stream> ws;
-   net::steady_timer timer;
    beast::multi_buffer buffer;
+
+   // The pong counter is used to decide when the login timeout
+   // occurrs, at the moment it is hardcoded to 2.
+   int pong_counter = 0;
 
    worker& worker_;
 

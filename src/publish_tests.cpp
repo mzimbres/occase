@@ -295,7 +295,7 @@ void test_offline(options const& op)
       std::cout << "Test fail: Offline messages." << std::endl;
 }
 
-void read_only_tests(options const& op)
+void login_timeout(options const& op)
 {
    boost::asio::io_context ioc {1};
 
@@ -306,7 +306,7 @@ void read_only_tests(options const& op)
                    >( ioc
                     , config_type2 {}
                     , op.make_session_cf()
-                    , op.make_launcher_empty_cfg(300)
+                    , op.make_launcher_empty_cfg(1)
                     )->run({});
 
    ioc.run();
@@ -445,8 +445,8 @@ int main(int argc, char* argv[])
            "up on the handshake in seconds.")
 
          ("auth-timeout,l"
-         , po::value<int>(&op.auth_timeout)->default_value(3)
-         , "Time the server waits for the auth cmd.")
+         , po::value<int>(&op.auth_timeout)->default_value(6)
+         , "Time before which the server should give up wainting for the login.")
 
          ("test,r"
          , po::value<int>(&op.test)->default_value(1)
@@ -477,7 +477,7 @@ int main(int argc, char* argv[])
       {
          case 1: test_online(op); break;
          case 2: test_offline(op); break;
-         case 3: read_only_tests(op); break;
+         case 3: login_timeout(op); break;
          case 4: test_login_error(op); break;
          case 5: test_early_close(op); break;
          case 6: start_leave_after_n_posts(op); break;

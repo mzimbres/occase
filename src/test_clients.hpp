@@ -46,8 +46,6 @@ public:
       { throw std::runtime_error("accept_timer::on_write"); return 1; }
    auto on_handshake(std::shared_ptr<client_type> s)
       { return -1;}
-   auto on_connect() const noexcept
-      { return 1;}
    auto get_login() const noexcept
       {return login {};}
 };
@@ -88,7 +86,6 @@ public:
    int on_read(std::string msg, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec);
    int on_handshake(std::shared_ptr<client_type> s);
-   int on_connect() const noexcept { return 1;}
    auto const& get_login() const noexcept {return op.user;}
 };
 
@@ -112,7 +109,6 @@ public:
    int on_read(std::string msg, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec);
    int on_handshake(std::shared_ptr<client_type> s);
-   int on_connect() const noexcept { return 1;}
    auto const& get_login() const noexcept {return op.user;}
 };
 
@@ -141,7 +137,6 @@ public:
    int on_read(std::string msg, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec);
    int on_handshake(std::shared_ptr<client_type> s);
-   int on_connect() const noexcept { return 1;}
    auto const& get_login() const noexcept {return op.user;}
 };
 
@@ -174,7 +169,6 @@ public:
    int on_read(std::string msg, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec);
    int on_handshake(std::shared_ptr<client_type> s);
-   int on_connect() const noexcept { return 1;}
    auto const& get_login() const noexcept {return op.user;}
 };
 
@@ -230,7 +224,6 @@ public:
    int on_read(std::string msg, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec);
    int on_handshake(std::shared_ptr<client_type> s);
-   int on_connect() const noexcept { return 1;}
    auto const& get_login() const noexcept {return op.user;}
 };
 
@@ -261,7 +254,6 @@ public:
    int on_read(std::string msg, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec);
    int on_handshake(std::shared_ptr<client_type> s);
-   int on_connect() const noexcept { return 1;}
    auto const& get_login() const noexcept {return op.user;}
    auto get_post_ids() const {return post_ids;}
 };
@@ -291,7 +283,6 @@ public:
    int on_closed(boost::system::error_code ec)
       { throw std::runtime_error("msg_pull::on_closed"); return -1; }
    int on_handshake(std::shared_ptr<client_type> s);
-   int on_connect() const noexcept { return 1;}
    auto const& get_login() const noexcept {return op.user;}
    auto get_post_ids() const {return post_ids;}
 };
@@ -318,7 +309,6 @@ public:
    int on_closed(boost::system::error_code ec)
       { throw std::runtime_error("register1::on_closed"); return -1; }
    int on_handshake(std::shared_ptr<client_type> s);
-   int on_connect() const noexcept { return 1;}
    auto const& get_login() const noexcept {return op.user;}
 };
 
@@ -342,7 +332,6 @@ public:
    int on_closed(boost::system::error_code ec)
       { return -1; }
    int on_handshake(std::shared_ptr<client_type> s);
-   int on_connect() const noexcept { return 1;}
    auto const& get_login() const noexcept {return op.user;}
 };
 
@@ -371,7 +360,6 @@ public:
    int on_closed(boost::system::error_code ec)
       { throw std::runtime_error("early_close::on_closed"); return -1; }
    int on_handshake(std::shared_ptr<client_type> s);
-   int on_connect() const noexcept { return 1;}
    auto const& get_login() const noexcept {return op.user;}
 };
 

@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include <boost/asio.hpp>
+#include <boost/beast/ssl.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
@@ -16,6 +17,7 @@ namespace ip = net::ip;
 namespace beast = boost::beast;
 namespace http = beast::http;
 namespace websocket = beast::websocket;
+namespace ssl = boost::asio::ssl;
 using tcp = net::ip::tcp;
 
 namespace rt

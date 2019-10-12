@@ -26,7 +26,8 @@ private:
    std::shared_ptr<psession_type> psession;
 
 public:
-   explicit db_plain_session(tcp::socket&& stream, arg_type w_)
+   explicit
+   db_plain_session(tcp::socket&& stream, arg_type w_, ssl::context& ctx)
    : stream(std::move(stream))
    , w {w_}
    { }
@@ -42,6 +43,11 @@ public:
       }
 
       return psession;
+   }
+
+   void run()
+   {
+      accept();
    }
 };
 

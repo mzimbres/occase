@@ -16,15 +16,16 @@ private:
    using arg_type = typename Session::arg_type;
    net::ip::tcp::acceptor acceptor;
 
-   void do_accept(arg_type w)
+   void do_accept(arg_type w, ssl::context& ctx)
    {
-      auto handler = [this, &w](auto const& ec, auto socket)
-         { on_accept(w, ec, std::move(socket)); };
+      auto handler = [this, &w, &ctx](auto const& ec, auto socket)
+         { on_accept(w, ctx, ec, std::move(socket)); };
 
       acceptor.async_accept(handler);
    }
 
    void on_accept( arg_type w
+                 , ssl::context& ctx
                  , boost::system::error_code ec
                  , net::ip::tcp::socket peer)
    {
@@ -36,10 +37,10 @@ private:
 
          log(loglevel::debug, "listener::on_accept: {0}", ec.message());
       } else {
-         std::make_shared<Session>(std::move(peer), w)->accept();
+         std::make_shared<Session>(std::move(peer), w, ctx)->run();
       }
 
-      do_accept(w);
+      do_accept(w, ctx);
    }
 
 public:
@@ -48,6 +49,7 @@ public:
    { }
 
    void run( arg_type w
+           , ssl::context& ctx
            , unsigned short port
            , int max_listen_connections)
    {
@@ -80,7 +82,7 @@ public:
          log( loglevel::info, "acceptor_mgr:run: TCP backlog set to {}"
             , max_listen_connections);
 
-         do_accept(w);
+         do_accept(w, ctx);
       }
    }
 

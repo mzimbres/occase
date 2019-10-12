@@ -28,6 +28,8 @@ ext_libs += $(boost_lib_dir)/libboost_program_options.a
 LDFLAGS = -lpthread
 LDFLAGS += -lfmt
 LDFLAGS += -lsodium
+LDFLAGS += -lssl
+LDFLAGS += -lcrypto
 
 CPPFLAGS = -std=c++17
 CPPFLAGS += -I. -I$./src -I$(boost_inc_dir)

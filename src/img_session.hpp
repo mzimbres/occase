@@ -48,8 +48,8 @@ private:
    void check_deadline();
 public:
 
-   img_session(tcp::socket socket, arg_type arg);
-   void accept();
+   img_session(tcp::socket socket, arg_type arg, ssl::context& ctx);
+   void run();
 };
 
 }

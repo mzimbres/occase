@@ -18,6 +18,7 @@
 #include "system.hpp"
 #include "worker.hpp"
 #include "release.hpp"
+#include "db_ssl_session.hpp"
 #include "db_plain_session.hpp"
 
 using namespace rt;
@@ -26,6 +27,7 @@ struct server_cfg {
    int help = 0; // 0: continue, 1: help, -1: error.
    bool log_on_stderr = false;
    bool daemonize = false;
+   std::string ssl_certificate;
    std::string pidfile;
    std::string loglevel;
 
@@ -78,6 +80,9 @@ auto get_cfg(int argc, char* argv[])
    ("daemonize"
    , po::value<std::string>(&daemonize)->default_value("no")
    , "Runs the server in the backgroud as daemon process.")
+
+   ("ssl-only"
+   , po::value<std::string>(&cfg.ssl_certificate)->default_value(""))
 
    ("pidfile"
    , po::value<std::string>(&cfg.pidfile)
@@ -294,7 +299,16 @@ int main(int argc, char* argv[])
       if (cfg.number_of_fds != -1)
          set_fd_limits(cfg.number_of_fds);
 
-      worker<db_plain_session> db {cfg.worker};
+      ssl::context ctx {ssl::context::tlsv12};
+
+      if (std::empty(cfg.ssl_certificate)) {
+         worker<db_plain_session> db {cfg.worker, ctx};
+         drop_root_priviledges();
+         db.run();
+         return 0;
+      }
+
+      worker<db_ssl_session> db {cfg.worker, ctx};
       drop_root_priviledges();
       db.run();
 

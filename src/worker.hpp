@@ -81,6 +81,7 @@ template <class Session>
 class worker {
 private:
    net::io_context ioc {1};
+   ssl::context& ctx;
 
    core_cfg const cfg;
 
@@ -643,6 +644,7 @@ private:
          // be better to use acceptor::is_open to determine if the run
          // functions should be called instead of using empty.
          acceptor.run( *this
+                     , ctx
                      , cfg.port
                      , cfg.max_listen_connections);
 
@@ -912,8 +914,9 @@ private:
    }
 
 public:
-   worker(worker_cfg cfg)
-   : cfg {cfg.core}
+   worker(worker_cfg cfg, ssl::context& c)
+   : ctx {c}
+   , cfg {cfg.core}
    , ch_cfg {cfg.channel}
    , ws_timeouts_ {cfg.timeouts}
    , db {cfg.db, ioc}

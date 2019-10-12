@@ -160,15 +160,15 @@ private:
             return;
          }
 
-         auto const err = ec.message();
-         auto ed = derived().ws().next_layer().socket().remote_endpoint(ec).address().to_string();
-         if (ec)
-            ed = ec.message();
+         //auto const err = ec.message();
+         //auto ed = derived().ws().next_layer().socket().remote_endpoint(ec).address().to_string();
+         //if (ec)
+         //   ed = ec.message();
 
-         log( loglevel::debug
-            , "db_session::on_accept1: {0}. Remote endpoint: {1}."
-            , err
-            , ed);
+         //log( loglevel::debug
+         //   , "db_session::on_accept1: {0}. Remote endpoint: {1}."
+         //   , err
+         //   , ed);
 
          return;
       }

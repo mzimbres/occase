@@ -128,13 +128,15 @@ beast::string_view mime_type(beast::string_view path)
     return "application/text";
 }
 
-img_session::img_session(tcp::socket socket, arg_type arg)
+img_session::img_session( tcp::socket socket
+                        , arg_type arg
+                        , ssl::context& ctx)
 : socket(std::move(socket))
 , deadline {socket.get_executor(), std::chrono::seconds(60)}
 , cfg {arg}
 { }
 
-void img_session::accept()
+void img_session::run()
 {
    std::cout << "Accept" << std::endl;
 

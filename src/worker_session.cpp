@@ -62,7 +62,7 @@ void worker_session::accept()
 
    timeout_type wstm
    { worker_.get_timeouts().handshake
-   , worker_.get_timeouts().pong
+   , worker_.get_timeouts().idle
    , true
    };
 

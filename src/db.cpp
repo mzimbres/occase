@@ -32,18 +32,14 @@ struct server_cfg {
 
    worker_cfg worker;
 
-   int login_timeout;
    int handshake_timeout;
-   int pong_timeout;
-   int close_frame_timeout;
+   int idle_timeout;
 
    auto get_timeouts() const noexcept
    {
       return ws_timeouts
-      { std::chrono::seconds {login_timeout}
-      , std::chrono::seconds {handshake_timeout}
-      , std::chrono::seconds {pong_timeout}
-      , std::chrono::seconds {close_frame_timeout}
+      { std::chrono::seconds {handshake_timeout}
+      , std::chrono::seconds {idle_timeout}
       };
    }
 };
@@ -98,27 +94,13 @@ auto get_cfg(int argc, char* argv[])
    , po::value<std::string>(&cfg.worker.stats.port)->default_value("9090")
    , "The statistics server base port.")
 
-   ( "login-timeout"
-   , po::value<int>(&cfg.login_timeout)->default_value(2)
-   , "Login timeout in seconds. Started after the websocket "
-     "handshake completes.")
-
    ( "handshake-timeout"
    , po::value<int>(&cfg.handshake_timeout)->default_value(2)
-   , "Handshake timeout in seconds. If the websocket handshake lasts "
-     "more than that the socket is shutdown and closed.")
+   , "Refer to the documentation in Beast for what this means.")
 
-   ( "pong-timeout"
-   , po::value<int>(&cfg.pong_timeout)->default_value(2)
-   , "Pong timeout in seconds. This is the time the client has to "
-     "reply a ping frame sent by the server. If a pong is received "
-     "on time a new ping is sent on timer expiration. Otherwise the "
-     "connection is closed.")
-
-   ( "close-frame-timeout"
-   , po::value<int>(&cfg.close_frame_timeout)->default_value(2)
-   , "The time we are willing to wait for an ack to websocket "
-     "close frame that has been sent to the client.")
+   ( "idle-timeout"
+   , po::value<int>(&cfg.idle_timeout)->default_value(2)
+   , "Refer to the documentation in Beast for what this means.")
 
    ( "channel-cleanup-rate"
    , po::value<int>(&cfg.worker.channel.cleanup_rate)->default_value(128)

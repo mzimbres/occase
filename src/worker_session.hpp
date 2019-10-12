@@ -39,10 +39,8 @@ enum class ev_res
 };
 
 struct ws_timeouts {
-   std::chrono::seconds login {2};
    std::chrono::seconds handshake {2};
-   std::chrono::seconds pong {2};
-   std::chrono::seconds close {2};
+   std::chrono::seconds idle {2};
 };
 
 struct proxy_session {

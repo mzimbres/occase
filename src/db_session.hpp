@@ -16,7 +16,7 @@ namespace rt
 {
 
 class worker;
-class worker_session;
+class db_session;
 
 enum class ev_res
 { register_ok
@@ -48,11 +48,11 @@ struct proxy_session {
    // Even when the proxy_session object is explicitly killed. The
    // object is itself killed only after the last weak_ptr is
    // destructed. The shared_ptr will live that long in that case.
-   std::weak_ptr<worker_session> session;
+   std::weak_ptr<db_session> session;
 };
 
-class worker_session :
-   public std::enable_shared_from_this<worker_session> {
+class db_session :
+   public std::enable_shared_from_this<db_session> {
 public:
    using arg_type = worker&;
 
@@ -103,8 +103,8 @@ private:
 
 public:
 
-   explicit worker_session(tcp::socket socket, arg_type w);
-   ~worker_session();
+   explicit db_session(tcp::socket socket, arg_type w);
+   ~db_session();
 
    void accept();
 

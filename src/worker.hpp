@@ -21,7 +21,7 @@
 #include "json_utils.hpp"
 #include "stats_server.hpp"
 #include "acceptor_mgr.hpp"
-#include "worker_session.hpp"
+#include "db_session.hpp"
 
 namespace rt
 {
@@ -60,12 +60,12 @@ struct ws_stats {
 // We have to store publish items in this queue while we wait for
 // the pub id that were requested from redis.
 struct post_queue_item {
-   std::weak_ptr<worker_session> session;
+   std::weak_ptr<db_session> session;
    post item;
 };
 
 struct pwd_queue_item {
-   std::weak_ptr<worker_session> session;
+   std::weak_ptr<db_session> session;
    std::string pwd;
 };
 
@@ -95,7 +95,7 @@ private:
 
    // Maps a user id in to a websocket session.
    std::unordered_map< std::string
-                     , std::weak_ptr<worker_session>
+                     , std::weak_ptr<db_session>
                      > sessions;
 
    // The channels are stored in a vector and the channel hash codes
@@ -135,7 +135,7 @@ private:
    pwd_gen pwdgen;
 
    // Accepts websocket connections.
-   acceptor_mgr<worker_session> acceptor;
+   acceptor_mgr<db_session> acceptor;
 
    // Provides some statistics about the server.
    stats_server sserver;
@@ -147,21 +147,21 @@ private:
    void create_channels(menu_elems_array_type const& menu);
 
    ev_res on_app_login( json const& j
-                      , std::shared_ptr<worker_session> s);
+                      , std::shared_ptr<db_session> s);
    ev_res on_app_register( json const& j
-                         , std::shared_ptr<worker_session> s);
+                         , std::shared_ptr<db_session> s);
    ev_res on_app_subscribe( json const& j
-                          , std::shared_ptr<worker_session> s);
+                          , std::shared_ptr<db_session> s);
    ev_res on_app_chat_msg( json j
-                         , std::shared_ptr<worker_session> s);
+                         , std::shared_ptr<db_session> s);
    ev_res on_app_presence( json j
-                         , std::shared_ptr<worker_session> s);
+                         , std::shared_ptr<db_session> s);
    ev_res on_app_publish( json j
-                        , std::shared_ptr<worker_session> s);
+                        , std::shared_ptr<db_session> s);
    ev_res on_app_del_post( json j
-                         , std::shared_ptr<worker_session> s);
+                         , std::shared_ptr<db_session> s);
    ev_res on_app_filenames( json j
-                          , std::shared_ptr<worker_session> s);
+                          , std::shared_ptr<db_session> s);
 
    // Handlers for events we receive from the database.
    void on_db_chat_msg( std::string const& user_id
@@ -187,7 +187,7 @@ public:
    void on_session_dtor( std::string const& id
                        , std::vector<std::string> msgs);
 
-   ev_res on_app( std::shared_ptr<worker_session> s
+   ev_res on_app( std::shared_ptr<db_session> s
                 , std::string msg) noexcept;
 
    auto const& get_timeouts() const noexcept

@@ -55,7 +55,7 @@ common_objs += crypto.o
 
 db_objs =
 db_objs += worker.o
-db_objs += worker_session.o
+db_objs += db_session.o
 db_objs += redis.o
 db_objs += stats_server.o
 db_objs += http_session.o

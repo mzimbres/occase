@@ -1,4 +1,4 @@
-#include "worker_session.hpp"
+#include "db_session.hpp"
 
 #include <chrono>
 
@@ -14,14 +14,14 @@
 namespace rt
 {
 
-worker_session::worker_session(tcp::socket socket, worker& w)
+db_session::db_session(tcp::socket socket, worker& w)
 : ws(std::move(socket))
 , worker_(w)
 {
    ++worker_.get_ws_stats().number_of_sessions;
 }
 
-worker_session::~worker_session()
+db_session::~db_session()
 {
    try {
       --worker_.get_ws_stats().number_of_sessions;
@@ -56,7 +56,7 @@ worker_session::~worker_session()
    }
 }
 
-void worker_session::accept()
+void db_session::accept()
 {
    using timeout_type = websocket::stream_base::timeout;
 
@@ -96,7 +96,7 @@ void worker_session::accept()
    ws.async_accept(handler2);
 }
 
-void worker_session::on_accept(boost::system::error_code ec)
+void db_session::on_accept(boost::system::error_code ec)
 {
    if (ec) {
       if (ec == beast::error::timeout) {
@@ -110,7 +110,7 @@ void worker_session::on_accept(boost::system::error_code ec)
          ed = ec.message();
 
       log( loglevel::debug
-         , "worker_session::on_accept1: {0}. Remote endpoint: {1}."
+         , "db_session::on_accept1: {0}. Remote endpoint: {1}."
          , err
          , ed);
 
@@ -120,7 +120,7 @@ void worker_session::on_accept(boost::system::error_code ec)
    do_read();
 }
 
-void worker_session::do_read()
+void db_session::do_read()
 {
    auto handler = [p = shared_from_this()](auto ec, auto n)
       { p->on_read(ec, n); };
@@ -128,7 +128,7 @@ void worker_session::do_read()
    ws.async_read(buffer, handler);
 }
 
-void worker_session::on_close(boost::system::error_code ec)
+void db_session::on_close(boost::system::error_code ec)
 {
    if (ec) {
       if (ec == net::error::operation_aborted) {
@@ -144,12 +144,12 @@ void worker_session::on_close(boost::system::error_code ec)
    }
 }
 
-void worker_session::shutdown()
+void db_session::shutdown()
 {
    if (closing)
       return;
 
-   log(loglevel::debug, "worker_session::shutdown: {0}.", user_id);
+   log(loglevel::debug, "db_session::shutdown: {0}.", user_id);
 
    closing = true;
 
@@ -160,7 +160,7 @@ void worker_session::shutdown()
    ws.async_close(reason, handler);
 }
 
-void worker_session::send(std::string msg, bool persist)
+void db_session::send(std::string msg, bool persist)
 {
    assert(!std::empty(msg));
    auto const is_empty = std::empty(msg_queue);
@@ -172,7 +172,7 @@ void worker_session::send(std::string msg, bool persist)
 }
 
 void
-worker_session::send_post( std::shared_ptr<std::string> msg
+db_session::send_post( std::shared_ptr<std::string> msg
                          , std::uint64_t hash_code
                          , std::uint64_t features)
 {
@@ -198,7 +198,7 @@ worker_session::send_post( std::shared_ptr<std::string> msg
       do_write(*msg_queue.front().menu_msg);
 }
 
-void worker_session::handle_ev(ev_res r)
+void db_session::handle_ev(ev_res r)
 {
    switch (r) {
       case ev_res::register_fail:
@@ -219,14 +219,14 @@ void worker_session::handle_ev(ev_res r)
    }
 }
 
-void worker_session::on_read( boost::system::error_code ec
+void db_session::on_read( boost::system::error_code ec
                             , std::size_t bytes_transferred)
 {
    boost::ignore_unused(bytes_transferred);
 
    if (ec == beast::websocket::error::closed) {
       log( loglevel::debug
-         , "worker_session::on_read: Gracefully closed {0}."
+         , "db_session::on_read: Gracefully closed {0}."
          , user_id);
 
       return;
@@ -248,7 +248,7 @@ void worker_session::on_read( boost::system::error_code ec
    do_read();
 }
 
-void worker_session::on_write( boost::system::error_code ec
+void db_session::on_write( boost::system::error_code ec
                              , std::size_t bytes_transferred)
 {
    boost::ignore_unused(bytes_transferred);
@@ -277,7 +277,7 @@ void worker_session::on_write( boost::system::error_code ec
    }
 }
 
-void worker_session::do_write(std::string const& msg)
+void db_session::do_write(std::string const& msg)
 {
    ws.text(ws.got_text());
 
@@ -288,7 +288,7 @@ void worker_session::do_write(std::string const& msg)
 }
 
 std::weak_ptr<proxy_session>
-worker_session::get_proxy_session(bool make_new_session)
+db_session::get_proxy_session(bool make_new_session)
 {
    if (!psession || make_new_session) {
       psession = std::make_shared<proxy_session>();
@@ -298,7 +298,7 @@ worker_session::get_proxy_session(bool make_new_session)
    return psession;
 }
 
-void worker_session::set_filter(std::vector<std::uint64_t> const& codes)
+void db_session::set_filter(std::vector<std::uint64_t> const& codes)
 {
    auto const min = std::min(ssize(codes), menu_codes_size);
    menu_codes.clear();

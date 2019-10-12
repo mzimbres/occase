@@ -2,7 +2,7 @@
 
 #include "net.hpp"
 #include "logger.hpp"
-#include "worker_session.hpp"
+#include "db_session.hpp"
 
 #include <sys/types.h>
 #include <sys/socket.h>

@@ -10,7 +10,7 @@
 #include "menu.hpp"
 #include "utils.hpp"
 #include "logger.hpp"
-#include "worker_session.hpp"
+#include "db_session.hpp"
 #include "json_utils.hpp"
 
 namespace rt
@@ -505,7 +505,7 @@ void worker::on_db_post_id(std::string const& post_id_str)
 
 ev_res
 worker::on_app_login( json const& j
-                    , std::shared_ptr<worker_session> s)
+                    , std::shared_ptr<db_session> s)
 {
    auto const user = j.at("user").get<std::string>();
    s->set_id(user);
@@ -522,7 +522,7 @@ worker::on_app_login( json const& j
 
 ev_res
 worker::on_app_register( json const& j
-                       , std::shared_ptr<worker_session> s)
+                       , std::shared_ptr<db_session> s)
 {
    auto const empty = std::empty(reg_queue);
    reg_queue.push({s, {}});
@@ -534,7 +534,7 @@ worker::on_app_register( json const& j
 
 ev_res
 worker::on_app_subscribe( json const& j
-                        , std::shared_ptr<worker_session> s)
+                        , std::shared_ptr<db_session> s)
 {
    auto const codes = j.at("channels").get<menu_code_type2>();
 
@@ -667,7 +667,7 @@ worker::on_app_subscribe( json const& j
    return ev_res::subscribe_ok;
 }
 
-ev_res worker::on_app_del_post(json j, std::shared_ptr<worker_session> s)
+ev_res worker::on_app_del_post(json j, std::shared_ptr<db_session> s)
 {
    // A post should be deleted from the database as well as from each
    // worker, so that users do not receive posts from products that
@@ -688,7 +688,7 @@ ev_res worker::on_app_del_post(json j, std::shared_ptr<worker_session> s)
 }
 
 ev_res
-worker::on_app_filenames(json j, std::shared_ptr<worker_session> s)
+worker::on_app_filenames(json j, std::shared_ptr<db_session> s)
 {
    auto const n = sz::img_filename_min_size;
    auto f = [this, n]()
@@ -711,7 +711,7 @@ worker::on_app_filenames(json j, std::shared_ptr<worker_session> s)
 }
 
 ev_res
-worker::on_app_publish(json j, std::shared_ptr<worker_session> s)
+worker::on_app_publish(json j, std::shared_ptr<db_session> s)
 {
    auto items = j.at("items").get<std::vector<post>>();
 
@@ -781,7 +781,7 @@ void worker::on_session_dtor( std::string const& user_id
 }
 
 ev_res
-worker::on_app_chat_msg(json j, std::shared_ptr<worker_session> s)
+worker::on_app_chat_msg(json j, std::shared_ptr<db_session> s)
 {
    // Consider searching the sessions map if the user in this worker
    // and send him his message directly to avoid overloading the redis
@@ -811,7 +811,7 @@ worker::on_app_chat_msg(json j, std::shared_ptr<worker_session> s)
 }
 
 ev_res
-worker::on_app_presence(json j, std::shared_ptr<worker_session> s)
+worker::on_app_presence(json j, std::shared_ptr<db_session> s)
 {
    // Consider searching the sessions map if the user in this worker
    // and send him his message directly to avoid overloading the redis
@@ -849,7 +849,7 @@ void worker::shutdown()
    db.disconnect();
 }
 
-ev_res worker::on_app( std::shared_ptr<worker_session> s
+ev_res worker::on_app( std::shared_ptr<db_session> s
                      , std::string msg) noexcept
 {
    try {

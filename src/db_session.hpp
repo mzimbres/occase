@@ -19,8 +19,14 @@
 namespace rt
 {
 
-template <class Derived>
-class db_session;
+template <class Session>
+struct proxy_session {
+   // We have to use a weak pointer here. A share_ptr doen't work.
+   // Even when the proxy_session object is explicitly killed. The
+   // object is itself killed only after the last weak_ptr is
+   // destructed. The shared_ptr will live that long in that case.
+   std::weak_ptr<Session> session;
+};
 
 enum class ev_res
 { register_ok

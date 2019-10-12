@@ -101,13 +101,13 @@ private:
    // channel_hashes is used as sentinel to perform fast linear
    // searches.
    std::vector<std::uint64_t> channel_hashes;
-   std::vector<channel> channels;
+   std::vector<channel<Session>> channels;
 
    // Apps that do not register for any product channels (the seconds
    // item in the menu) will receive posts from any channel. This is
    // the channel that will store the web socket channels for this
    // case.
-   channel none_channel;
+   channel<Session> none_channel;
 
    // Facade to redis.
    redis::facade db;

@@ -68,13 +68,15 @@ struct channel_cfg {
    int max_sub; 
 };
 
+template <class Session>
 class channel {
 public:
    using inserter_type = std::back_insert_iterator<std::vector<post>>;
+   using psession_type = proxy_session<Session>;
 
 private:
    int insertions_on_inactivity = 0;
-   std::vector<std::weak_ptr<proxy_session>> members;
+   std::vector<std::weak_ptr<psession_type>> members;
    std::vector<post> items;
 
    template <class F>
@@ -145,7 +147,7 @@ public:
       insertions_on_inactivity = 0;
    }
 
-   void add_member(std::weak_ptr<proxy_session> s, int cleanup_rate)
+   void add_member(std::weak_ptr<psession_type> s, int cleanup_rate)
    {
       members.push_back(s);
 

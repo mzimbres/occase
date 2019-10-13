@@ -104,7 +104,7 @@ represented as an array of integers that is contained inside other
 arrays. We will explain why it is this way after we introduce the
 channels.
 
-Channels
+Channels (outdated)
 --------
 
 The app allows the user to filter the posts it receives. The filter

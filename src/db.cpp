@@ -27,7 +27,9 @@ struct server_cfg {
    int help = 0; // 0: continue, 1: help, -1: error.
    bool log_on_stderr = false;
    bool daemonize = false;
-   std::string ssl_certificate;
+   std::string ssl_cert_file;
+   std::string ssl_priv_key_file;
+   std::string ssl_dh_file;
    std::string pidfile;
    std::string loglevel;
 
@@ -44,6 +46,14 @@ struct server_cfg {
       { std::chrono::seconds {handshake_timeout}
       , std::chrono::seconds {idle_timeout}
       };
+   }
+
+   auto with_ssl() const noexcept
+   {
+      auto const r = std::empty(ssl_cert_file) ||
+                     std::empty(ssl_priv_key_file) ||
+                     std::empty(ssl_dh_file);
+      return !r;
    }
 };
 
@@ -81,8 +91,9 @@ auto get_cfg(int argc, char* argv[])
    , po::value<std::string>(&daemonize)->default_value("no")
    , "Runs the server in the backgroud as daemon process.")
 
-   ("ssl-only"
-   , po::value<std::string>(&cfg.ssl_certificate)->default_value(""))
+   ("ssl-certificate-file", po::value<std::string>(&cfg.ssl_cert_file))
+   ("ssl-private-key-file", po::value<std::string>(&cfg.ssl_priv_key_file))
+   ("ssl-dh-file", po::value<std::string>(&cfg.ssl_dh_file))
 
    ("pidfile"
    , po::value<std::string>(&cfg.pidfile)
@@ -278,6 +289,62 @@ auto get_cfg(int argc, char* argv[])
    return cfg;
 }
 
+auto load_ssl(ssl::context& ctx, server_cfg const& cfg)
+{
+   boost::system::error_code ec;
+
+   // At the moment we do not have certificate with password.
+   ctx.set_password_callback( [](auto n, auto k) { return ""; }
+                            , ec);
+
+   if (ec) {
+      log(loglevel::emerg, "{}", ec.message());
+      return false;
+   }
+
+   ec = {};
+
+   ctx.set_options(
+      ssl::context::default_workarounds |
+      ssl::context::no_sslv2 |
+      ssl::context::single_dh_use, ec);
+
+   if (ec) {
+      log(loglevel::emerg, "{}", ec.message());
+      return false;
+   }
+
+   ec = {};
+
+   ctx.use_certificate_chain_file(cfg.ssl_cert_file, ec);
+
+   if (ec) {
+      log(loglevel::emerg, "{}", ec.message());
+      return false;
+   }
+
+   ec = {};
+
+   ctx.use_private_key_file( cfg.ssl_priv_key_file
+                           , ssl::context::file_format::pem);
+
+   if (ec) {
+      log(loglevel::emerg, "{}", ec.message());
+      return false;
+   }
+
+   ec = {};
+
+   ctx.use_tmp_dh_file(cfg.ssl_dh_file, ec);
+
+   if (ec) {
+      log(loglevel::emerg, "{}", ec.message());
+      return false;
+   }
+
+   return true;
+}
+
 int main(int argc, char* argv[])
 {
    try {
@@ -301,14 +368,17 @@ int main(int argc, char* argv[])
 
       ssl::context ctx {ssl::context::tlsv12};
 
-      if (std::empty(cfg.ssl_certificate)) {
-         worker<db_plain_session> db {cfg.worker, ctx};
+      if (cfg.with_ssl()) {
+         if (!load_ssl(ctx, cfg))
+            return 1;
+
+         worker<db_ssl_session> db {cfg.worker, ctx};
          drop_root_priviledges();
          db.run();
          return 0;
       }
 
-      worker<db_ssl_session> db {cfg.worker, ctx};
+      worker<db_plain_session> db {cfg.worker, ctx};
       drop_root_priviledges();
       db.run();
 

@@ -143,7 +143,7 @@ int main(int argc, char* argv[])
       ssl::context ctx {ssl::context::tlsv12};
       acceptor_mgr<img_session> lst {ioc};
       lst.run(cfg.cfg, ctx, cfg.port, cfg.max_listen_connections);
-      //drop_root_priviledges();
+      drop_root_priviledges();
       ioc.run();
    } catch(std::exception const& e) {
       log(loglevel::notice, e.what());

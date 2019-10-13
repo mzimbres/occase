@@ -2,7 +2,7 @@ To build this project you will need
 
    1. nlohmann json.
    2. libfmt.
-   3. boost > 1.70.
+   3. boost > 1.71.
    4. libsodium.
 
 On debian systems 1. and 2. and 4. can be installed from packages
@@ -10,4 +10,23 @@ On debian systems 1. and 2. and 4. can be installed from packages
    $ sudo apt-get install nlohmann-json3-dev
    $ sudo apt-get install libfmt3-dev
    $ sudo apt-get install libsodium-dev
+
+Occase makes direct use of only three boost packages
+  
+  1. Asio
+  2. Beast
+  3. Program Options
+
+To build occase there is not need to build boost whole, for example
+
+   $ ./bootstrap.sh --with-libraries=program_options,system --prefix=/opt/boost_1_71_0/
+   $ ./b2
+   $ sudo b2 install
+
+The Makefile assumes boost is installed in
+
+   boost_inc_dir = /opt/boost_1_71_0/include
+   boost_lib_dir = /opt/boost_1_71_0/lib
+
+Change that if needed.
 

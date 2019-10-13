@@ -7,20 +7,22 @@ prefix = /usr
 datarootdir = $(prefix)/share
 datadir = $(datarootdir)
 docdir = $(datadir)/doc/$(pkg_name)
-exec_prefix = $(prefix)
-bindir = $(exec_prefix)/bin
+bindir = $(prefix)/bin
 binprefix =
 srcdir = .
 confdir = /etc/$(pkg_name)
 systemddir = /lib/systemd/system
 
-servername = $(pkg_name)-db
+bin_final_dir = $(DESTDIR)$(bindir)/$(binprefix)
+doc_final_dir = $(DESTDIR)$(docdir)
+
+db_name = $(pkg_name)-db
 toolname = $(pkg_name)-tool
 monitorname = $(pkg_name)-monitor
 loadtoolname = $(pkg_name)-load-tool
 
-boost_inc_dir = /opt/boost_1_70_0/include
-boost_lib_dir = /opt/boost_1_70_0/lib
+boost_inc_dir = /opt/boost_1_71_0/include
+boost_lib_dir = /opt/boost_1_71_0/lib
 
 ext_libs =
 ext_libs += $(boost_lib_dir)/libboost_program_options.a
@@ -46,7 +48,7 @@ exes += db
 exes += menu_tool
 exes += aedis
 exes += simulation
-exes += imgserver
+exes += img
 exes += img_key_gen
 
 common_objs += menu.o
@@ -112,7 +114,7 @@ publish_tests: % : %.o $(client_objs) $(common_objs)
 db: % : %.o $(db_objs) $(common_objs) $(aedis_objs) 
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_CONCURRENCY_HINT_1=BOOST_ASIO_CONCURRENCY_HINT_UNSAFE
 
-imgserver: % : %.o $(imgserver_objs) $(common_objs) $(aedis_objs)
+img: % : %.o $(imgserver_objs) $(common_objs) $(aedis_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_CONCURRENCY_HINT_1=BOOST_ASIO_CONCURRENCY_HINT_UNSAFE
 
 menu_tool: % : %.o $(menu_dump_objs) $(common_objs)
@@ -129,26 +131,26 @@ load-tool: load-tool.sh.in
 	chmod +x $@
 
 install: all
-	install -D db $(DESTDIR)$(bindir)/$(binprefix)$(servername)
-	install -D menu_tool $(DESTDIR)$(bindir)/$(binprefix)$(toolname)
-	install -D monitor.sh $(DESTDIR)$(bindir)/$(binprefix)$(monitorname)
-	install -D load-tool $(DESTDIR)$(bindir)/$(binprefix)$(loadtoolname)
-	install -D doc/management.txt $(DESTDIR)$(docdir)/management.txt
-	install -D doc/intro.txt $(DESTDIR)$(docdir)/intro.txt
-	install -D doc/posts.txt $(DESTDIR)$(docdir)/posts.txt
-	install -D $(servername).conf $(DESTDIR)$(confdir)/$(servername).conf
-	install -D $(servername).service $(DESTDIR)$(systemddir)/$(servername).service
+	install -D db $(bin_final_dir)$(db_name)
+	install -D menu_tool $(bin_final_dir)$(toolname)
+	install -D monitor.sh $(bin_final_dir)$(monitorname)
+	install -D load-tool $(bin_final_dir)$(loadtoolname)
+	install -D doc/management.txt $(doc_final_dir)/management.txt
+	install -D doc/intro.txt $(doc_final_dir)/intro.txt
+	install -D doc/posts.txt $(doc_final_dir)/posts.txt
+	install -D $(db_name).conf $(DESTDIR)$(confdir)/$(db_name).conf
+	install -D $(db_name).service $(DESTDIR)$(systemddir)/$(db_name).service
 
 uninstall:
-	rm -f $(DESDIR)$(bindir)/$(binprefix)$(servername)
-	rm -f $(DESDIR)$(bindir)/$(binprefix)$(toolname)
-	rm -f $(DESDIR)$(bindir)/$(binprefix)$(monitorname)
-	rm -f $(DESDIR)$(bindir)/$(binprefix)$(loadtoolname)
-	rm -f $(DESDIR)$(docdir)/management.txt
-	rm -f $(DESDIR)$(docdir)/intro.txt
-	rm -f $(DESDIR)$(docdir)/posts.txt
-	rm -f $(DESDIR)$(confdir)/$(servername).conf
-	rm -f $(DESDIR)$(systemddir)/$(servername).service
+	rm -f $(bin_final_dir)$(db_name)
+	rm -f $(bin_final_dir)$(toolname)
+	rm -f $(bin_final_dir)$(monitorname)
+	rm -f $(bin_final_dir)$(loadtoolname)
+	rm -f $(doc_final_dir)/management.txt
+	rm -f $(doc_final_dir)/intro.txt
+	rm -f $(doc_final_dir)/posts.txt
+	rm -f $(DESDIR)$(confdir)/$(db_name).conf
+	rm -f $(DESDIR)$(systemddir)/$(db_name).service
 	rmdir $(DESDIR)$(docdir)
 
 .PHONY: clean

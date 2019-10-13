@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "net.hpp"
+#include "logger.hpp"
 #include "db_session.hpp"
 
 namespace rt
@@ -28,8 +29,13 @@ private:
 
    void on_handshake(beast::error_code ec)
    {
-      if (ec)
-          return fail(ec, "handshake");
+      if (ec) {
+         log( loglevel::debug
+            , "db_ssl_session::on_handshake: {0}."
+            , ec.message());
+
+         return;
+      }
 
       accept();
    }

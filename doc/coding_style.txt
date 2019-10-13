@@ -82,7 +82,6 @@ Coding Standards
 * Keep names short.
 * Write stateless code as much as possible.
 * Use unsigned types ONLY for bitwise operations.
-* Again, avoid unsigned.
 
 Some further cosmetic guidelines
 
@@ -194,6 +193,7 @@ Pointers
   if (!a) // right
 
   if (a == nullptr) // wrong
+  if (nullprt == a) // wrong
 
   if (a == NULL) // wrong
 

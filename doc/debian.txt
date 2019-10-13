@@ -1,6 +1,7 @@
-How to make the debian package. 
+To make a debian package for occase
 
-$ mkdir pkg && cd pkg
+$ make dist
+$ mkdir yyy/pkg && cd pkg
 $ mv xxx/occase-1.0.0-1.tar.gz .
 $ tar -xvvzf occase-1.0.0-1.tar.gz .
 $ ln occase-1.0.0-1.tar.gz occase_1.0.0.orig.tar.gz

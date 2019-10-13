@@ -1,26 +1,33 @@
+Redis
+=========================================================================
+
 You will need to enable keyspace notifications in redis.conf.
 
 notify-keyspace-events "KA"
 
-Starting the server
+occase-db
+=========================================================================
 
-   debian2[0]$ redis-cli flushall 
+On startup occase-db will retrieve the menu from the server, if not
+available the process will exit with error. To load the menu on redis
+
+   $ redis-cli flushall 
    OK
-   debian2[0]$ cat menu.txt | redis-cli -x set menu
+   $ load-tool path-to-menu
+   $ cat menu.txt | redis-cli -x set menu
    OK
-   debian2[0]$ sudo systemctl restart occase-server.service
+   $ sudo systemctl restart occase-db.service
 
-To send the menu to redis.
+Once the server is running it is possible to monitor internal queue
+sizes and the current number of active sessions with the monitor tool
 
-   $ ./menu_dump -o 6 menus/cidades_small:2:1 menus/fipe_veiculos.txt:2:1 | redis-cli -x set menu
+   $ ./monitor.sh
 
-To test it is necessary to send smaller menus
+File descriptors
+==========================================================================
 
-   $ redis-cli flushall
-   $ ./menu_dump -o 6 menus/cidades_small:2:1 menus/cidades_small:2:1 | redis-cli -x set menu
-
-For useful information about the may number of file descriptors
-read haproxy
+For useful information about the number of file descriptors read
+haproxy
 
    haproxy/doc/management.txt
 
@@ -54,6 +61,4 @@ ulimit -Sn value
 Ephemeral ports file
 
 /proc/sys/net/ipv4/ip_local_port_range
-
-wget -O - 127.0.0.1:9090/count 2> /dev/null
 

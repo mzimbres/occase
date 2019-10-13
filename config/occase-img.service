@@ -1,0 +1,14 @@
+[Unit]
+Description=HTTP image server.
+After=network.target
+
+[Service]
+Type=forking
+ExecStart=/usr/bin/occase-img /etc/occase/occase-img.conf
+ExecStop=/bin/kill -s INT $MAINPID
+PIDFile=/run/occase-img.pid
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+

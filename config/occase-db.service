@@ -4,7 +4,7 @@ After=network.target redis.service sentinel.service
 
 [Service]
 Type=forking
-ExecStart=/usr/local/bin/occase /etc/occase/occase-db.conf
+ExecStart=/usr/bin/occase-db /etc/occase/occase-db.conf
 ExecStop=/bin/kill -s INT $MAINPID
 PIDFile=/run/occase-db.pid
 Restart=always

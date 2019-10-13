@@ -8,15 +8,17 @@ datarootdir = $(prefix)/share
 datadir = $(datarootdir)
 docdir = $(datadir)/doc/$(pkg_name)
 bindir = $(prefix)/bin
-binprefix =
 srcdir = .
 confdir = /etc/$(pkg_name)
 systemddir = /lib/systemd/system
 
-bin_final_dir = $(DESTDIR)$(bindir)/$(binprefix)
+bin_final_dir = $(DESTDIR)$(bindir)/
 doc_final_dir = $(DESTDIR)$(docdir)
+conf_final_dir = $(DESTDIR)$(confdir)
+service_final_dir = $(DESTDIR)$(systemddir)
 
 db_name = $(pkg_name)-db
+img_name = $(pkg_name)-img
 toolname = $(pkg_name)-tool
 monitorname = $(pkg_name)-monitor
 loadtoolname = $(pkg_name)-load-tool
@@ -132,25 +134,31 @@ load-tool: load-tool.sh.in
 
 install: all
 	install -D db $(bin_final_dir)$(db_name)
+	install -D img $(bin_final_dir)$(img_name)
 	install -D menu_tool $(bin_final_dir)$(toolname)
 	install -D monitor.sh $(bin_final_dir)$(monitorname)
 	install -D load-tool $(bin_final_dir)$(loadtoolname)
 	install -D doc/management.txt $(doc_final_dir)/management.txt
 	install -D doc/intro.txt $(doc_final_dir)/intro.txt
 	install -D doc/posts.txt $(doc_final_dir)/posts.txt
-	install -D $(db_name).conf $(DESTDIR)$(confdir)/$(db_name).conf
-	install -D $(db_name).service $(DESTDIR)$(systemddir)/$(db_name).service
+	install -D config/$(db_name).conf $(conf_final_dir)/$(db_name).conf
+	install -D config/$(img_name).conf $(conf_final_dir)/$(img_name).conf
+	install -D config/$(db_name).service $(service_final_dir)/$(db_name).service
+	install -D config/$(img_name).service $(service_final_dir)/$(img_name).service
 
 uninstall:
 	rm -f $(bin_final_dir)$(db_name)
+	rm -f $(bin_final_dir)$(img_name)
 	rm -f $(bin_final_dir)$(toolname)
 	rm -f $(bin_final_dir)$(monitorname)
 	rm -f $(bin_final_dir)$(loadtoolname)
 	rm -f $(doc_final_dir)/management.txt
 	rm -f $(doc_final_dir)/intro.txt
 	rm -f $(doc_final_dir)/posts.txt
-	rm -f $(DESDIR)$(confdir)/$(db_name).conf
-	rm -f $(DESDIR)$(systemddir)/$(db_name).service
+	rm -f $(conf_final_dir)/$(db_name).conf
+	rm -f $(conf_final_dir)/$(img_name).conf
+	rm -f $(service_final_dir)/$(db_name).service
+	rm -f $(service_final_dir)/$(img_name).service
 	rmdir $(DESDIR)$(docdir)
 
 .PHONY: clean

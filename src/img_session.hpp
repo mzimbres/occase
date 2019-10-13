@@ -8,6 +8,7 @@ namespace rt
 struct img_session_cfg {
    std::string doc_root;
    std::string img_key;
+   std::uint64_t body_limit {1000000}; 
 };
 
 class img_session : public std::enable_shared_from_this<img_session> {

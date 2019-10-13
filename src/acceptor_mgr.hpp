@@ -35,7 +35,7 @@ private:
             return;
          }
 
-         log(loglevel::debug, "listener::on_accept: {0}", ec.message());
+         log(loglevel::info, "listener::on_accept: {0}", ec.message());
       } else {
          std::make_shared<Session>(std::move(peer), w, ctx)->run();
       }
@@ -75,7 +75,7 @@ public:
       acceptor.listen(max_listen_connections, ec);
 
       if (ec) {
-         log(loglevel::debug, "acceptor_mgr::run: {0}.", ec.message());
+         log(loglevel::info, "acceptor_mgr::run: {0}.", ec.message());
       } else {
          log( loglevel::info, "acceptor_mgr:run: Listening on {}"
             , acceptor.local_endpoint());

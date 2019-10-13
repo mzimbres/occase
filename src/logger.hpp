@@ -51,10 +51,16 @@ int to_syslog_prio(loglevel ll)
 
 namespace global {extern loglevel logfilter;}
 
+inline
+auto ignore_log(loglevel ll)
+{
+   return ll > global::logfilter;
+}
+
 template <class... Args>
 void log(loglevel ll, char const* fmt, Args const& ... args)
 {
-   if (ll > global::logfilter)
+   if (ignore_log(ll))
       return;
 
    auto const prio = to_syslog_prio(ll);

@@ -51,6 +51,9 @@ auto get_cfg(int argc, char* argv[])
    , po::value<std::string>(&cfg.cfg.doc_root)->default_value("/www/data")
    , "Directory where image will be written to and read from.")
 
+   ("body-limit"
+   , po::value<std::uint64_t>(&cfg.cfg.body_limit)->default_value(1000000))
+
    ("config"
    , po::value<std::string>(&conf_file)
    , "The file containing the configuration.")
@@ -64,7 +67,7 @@ auto get_cfg(int argc, char* argv[])
    , "Instructs syslog to write the messages on stderr as well.")
 
    ( "log-level"
-   , po::value<std::string>(&cfg.loglevel)->default_value("notice")
+   , po::value<std::string>(&cfg.loglevel)->default_value("debug")
    , "Control the amount of information that is output in the logs. "
      " Available options are: emerg, alert, crit, err, warning, notice, "
      " info, debug.")
@@ -92,9 +95,6 @@ auto get_cfg(int argc, char* argv[])
 
    ;
 
-   cfg.log_on_stderr = log_on_stderr == "yes";
-   cfg.daemonize = daemonize == "yes";
-
    po::positional_options_description pos;
    pos.add("config", -1);
 
@@ -110,6 +110,9 @@ auto get_cfg(int argc, char* argv[])
          notify(vm);
       }
    }
+
+   cfg.log_on_stderr = log_on_stderr == "yes";
+   cfg.daemonize = daemonize == "yes";
 
    if (vm.count("help")) {
       std::cout << desc << "\n";

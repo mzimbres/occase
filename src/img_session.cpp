@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include "logger.hpp"
 #include "json_utils.hpp"
 
 /* The http target used by apps to post images has the following form.
@@ -16,7 +17,7 @@
  *
  * The different parts have the following meaning.
  *
- * a: The hex digest produces by the ws server that uses as input b
+ * a: The hex digest produced by the ws server that uses as input b
  *    and a key that is known only by the ws and the image server. If
  *    a and b do not belong to each other the image has not been
  *    authorized by the server to be posted.
@@ -138,13 +139,11 @@ img_session::img_session( tcp::socket socket
 
 void img_session::run()
 {
-   std::cout << "Accept" << std::endl;
-
    auto self = shared_from_this();
    auto f = [self](auto ec, auto n)
       { self->on_read_header(ec, n); };
 
-   header_parser.body_limit(10000000);
+   header_parser.body_limit(cfg.body_limit);
    http::async_read_header(socket, buffer, header_parser, f);
 
    check_deadline();
@@ -184,7 +183,7 @@ void img_session::post_handler()
    if (is_valid(st)) {
       path = cfg.doc_root + "/" + make_img_path(st.filename);
 
-      std::cout << "Dir: " << path << std::endl;
+      log(loglevel::debug , "Post dir: {0}", path);
 
       create_dir(path.data());
 
@@ -194,7 +193,7 @@ void img_session::post_handler()
       path.append(st.extension.data(), std::size(st.extension));
    }
 
-   std::cout << "Path: " << path << std::endl;
+   log(loglevel::debug , "Post full dir: {0}", path);
 
    if (std::empty(path)) {
       resp.result(http::status::bad_request);
@@ -216,7 +215,7 @@ void img_session::post_handler()
                                  , beast::file_mode::write, ec);
 
    if (ec) {
-      std::cout << ec.message() << std::endl;
+      log(loglevel::info , "post_handler: {0}", ec.message());
       resp.result(http::status::bad_request);
       resp.set(http::field::content_type, "text/plain");
       beast::ostream(resp.body()) << "Error\r\n";
@@ -234,7 +233,9 @@ void img_session::post_handler()
 
 void img_session::get_handler()
 {
-   std::cout << "Get target: " << header_parser.get().target() << std::endl;
+   log( loglevel::debug
+      , "Get target: {0}"
+      , header_parser.get().target());
 
    std::string path;
 
@@ -246,7 +247,7 @@ void img_session::get_handler()
       path.append(st.extension.data(), std::size(st.extension));
    }
 
-   std::cout << "Path: " << path << std::endl;
+   log(loglevel::debug, "Get target path: {0}", path);
 
    if (std::empty(path)) {
       resp.result(http::status::not_found);
@@ -262,7 +263,7 @@ void img_session::get_handler()
    body.open(path.data(), beast::file_mode::scan, ec);
 
    if (ec) {
-      std::cout << ec.message() << std::endl;
+      log(loglevel::debug, "get_handler: {0}", ec.message());
       resp.result(http::status::not_found);
       resp.set(http::field::content_type, "text/plain");
       beast::ostream(resp.body()) << "File not found.\r\n";
@@ -297,18 +298,17 @@ void
 img_session::on_read_post_body( boost::system::error_code ec
                               , std::size_t n)
 {
-   std::cout << "===> size: " << n << std::endl;
+   log(loglevel::debug, "Body size: {0}.", n);
 
    if (ec) {
       // TODO: Use the correct code.
       resp.result(http::status::bad_request);
       resp.set(http::field::content_type, "text/plain");
       beast::ostream(resp.body()) << "File not found\r\n";
-      std::cout << "Error: " << ec.message() << std::endl;
-      std::cout << "docroot: " << cfg.doc_root << std::endl;
+      log(loglevel::info, "on_read_post_body: {0}.", ec.message());
    } else {
       resp.result(http::status::ok);
-      resp.set(http::field::server, "Beast");
+      resp.set(http::field::server, "occase-img");
    }
 
    resp.set(http::field::content_length, resp.body().size());
@@ -317,10 +317,11 @@ img_session::on_read_post_body( boost::system::error_code ec
 
 void img_session::on_read_header(boost::system::error_code ec, std::size_t n)
 {
-   for (auto const& field : header_parser.get())
-      std::cout << field.name() << " = " << field.value() << "\n";
+   if (!ignore_log(loglevel::debug)) { // Optimization.
+      for (auto const& field : header_parser.get())
+         log(loglevel::debug, "Header: {0} = {1}", field.name(), field.value());
+   }
 
-   std::cout << "on_read_header" << std::endl;
    resp.version(header_parser.get().version());
    resp.keep_alive(false);
 
@@ -344,8 +345,9 @@ void img_session::write_response()
    auto f = [self](auto ec, auto)
    {
       self->socket.shutdown(tcp::socket::shutdown_send, ec);
+
       if (ec)
-         std::cout << ec.message() << std::endl;
+         log(loglevel::info, "write_response: {0}", ec.message());
 
       self->deadline.cancel();
    };

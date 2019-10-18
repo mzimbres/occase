@@ -5,15 +5,15 @@
 namespace rt
 {
 
-struct img_session_cfg {
+struct mms_session_cfg {
    std::string doc_root;
-   std::string img_key;
+   std::string mms_key;
    std::uint64_t body_limit {1000000}; 
 };
 
-class img_session : public std::enable_shared_from_this<img_session> {
+class mms_session : public std::enable_shared_from_this<mms_session> {
 public:
-   using arg_type = img_session_cfg const&;
+   using arg_type = mms_session_cfg const&;
 
 private:
    using file_body_type = http::file_body;
@@ -39,7 +39,7 @@ private:
    std::unique_ptr<resp_body_type> file_body_resp;
    
    net::basic_waitable_timer<std::chrono::steady_clock> deadline;
-   img_session_cfg const& cfg;
+   mms_session_cfg const& cfg;
 
    void post_handler();
    void get_handler();
@@ -49,7 +49,7 @@ private:
    void check_deadline();
 public:
 
-   img_session(tcp::socket socket, arg_type arg, ssl::context& ctx);
+   mms_session(tcp::socket socket, arg_type arg, ssl::context& ctx);
    void run();
 };
 

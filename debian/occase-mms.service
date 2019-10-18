@@ -4,9 +4,9 @@ After=network.target
 
 [Service]
 Type=forking
-ExecStart=/usr/bin/occase-img /etc/occase/occase-img.conf
+ExecStart=/usr/bin/occase-mms /etc/occase/occase-mms.conf
 ExecStop=/bin/kill -s INT $MAINPID
-PIDFile=/run/occase-img.pid
+PIDFile=/run/occase-mms.pid
 Restart=always
 
 [Install]

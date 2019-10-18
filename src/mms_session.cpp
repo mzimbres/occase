@@ -1,4 +1,4 @@
-#include "img_session.hpp"
+#include "mms_session.hpp"
 
 #include <fstream>
 #include <iostream>
@@ -129,7 +129,7 @@ beast::string_view mime_type(beast::string_view path)
     return "application/text";
 }
 
-img_session::img_session( tcp::socket socket
+mms_session::mms_session( tcp::socket socket
                         , arg_type arg
                         , ssl::context& ctx)
 : socket(std::move(socket))
@@ -137,7 +137,7 @@ img_session::img_session( tcp::socket socket
 , cfg {arg}
 { }
 
-void img_session::run()
+void mms_session::run()
 {
    auto self = shared_from_this();
    auto f = [self](auto ec, auto n)
@@ -175,7 +175,7 @@ auto is_valid(splited_target const& st)
    return !std::empty(st.digest) && !std::empty(st.extension);
 }
 
-void img_session::post_handler()
+void mms_session::post_handler()
 {
    std::string path;
 
@@ -231,7 +231,7 @@ void img_session::post_handler()
    http::async_read(socket, buffer, *body_parser, f);
 }
 
-void img_session::get_handler()
+void mms_session::get_handler()
 {
    log( loglevel::debug
       , "Get target: {0}"
@@ -295,7 +295,7 @@ void img_session::get_handler()
 }
 
 void
-img_session::on_read_post_body( boost::system::error_code ec
+mms_session::on_read_post_body( boost::system::error_code ec
                               , std::size_t n)
 {
    log(loglevel::debug, "Body size: {0}.", n);
@@ -315,7 +315,7 @@ img_session::on_read_post_body( boost::system::error_code ec
    write_response();
 }
 
-void img_session::on_read_header(boost::system::error_code ec, std::size_t n)
+void mms_session::on_read_header(boost::system::error_code ec, std::size_t n)
 {
    if (!ignore_log(loglevel::debug)) { // Optimization.
       for (auto const& field : header_parser.get())
@@ -339,7 +339,7 @@ void img_session::on_read_header(boost::system::error_code ec, std::size_t n)
    }
 }
 
-void img_session::write_response()
+void mms_session::write_response()
 {
    auto self = shared_from_this();
    auto f = [self](auto ec, auto)
@@ -355,7 +355,7 @@ void img_session::write_response()
    http::async_write(socket, resp, f);
 }
 
-void img_session::check_deadline()
+void mms_session::check_deadline()
 {
    auto self = shared_from_this();
    auto f = [self](auto ec)

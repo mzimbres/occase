@@ -18,8 +18,8 @@ conf_final_dir = $(DESTDIR)$(confdir)
 service_final_dir = $(DESTDIR)$(systemddir)
 
 db_name = $(pkg_name)-db
-img_name = $(pkg_name)-img
-toolname = $(pkg_name)-tool
+mms_name = $(pkg_name)-mms
+menu_name = $(pkg_name)-menu
 monitorname = $(pkg_name)-monitor
 loadtoolname = $(pkg_name)-load-tool
 
@@ -46,11 +46,11 @@ VPATH = ./src
 
 exes =
 exes += publish_tests
-exes += db
-exes += menu_tool
+exes += $(db_name)
+exes += $(menu_name)
 exes += aedis
 exes += simulation
-exes += img
+exes += $(mms_name)
 exes += img_key_gen
 
 common_objs += menu.o
@@ -63,8 +63,8 @@ db_objs =
 db_objs += redis.o
 db_objs += utils.o
 
-imgserver_objs =
-imgserver_objs += img_session.o
+mms_objs =
+mms_objs += mms_session.o
 
 client_objs =
 client_objs += test_clients.o
@@ -79,7 +79,7 @@ exe_objs = $(addsuffix .o, $(exes))
 
 lib_objs =
 lib_objs += $(db_objs)
-lib_objs += $(imgserver_objs)
+lib_objs += $(mms_objs)
 lib_objs += $(client_objs)
 lib_objs += $(aedis_objs)
 lib_objs += $(menu_dump_objs)
@@ -113,13 +113,13 @@ simulation: % : %.o $(client_objs) $(common_objs)
 publish_tests: % : %.o $(client_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
-db: % : %.o $(db_objs) $(common_objs) $(aedis_objs) 
+$(db_name): % : %.o $(db_objs) $(common_objs) $(aedis_objs) 
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_CONCURRENCY_HINT_1=BOOST_ASIO_CONCURRENCY_HINT_UNSAFE
 
-img: % : %.o $(imgserver_objs) $(common_objs) $(aedis_objs)
+$(mms_name): % : %.o $(mms_objs) $(common_objs) $(aedis_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_CONCURRENCY_HINT_1=BOOST_ASIO_CONCURRENCY_HINT_UNSAFE
 
-menu_tool: % : %.o $(menu_dump_objs) $(common_objs)
+$(menu_name): % : %.o $(menu_dump_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(ext_libs) $(LDFLAGS)
 
 aedis: % : %.o $(aedis_objs) $(common_objs)
@@ -129,36 +129,32 @@ img_key_gen: % : %.o  $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS)
 
 load-tool: load-tool.sh.in
-	sed s/toolname/$(toolname)/ < $^ > $@
+	sed s/toolname/$(menu_name)/ < $^ > $@
 	chmod +x $@
 
 install: all
-	install -D db $(bin_final_dir)$(db_name)
-	install -D img $(bin_final_dir)$(img_name)
-	install -D menu_tool $(bin_final_dir)$(toolname)
+	install -D $(db_name) --target-directory $(bin_final_dir)
+	install -D $(mms_name) --target-directory $(bin_final_dir)
+	install -D $(menu_name) --target-directory $(bin_final_dir)
 	install -D monitor.sh $(bin_final_dir)$(monitorname)
 	install -D load-tool $(bin_final_dir)$(loadtoolname)
 	install -D doc/management.txt $(doc_final_dir)/management.txt
 	install -D doc/intro.txt $(doc_final_dir)/intro.txt
 	install -D doc/posts.txt $(doc_final_dir)/posts.txt
 	install -D config/$(db_name).conf $(conf_final_dir)/$(db_name).conf
-	install -D config/$(img_name).conf $(conf_final_dir)/$(img_name).conf
-	install -D config/$(db_name).service $(service_final_dir)/$(db_name).service
-	install -D config/$(img_name).service $(service_final_dir)/$(img_name).service
+	install -D config/$(mms_name).conf $(conf_final_dir)/$(mms_name).conf
 
 uninstall:
 	rm -f $(bin_final_dir)$(db_name)
-	rm -f $(bin_final_dir)$(img_name)
-	rm -f $(bin_final_dir)$(toolname)
+	rm -f $(bin_final_dir)$(mms_name)
+	rm -f $(bin_final_dir)$(menu_name)
 	rm -f $(bin_final_dir)$(monitorname)
 	rm -f $(bin_final_dir)$(loadtoolname)
 	rm -f $(doc_final_dir)/management.txt
 	rm -f $(doc_final_dir)/intro.txt
 	rm -f $(doc_final_dir)/posts.txt
 	rm -f $(conf_final_dir)/$(db_name).conf
-	rm -f $(conf_final_dir)/$(img_name).conf
-	rm -f $(service_final_dir)/$(db_name).service
-	rm -f $(service_final_dir)/$(img_name).service
+	rm -f $(conf_final_dir)/$(mms_name).conf
 	rmdir $(DESDIR)$(docdir)
 
 .PHONY: clean
@@ -171,7 +167,14 @@ $(tarball_name).tar.gz:
 .PHONY: dist
 dist: $(tarball_name).tar.gz
 
-backup_emails = laetitiapozwolski@yahoo.fr mzimbres@gmail.com bobkahnn@gmail.com coolcatlookingforakitty@gmail.com
+.PHONY: deb
+deb: dist
+	rm -rf tmp; mkdir tmp; mv $(tarball_name).tar.gz tmp; cd tmp; \
+	ln $(tarball_name).tar.gz occase_1.0.0.orig.tar.gz; \
+	tar -xvvzf $(tarball_name).tar.gz; \
+	cd $(tarball_dir)/debian; debuild --no-sign -j1
+
+backup_emails = laetitiapozwolski@yahoo.fr mzimbres@gmail.com bobkahnn@gmail.com occase.app@gmail.com
 
 .PHONY: backup
 backup: $(tarball_name).tar.gz

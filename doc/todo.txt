@@ -1,0 +1,16 @@
+
+* Clear the lintian errors when generating debian packages.
+
+W: occase source: obsolete-field-in-dep5-copyright maintainer upstream-contact (line 2)
+W: occase source: space-in-std-shortname-in-dep5-copyright marcelo zimbres (paragraph at line 6)
+W: occase-tools: new-package-should-close-itp-bug
+W: occase-tools: package-relation-with-self breaks: occase-tools (<< 1.0.0-0)
+W: occase-tools: binary-without-manpage usr/bin/occase-menu
+W: occase-db: new-package-should-close-itp-bug
+W: occase-db: package-relation-with-self breaks: occase-db (<< 1.0.0-0)
+W: occase-db: binary-without-manpage usr/bin/occase-db
+W: occase-mms: new-package-should-close-itp-bug
+W: occase-mms: description-synopsis-starts-with-article
+W: occase-mms: package-relation-with-self breaks: occase-mms (<< 1.0.0-0)
+W: occase-mms: binary-without-manpage usr/bin/occase-mms
+

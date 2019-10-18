@@ -18,7 +18,7 @@
 #include "crypto.hpp"
 #include "logger.hpp"
 #include "system.hpp"
-#include "img_session.hpp"
+#include "mms_session.hpp"
 #include "acceptor_mgr.hpp"
 
 struct server_cfg {
@@ -28,7 +28,7 @@ struct server_cfg {
    bool daemonize = false;
    std::string pidfile;
    std::string loglevel;
-   rt::img_session_cfg cfg;
+   rt::mms_session_cfg cfg;
    int number_of_fds = -1;
    int max_listen_connections;
 };
@@ -86,7 +86,7 @@ auto get_cfg(int argc, char* argv[])
    , "Runs the server in the backgroud as daemon process.")
 
    ("img-key"
-   , po::value<std::string>(&cfg.cfg.img_key)
+   , po::value<std::string>(&cfg.cfg.mms_key)
    , "See websocket server for information.")
 
    ( "max-listen-connections"
@@ -144,7 +144,7 @@ int main(int argc, char* argv[])
 
       net::io_context ioc {1};
       ssl::context ctx {ssl::context::tlsv12};
-      acceptor_mgr<img_session> lst {ioc};
+      acceptor_mgr<mms_session> lst {ioc};
       lst.run(cfg.cfg, ctx, cfg.port, cfg.max_listen_connections);
       drop_root_priviledges();
       ioc.run();

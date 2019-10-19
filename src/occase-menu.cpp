@@ -11,7 +11,7 @@
 
 #include "menu.hpp"
 #include "fipe.hpp"
-#include "json_utils.hpp"
+#include "post.hpp"
 
 using namespace rt;
 
@@ -19,7 +19,7 @@ struct menu_op {
    int sim_length;
    int oformat;
    int depth;
-   std::vector<std::string> files;
+   std::string channels_file;
    std::string fipe_tipo;
    bool validate = false;
    bool fipe = false;
@@ -116,8 +116,7 @@ menu_info convert_to_menu_info(std::string const& data)
           , std::stoi(data.substr(p2 + 1))};
 }
 
-menu_elem
-convert_to_menu_elem(std::string const& file_info_raw)
+menu_elem convert_to_menu_elem(std::string const& file_info_raw)
 {
    using iter_type = std::istreambuf_iterator<char>;
 
@@ -138,37 +137,42 @@ convert_to_menu_elem(std::string const& file_info_raw)
 
 int impl(menu_op const& op)
 {
+   if (std::empty(op.channels_file))
+      return 1;
+
    if (op.oformat == 5) {
-      std::cerr << "Unsuported." << std::endl;
-      //std::vector<menu_elem> elems;
-      //for (auto const& e : op.files)
-      //   elems.push_back(convert_to_menu_elem(e));
+      auto const elem = convert_to_menu_elem(op.channels_file);
+      auto const codes = menu_elems_to_codes(elem);
 
-      //auto const hash_codes = menu_elems_to_codes(elems);
-      //auto const channels = channel_codes(hash_codes, elems);
-      //for (auto const& c : channels)
-      //   std::cout << to_hash_code(c) << std::endl;
+      channels_type channels;
+      channels.reserve(std::size(codes));
 
-      return 0;
-   }
+      auto f = [&](auto const& code)
+         { return to_hash_code(code, elem.depth); };
 
-   if (op.oformat == 4) {
-      std::vector<menu_elem> elems;
-      for (auto const& e : op.files) {
-         auto elem = convert_to_menu_elem(e);
-         elems.push_back(std::move(elem));
-      }
+      std::transform( std::cbegin(codes)
+                    , std::cend(codes)
+                    , std::back_inserter(channels)
+                    , f);
+
+      std::sort(std::begin(channels), std::end(channels));
 
       json j;
-      j["menus"] = elems;
+      j["channels"] = channels;
+
       std::cout << j.dump() << std::flush;
       return 0;
    }
 
-   if (std::empty(op.files))
+   if (op.oformat == 4) {
+      auto const elem = convert_to_menu_elem(op.channels_file);
+      json j;
+      j["menus"] = std::vector<menu_elem>{elem};
+      std::cout << j.dump() << std::flush;
       return 0;
+   }
 
-   menu_info minfo = convert_to_menu_info(op.files.front());
+   menu_info minfo = convert_to_menu_info(op.channels_file);
 
    auto const raw_menu = get_file_as_str(minfo.file, op.sim_length);
    auto menu_str = raw_menu;
@@ -206,10 +210,9 @@ int main(int argc, char* argv[])
         " 1: \tNode depth with indentation.\n"
         " 2: \tNode depth from line first digit.\n"
         " 3: \tOutput hash codes at certain depth (see -d option).\n"
-        " 4: \tPacks the output in json format ready to be loaded on redis. "
+        " 4: \tPacks the output in json format ready to be used by the app. "
         "Will automatically use field-separator ';' and --validate.\n"
-        " 5: \tSimilar to 6 but outputs the combined codes that will "
-        "become the channels hash codes."
+        " 5: \tPacks the output in json format ready to be loaded on redis."
       )
       ("sim-length,l"
       , po::value<int>(&op.sim_length)->default_value(2)
@@ -217,11 +220,12 @@ int main(int argc, char* argv[])
       )
       ("depth,d"
       , po::value<int>(&op.depth)->default_value(std::numeric_limits<int>::max())
-      , "Influences the output."
-      )
-      ("files,f"
-      , po::value<std::vector<std::string>>(&op.files)
-      , "The file containing the menu. If empty, the menu will be simulated.")
+      , "Influences the output.")
+
+      ("channels-file,f"
+      , po::value<std::string>(&op.channels_file)
+      , "The file containing the channels.")
+
       ("fipe-tipo,k"
       , po::value<std::string>(&op.fipe_tipo)->default_value("1")
       , "Controls which field of the fipe table is read:\n"
@@ -239,7 +243,7 @@ int main(int argc, char* argv[])
    ;
 
    po::positional_options_description pos;
-   pos.add("files", -1);
+   pos.add("channels-file", -1);
 
    po::variables_map vm;        
    po::store(po::command_line_parser(argc, argv).

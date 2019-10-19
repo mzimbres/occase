@@ -29,7 +29,8 @@ using namespace rt::cli;
 namespace po = boost::program_options;
 
 struct options {
-   std::string menu; // In json format.
+   channels_type channels;
+   channels_type filters;
    std::string host {"127.0.0.1"};
    std::string port {"8080"};
    int n_publishers = 10;
@@ -78,6 +79,19 @@ struct options {
       };
    }
 };
+
+channels_type make_channels(std::string const& filename)
+{
+   if (std::empty(filename))
+      throw std::runtime_error("Filename cannot be empty.");
+
+   using iter_type = std::istreambuf_iterator<char>;
+
+   std::ifstream ifs {filename};
+   auto const content = std::string {iter_type {ifs}, {}};
+   auto const j = json::parse(content);
+   return j.at("channels").get<channels_type>();
+}
 
 class timer {
 private:
@@ -140,13 +154,9 @@ void start_leave_after_sub_ack(options const& op)
    using client_type = leave_after_sub_ack;
    using config_type = client_type::options_type;
 
-   auto const j_menu = json::parse(op.menu);
-   auto const menus = j_menu.at("menus").get<menu_elems_array_type>();
-   auto const channels = create_channels2(menus);
-
    auto const s = std::make_shared<session_launcher<client_type>
                    >( ioc
-                    , config_type {{}, channels}
+                    , config_type {{}, op.channels, op.filters}
                     , op.make_session_cf()
                     , op.make_cfg(logins)
                     );
@@ -174,7 +184,8 @@ void test_online(options const& op)
 
       auto const s = std::make_shared<session_launcher<publisher>
                       >( ioc
-                       , config_type {{}, op.n_repliers, op.menu}
+                       , config_type 
+                         {{}, op.n_repliers, op.channels, op.filters}
                        , op.make_session_cf()
                        , op.make_pub_cfg(logins1)
                        );
@@ -194,7 +205,8 @@ void test_online(options const& op)
 
       auto const s = std::make_shared<session_launcher<client_type>
                       >( ioc
-                       , config_type {{}, op.n_publishers, op.menu}
+                       , config_type
+                         {{}, op.n_publishers, op.channels, op.filters}
                        , op.make_session_cf()
                        , op.make_cfg(logins2)
                        );
@@ -213,20 +225,17 @@ void test_online(options const& op)
    using client_type = leave_after_n_posts;
    using config_type = client_type::options_type;
 
-
-   auto const j_menu = json::parse(op.menu);
-   auto const menu = j_menu.at("menus").get<menu_elems_array_type>();
-   auto const menu_codes = create_channels(menu);
-   auto const n = ssize(menu_codes.at(0))
-                * ssize(menu_codes.at(1))
+   auto const n = ssize(op.channels)
+                * ssize(op.filters)
                 * op.n_publishers;
 
+   //std::cout << "Test online: waiting: " << n << std::endl;
+   //std::cout << "Test online size1: " << std::size(logins3) << std::endl;
    auto const s = std::make_shared<session_launcher<client_type>
                   >( ioc
                    , config_type {{}, n}
                    , op.make_session_cf()
-                   , op.make_cfg(logins3)
-                   );
+                   , op.make_cfg(logins3));
    
    s->set_on_end(next2);
    s->run({});
@@ -251,7 +260,9 @@ void test_offline(options const& op)
       std::make_shared<session_type1>( ioc
                                      , op.make_session_cf()
                                      , config_type1
-                                       {l1.front(), op.menu});
+                                       { l1.front()
+                                       , op.channels
+                                       , op.filters});
    s1->run();
    ioc.run();
    auto post_ids = s1->get_mgr().get_post_ids();
@@ -268,7 +279,10 @@ void test_offline(options const& op)
    std::make_shared<session_type2>( ioc
                                   , op.make_session_cf()
                                   , config_type2
-                                    {l2.front(), 1, op.menu}
+                                    { l2.front()
+                                    , 1
+                                    , op.channels
+                                    , op.filters}
                                   )->run();
    ioc.restart();
    ioc.run();
@@ -401,15 +415,20 @@ void test_early_close(options const& op)
 int main(int argc, char* argv[])
 {
    try {
-      std::string menu_file;
+      std::string channels_file;
+      std::string filters_file;
       options op;
       po::options_description desc("Options");
       desc.add_options()
          ("help,h", "Produces the help message.")
 
-         ( "menu,m"
-         , po::value<std::string>(&menu_file)
-         , "File with menu in json format.")
+         ( "channels-file,m"
+         , po::value<std::string>(&channels_file)
+         , "File with channels in json format.")
+
+         ( "filters-file"
+         , po::value<std::string>(&filters_file)
+         , "File with the filters in json format.")
 
          ( "port,p"
          , po::value<std::string>(&op.port)->default_value("8080")
@@ -462,16 +481,10 @@ int main(int argc, char* argv[])
          return 0;
       }
 
-      if (std::empty(menu_file)) {
-         std::cerr << "Menu option cannot be empty." << std::endl;
-         return 1;
-      }
+      op.channels = make_channels(channels_file);
+      op.filters = make_channels(filters_file);
 
-      using iter_type = std::istreambuf_iterator<char>;
-      std::ifstream ifs {menu_file};
-      op.menu = std::string {iter_type {ifs}, {}};
-
-      set_fd_limits(500000);
+      set_fd_limits(100000);
 
       switch (op.test)
       {

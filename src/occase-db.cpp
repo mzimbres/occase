@@ -170,10 +170,10 @@ auto get_cfg(int argc, char* argv[])
    , "The maximum allowed size of pipelined commands in the redis "
      " session.")
 
-   ( "redis-key-menu"
-   , po::value<std::string>(&cfg.worker.db.cfg.menu_key)->
-        default_value("menu")
-   , "Redis key holding the menus in json format.")
+   ( "redis-key-channels"
+   , po::value<std::string>(&cfg.worker.db.cfg.channels_key)->
+        default_value("channels")
+   , "Redis key holding the channels in json format.")
 
    ( "redis-key-post-id"
    , po::value<std::string>(&cfg.worker.db.cfg.post_id_key)->

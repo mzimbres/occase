@@ -7,11 +7,23 @@
 #include <limits>
 #include <cstdint>
 
+#include "post.hpp"
 #include "utils.hpp"
-#include "json_utils.hpp"
 
 namespace rt
 {
+
+struct menu_elem {
+   std::string data;
+   int depth = 0;
+   int version = 0;
+};
+
+void to_json(json& j, menu_elem const& e);
+void from_json(json const& j, menu_elem& e);
+
+using channel_code_type = std::vector<int>;
+using menu_channel_elem_type = std::vector<channel_code_type>;
 
 std::string to_str_raw(int i, int width, char fill);
 std::string to_str(int i);
@@ -292,7 +304,7 @@ public:
 };
 
 inline
-std::uint64_t to_channel_hash_code_d1(channel_code_type const& c)
+code_type to_channel_hash_code_d1(channel_code_type const& c)
 {
    if (std::size(c) < 1)
       return 0;
@@ -301,13 +313,13 @@ std::uint64_t to_channel_hash_code_d1(channel_code_type const& c)
 }
 
 inline
-std::uint64_t to_channel_hash_code_d2(channel_code_type const& c)
+code_type to_channel_hash_code_d2(channel_code_type const& c)
 {
    if (std::size(c) < 2)
       return 0;
 
-   std::uint64_t ca = c[0];
-   std::uint64_t cb = c[1];
+   code_type ca = c[0];
+   code_type cb = c[1];
 
    constexpr auto shift = 32;
 
@@ -316,14 +328,14 @@ std::uint64_t to_channel_hash_code_d2(channel_code_type const& c)
 }
 
 inline
-std::uint64_t to_channel_hash_code_d3(channel_code_type const& c)
+code_type to_channel_hash_code_d3(channel_code_type const& c)
 {
    if (std::size(c) < 3)
       return 0;
 
-   std::uint64_t ca = c[0];
-   std::uint64_t cb = c[1];
-   std::uint64_t cc = c[2];
+   code_type ca = c[0];
+   code_type cb = c[1];
+   code_type cc = c[2];
 
    constexpr auto shift = 21;
 
@@ -333,15 +345,15 @@ std::uint64_t to_channel_hash_code_d3(channel_code_type const& c)
 }
 
 inline
-std::uint64_t to_channel_hash_code_d4(channel_code_type const& c)
+code_type to_channel_hash_code_d4(channel_code_type const& c)
 {
    if (std::size(c) < 4)
       return 0;
 
-   std::uint64_t ca = c[0];
-   std::uint64_t cb = c[1];
-   std::uint64_t cc = c[2];
-   std::uint64_t cd = c[3];
+   code_type ca = c[0];
+   code_type cb = c[1];
+   code_type cc = c[2];
+   code_type cd = c[3];
 
    constexpr auto shift = 16;
 
@@ -363,7 +375,7 @@ std::uint64_t to_channel_hash_code_d4(channel_code_type const& c)
  * extended for other sizes.
  */
 inline
-std::uint64_t to_hash_code(channel_code_type const& c, int depth)
+code_type to_hash_code(channel_code_type const& c, int depth)
 {
    switch (depth) {
       case 1: return to_channel_hash_code_d1(c);
@@ -378,12 +390,9 @@ std::uint64_t to_hash_code(channel_code_type const& c, int depth)
 
 menu_channel_elem_type menu_elems_to_codes(menu_elem const& elem);
 
-std::vector<int>
-read_versions(menu_elems_array_type const& elems);
-
 // Converts a vector of menu codes into a vector of channel hash codes
 // sorts the vector and returns it.
-std::vector<std::uint64_t>
+std::vector<code_type>
 menu_to_channel_codes( menu_channel_elem_type const& o
                      , int depth
                      , int max);

@@ -61,7 +61,7 @@ void facade::on_chat_pub_conn()
 
 void facade::retrieve_menu()
 {
-   ss_menu_pub.send(get(cfg.menu_key));
+   ss_menu_pub.send(get(cfg.channels_key));
    menu_pub_queue.push(request::menu);
 }
 
@@ -113,9 +113,9 @@ facade::on_menu_pub( boost::system::error_code const& ec
       assert(std::stoi(data.front()) == 1);
    }
 
-   if (menu_pub_queue.front() != request::posts) {
-      assert(!std::empty(data));
-   }
+   //if (menu_pub_queue.front() != request::posts) {
+   //   assert(!std::empty(data));
+   //}
 
    // This session is not subscribed to any unsolicited message.
    assert(!std::empty(menu_pub_queue));

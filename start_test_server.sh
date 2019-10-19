@@ -13,7 +13,7 @@ menu0=${menu_dir}/locations.txt:${menu_depth}:${menu_version}
 menu1=${menu_dir}/products.txt:${menu_depth}:${menu_version}
 
 redis-cli flushall
-./menu_tool -o 4 $menu0 $menu1 | redis-cli -x set menu
+./occase-menu -o 5 $menu1 | redis-cli -x set channels
 
 # We start the server and put it on the background. Consider starting
 # many server instances.

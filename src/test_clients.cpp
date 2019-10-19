@@ -4,7 +4,7 @@
 #include "client_session.hpp"
 #include "session_launcher.hpp"
 
-namespace rt
+namespace rt::cli
 {
 
 std::vector<std::string> const nicks
@@ -40,85 +40,37 @@ std::string make_login_cmd(rt::cli::login const& user)
    return j.dump();
 }
 
-std::string make_post_cmd(rt::menu_code_type const& menu_code)
+std::string make_post_cmd(code_type channel, code_type filter)
 {
    json sub;
    sub["msg"] = "Not an interesting message.";
    sub["nick"] = "Wheeler";
    sub["avatar"] = "9ac8316ca55e6d888d43092fd73a78d6";
-   sub["ex_details"] = std::vector<std::uint64_t>{};
-   sub["in_details"] = std::vector<std::uint64_t>{};
+   sub["ex_details"] = std::vector<code_type>{};
+   sub["in_details"] = std::vector<code_type>{};
 
-   rt::post item {-1, {}, sub.dump(), menu_code, 0, 0, {}};
+   rt::post item { -1
+                 , {}
+                 , sub.dump()
+                 , channel
+                 , filter
+                 , 0
+                 , 0
+                 , {}};
    json j;
    j["cmd"] = "publish";
    j["items"] = std::vector<rt::post>{item};
    return j.dump();
 }
 
-/* This function receives input in the form
- *
- *   _________menu_1__________    ___________menu_2________
- *  |                         |  |                         |
- * [[[1, 2, 3], [3, 4, 1], ...], [[a, b, c], [d, e, f], ...]]
- *
- * The menu_1 may refer to regions of a country and menu_2 to a
- * product for example.  The inner most array contains the coordinates
- * of the menu items the user wants to subscribe to. It has the form
- *
- *    [1, 2, 3, ..]
- *
- * Each position in this array refers to a level in the menu, for
- * example
- *
- *    [State, City, Neighbourhood]
- *
- * This array is contained in another array with the other channels
- * the user wants to subscribe to, for example
- *
- *    [Sao Paulo, Atibaia, Vila Santista]
- *    [Sao Paulo, Atibaia, Centro]
- *    [Sao Paulo, Campinas, Barao Geraldo]
- *    ...
- *
- * These arrays in turn are grouped in the outer most array where each
- * element corresponds to a menu. There will be typically two or three
- * menus per app.
- * 
- * The function respects the menu depth, so if the menu coodinates
- * have length 6 but the the hash codes are generate for depth 2 only
- * the first two elements will be considered.
- *
- * The output is the combination of the codes respecting the depths.
- * For the input array above the output would be
- *
- * [[[[1, 2], [a, b]]], [[[1, 2], [c, d]]], ..., [[[3, 4], [a, b]]], ...
- *
- * Each element of the outermost array will have length one.
- */
-std::vector<menu_code_type>
-channel_codes( menu_code_type const& channels
-             , menu_elems_array_type const& menus)
+std::vector<pub_helper>
+channel_codes( channels_type const& channels
+             , channels_type const& filters)
 {
-   std::vector<menu_code_type> ret;
-   for (auto i = 0; i < ssize(channels.at(0)); ++i) {
-      for (auto j = 0; j < ssize(channels.at(1)); ++j) {
-         auto begin0 = std::begin(channels.at(0).at(i));
-         auto end0 = begin0 + menus.at(0).depth;
-
-         auto begin1 = std::begin(channels.at(1).at(j));
-         auto end1 = begin1 + menus.at(1).depth;
-
-         channel_code_type c0 {begin0, end0};
-         channel_code_type c1 {begin1, end1};
-
-         menu_channel_elem_type d0 {c0};
-         menu_channel_elem_type d1 {c1};
-
-         menu_code_type foo {d0, d1};
-         ret.push_back(foo);
-      }
-   }
+   std::vector<pub_helper> ret;
+   for (auto i = 0; i < ssize(channels); ++i)
+      for (auto j = 0; j < ssize(filters); ++j)
+         ret.push_back({-1, channels.at(i), filters.at(j)});
 
    return ret;
 }
@@ -132,40 +84,20 @@ void check_result( json const& j
       throw std::runtime_error(error);
 }
 
-}
-
-namespace rt::cli
-{
-
-menu_code_type create_channels(menu_elems_array_type const& menus)
-{
-   auto const c0 = menu_elems_to_codes(menus.at(0));
-   auto const c1 = menu_elems_to_codes(menus.at(1));
-   return {c0, c1};
-}
-
-menu_code_type2 create_channels2(menu_elems_array_type const& menus)
-{
-   auto const max = std::numeric_limits<int>::max();
-   auto const c0 = menu_elems_to_codes(menus.at(0));
-   auto const c1 = menu_elems_to_codes(menus.at(1));
-   auto const r0 = menu_to_channel_codes(c0, menus.at(0).depth, max);
-   auto const r1 = menu_to_channel_codes(c1, menus.at(1).depth, max);
-   return {r0, r1};
-}
-
-std::string make_sub_payload(menu_code_type2 const& channels)
+std::string
+make_sub_payload( channels_type const& channels
+                , channels_type const& filters)
 {
    json j_sub;
    j_sub["cmd"] = "subscribe";
    j_sub["last_post_id"] = 0;
    j_sub["channels"] = channels;
+   j_sub["filters"] = filters;
    j_sub["any_of_features"] = 0;
    return j_sub.dump();
 }
 
-int replier::on_read( std::string msg
-                    , std::shared_ptr<client_type> s)
+int replier::on_read(std::string msg, std::shared_ptr<client_type> s)
 {
    auto const j = json::parse(msg);
 
@@ -173,20 +105,15 @@ int replier::on_read( std::string msg
    if (cmd == "login_ack") {
       check_result(j, "ok", "replier::login_ack");
 
-      auto const j_menu = json::parse(op.menu);
-      menus = j_menu.at("menus").get<menu_elems_array_type>();
-
-      auto const menu_codes_0 = menu_elems_to_codes(menus.at(0));
-      auto const menu_codes_1 = menu_elems_to_codes(menus.at(1));
-
       to_receive_posts = op.n_publishers
-                       * std::size(menu_codes_0)
-                       * std::size(menu_codes_1);
+                       * std::size(op.channels)
+                       * std::size(op.filters);
 
-      //std::cout << "Sub: User " << op.user << " expects: " << to_receive_posts
-      //          << std::endl;
+      std::cout << "Sub: User " << op.user
+                << " expects: " << to_receive_posts
+                << std::endl;
 
-      s->send_msg(make_sub_payload(create_channels2(menus)));
+      s->send_msg(make_sub_payload(op.channels, op.filters));
       return 1;
    }
 
@@ -209,6 +136,8 @@ int replier::on_read( std::string msg
    if (cmd == "message") {
       auto const type = j.at("type").get<std::string>();
       if (type == "server_ack") {
+         //std::cout << "Codition not met: " << (to_receive_posts - 1)
+         //          << std::endl;
          if (--to_receive_posts == 0) {
             std::cout << "User " << op.user << " done. (Replier)."
                       << std::endl;
@@ -302,7 +231,7 @@ leave_after_sub_ack::on_read( std::string msg
    auto const cmd = j.at("cmd").get<std::string>();
    if (cmd == "login_ack") {
       check_result(j, "ok", "leave_after_sub_ack::login_ack");
-      s->send_msg(make_sub_payload(op.channels));
+      s->send_msg(make_sub_payload(op.channels, op.filters));
       return 1;
    }
 
@@ -348,7 +277,7 @@ leave_after_n_posts::on_read( std::string msg
    if (cmd == "login_ack") {
       check_result(j, "ok", "leave_after_n_posts::login_ack");
 
-      s->send_msg(make_sub_payload({}));
+      s->send_msg(make_sub_payload({}, {}));
       return 1;
    }
 
@@ -404,7 +333,7 @@ int simulator::on_read( std::string msg
    auto const cmd = j.at("cmd").get<std::string>();
    if (cmd == "login_ack") {
       check_result(j, "ok", "simulator::login_ack");
-      s->send_msg(make_sub_payload({}));
+      s->send_msg(make_sub_payload({}, {}));
       return 1;
    }
 
@@ -523,19 +452,13 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
    if (cmd == "login_ack") {
       check_result(j, "ok", "publisher::login_ack");
 
-      auto const j_menu = json::parse(op.menu);
-      auto const menus = j_menu.at("menus").get<menu_elems_array_type>();
-      auto const menu_codes = create_channels(menus);
-      auto const pub_codes = channel_codes(menu_codes, menus);
-
-      assert(!std::empty(pub_codes));
-
+      auto const pub_codes = channel_codes(op.channels, op.filters);
       auto pusher = [this](auto const& o)
-         { pub_stack.push({-1, o}); };
+         { pub_stack.push(o); };
 
       std::for_each(std::begin(pub_codes), std::end(pub_codes), pusher);
 
-      s->send_msg(make_sub_payload(create_channels2(menus)));
+      s->send_msg(make_sub_payload(op.channels, op.filters));
       return 1;
    }
 
@@ -546,7 +469,7 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
 
    if (cmd == "publish_ack") {
       check_result(j, "ok", "publisher::publish_ack");
-      pub_stack.top().first = j.at("id").get<int>();
+      pub_stack.top().id = j.at("id").get<int>();
       //std::cout << op.user << " publish_ack " << post_id << std::endl;
       return handle_msg(s);
    }
@@ -574,7 +497,7 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
       // Since we send only one publish at time items should contain
       // only one item now.
 
-      if (pub_stack.top().first != items.front().id)
+      if (pub_stack.top().id != items.front().id)
          throw std::runtime_error("publisher::publish2");
 
       //std::cout << op.user << " publish echo " << post_id << std::endl;
@@ -595,8 +518,8 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
             throw std::runtime_error("publisher::on_read5");
 
          auto const post_id2 = j.at("post_id").get<int>();
-         if (pub_stack.top().first != post_id2) {
-            std::cout << op.user << " " << pub_stack.top().first << " != " << post_id2
+         if (pub_stack.top().id != post_id2) {
+            std::cout << op.user << " " << pub_stack.top().id << " != " << post_id2
                       << " " << msg << std::endl;
             throw std::runtime_error("publisher::on_read6");
          }
@@ -630,12 +553,12 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
 
 int publisher::handle_msg(std::shared_ptr<client_type> s)
 {
-   if (server_echo && pub_stack.top().first != -1 && user_msg_counter == 0) {
+   if (server_echo && pub_stack.top().id != -1 && user_msg_counter == 0) {
       // We are done with this post and can delete it from the server.
       json j_sub;
       j_sub["cmd"] = "delete";
-      j_sub["id"] = pub_stack.top().first;
-      j_sub["to"] = pub_stack.top().second;
+      j_sub["id"] = pub_stack.top().id;
+      j_sub["to"] = pub_stack.top().channel;
       s->send_msg(j_sub.dump());
    }
 
@@ -657,7 +580,10 @@ int publisher::on_closed(boost::system::error_code ec)
 
 int publisher::send_post(std::shared_ptr<client_type> s) const
 {
-   auto const str = make_post_cmd(pub_stack.top().second);
+   auto const str =
+      make_post_cmd( pub_stack.top().channel
+                   , pub_stack.top().filter);
+
    s->send_msg(str);
    return 1;
 }
@@ -672,15 +598,9 @@ int publisher2::on_read(std::string msg, std::shared_ptr<client_type> s)
    if (cmd == "login_ack") {
       check_result(j, "ok", "publisher2::login_ack");
 
-      auto const j_menu = json::parse(op.menu);
-      auto const menus = j_menu.at("menus").get<menu_elems_array_type>();
-      auto const menu_codes = create_channels(menus);
-      auto const pub_codes = channel_codes(menu_codes, menus);
-
-      assert(!std::empty(pub_codes));
-
+      auto const pub_codes = channel_codes(op.channels, op.filters);
       auto f = [s, this](auto const& o)
-         { pub(o, s); };
+         { pub(o.channel, o.filter, s); };
 
       // Sending the publishes without waiting for the acks is not the
       // expected way to use the server. At the moment however nothing
@@ -726,8 +646,9 @@ int publisher2::on_closed(boost::system::error_code ec)
    return -1;
 };
 
-int publisher2::pub( menu_code_type const& pub_code
-                 , std::shared_ptr<client_type> s) const
+int publisher2::pub( code_type channel
+                   , code_type filter
+                   , std::shared_ptr<client_type> s) const
 {
    json sub;
    sub["msg"] = "Not an interesting message.";
@@ -736,7 +657,14 @@ int publisher2::pub( menu_code_type const& pub_code
    sub["ex_details"] = std::vector<std::uint64_t>{};
    sub["in_details"] = std::vector<std::uint64_t>{};
 
-   post item {-1, op.user.id, sub.dump(), pub_code, 0, 0, {}};
+   post item { -1
+             , op.user.id
+             , sub.dump()
+             , channel
+             , filter
+             , 0
+             , 0
+             , {}};
 
    json j_msg;
    j_msg["cmd"] = "publish";
@@ -879,8 +807,7 @@ int early_close::on_handshake(std::shared_ptr<client_type> s)
 
 void early_close::send_post(std::shared_ptr<client_type> s) const
 {
-   auto const code = menu_code_type {{{{0, 0, 0, 0}}, {{0, 0, 0, 0}}}};
-   auto const str = make_post_cmd(code);
+   auto const str = make_post_cmd(0, 0);
    s->send_msg(str, -1);
 }
 

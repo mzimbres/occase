@@ -6,9 +6,9 @@
 #include <vector>
 #include <algorithm>
 
+#include "post.hpp"
 #include "menu.hpp"
 #include "utils.hpp"
-#include "json_utils.hpp"
 #include "db_plain_session.hpp"
 
 namespace rt
@@ -126,22 +126,19 @@ private:
    }
 
 public:
-   void broadcast(post item, int hash_depth)
+   void broadcast(post item)
    {
       json j_pub;
       j_pub["cmd"] = "post";
       j_pub["items"] = std::vector<post>{item};
 
-      auto const hash_code =
-         to_hash_code( item.to.at(0).at(0)
-                     , hash_depth);
-
+      auto const filter = item.filter;
       auto const features = item.features;
       auto msg = std::make_shared<std::string>(j_pub.dump());
       store_item(std::move(item));
 
-      auto f = [msg, features, hash_code](auto session)
-         { session->send_post(msg, hash_code, features); };
+      auto f = [msg, features, filter](auto session)
+         { session->send_post(msg, filter, features); };
 
       cleanup_traversal(f);
       insertions_on_inactivity = 0;

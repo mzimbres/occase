@@ -19,13 +19,13 @@
 
 #include "net.hpp"
 #include "menu.hpp"
+#include "post.hpp"
 #include "utils.hpp"
 #include "redis.hpp"
 #include "logger.hpp"
 #include "crypto.hpp"
 #include "channel.hpp"
 #include "db_session.hpp"
-#include "json_utils.hpp"
 #include "stats_server.hpp"
 #include "acceptor_mgr.hpp"
 
@@ -99,10 +99,10 @@ private:
 
    // The channels are stored in a vector and the channel hash codes
    // separately in another vector. The last element in the
-   // channel_hashes is used as sentinel to perform fast linear
+   // tmp_channels is used as sentinel to perform fast linear
    // searches.
-   std::vector<std::uint64_t> channel_hashes;
-   std::vector<channel<Session>> channels;
+   channels_type tmp_channels;
+   std::vector<channel<Session>> channel_objs;
 
    // Apps that do not register for any product channels (the seconds
    // item in the menu) will receive posts from any channel. This is
@@ -112,8 +112,6 @@ private:
 
    // Facade to redis.
    redis::facade db;
-
-   menu_elems_array_type menu;
 
    // Queue of user posts waiting for an id that has been requested
    // from redis.
@@ -151,46 +149,25 @@ private:
       db.run();
    }
 
-   void create_channels(menu_elems_array_type const& me)
+   void create_channels()
    {
-      assert(std::empty(channel_hashes));
-      assert(std::empty(channels));
+      assert(std::empty(channel_objs));
 
-      channel_hashes.clear();
-      channels.clear();
+      // Reserve the exact amount of memory that will be needed. The
+      // vector with the channels will also hold the sentinel to make
+      // linear searches faster.
+      channel_objs.resize(std::size(tmp_channels));
 
-      // Channels are created only for the second menu element.
-      auto const hashes = menu_elems_to_codes(me.at(idx::b));
-
-      // Reserver the exact amount of memory that will be needed. The
-      // vector with hashes will also hold the sentinel to make linear
-      // searches faster.
-      channel_hashes.reserve(std::size(hashes) + 1);
-      channels.reserve(std::size(hashes));
-
-      auto f = [&](auto const& code)
-         { return to_hash_code(code, me.at(idx::b).depth); };
-
-      std::transform( std::cbegin(hashes)
-                    , std::cend(hashes)
-                    , std::back_inserter(channel_hashes)
-                    , f);
-
-      channels.resize(std::size(channel_hashes));
-
-      std::sort(std::begin(channel_hashes), std::end(channel_hashes));
-
-      // Inserts an element that will be used as sentinel.
-      channel_hashes.push_back(0);
+      // Inserts an element that will be used as sentinel on linear
+      // searches.
+      tmp_channels.push_back(0);
 
       log( loglevel::info
          , "Number of channels created: {0}"
-         , std::size(channels));
+         , std::size(channel_objs));
    }
 
-
-   ev_res on_app_login( json const& j
-                      , std::shared_ptr<Session> s)
+   ev_res on_app_login(json const& j, std::shared_ptr<Session> s)
    {
       auto const user = j.at("user").get<std::string>();
       s->set_id(user);
@@ -217,47 +194,36 @@ private:
 
    ev_res on_app_subscribe(json const& j, std::shared_ptr<Session> s)
    {
-      auto const codes = j.at("channels").get<menu_code_type2>();
-
-      // The codes above have the form
-      //
-      //      ____menu_1_____    ____menu_2__ 
-      //     |               |  |            |
-      //    [[a, b, c, d, ...], [e, f, g, ...]]
-      //
+      auto const channels = j.at("channels").get<channels_type>();
+      auto const filters = j.at("filters").get<channels_type>();
 
       auto const b0 =
-         std::is_sorted( std::cbegin(codes.at(idx::a))
-                       , std::cend(codes.at(idx::a)));
+         std::is_sorted(std::cbegin(channels), std::cend(channels));
 
       auto const b1 =
-         std::is_sorted( std::cbegin(codes.at(idx::b))
-                       , std::cend(codes.at(idx::b)));
+         std::is_sorted(std::cbegin(filters), std::cend(filters));
 
       if (!b0 || !b1) {
          json resp;
          resp["cmd"] = "subscribe_ack";
          resp["result"] = "fail";
          s->send(resp.dump(), false);
+         std::cout << "===> 1" << std::endl;
          return ev_res::subscribe_fail;
       }
 
-      auto const any_of_features =
-         j.at("any_of_features").get<std::uint64_t>();
-
+      auto const any_of_features = j.at("any_of_features").get<code_type>();
       auto const app_last_post_id = j.at("last_post_id").get<int>();
 
       s->set_any_of_features(any_of_features);
-
-      s->set_filter(codes.at(idx::a));
-
+      s->set_filter(filters);
       auto psession = s->get_proxy_session(true);
 
       std::vector<post> items;
 
       // If the second channels are empty, the app wants posts from all
       // channels, otherwise we have to traverse the individual channels.
-      if (std::empty(codes.at(idx::b))) {
+      if (std::empty(channels)) {
          none_channel.add_member(psession, ch_cfg.cleanup_rate);
          none_channel.get_posts( app_last_post_id
                                , std::back_inserter(items)
@@ -269,20 +235,20 @@ private:
          // not subscribed to.
          //
          // NOTICE: Remember to skip the sentinel.
-         auto const cend = std::cend(channel_hashes);
+         auto const cend = std::cend(tmp_channels);
          auto match =
-            std::lower_bound( std::cbegin(channel_hashes)
+            std::lower_bound( std::cbegin(tmp_channels)
                             , std::prev(cend)
-                            , codes.at(idx::b).front());
+                            , channels.front());
 
          auto invalid_count = 0;
-         if (match == std::prev(cend) || *match > codes.at(idx::b).front()) {
+         if (match == std::prev(cend) || *match > channels.front()) {
             invalid_count = 1;
          } else {
             auto f = [&, this](auto const& code)
             {
                // Sets the sentinel
-               channel_hashes.back() = code;
+               tmp_channels.back() = code;
 
                // Linear search with sentinel.
                while (*match != code)
@@ -294,22 +260,21 @@ private:
                }
 
                auto const i =
-                  std::distance(std::cbegin(channel_hashes), match);
+                  std::distance(std::cbegin(tmp_channels), match);
 
-               channels[i].add_member(psession, ch_cfg.cleanup_rate);
+               channel_objs[i].add_member(psession, ch_cfg.cleanup_rate);
 
-               channels[i].get_posts( app_last_post_id
+               channel_objs[i].get_posts( app_last_post_id
                                     , std::back_inserter(items)
                                     , cfg.max_posts_on_sub);
             };
 
             // There is a limit on how many channels the app is allowed
             // to subscribe to.
-            auto const d = std::min( ssize(codes.at(idx::b))
-                                   , ch_cfg.max_sub);
+            auto const d = std::min(ssize(channels), ch_cfg.max_sub);
 
-            std::for_each( std::cbegin(codes.at(idx::b))
-                         , std::cbegin(codes.at(idx::b)) + d
+            std::for_each( std::cbegin(channels)
+                         , std::cbegin(channels) + d
                          , f);
          }
 
@@ -397,23 +362,26 @@ private:
    {
       auto items = j.at("items").get<std::vector<post>>();
 
+      if (std::empty(items)) {
+         json resp;
+         resp["cmd"] = "publish_ack";
+         resp["result"] = "fail";
+         s->send(resp.dump(), false);
+         std::cout << "===> 2" << std::endl;
+         return ev_res::publish_fail;
+      }
+
       // Before we request a new pub id, we have to check that the post
       // is valid and will not be refused later. This prevents the pub
       // items from being incremented on an invalid message. May be
       // overkill since we do not expect the app to contain so severe
       // bugs but we have care for server exploitation.
 
-      // The channel code has the form [[[1, 2]], [[2, 3, 4]]]
-      // where each array in the outermost array refers to one menu.
-      auto const hash =
-         to_hash_code( items.front().to.at(idx::b).front()
-                     , menu.at(idx::b).depth);
-
-      auto const cend = std::cend(channel_hashes);
+      auto const cend = std::cend(tmp_channels);
       auto const match =
-         std::lower_bound( std::cbegin(channel_hashes)
+         std::lower_bound( std::cbegin(tmp_channels)
                          , std::prev(cend)
-                         , hash);
+                         , items.front().to);
 
       if (match == std::prev(cend) || std::size(items) != 1) {
          // This is a non-existing channel. Perhaps the json command was
@@ -463,7 +431,7 @@ private:
 
    ev_res on_app_filenames(json j, std::shared_ptr<Session> s)
    {
-      auto const n = sz::img_filename_min_size;
+      auto const n = sz::mms_filename_min_size;
       auto f = [this, n]()
       {
          auto const filename = pwdgen(n);
@@ -514,18 +482,42 @@ private:
       assert(false);
    }
 
-   void on_db_menu(std::string const& data)
+   void on_db_menu(std::vector<std::string> const& data) noexcept
    {
-      auto const j_menu = json::parse(data);
+      try {
+         if (std::size(data) != 1) {
+            log( loglevel::emerg
+               , "Menu received from the database is empty. Exiting ...");
 
-      assert(is_menu_empty(menu));
+            shutdown();
+            return;
+         }
 
-      // We have to save the menu and retrieve the menu messages from the
-      // database. Only after that we will bind and listen for websocket
-      // connections.
+         if (std::empty(data.back())) {
+            log( loglevel::emerg
+               , "Menu received from the database is empty. Exiting ...");
 
-      menu = j_menu.at("menus").get<menu_elems_array_type>();
-      db.retrieve_posts(0);
+            shutdown();
+            return;
+         }
+
+         auto const j = json::parse(data.back());
+
+         // We have to save the menu and retrieve the menu messages from the
+         // database. Only after that we will bind and listen for websocket
+         // connections.
+         tmp_channels = j.at("channels").get<channels_type>();
+         std::sort(std::begin(tmp_channels), std::end(tmp_channels));
+         db.retrieve_posts(0);
+
+         log( loglevel::info
+            , "Success retrieving channels from redis.");
+
+      } catch (...) {
+         log( loglevel::emerg
+            , "Unrecoverable error in: on_db_menu");
+         shutdown();
+      }
    }
 
    void on_db_channel_post(std::string const& msg)
@@ -538,32 +530,19 @@ private:
       // commands that are sent from workers to workers increases.
 
       auto const j = json::parse(msg);
-      auto const channel = j.at("to").get<menu_code_type>();
-
-      // The channel above has the form
-      //
-      //      ____menu_1____    ____menu_2____
-      //     |              |  |              |
-      //    [[[1, 2, 3, ...]], [[a, b, c, ...]]]
-      //
-      // We want to convert the second code [a, b, c] to its hash.
-      //
-      auto const hash =
-         to_hash_code( channel.at(idx::b).front()
-                     , menu.at(idx::b).depth);
+      auto const to = j.at("to").get<code_type>();
 
       // Now we perform a binary search of the channel hash code
-      // calculated above in the channel_hashes to determine in which
+      // calculated above in the tmp_channels to determine in which
       // channel it shall be published. Notice we exclude the sentinel
       // from the search.
-      auto const cend = std::cend(channel_hashes);
+      auto const cend = std::cend(tmp_channels);
       auto const match =
-         std::lower_bound( std::cbegin(channel_hashes)
+         std::lower_bound( std::cbegin(tmp_channels)
                          , std::prev(cend)
-                         , hash);
+                         , to);
 
-      // TODO: Will the last condition be evaluated if match is end? 
-      if (match == std::prev(cend) || *match > hash) {
+      if (match == std::prev(cend)) {
          // This happens if the subscription to the posts channel happens
          // before we receive the menu and generate the channels.  That
          // is why it is important to update the last message id only
@@ -572,31 +551,38 @@ private:
          // We could in principle insert the post, but I am afraid this
          // could result in duplicated posts after we receive those from
          // the database.
-         log(loglevel::debug, "Channel could not be found: {0}", hash);
+         log(loglevel::debug, "Channel could not be found: {0}", to);
+         return;
+      }
+
+      if (*match > to) {
+         log(loglevel::debug, "Channel could not be found: {0}", to);
          return;
       }
 
       // The channel has been found, we can now calculate the offset in
       // the channels array.
-      auto const i = std::distance(std::cbegin(channel_hashes), match);
+      auto const i = std::distance(std::cbegin(tmp_channels), match);
 
       if (j.contains("cmd")) {
          auto const post_id = j.at("id").get<int>();
          auto const from = j.at("from").get<std::string>();
-         auto const r = channels[i].remove_post(post_id, from);
+         auto const r = channel_objs[i].remove_post(post_id, from);
          if (!r) 
             log(loglevel::notice, "Failed to remove post: {0}.", post_id);
 
          return;
       }
 
+      // Do not call this before we know it is not a delete command.
+      // Parsing will throw and error.
       auto const item = j.get<post>();
 
       if (item.id > last_post_id)
          last_post_id = item.id;
 
-      channels[i].broadcast(item, menu.at(idx::a).depth);
-      none_channel.broadcast(item, menu.at(idx::a).depth);
+      channel_objs[i].broadcast(item);
+      none_channel.broadcast(item);
    }
 
    void on_db_presence(std::string const& user_id, std::string msg)
@@ -626,9 +612,9 @@ private:
       // Create the channels only if its empty since this function is
       // also called when the connection to redis is lost and
       // restablished. 
-      auto const empty = std::empty(channels);
+      auto const empty = std::empty(channel_objs);
       if (empty)
-         create_channels(menu);
+         create_channels();
 
       log( loglevel::info
          , "Number of messages received from the database: {0}"
@@ -660,8 +646,7 @@ private:
       switch (req.req)
       {
          case redis::request::menu:
-            assert(std::size(data) == 1);
-            on_db_menu(data.back());
+            on_db_menu(data);
             break;
 
          case redis::request::chat_messages:
@@ -767,7 +752,7 @@ private:
       //    restablished. In this case we have to retrieve all the
       //    messages that may have arrived while we were offline.
 
-      if (is_menu_empty(menu)) {
+      if (std::empty(tmp_channels)) {
          db.retrieve_menu();
       } else {
          db.retrieve_posts(1 + last_post_id);
@@ -906,11 +891,10 @@ private:
       }
 
       log( loglevel::notice
-         , "Signal {0} has been captured. "
-           " Stopping listening for new connections"
+         , "Signal {0} has been captured. " 
          , n);
 
-      shutdown();
+      shutdown_impl();
    }
 
 public:
@@ -993,7 +977,22 @@ public:
       { return ws_stats_;}
    auto const& get_ws_stats() const noexcept
       { return ws_stats_; }
+
+   // WARNING: Do not call this function from the signal handler.
    void shutdown()
+   {
+      shutdown_impl();
+
+      boost::system::error_code ec;
+      signal_set.cancel(ec);
+      if (ec) {
+         log( loglevel::info
+            , "worker::shutdown: {0}"
+            , ec.message());
+      }
+   }
+
+   void shutdown_impl()
    {
       log(loglevel::notice, "Shutdown has been requested.");
 

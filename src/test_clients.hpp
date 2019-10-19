@@ -11,7 +11,7 @@
 
 #include "menu.hpp"
 #include "net.hpp"
-#include "json_utils.hpp"
+#include "post.hpp"
 #include "client_session.hpp"
 #include "session_launcher.hpp"
 
@@ -20,8 +20,13 @@
 namespace rt::cli
 {
 
-menu_code_type create_channels(menu_elems_array_type const& menus);
-menu_code_type2 create_channels2(menu_elems_array_type const& menus);
+constexpr auto menu_size = 2;
+using menu_type = std::array<menu_elem, menu_size>;
+using menu_code_type = std::array<menu_channel_elem_type, menu_size>;
+using menu_code_type2 = std::array<channels_type, menu_size>;
+
+menu_code_type create_channels(menu_type const& menus);
+menu_code_type2 create_channels2(menu_type const& menus);
 
 template <class Mgr>
 class session_shell;
@@ -60,7 +65,8 @@ public:
    struct options_type {
       login user;
       int n_publishers;
-      std::string menu;
+      channels_type channels;
+      channels_type filters;
    };
 
 private:
@@ -69,7 +75,6 @@ private:
    options_type op;
 
    int to_receive_posts;
-   menu_elems_array_type menus;
    std::string nick;
 
    void send_chat_msg( std::string user, long long id
@@ -94,7 +99,8 @@ class leave_after_sub_ack {
 public:
    struct options_type {
       login user;
-      menu_code_type2 channels;
+      channels_type channels;
+      channels_type filters;
    };
 
 private:
@@ -191,12 +197,19 @@ public:
  * frame.
  */
 
+struct pub_helper {
+   int id;
+   code_type channel;
+   code_type filter;
+};
+
 class publisher {
 public:
    struct options_type {
       login user;
       int n_repliers;
-      std::string menu;
+      channels_type channels;
+      channels_type filters;
    };
 
 private:
@@ -207,7 +220,7 @@ private:
    bool server_echo = false;
    int user_msg_counter;
 
-   std::stack<std::pair<int, menu_code_type>> pub_stack;
+   std::stack<pub_helper> pub_stack;
 
    int send_post(std::shared_ptr<client_type> s) const;
 
@@ -233,7 +246,8 @@ class publisher2 {
 public:
    struct options_type {
       login user;
-      std::string menu;
+      channels_type channels;
+      channels_type filters;
    };
 
 private:
@@ -243,7 +257,8 @@ private:
    int msg_counter;
    std::vector<int> post_ids;
 
-   int pub( menu_code_type const& pub_code
+   int pub( code_type channel
+          , code_type filter
           , std::shared_ptr<client_type> s) const;
 
 public:

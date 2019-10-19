@@ -35,7 +35,7 @@ struct db_cfg {
    std::string menu_channel_key;
 
    // Key in redis holding the menu in json format.
-   std::string menu_key;
+   std::string channels_key;
 
    // The key used to store posts in redis.
    std::string posts_key;

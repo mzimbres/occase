@@ -9,7 +9,7 @@
 #include <sys/types.h>
 
 #include "logger.hpp"
-#include "json_utils.hpp"
+#include "post.hpp"
 
 /* The http target used by apps to post images has the following form.
  *
@@ -168,7 +168,7 @@ splited_target make_splited_target(beast::string_view const target)
 
 auto is_valid(splited_target const& st)
 {
-   if (std::size(st.filename) < sz::img_filename_min_size)
+   if (std::size(st.filename) < sz::mms_filename_min_size)
       return false;
 
    // TODO: Prove signature and sizes here.

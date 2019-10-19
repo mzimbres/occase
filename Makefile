@@ -41,7 +41,7 @@ CPPFLAGS += -I. -I$./src -I$(boost_inc_dir)
 CPPFLAGS += -Wall -Werror=format-security \
 	    -Werror=implicit-function-declaration
 CPPFLAGS += $(pkg-config --cflags libsodium)
-CPPFLAGS += #-O2
+CPPFLAGS += -g #-O2
 
 VPATH = ./src
 
@@ -57,7 +57,7 @@ exes += simulation
 common_objs += menu.o
 common_objs += system.o
 common_objs += logger.o
-common_objs += json_utils.o
+common_objs += post.o
 common_objs += crypto.o
 
 db_objs =

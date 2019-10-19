@@ -11,10 +11,25 @@
 #include <algorithm>
 #include <exception>
 
-#include "json_utils.hpp"
+#include "post.hpp"
 
 namespace rt
 {
+
+void to_json(json& j, menu_elem const& e)
+{
+  j = json{ {"data", e.data}
+          , {"depth", e.depth}
+          , {"version", e.version}
+          };
+}
+
+void from_json(json const& j, menu_elem& e)
+{
+  e.data = j.at("data").get<std::string>();
+  e.depth = j.at("depth").get<unsigned>();
+  e.version = j.at("version").get<int>();
+}
 
 std::string to_str_raw(int i, int width, char fill)
 {
@@ -328,7 +343,6 @@ menu_channel_elem_type menu_elems_to_codes(menu_elem const& elem)
    if (std::empty(m))
       throw std::runtime_error("Menu is empty.");
 
-   // TODO: Use std::generate here.
    menu_channel_elem_type codes;
    for (auto const& o : menu_view<0> {m, elem.depth})
       codes.push_back(o.code);
@@ -339,20 +353,7 @@ menu_channel_elem_type menu_elems_to_codes(menu_elem const& elem)
    return codes;
 }
 
-std::vector<int>
-read_versions(menu_elems_array_type const& elems)
-{
-   auto make_version = [](auto const& e)
-      { return e.version; };
-
-   std::vector<int> vs;
-   std::transform( std::begin(elems), std::end(elems)
-                 , std::back_inserter(vs), make_version);
-
-   return vs;
-}
-
-std::vector<std::uint64_t>
+std::vector<code_type>
 menu_to_channel_codes( menu_channel_elem_type const& o
                      , int depth
                      , int max)
@@ -362,7 +363,7 @@ menu_to_channel_codes( menu_channel_elem_type const& o
    auto f = [depth](auto const& e)
       { return to_hash_code(e, depth); };
 
-   std::vector<std::uint64_t> ret;
+   std::vector<code_type> ret;
    std::transform( std::cbegin(o)
                  , std::cbegin(o) + max_channels
                  , std::back_inserter(ret)

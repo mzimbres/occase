@@ -12,9 +12,9 @@
 #include <fmt/format.h>
 
 #include "net.hpp"
-#include "logger.hpp"
+#include "post.hpp"
 #include "menu.hpp"
-#include "json_utils.hpp"
+#include "logger.hpp"
 
 namespace rt
 {
@@ -325,7 +325,7 @@ public:
    }
 
    void send_post( std::shared_ptr<std::string> msg
-                 , std::uint64_t hash_code
+                 , std::uint64_t filter
                  , std::uint64_t features)
    {
       if (any_of_features != 0) {
@@ -337,7 +337,7 @@ public:
          auto const match =
             std::binary_search( std::begin(menu_codes)
                               , std::end(menu_codes)
-                              , hash_code);
+                              , filter);
          if (!match)
             return;
       }
@@ -374,10 +374,10 @@ public:
    // above. If the filter is non-null the post features will be
    // required to contain at least one bit set that is also set in the
    // argument passed here.
-   void set_any_of_features(std::uint64_t o)
+   void set_any_of_features(code_type o)
       { any_of_features = o; }
 
-   void set_filter(std::vector<std::uint64_t> const& codes)
+   void set_filter(channels_type const& codes)
    {
       auto const min = std::min(ssize(codes), menu_codes_size);
       menu_codes.clear();

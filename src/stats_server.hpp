@@ -64,7 +64,12 @@ public:
 
    void shutdown()
    {
-      acceptor_.cancel();
+      boost::system::error_code ec;
+      acceptor_.cancel(ec);
+      if (ec) {
+         log( loglevel::info
+            , "stats_server::shutdown: {0}.", ec.message());
+      }
    }
 };
 

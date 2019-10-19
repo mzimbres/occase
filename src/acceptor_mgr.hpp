@@ -88,7 +88,14 @@ public:
 
    void shutdown()
    {
-      acceptor.cancel();
+      if (acceptor.is_open()) {
+         boost::system::error_code ec;
+         acceptor.cancel(ec);
+         if (ec) {
+            log( loglevel::info
+               , "acceptor_mgr::shutdown: {0}.", ec.message());
+         }
+      }
    }
 };
 

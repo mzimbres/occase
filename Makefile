@@ -20,8 +20,9 @@ service_final_dir = $(DESTDIR)$(systemddir)
 db_name = $(pkg_name)-db
 mms_name = $(pkg_name)-mms
 menu_name = $(pkg_name)-menu
-monitorname = $(pkg_name)-monitor
-loadtoolname = $(pkg_name)-load-tool
+key_gen_name = $(pkg_name)-key-gen
+db_monitor_name = $(pkg_name)-db-monitor.sh
+menu_gen_name = $(pkg_name)-menu-gen.sh
 
 boost_inc_dir = /opt/boost_1_71_0/include
 boost_lib_dir = /opt/boost_1_71_0/lib
@@ -45,13 +46,13 @@ CPPFLAGS += #-O2
 VPATH = ./src
 
 exes =
-exes += publish_tests
 exes += $(db_name)
 exes += $(menu_name)
+exes += $(mms_name)
+exes += $(key_gen_name)
+exes += tests
 exes += aedis
 exes += simulation
-exes += $(mms_name)
-exes += img_key_gen
 
 common_objs += menu.o
 common_objs += system.o
@@ -96,7 +97,7 @@ srcs += async_read_resp.hpp
 
 aux = Makefile
 
-all: $(exes) load-tool
+all: $(exes)
 
 #.PHONY: release_hdr
 #release_hdr:
@@ -110,7 +111,7 @@ Makefile.dep:
 simulation: % : %.o $(client_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
-publish_tests: % : %.o $(client_objs) $(common_objs)
+tests: % : %.o $(client_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
 $(db_name): % : %.o $(db_objs) $(common_objs) $(aedis_objs) 
@@ -125,41 +126,44 @@ $(menu_name): % : %.o $(menu_dump_objs) $(common_objs)
 aedis: % : %.o $(aedis_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
-img_key_gen: % : %.o  $(common_objs)
+$(key_gen_name): % : %.o  $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS)
 
-load-tool: load-tool.sh.in
-	sed s/toolname/$(menu_name)/ < $^ > $@
-	chmod +x $@
+#load-tool: load-tool.sh.in
+#	sed s/toolname/$(menu_name)/ < $^ > $@
+#	chmod +x $@
 
 install: all
 	install -D $(db_name) --target-directory $(bin_final_dir)
 	install -D $(mms_name) --target-directory $(bin_final_dir)
 	install -D $(menu_name) --target-directory $(bin_final_dir)
-	install -D monitor.sh $(bin_final_dir)$(monitorname)
-	install -D load-tool $(bin_final_dir)$(loadtoolname)
+	install -D $(key_gen_name) --target-directory $(bin_final_dir)
+	install -D scripts/$(db_monitor_name) $(bin_final_dir)
+	install -D scripts/$(menu_gen_name) $(bin_final_dir)
+	install -D config/$(db_name).conf $(conf_final_dir)/$(db_name).conf
+	install -D config/$(mms_name).conf $(conf_final_dir)/$(mms_name).conf
 	install -D doc/management.txt $(doc_final_dir)/management.txt
 	install -D doc/intro.txt $(doc_final_dir)/intro.txt
 	install -D doc/posts.txt $(doc_final_dir)/posts.txt
-	install -D config/$(db_name).conf $(conf_final_dir)/$(db_name).conf
-	install -D config/$(mms_name).conf $(conf_final_dir)/$(mms_name).conf
 
 uninstall:
 	rm -f $(bin_final_dir)$(db_name)
 	rm -f $(bin_final_dir)$(mms_name)
 	rm -f $(bin_final_dir)$(menu_name)
-	rm -f $(bin_final_dir)$(monitorname)
-	rm -f $(bin_final_dir)$(loadtoolname)
+	rm -f $(bin_final_dir)$(key_gen_name)
+	rm -f scripts/$(bin_final_dir)$(db_monitor_name)
+	rm -f scripts/$(bin_final_dir)$(menu_gen_name)
+	rm -f $(conf_final_dir)/$(db_name).conf
+	rm -f $(conf_final_dir)/$(mms_name).conf
 	rm -f $(doc_final_dir)/management.txt
 	rm -f $(doc_final_dir)/intro.txt
 	rm -f $(doc_final_dir)/posts.txt
-	rm -f $(conf_final_dir)/$(db_name).conf
-	rm -f $(conf_final_dir)/$(mms_name).conf
 	rmdir $(DESDIR)$(docdir)
 
 .PHONY: clean
 clean:
-	rm -f $(exes) $(exe_objs) $(lib_objs) $(pkg_name).tar.gz Makefile.dep load-tool
+	rm -f $(exes) $(exe_objs) $(lib_objs) $(tarball_name).tar.gz Makefile.dep Makefile.dep
+	rm -rf tmp
 
 $(tarball_name).tar.gz:
 	git archive --format=tar.gz --prefix=$(tarball_dir)/ HEAD > $(tarball_name).tar.gz

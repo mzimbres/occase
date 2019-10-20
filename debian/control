@@ -10,9 +10,7 @@ Package: occase-db
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Replaces:
- occase-db (<< 1.0.0-0),
-Breaks:
- occase-db (<< 1.0.0-0),
+ occase-db (<< 1.0.0-1),
 Description: Realtime database for the occase app (server).
  A sigle threaded database that uses websocket and scales per process.
  .
@@ -22,10 +20,8 @@ Package: occase-mms
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Replaces:
- occase-mms (<< 1.0.0-0),
-Breaks:
- occase-mms (<< 1.0.0-0),
-Description: The multimedia server used by the occase app (server).
+ occase-mms (<< 1.0.0-1),
+Description: Multimedia server used by the occase app (server).
  A very simple single threaded Http server used to post and get
  multimedia data.
  .
@@ -35,9 +31,7 @@ Package: occase-tools
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Replaces:
- occase-tools (<< 1.0.0-0),
-Breaks:
- occase-tools (<< 1.0.0-0),
+ occase-tools (<< 1.0.0-1),
 Description: Tools to configure and monitor the occase servers.
  Contains the tools to configure and monitor the occase server.
  For example load redis with the channels, display current number of

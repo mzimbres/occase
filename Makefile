@@ -21,8 +21,8 @@ db_name = $(pkg_name)-db
 mms_name = $(pkg_name)-mms
 menu_name = $(pkg_name)-menu
 key_gen_name = $(pkg_name)-key-gen
-db_monitor_name = $(pkg_name)-db-monitor.sh
-menu_gen_name = $(pkg_name)-menu-gen.sh
+db_monitor_name = $(pkg_name)-db-monitor
+menu_gen_name = $(pkg_name)-menu-gen
 
 boost_inc_dir = /opt/boost_1_71_0/include
 boost_lib_dir = /opt/boost_1_71_0/lib
@@ -121,13 +121,13 @@ $(mms_name): % : %.o $(mms_objs) $(common_objs) $(aedis_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_CONCURRENCY_HINT_1=BOOST_ASIO_CONCURRENCY_HINT_UNSAFE
 
 $(menu_name): % : %.o $(menu_dump_objs) $(common_objs)
-	$(CXX) -o $@ $^ $(CPPFLAGS) $(ext_libs) $(LDFLAGS)
+	$(CXX) -o $@ $^ $(CPPFLAGS) $(ext_libs) -lfmt -lsodium
 
 aedis: % : %.o $(aedis_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
 $(key_gen_name): % : %.o  $(common_objs)
-	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS)
+	$(CXX) -o $@ $^ $(CPPFLAGS) -lfmt -lsodium
 
 #load-tool: load-tool.sh.in
 #	sed s/toolname/$(menu_name)/ < $^ > $@

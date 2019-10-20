@@ -112,6 +112,7 @@ private:
       boost::ignore_unused(bytes_transferred);
 
       if (ec) {
+         --derived().db().get_ws_stats().number_of_sessions;
          log( loglevel::debug
             , "db_session::on_read: {0}. User {1}"
             , ec.message(), user_id);
@@ -163,6 +164,7 @@ private:
          return;
       }
 
+      ++derived().db().get_ws_stats().number_of_sessions;
       do_read();
    }
 
@@ -226,8 +228,6 @@ public:
    ~db_session()
    {
       try {
-         --derived().db().get_ws_stats().number_of_sessions;
-
          if (is_logged_in()) {
             // We also have to store all messages we weren't able to deliver
             // to the user, due to, for example, a disconnection. But we are
@@ -260,7 +260,9 @@ public:
 
    void accept()
    {
-      ++derived().db().get_ws_stats().number_of_sessions;
+      // Turn off the timeout on the tcp_stream, because
+      // the websocket stream has its own timeout system.
+      beast::get_lowest_layer(derived().ws()).expires_never();
 
       using timeout_type = websocket::stream_base::timeout;
 

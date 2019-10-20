@@ -14,7 +14,7 @@ available the process will exit with error. To load the menu on redis
    $ redis-cli flushall 
    OK
    $ load-tool path-to-menu
-   $ cat menu.txt | redis-cli -x set menu
+   $ cat channels.txt | redis-cli -x set channels
    OK
    $ sudo systemctl restart occase-db.service
 

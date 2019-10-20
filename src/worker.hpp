@@ -208,7 +208,6 @@ private:
          resp["cmd"] = "subscribe_ack";
          resp["result"] = "fail";
          s->send(resp.dump(), false);
-         std::cout << "===> 1" << std::endl;
          return ev_res::subscribe_fail;
       }
 
@@ -247,6 +246,13 @@ private:
          } else {
             auto f = [&, this](auto const& code)
             {
+               // If the number of posts is already big enough we
+               // return immediately. Ideally we would stop traversion
+               // the channels, but this is not possible inside the
+               // for_each, would have to write a loop.
+               if (ssize(items) >= cfg.max_posts_on_sub)
+                  return;
+
                // Sets the sentinel
                tmp_channels.back() = code;
 
@@ -264,9 +270,12 @@ private:
 
                channel_objs[i].add_member(psession, ch_cfg.cleanup_rate);
 
+               auto const n = cfg.max_posts_on_sub - ssize(items);
+               assert(n >= 0);
+
                channel_objs[i].get_posts( app_last_post_id
-                                    , std::back_inserter(items)
-                                    , cfg.max_posts_on_sub);
+                                        , std::back_inserter(items)
+                                        , n);
             };
 
             // There is a limit on how many channels the app is allowed
@@ -278,18 +287,9 @@ private:
                          , f);
          }
 
-         // When there are too many posts in the database, the operation
-         // below may become too expensive to and we may want to avoid
-         // it. We may want to impose a limit on how big the items array
-         // may get.
-         if (ssize(items) > cfg.max_posts_on_sub) {
-            std::nth_element( std::begin(items)
-                            , std::begin(items) + cfg.max_posts_on_sub
-                            , std::end(items));
+         assert(ssize(items) <= cfg.max_posts_on_sub);
 
-            items.erase( std::begin(items) + cfg.max_posts_on_sub
-                       , std::end(items));
-         }
+         std::sort(std::begin(items), std::end(items));
 
          if (invalid_count != 0) {
             log( loglevel::debug
@@ -367,7 +367,6 @@ private:
          resp["cmd"] = "publish_ack";
          resp["result"] = "fail";
          s->send(resp.dump(), false);
-         std::cout << "===> 2" << std::endl;
          return ev_res::publish_fail;
       }
 

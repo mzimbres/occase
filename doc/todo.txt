@@ -19,4 +19,17 @@ W: occase-mms: description-synopsis-starts-with-article
 W: occase-mms: package-relation-with-self breaks: occase-mms (<< 1.0.0-0)
 W: occase-mms: binary-without-manpage usr/bin/occase-mms
 
+dpkg-shlibdeps: warning: package could avoid a useless dependency if
+
+   debian/occase-tools/usr/bin/occase-key-gen
+   debian/occase-tools/usr/bin/occase-menu
+
+were not linked against libssl.so.1.1 (they use none of the library's symbols)
+
+dpkg-shlibdeps: warning: package could avoid a useless dependency if
+
+   debian/occase-tools/usr/bin/occase-key-gen
+   debian/occase-tools/usr/bin/occase-menu
+
+were not linked against libcrypto.so.1.1 (they use none of the library's symbols)
 

@@ -113,11 +113,11 @@ auto get_cfg(int argc, char* argv[])
 
    ( "handshake-timeout"
    , po::value<int>(&cfg.handshake_timeout)->default_value(2)
-   , "Refer to the documentation in Beast for what this means.")
+   , "Refer to the documentation in Beast for what its meaning.")
 
    ( "idle-timeout"
    , po::value<int>(&cfg.idle_timeout)->default_value(2)
-   , "Refer to the documentation in Beast for what this means.")
+   , "Refer to the documentation in Beast for what its meaning.")
 
    ( "channel-cleanup-rate"
    , po::value<int>(&cfg.worker.channel.cleanup_rate)->default_value(128)

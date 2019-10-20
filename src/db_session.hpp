@@ -49,8 +49,8 @@ enum class ev_res
 };
 
 struct ws_timeouts {
-   std::chrono::seconds handshake {2};
-   std::chrono::seconds idle {2};
+   std::chrono::seconds handshake;
+   std::chrono::seconds idle;
 };
 
 template <class Derived>
@@ -111,22 +111,12 @@ private:
    {
       boost::ignore_unused(bytes_transferred);
 
-      if (ec == beast::websocket::error::closed) {
+      if (ec) {
          log( loglevel::debug
-            , "db_session::on_read: Gracefully closed {0}."
-            , user_id);
-
+            , "db_session::on_read: {0}. User {1}"
+            , ec.message(), user_id);
          return;
       }
-
-      if (ec == net::error::operation_aborted) {
-         // Abortion can be caused by a socket shutting down and closing.
-         // We have no cleanup to perform.
-         return;
-      }
-
-      if (ec)
-         return;
 
       auto msg = beast::buffers_to_string(buffer.data());
       buffer.consume(std::size(buffer));
@@ -285,7 +275,7 @@ public:
       auto f = [](websocket::response_type& res)
       {
           res.set( http::field::server
-                 , std::string(BOOST_BEAST_VERSION_STRING) + " occase");
+                 , std::string(BOOST_BEAST_VERSION_STRING) + " occase-db");
       };
 
       derived().ws().set_option(websocket::stream_base::decorator(f));

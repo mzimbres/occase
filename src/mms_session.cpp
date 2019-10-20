@@ -8,8 +8,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "logger.hpp"
 #include "post.hpp"
+#include "logger.hpp"
+#include "crypto.hpp"
 
 /* The http target used by apps to post images has the following form.
  *
@@ -155,8 +156,11 @@ struct splited_target {
    beast::string_view extension;
 };
 
-splited_target make_splited_target(beast::string_view const target)
+splited_target make_splited_target(beast::string_view target)
 {
+   if (target.front() == '/')
+      target.remove_prefix(1);
+
    // Splits the target in the form [A, B.C].
    auto const pair1 = split(target, "/");
 
@@ -166,13 +170,30 @@ splited_target make_splited_target(beast::string_view const target)
    return {pair1.first, pair2.first, pair2.second};
 }
 
-auto is_valid(splited_target const& st)
+auto is_valid(splited_target const& st, std::string const& mms_key)
 {
    if (std::size(st.filename) < sz::mms_filename_min_size)
       return false;
 
-   // TODO: Prove signature and sizes here.
-   return !std::empty(st.digest) && !std::empty(st.extension);
+   if (std::empty(st.digest))
+      return false;
+
+   if (std::empty(st.extension))
+      return false;
+
+   // TODO: Find a way to avoid contructing a filename as string.
+   std::string const as_str
+      { std::begin(st.filename)
+      , std::end(st.filename)};
+
+   auto const s = std::size(st.digest);
+
+   auto const digest = make_hex_digest(as_str, mms_key);
+
+   if (s != std::size(digest))
+      return false;
+
+   return digest.compare(0, s, st.digest.data(), s) == 0;
 }
 
 void mms_session::post_handler()
@@ -180,7 +201,7 @@ void mms_session::post_handler()
    std::string path;
 
    auto const st = make_splited_target(header_parser.get().target());
-   if (is_valid(st)) {
+   if (is_valid(st, cfg.mms_key)) {
       path = cfg.doc_root + "/" + make_img_path(st.filename);
 
       log(loglevel::debug , "Post dir: {0}", path);
@@ -240,7 +261,7 @@ void mms_session::get_handler()
    std::string path;
 
    auto const st = make_splited_target(header_parser.get().target());
-   if (is_valid(st)) {
+   if (is_valid(st, cfg.mms_key)) {
       path = cfg.doc_root + "/" + make_img_path(st.filename) + "/";
       path.append(st.filename.data(), std::size(st.filename));
       path += ".";

@@ -85,7 +85,7 @@ auto get_cfg(int argc, char* argv[])
    , po::value<std::string>(&daemonize)->default_value("no")
    , "Runs the server in the backgroud as daemon process.")
 
-   ("img-key"
+   ("mms-key"
    , po::value<std::string>(&cfg.cfg.mms_key)
    , "See websocket server for information.")
 

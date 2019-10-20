@@ -108,7 +108,7 @@ auto get_cfg(int argc, char* argv[])
    , "The size of the tcp backlog.")
 
    ( "stats-server-base-port"
-   , po::value<std::string>(&cfg.worker.stats.port)->default_value("9090")
+   , po::value<unsigned short>(&cfg.worker.core.http_port)->default_value(9090)
    , "The statistics server base port.")
 
    ( "handshake-timeout"

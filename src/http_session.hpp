@@ -43,6 +43,10 @@ std::ostream& operator<<(std::ostream& os, worker_stats const& stats)
 template <class Session>
 class http_session :
    public std::enable_shared_from_this<http_session<Session>> {
+public:
+   using worker_type = worker<Session>;
+   using arg_type = worker_type const&;
+
 private:
    tcp::socket socket_;
    beast::flat_buffer buffer_{8192};
@@ -75,7 +79,7 @@ private:
       case http::verb::get:
       {
          response_.result(http::status::ok);
-         response_.set(http::field::server, "Beast");
+         response_.set(http::field::server, "occase-db");
          stats = worker_.get_stats();
          create_response();
          write_response();
@@ -96,7 +100,6 @@ private:
       }
       break;
       }
-
    }
 
    void create_response()
@@ -131,32 +134,30 @@ private:
 
    void check_deadline()
    {
-       auto self = this->shared_from_this();
+      auto self = this->shared_from_this();
 
-       auto handler = [self](boost::beast::error_code ec)
-       {
-           if (!ec)
-              self->socket_.close(ec);
-       };
+      auto handler = [self](boost::beast::error_code ec)
+      {
+          if (!ec)
+             self->socket_.close(ec);
+      };
 
-       deadline_.async_wait(handler);
+      deadline_.async_wait(handler);
    }
 
 
 public:
-   http_session(tcp::socket socket , worker<Session> const& w)
+   http_session(tcp::socket socket, arg_type w, ssl::context& ctx)
    : socket_ {std::move(socket)}
-   , deadline_ { socket_.get_executor()
-               , std::chrono::seconds(60)}
+   , deadline_ { socket_.get_executor(), std::chrono::seconds(60)}
    , worker_ {w}
    { }
 
-   void start()
+   void run()
    {
        read_request();
        check_deadline();
    }
-
 };
 
 }

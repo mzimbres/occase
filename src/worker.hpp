@@ -26,7 +26,7 @@
 #include "crypto.hpp"
 #include "channel.hpp"
 #include "db_session.hpp"
-#include "stats_server.hpp"
+#include "http_session.hpp"
 #include "acceptor_mgr.hpp"
 
 namespace rt
@@ -43,6 +43,9 @@ struct core_cfg {
    // Websocket port.
    unsigned short port;
 
+   // Port of the stats server.
+   unsigned short http_port;
+
    // The size of the tcp backlog.
    int max_listen_connections;
 
@@ -56,7 +59,6 @@ struct worker_cfg {
    ws_timeouts timeouts;
    core_cfg core;
    channel_cfg channel;
-   stats_server_cfg stats;
 };
 
 struct ws_stats {
@@ -132,10 +134,10 @@ private:
    pwd_gen pwdgen;
 
    // Accepts websocket connections.
-   acceptor_mgr<Session> acceptor;
+   acceptor_mgr<Session> ws_acceptor;
 
    // Provides some statistics about the server.
-   stats_server<Session> sserver;
+   acceptor_mgr<http_session<Session>> http_acceptor;
 
    // Signal handler.
    net::signal_set signal_set;
@@ -628,12 +630,15 @@ private:
          // We can begin to accept websocket connections. NOTICE: It may
          // be better to use acceptor::is_open to determine if the run
          // functions should be called instead of using empty.
-         acceptor.run( *this
-                     , ctx
-                     , cfg.port
-                     , cfg.max_listen_connections);
+         ws_acceptor.run( *this
+                        , ctx
+                        , cfg.port
+                        , cfg.max_listen_connections);
 
-         sserver.run(*this);
+         http_acceptor.run( *this
+                          , ctx
+                          , cfg.http_port
+                          , cfg.max_listen_connections);
       }
    }
 
@@ -903,8 +908,8 @@ public:
    , ch_cfg {cfg.channel}
    , ws_timeouts_ {cfg.timeouts}
    , db {cfg.db, ioc}
-   , acceptor {ioc}
-   , sserver {cfg.stats, ioc}
+   , ws_acceptor {ioc}
+   , http_acceptor {ioc}
    , signal_set {ioc, SIGINT, SIGTERM}
    {
       auto f = [this](auto const& ec, auto n)
@@ -999,8 +1004,8 @@ public:
          , "Number of sessions that will be closed: {0}"
          , std::size(sessions));
 
-      acceptor.shutdown();
-      sserver.shutdown();
+      ws_acceptor.shutdown();
+      http_acceptor.shutdown();
 
       auto f = [](auto o)
       {

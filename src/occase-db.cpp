@@ -25,15 +25,10 @@ using namespace rt;
 
 struct server_cfg {
    int help = 0; // 0: continue, 1: help, -1: error.
-   bool log_on_stderr = false;
-   bool daemonize = false;
    std::string ssl_cert_file;
    std::string ssl_priv_key_file;
    std::string ssl_dh_file;
-   std::string pidfile;
    std::string loglevel;
-
-   int number_of_fds = -1;
 
    worker_cfg worker;
 
@@ -64,9 +59,7 @@ auto get_cfg(int argc, char* argv[])
    std::vector<std::string> ips;
    server_cfg cfg;
    int conn_retry_interval = 500;
-   std::string log_on_stderr = "no";
    std::string conf_file;
-   std::string daemonize;
    std::string redis_host1;
    std::string redis_host2;
    std::vector<std::string> sentinels;
@@ -83,21 +76,9 @@ auto get_cfg(int argc, char* argv[])
    , po::value<std::string>(&conf_file)
    , "The file containing the configuration.")
 
-   ("log-on-stderr"
-   , po::value<std::string>(&log_on_stderr)->default_value("no")
-   , "Instructs syslog to write the messages on stderr as well.")
-
-   ("daemonize"
-   , po::value<std::string>(&daemonize)->default_value("no")
-   , "Runs the server in the backgroud as daemon process.")
-
    ("ssl-certificate-file", po::value<std::string>(&cfg.ssl_cert_file))
    ("ssl-private-key-file", po::value<std::string>(&cfg.ssl_priv_key_file))
    ("ssl-dh-file", po::value<std::string>(&cfg.ssl_dh_file))
-
-   ("pidfile"
-   , po::value<std::string>(&cfg.pidfile)
-   , "The pidfile.")
 
    ( "port"
    , po::value<unsigned short>(&cfg.worker.core.port)->default_value(8080)
@@ -146,11 +127,6 @@ auto get_cfg(int argc, char* argv[])
    , "The size of the password sent to the app.")
 
    ("img-key", po::value<std::string>(&cfg.worker.core.img_key))
-
-   ( "number-of-fds"
-   , po::value<int>(&cfg.number_of_fds)->default_value(-1)
-   , "If provided, the server will try to increase the number of file "
-     "descriptors to this value, via setrlimit.")
 
    ( "redis-host1"
    , po::value<std::string>(&redis_host1)->default_value("127.0.0.1:6379")
@@ -260,9 +236,6 @@ auto get_cfg(int argc, char* argv[])
       return server_cfg {-1};
    }
 
-   cfg.log_on_stderr = log_on_stderr == "yes";
-   cfg.daemonize = daemonize == "yes";
-
    cfg.worker.db.cfg.chat_msg_prefix += ":";
    cfg.worker.db.cfg.user_notify_prefix
       = cfg.worker.db.cfg.notify_prefix
@@ -355,16 +328,8 @@ int main(int argc, char* argv[])
       if (cfg.help == -1)
          return 1;
 
-      if (cfg.daemonize)
-         daemonize();
-
       init_libsodium();
-      logger logg {argv[0], cfg.log_on_stderr};
       log_upto(cfg.loglevel);
-      pidfile_mgr pidfile_mgr_ {cfg.pidfile};
-
-      if (cfg.number_of_fds != -1)
-         set_fd_limits(cfg.number_of_fds);
 
       ssl::context ctx {ssl::context::tlsv12};
 
@@ -373,13 +338,11 @@ int main(int argc, char* argv[])
             return 1;
 
          worker<db_ssl_session> db {cfg.worker, ctx};
-         drop_root_priviledges();
          db.run();
          return 0;
       }
 
       worker<db_plain_session> db {cfg.worker, ctx};
-      drop_root_priviledges();
       db.run();
 
    } catch (std::exception const& e) {

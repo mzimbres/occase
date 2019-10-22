@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iostream>
+
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
@@ -63,8 +65,9 @@ void log(loglevel ll, char const* fmt, Args const& ... args)
    if (ignore_log(ll))
       return;
 
-   auto const prio = to_syslog_prio(ll);
-   syslog(prio, "%s", fmt::format(fmt, args...).data());
+   std::clog << fmt::format(fmt, args...) << std::endl;
+   //auto const prio = to_syslog_prio(ll);
+   //syslog(prio, "%s", fmt::format(fmt, args...).data());
 }
 
 }

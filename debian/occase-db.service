@@ -3,11 +3,15 @@ Description=Advanced realtime database.
 After=network.target redis.service sentinel.service
 
 [Service]
-Type=forking
 ExecStart=/usr/bin/occase-db /etc/occase/occase-db.conf
 ExecStop=/bin/kill -s INT $MAINPID
-PIDFile=/run/occase-db.pid
 Restart=always
+NoNewPrivileges=true
+LimitNOFILE=100000
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelModules=true
+ProtectControlGroups=true
 
 [Install]
 WantedBy=multi-user.target

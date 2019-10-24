@@ -4,14 +4,14 @@
 #include <chrono>
 #include <memory>
 
-#include "worker.hpp"
 #include "net.hpp"
+#include "db_worker.hpp"
 
 namespace rt
 {
 
 template <class Session>
-class worker;
+class db_worker;
 
 struct worker_stats {
    int number_of_sessions = 0;
@@ -41,10 +41,10 @@ std::ostream& operator<<(std::ostream& os, worker_stats const& stats)
 }
 
 template <class Session>
-class http_session :
-   public std::enable_shared_from_this<http_session<Session>> {
+class db_adm_session :
+   public std::enable_shared_from_this<db_adm_session<Session>> {
 public:
-   using worker_type = worker<Session>;
+   using worker_type = db_worker<Session>;
    using arg_type = worker_type const&;
 
 private:
@@ -53,7 +53,7 @@ private:
    http::request<http::dynamic_body> request_;
    http::response<http::dynamic_body> response_;
    net::steady_timer deadline_;
-   worker<Session> const& worker_;
+   db_worker<Session> const& worker_;
    worker_stats stats {};
 
    void read_request()
@@ -147,7 +147,7 @@ private:
 
 
 public:
-   http_session(tcp::socket socket, arg_type w, ssl::context& ctx)
+   db_adm_session(tcp::socket socket, arg_type w, ssl::context& ctx)
    : socket_ {std::move(socket)}
    , deadline_ { socket_.get_executor(), std::chrono::seconds(60)}
    , worker_ {w}

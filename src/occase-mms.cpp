@@ -24,12 +24,8 @@
 struct server_cfg {
    bool help = false;
    unsigned short port;
-   bool log_on_stderr = false;
-   bool daemonize = false;
-   std::string pidfile;
    std::string loglevel;
-   rt::mms_session_cfg cfg;
-   int number_of_fds = -1;
+   rt::mms_session_cfg session_cfg;
    int max_listen_connections;
 };
 
@@ -38,9 +34,7 @@ namespace po = boost::program_options;
 auto get_cfg(int argc, char* argv[])
 {
    server_cfg cfg;
-   std::string log_on_stderr = "no";
    std::string conf_file;
-   std::string daemonize;
 
    po::options_description desc("Options");
    desc.add_options()
@@ -48,11 +42,11 @@ auto get_cfg(int argc, char* argv[])
    , "Produces help message")
 
    ("doc-root"
-   , po::value<std::string>(&cfg.cfg.doc_root)->default_value("/www/data")
+   , po::value<std::string>(&cfg.session_cfg.doc_root)->default_value("/www/data")
    , "Directory where image will be written to and read from.")
 
    ("body-limit"
-   , po::value<std::uint64_t>(&cfg.cfg.body_limit)->default_value(1000000))
+   , po::value<std::uint64_t>(&cfg.session_cfg.body_limit)->default_value(1000000))
 
    ("config"
    , po::value<std::string>(&conf_file)
@@ -62,31 +56,14 @@ auto get_cfg(int argc, char* argv[])
    , po::value<unsigned short>(&cfg.port)->default_value(81)
    , "Server listening port.")
 
-   ("log-on-stderr"
-   , po::value<std::string>(&log_on_stderr)->default_value("no")
-   , "Instructs syslog to write the messages on stderr as well.")
-
    ( "log-level"
    , po::value<std::string>(&cfg.loglevel)->default_value("debug")
    , "Control the amount of information that is output in the logs. "
      " Available options are: emerg, alert, crit, err, warning, notice, "
      " info, debug.")
 
-   ("pidfile"
-   , po::value<std::string>(&cfg.pidfile)
-   , "The pidfile.")
-
-   ( "number-of-fds"
-   , po::value<int>(&cfg.number_of_fds)->default_value(-1)
-   , "If provided, the server will try to increase the number of file "
-     "descriptors to this value, via setrlimit.")
-
-   ("daemonize"
-   , po::value<std::string>(&daemonize)->default_value("no")
-   , "Runs the server in the backgroud as daemon process.")
-
    ("mms-key"
-   , po::value<std::string>(&cfg.cfg.mms_key)
+   , po::value<std::string>(&cfg.session_cfg.mms_key)
    , "See websocket server for information.")
 
    ( "max-listen-connections"
@@ -111,9 +88,6 @@ auto get_cfg(int argc, char* argv[])
       }
    }
 
-   cfg.log_on_stderr = log_on_stderr == "yes";
-   cfg.daemonize = daemonize == "yes";
-
    if (vm.count("help")) {
       std::cout << desc << "\n";
       return server_cfg {true};
@@ -131,22 +105,13 @@ int main(int argc, char* argv[])
       if (cfg.help)
          return 0;
 
-      if (cfg.daemonize)
-         daemonize();
-
       init_libsodium();
-      logger logg {argv[0], cfg.log_on_stderr};
       log_upto(cfg.loglevel);
-      pidfile_mgr pidfile_mgr_ {cfg.pidfile};
-
-      if (cfg.number_of_fds != -1)
-         set_fd_limits(cfg.number_of_fds);
 
       net::io_context ioc {1};
       ssl::context ctx {ssl::context::tlsv12};
       acceptor_mgr<mms_session> lst {ioc};
-      lst.run(cfg.cfg, ctx, cfg.port, cfg.max_listen_connections);
-      drop_root_priviledges();
+      lst.run(cfg.session_cfg, ctx, cfg.port, cfg.max_listen_connections);
       ioc.run();
    } catch(std::exception const& e) {
       log(loglevel::notice, e.what());

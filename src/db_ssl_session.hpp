@@ -10,7 +10,7 @@ namespace rt
 {
 
 template <class Session>
-class worker;
+class db_worker;
 
 class db_ssl_session
    : public db_session<db_ssl_session>
@@ -18,13 +18,13 @@ class db_ssl_session
 public:
    using stream_type =
       websocket::stream<beast::ssl_stream<beast::tcp_stream>>;
-   using worker_type = worker<db_ssl_session>;
+   using worker_type = db_worker<db_ssl_session>;
    using arg_type = worker_type&;
    using psession_type = proxy_session<db_ssl_session>;
 
 private:
    stream_type stream;
-   worker<db_ssl_session>& w;
+   db_worker<db_ssl_session>& w;
    std::shared_ptr<psession_type> psession;
 
    void on_handshake(beast::error_code ec)

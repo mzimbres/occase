@@ -233,7 +233,8 @@ void mms_session::post_handler()
 
    beast::error_code ec;
    body_parser->get().body().open( path.data()
-                                 , beast::file_mode::write, ec);
+                                 , beast::file_mode::write_new
+                                 , ec);
 
    if (ec) {
       log(loglevel::info , "post_handler: {0}", ec.message());

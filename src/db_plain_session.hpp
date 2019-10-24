@@ -9,20 +9,20 @@ namespace rt
 {
 
 template <class Session>
-class worker;
+class db_worker;
 
 class db_plain_session
    : public db_session<db_plain_session>
    , public std::enable_shared_from_this<db_plain_session> {
 public:
    using stream_type = websocket::stream<beast::tcp_stream>;
-   using worker_type = worker<db_plain_session>;
+   using worker_type = db_worker<db_plain_session>;
    using arg_type = worker_type&;
    using psession_type = proxy_session<db_plain_session>;
 
 private:
    stream_type stream;
-   worker<db_plain_session>& w;
+   db_worker<db_plain_session>& w;
    std::shared_ptr<psession_type> psession;
 
 public:

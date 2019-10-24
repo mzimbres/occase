@@ -1,13 +1,12 @@
 [Unit]
-Description=HTTP image server.
+Description=Http multimedia server.
 After=network.target
 
 [Service]
-Type=forking
 ExecStart=/usr/bin/occase-mms /etc/occase/occase-mms.conf
 ExecStop=/bin/kill -s INT $MAINPID
-PIDFile=/run/occase-mms.pid
 Restart=always
+NoNewPrivileges=true
 
 [Install]
 WantedBy=multi-user.target

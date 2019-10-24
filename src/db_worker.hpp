@@ -26,8 +26,8 @@
 #include "crypto.hpp"
 #include "channel.hpp"
 #include "db_session.hpp"
-#include "http_session.hpp"
 #include "acceptor_mgr.hpp"
+#include "db_adm_session.hpp"
 
 namespace rt
 {
@@ -51,10 +51,10 @@ struct core_cfg {
 
    // The key used to generate authenticated filenames that will be
    // user in the image server.
-   std::string img_key;
+   std::string mms_key;
 };
 
-struct worker_cfg {
+struct db_worker_cfg {
    redis::config db;
    ws_timeouts timeouts;
    core_cfg core;
@@ -80,7 +80,7 @@ struct pwd_queue_item {
 };
 
 template <class Session>
-class worker {
+class db_worker {
 private:
    net::io_context ioc {1};
    ssl::context& ctx;
@@ -137,7 +137,7 @@ private:
    acceptor_mgr<Session> ws_acceptor;
 
    // Provides some statistics about the server.
-   acceptor_mgr<http_session<Session>> http_acceptor;
+   acceptor_mgr<db_adm_session<Session>> http_acceptor;
 
    // Signal handler.
    net::signal_set signal_set;
@@ -295,7 +295,7 @@ private:
 
          if (invalid_count != 0) {
             log( loglevel::debug
-               , "worker::on_app_subscribe: Invalid channels {0}."
+               , "db_worker::on_app_subscribe: Invalid channels {0}."
                , invalid_count);
          }
       }
@@ -436,7 +436,7 @@ private:
       auto f = [this, n]()
       {
          auto const filename = pwdgen(n);
-         auto const digest = make_hex_digest(filename, cfg.img_key);
+         auto const digest = make_hex_digest(filename, cfg.mms_key);
          return digest + "/" + filename;
       };
 
@@ -902,7 +902,7 @@ private:
    }
 
 public:
-   worker(worker_cfg cfg, ssl::context& c)
+   db_worker(db_worker_cfg cfg, ssl::context& c)
    : ctx {c}
    , cfg {cfg.core}
    , ch_cfg {cfg.channel}
@@ -968,7 +968,7 @@ public:
                return on_app_register(j, s);
          }
       } catch (std::exception const& e) {
-         log(loglevel::debug, "worker::on_app: {0}.", e.what());
+         log(loglevel::debug, "db_worker::on_app: {0}.", e.what());
       }
 
       return ev_res::unknown;
@@ -991,7 +991,7 @@ public:
       signal_set.cancel(ec);
       if (ec) {
          log( loglevel::info
-            , "worker::shutdown: {0}"
+            , "db_worker::shutdown: {0}"
             , ec.message());
       }
    }

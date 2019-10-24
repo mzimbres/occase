@@ -38,8 +38,7 @@ LDFLAGS += -lcrypto
 
 CPPFLAGS = -std=c++17
 CPPFLAGS += -I. -I$./src -I$(boost_inc_dir)
-CPPFLAGS += -Wall -Werror=format-security \
-	    -Werror=implicit-function-declaration
+CPPFLAGS += -Wall -Werror=format-security
 CPPFLAGS += $(pkg-config --cflags libsodium)
 CPPFLAGS += #-O2
 

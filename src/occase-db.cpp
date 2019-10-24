@@ -16,21 +16,21 @@
 #include "crypto.hpp"
 #include "logger.hpp"
 #include "system.hpp"
-#include "worker.hpp"
 #include "release.hpp"
+#include "db_worker.hpp"
 #include "db_ssl_session.hpp"
 #include "db_plain_session.hpp"
 
 using namespace rt;
 
-struct server_cfg {
+struct occase_db_cfg {
    int help = 0; // 0: continue, 1: help, -1: error.
    std::string ssl_cert_file;
    std::string ssl_priv_key_file;
    std::string ssl_dh_file;
    std::string loglevel;
 
-   worker_cfg worker;
+   db_worker_cfg worker;
 
    int handshake_timeout;
    int idle_timeout;
@@ -57,7 +57,7 @@ namespace po = boost::program_options;
 auto get_cfg(int argc, char* argv[])
 {
    std::vector<std::string> ips;
-   server_cfg cfg;
+   occase_db_cfg cfg;
    int conn_retry_interval = 500;
    std::string conf_file;
    std::string redis_host1;
@@ -126,7 +126,7 @@ auto get_cfg(int argc, char* argv[])
    , po::value<int>(&cfg.worker.core.pwd_size)->default_value(10)
    , "The size of the password sent to the app.")
 
-   ("img-key", po::value<std::string>(&cfg.worker.core.img_key))
+   ("mms-key", po::value<std::string>(&cfg.worker.core.mms_key))
 
    ( "redis-host1"
    , po::value<std::string>(&redis_host1)->default_value("127.0.0.1:6379")
@@ -223,17 +223,17 @@ auto get_cfg(int argc, char* argv[])
 
    if (vm.count("help")) {
       std::cout << desc << "\n";
-      return server_cfg {1};
+      return occase_db_cfg {1};
    }
 
    if (vm.count("git-sha1")) {
       std::cout << GIT_SHA1 << "\n";
-      return server_cfg {1};
+      return occase_db_cfg {1};
    }
 
-   if (std::size(cfg.worker.core.img_key) != crypto_generichash_KEYBYTES) {
+   if (std::size(cfg.worker.core.mms_key) != crypto_generichash_KEYBYTES) {
       std::cerr << "Image key has the wrong size." << "\n";
-      return server_cfg {-1};
+      return occase_db_cfg {-1};
    }
 
    cfg.worker.db.cfg.chat_msg_prefix += ":";
@@ -262,7 +262,7 @@ auto get_cfg(int argc, char* argv[])
    return cfg;
 }
 
-auto load_ssl(ssl::context& ctx, server_cfg const& cfg)
+auto load_ssl(ssl::context& ctx, occase_db_cfg const& cfg)
 {
    boost::system::error_code ec;
 
@@ -337,12 +337,12 @@ int main(int argc, char* argv[])
          if (!load_ssl(ctx, cfg))
             return 1;
 
-         worker<db_ssl_session> db {cfg.worker, ctx};
+         db_worker<db_ssl_session> db {cfg.worker, ctx};
          db.run();
          return 0;
       }
 
-      worker<db_plain_session> db {cfg.worker, ctx};
+      db_worker<db_plain_session> db {cfg.worker, ctx};
       db.run();
 
    } catch (std::exception const& e) {

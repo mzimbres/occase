@@ -14,42 +14,45 @@ namespace rt
 namespace html
 {
 
-auto make_img(std::string const& img_host, std::string const& name)
+auto make_img(std::string const& mms_host, std::string const& name)
 {
    std::string img;
    img += "<img src=\"";
-   img += img_host;
+   img += mms_host;
    img += name;
    img += "\">";
    return img;
 }
 
 auto
-make_del_post_link( std::string const& img_host
+make_del_post_link( std::string const& adm_host
                   , std::string const& id)
 {
    std::string del;
    del += "<td>";
    del += "<a href=\"";
-   del += img_host;
-   del += "/delete/id";
+   del += adm_host;
+   del += "delete/";
+   del += id;
    del += "\">Delete</a>";
    del += "</td>";
    return del;
 }
 
-auto make_img_row( std::string const& img_host
-                 , post const& p) noexcept
+auto
+make_img_row( std::string const& mms_host
+            , std::string const& adm_host
+            , post const& p) noexcept
 {
    try {
       auto const j = json::parse(p.body);
       auto const images = j.at("images").get<std::vector<std::string>>();
       std::string row;
       row += "<tr>";
-      row += make_del_post_link(img_host, "1234");
+      row += make_del_post_link(adm_host, std::to_string(p.id));
       for (auto const& s : images) {
          row += "<td>";
-         row += make_img(img_host, s);
+         row += make_img(mms_host, s);
          row += "</td>";
       }
       row += "</tr>";
@@ -60,7 +63,8 @@ auto make_img_row( std::string const& img_host
    return std::string{};
 }
 
-auto make_adm_page( std::string const& img_host
+auto make_adm_page( std::string const& mms_host
+                  , std::string const& adm_host
                   , std::vector<post> const& posts)
 {
    // This is kind of weird, the database itself does not need to know
@@ -69,7 +73,7 @@ auto make_adm_page( std::string const& img_host
 
    auto acc = [&](auto init, auto const& p)
    {
-      init += make_img_row(img_host, p);
+      init += make_img_row(mms_host, adm_host, p);
       return init;
    };
 
@@ -92,7 +96,6 @@ auto make_adm_page( std::string const& img_host
    page += "<p>Posts</p>";
    page += table;
    page += "\n";
-   page += "<a href=\"http://127.0.0.1:9091/delete\">This is a link</a>";
    page += "</body>";
    page += "</html>";
 
@@ -187,34 +190,76 @@ private:
       }
    }
 
+   // Expects a target in the form
+   //
+   //    /posts/post_id
+   //
+   // or
+   //
+   //    /posts/post_id/
+   //
+   void get_posts_handler(beast::string_view target)
+   {
+      auto const foo = split(target, '/');
+      auto const str =
+         std::string( foo.second.data()
+                    , std::size(foo.second));
+
+      auto const posts = worker_.get_posts(std::stoi(str));
+      response_.set(http::field::content_type, "text/html");
+      boost::beast::ostream(response_.body())
+      << html::make_adm_page( worker_.get_cfg().mms_host
+                            , worker_.get_cfg().adm_host
+                            , posts);
+   }
+
+   void get_delete_handler(beast::string_view target)
+   {
+      auto const foo = split(target, '/');
+
+      auto const str =
+         std::string( foo.second.data()
+                    , std::size(foo.second));
+
+      worker_.delete_post(std::stoi(str));
+      response_.set(http::field::content_type, "text/html");
+      boost::beast::ostream(response_.body())
+      << html::make_post_del_ok();
+   }
+
+   void get_default_handler()
+   {
+      response_.result(http::status::not_found);
+      response_.set(http::field::content_type, "text/plain");
+      beast::ostream(response_.body()) << "File not found\r\n";
+   }
+
    void get_handler()
    {
-      response_.result(http::status::ok);
-      response_.set(http::field::server, "occase-db");
+      try {
+         response_.result(http::status::ok);
+         response_.set(http::field::server, "occase-db");
 
-      if (request_.target() == "/stats") {
-         stats = worker_.get_stats();
-         response_.set(http::field::content_type, "text/csv");
-         boost::beast::ostream(response_.body())
-         << stats
-         << "\n";
-      } else if (request_.target() == "/posts") {
-         log(loglevel::debug, "Posts have requested.");
-         auto const posts = worker_.get_posts(0);
-         response_.set(http::field::content_type, "text/html");
-         std::string const img_host = "http://occase.de:444/";
-         boost::beast::ostream(response_.body())
-         << html::make_adm_page(img_host, posts);
-      } else if (request_.target() == "/delete") {
-         log(loglevel::info, "Post deletion.");
-         // TODO: Check credentials to allow post deletion.
-         response_.set(http::field::content_type, "text/html");
-         boost::beast::ostream(response_.body())
-         << html::make_post_del_ok();
-      } else {
-         response_.result(http::status::not_found);
-         response_.set(http::field::content_type, "text/plain");
-         beast::ostream(response_.body()) << "File not found\r\n";
+         auto const target = request_.target();
+         std::cout << target << std::endl;
+
+         if (target == "/stats") {
+            stats = worker_.get_stats();
+            response_.set(http::field::content_type, "text/csv");
+            boost::beast::ostream(response_.body())
+            << stats
+            << "\n";
+         } else if (target.compare(0, 6, "/posts") == 0) {
+            log(loglevel::debug, "Http post request received.");
+            get_posts_handler(target);
+         } else if (target.compare(0, 7, "/delete") == 0) {
+            log(loglevel::info, "Post deletion.");
+            get_delete_handler(target);
+         } else {
+            get_default_handler();
+         }
+      } catch (...) {
+         get_default_handler();
       }
 
       write_response();

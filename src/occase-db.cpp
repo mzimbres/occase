@@ -52,6 +52,18 @@ struct occase_db_cfg {
    }
 };
 
+std::pair<std::string, std::string> split2(std::string data)
+{
+   auto const pos = data.find_first_of(':');
+   if (pos == std::string::npos)
+      return {};
+
+   if (1 + pos == std::size(data))
+      return {};
+
+   return {data.substr(0, pos), data.substr(pos + 1)};
+}
+
 namespace po = boost::program_options;
 
 auto get_cfg(int argc, char* argv[])
@@ -247,11 +259,11 @@ auto get_cfg(int argc, char* argv[])
    cfg.worker.db.ss_cfg1.conn_retry_interval = tmp;
    cfg.worker.db.ss_cfg2.conn_retry_interval = tmp;
 
-   auto const host1 = split(redis_host1);
+   auto const host1 = split2(redis_host1);
    cfg.worker.db.ss_cfg1.host = host1.first;
    cfg.worker.db.ss_cfg1.port = host1.second;
 
-   auto const host2 = split(redis_host2);
+   auto const host2 = split2(redis_host2);
    cfg.worker.db.ss_cfg2.host = host2.first;
    cfg.worker.db.ss_cfg2.port = host2.second;
 

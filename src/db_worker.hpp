@@ -52,6 +52,12 @@ struct core_cfg {
    // The key used to generate authenticated filenames that will be
    // user in the image server.
    std::string mms_key;
+
+   // Db host.
+   std::string adm_host {"http://127.0.0.1:445/"};
+
+   // The host where images are served.
+   std::string mms_host {"http://127.0.0.1:444/"};
 };
 
 struct db_worker_cfg {
@@ -1053,6 +1059,16 @@ public:
    void run()
    {
       ioc.run();
+   }
+
+   auto const& get_cfg() const noexcept
+   {
+      return cfg;
+   }
+
+   void delete_post(int id) const
+   {
+      std::cout << "==> Request to delete post " << id << std::endl;
    }
 };
 

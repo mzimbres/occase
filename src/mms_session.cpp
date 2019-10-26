@@ -9,6 +9,7 @@
 #include <sys/types.h>
 
 #include "post.hpp"
+#include "utils.hpp"
 #include "logger.hpp"
 #include "crypto.hpp"
 
@@ -58,24 +59,6 @@ void create_dir(const char *dir)
 
 namespace rt
 {
-
-/* Can be used to get the filename or the file extension.
-*
-*    s = "/" for file name.
-*    s = "." for file extension.
-*
-* For example foo.bar will result in "foo" and "bar".
-*/
-
-std::pair<beast::string_view, beast::string_view>
-split(beast::string_view path, char const* s)
-{
-   auto const pos = path.rfind(s);
-   if (pos == std::string::npos)
-      return {};
-
-   return {path.substr(0, pos), path.substr(pos + 1)};
-}
 
 /* This function receives as input the filename as specified above in
  * the form a/b.c, that means B and returns the path where it should
@@ -162,10 +145,10 @@ splited_target make_splited_target(beast::string_view target)
       target.remove_prefix(1);
 
    // Splits the target in the form [A, B.C].
-   auto const pair1 = split(target, "/");
+   auto const pair1 = split(target, '/');
 
    // Splits the filename from the extension, we end up with [B, C]
-   auto const pair2 = split(pair1.second, ".");
+   auto const pair2 = split(pair1.second, '.');
 
    return {pair1.first, pair2.first, pair2.second};
 }

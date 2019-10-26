@@ -378,12 +378,16 @@ private:
          return ev_res::publish_fail;
       }
 
+      log( loglevel::debug
+         , "New post to channel {0}, from user {1}"
+         , items.front().to
+         , items.front().from);
+
       // Before we request a new pub id, we have to check that the post
       // is valid and will not be refused later. This prevents the pub
       // items from being incremented on an invalid message. May be
       // overkill since we do not expect the app to contain so severe
       // bugs but we have care for server exploitation.
-
       auto const cend = std::cend(tmp_channels);
       auto const match =
          std::lower_bound( std::cbegin(tmp_channels)
@@ -574,9 +578,14 @@ private:
       if (j.contains("cmd")) {
          auto const post_id = j.at("id").get<int>();
          auto const from = j.at("from").get<std::string>();
-         auto const r = channel_objs[i].remove_post(post_id, from);
-         if (!r) 
-            log(loglevel::notice, "Failed to remove post: {0}.", post_id);
+         auto const r1 = channel_objs[i].remove_post(post_id, from);
+         auto const r2 = none_channel.remove_post(post_id, from);
+         if (!r1 || !r2) 
+            log( loglevel::notice
+               , "Failed to remove post {0} from channel {1}. User {2}"
+               , post_id
+               , to
+               , from);
 
          return;
       }
@@ -1066,9 +1075,18 @@ public:
       return cfg;
    }
 
-   void delete_post(int id) const
+   void delete_post( int post_id
+                   , std::string const& from
+                   , code_type to)
    {
-      std::cout << "==> Request to delete post " << id << std::endl;
+      // See comment is on_app_del_post.
+
+      json j;
+      j["cmd"] = "delete";
+      j["from"] = from;
+      j["id"] = post_id;
+      j["to"] = to;
+      db.remove_post(post_id, j.dump());
    }
 };
 

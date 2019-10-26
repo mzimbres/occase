@@ -23,3 +23,11 @@ dpkg-shlibdeps: warning: package could avoid a useless dependency if
 
 were not linked against libcrypto.so.1.1 (they use none of the library's symbols)
 
+---------------------------------------------------------------
+
+occase-db: ./src/redis.cpp:113: void
+rt::redis::facade::on_menu_pub(const boost::system::error_code&,
+std::vector<std::__cxx11::basic_string<char> >): Assertion
+`std::stoi(data.front()) == 1' failed.
+
+

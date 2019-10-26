@@ -11,6 +11,43 @@
 namespace rt
 {
 
+struct target4 {
+   std::string a;
+   std::string b;
+   std::string c;
+   std::string d;
+};
+
+target4 split4(beast::string_view target)
+{
+   // /a/b/c/d
+   auto const foo = split(target, '/');
+
+   auto const d =
+      std::string( foo.second.data()
+                 , std::size(foo.second));
+
+   // /a/b/c
+   auto const bar = split(foo.first, '/');
+
+   auto const c =
+      std::string( bar.second.data()
+                 , std::size(bar.second));
+
+   // /a/b
+   auto const foobar = split(bar.first, '/');
+
+   auto const b =
+      std::string( foobar.second.data()
+                 , std::size(bar.second));
+
+   auto const a =
+      std::string( foobar.first.data()
+                 , std::size(bar.first));
+
+   return {a, b, c, d};
+}
+
 namespace html
 {
 
@@ -26,14 +63,17 @@ auto make_img(std::string const& mms_host, std::string const& name)
 
 auto
 make_del_post_link( std::string const& adm_host
-                  , std::string const& id)
+                  , std::string const& from
+                  , std::string const& to
+                  , std::string const& post_id)
 {
+   // The delete target has the form /delete/from/to/post_id
+   auto const target = "delete/" + from + "/" + to + "/" + post_id;
    std::string del;
    del += "<td>";
    del += "<a href=\"";
    del += adm_host;
-   del += "delete/";
-   del += id;
+   del += target;
    del += "\">Delete</a>";
    del += "</td>";
    return del;
@@ -49,7 +89,10 @@ make_img_row( std::string const& mms_host
       auto const images = j.at("images").get<std::vector<std::string>>();
       std::string row;
       row += "<tr>";
-      row += make_del_post_link(adm_host, std::to_string(p.id));
+      row += make_del_post_link( adm_host
+                               , p.from
+                               , std::to_string(p.to)
+                               , std::to_string(p.id));
       for (auto const& s : images) {
          row += "<td>";
          row += make_img(mms_host, s);
@@ -154,7 +197,7 @@ class db_adm_session :
    public std::enable_shared_from_this<db_adm_session<Session>> {
 public:
    using worker_type = db_worker<Session>;
-   using arg_type = worker_type const&;
+   using arg_type = worker_type&;
 
 private:
    tcp::socket socket_;
@@ -162,7 +205,7 @@ private:
    http::request<http::dynamic_body> request_;
    http::response<http::dynamic_body> response_;
    net::steady_timer deadline_;
-   db_worker<Session> const& worker_;
+   arg_type worker_;
    worker_stats stats {};
 
    void read_request()
@@ -215,13 +258,11 @@ private:
 
    void get_delete_handler(beast::string_view target)
    {
-      auto const foo = split(target, '/');
+      auto const t4 = split4(target);
+      auto const post_id = std::stoi(t4.d);
+      code_type const to = std::stoll(t4.c);
+      worker_.delete_post(post_id, t4.b, to);
 
-      auto const str =
-         std::string( foo.second.data()
-                    , std::size(foo.second));
-
-      worker_.delete_post(std::stoi(str));
       response_.set(http::field::content_type, "text/html");
       boost::beast::ostream(response_.body())
       << html::make_post_del_ok();

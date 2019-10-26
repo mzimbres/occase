@@ -10,6 +10,18 @@
 namespace rt
 {
 
+std::string const adm_html =
+"<!DOCTYPE html>\n"
+"<html>\n"
+"<body>\n"
+"\n"
+"<h1>Occase administration pannel</h1>\n"
+"\n"
+"<p>Posts.</p>\n"
+"\n"
+"</body>\n"
+"</html>\n";
+
 template <class Session>
 class db_worker;
 
@@ -75,46 +87,52 @@ private:
       response_.version(request_.version());
       response_.keep_alive(false);
 
-      switch(request_.method()) {
-      case http::verb::get:
-      {
-         response_.result(http::status::ok);
-         response_.set(http::field::server, "occase-db");
-         stats = worker_.get_stats();
-         create_response();
-         write_response();
-      }
-      break;
-
-      default:
-      {
-         // We return responses indicating an error if
-         // we do not recognize the request method.
-         response_.result(http::status::bad_request);
-         response_.set(http::field::content_type, "text/plain");
-         beast::ostream(response_.body())
-             << "Invalid request-method '"
-             << request_.method_string().to_string()
-             << "'";
-         write_response();
-      }
-      break;
+      switch (request_.method()) {
+         case http::verb::get:  get_handler();  break;
+         case http::verb::post: post_handler(); break;
+         default: default_handler(); break;
       }
    }
 
-   void create_response()
+   void post_handler()
    {
+      // In the future we will accept delete commands here.
+      default_handler();
+   }
+
+   void get_handler()
+   {
+      response_.result(http::status::ok);
+      response_.set(http::field::server, "occase-db");
+
       if (request_.target() == "/stats") {
+         stats = worker_.get_stats();
          response_.set(http::field::content_type, "text/csv");
          boost::beast::ostream(response_.body())
-             << stats
-             << "\n";
-
+         << stats
+         << "\n";
+      } else if (request_.target() == "/posts") {
+         response_.set(http::field::content_type, "text/html");
+         boost::beast::ostream(response_.body())
+         << adm_html << "\n";
       } else {
          response_.result(http::status::not_found);
          response_.set(http::field::content_type, "text/plain");
          beast::ostream(response_.body()) << "File not found\r\n";
       }
+
+      write_response();
+   }
+
+   void default_handler()
+   {
+      response_.result(http::status::bad_request);
+      response_.set(http::field::content_type, "text/plain");
+      beast::ostream(response_.body())
+          << "Invalid request-method '"
+          << request_.method_string().to_string()
+          << "'";
+      write_response();
    }
 
    void write_response()
@@ -123,7 +141,7 @@ private:
 
       response_.set(http::field::content_length, response_.body().size());
 
-      auto handler = [self](beast::error_code ec, std::size_t)
+      auto handler = [self](auto ec, std::size_t)
       {
          self->socket_.shutdown(tcp::socket::shutdown_send, ec);
          self->deadline_.cancel();

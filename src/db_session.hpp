@@ -112,7 +112,7 @@ private:
       boost::ignore_unused(bytes_transferred);
 
       if (ec) {
-         --derived().db().get_ws_stats().number_of_sessions;
+         finish();
          log( loglevel::debug
             , "db_session::on_read: {0}. User {1}"
             , ec.message(), user_id);
@@ -221,13 +221,13 @@ private:
    void do_send(msg_entry entry);
 
 public:
-
    // NOTE: We cannot access the bases class members here since it is
-   // not constructed yet. Do not declare the constructor.
+   // not constructed yet.
 
-   ~db_session()
+   void finish()
    {
       try {
+         --derived().db().get_ws_stats().number_of_sessions;
          if (is_logged_in()) {
             // We also have to store all messages we weren't able to deliver
             // to the user, due to, for example, a disconnection. But we are

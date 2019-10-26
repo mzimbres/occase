@@ -92,17 +92,20 @@ auto get_cfg(int argc, char* argv[])
    ("ssl-private-key-file", po::value<std::string>(&cfg.ssl_priv_key_file))
    ("ssl-dh-file", po::value<std::string>(&cfg.ssl_dh_file))
 
-   ( "port"
-   , po::value<unsigned short>(&cfg.worker.core.port)->default_value(8080)
+   ( "db-port"
+   , po::value<unsigned short>(&cfg.worker.core.db_port)->default_value(8080)
    , "Server listening port.")
 
    ( "max-listen-connections"
    , po::value<int>(&cfg.worker.core.max_listen_connections)->default_value(511)
    , "The size of the tcp backlog.")
 
-   ( "stats-server-base-port"
-   , po::value<unsigned short>(&cfg.worker.core.http_port)->default_value(9090)
-   , "The statistics server base port.")
+   ( "adm-port"
+   , po::value<unsigned short>(&cfg.worker.core.adm_port)->default_value(445)
+   , "The port used for administration and statistics.")
+
+   ( "adm-host"
+   , po::value<std::string>(&cfg.worker.core.adm_host))
 
    ( "handshake-timeout"
    , po::value<int>(&cfg.handshake_timeout)->default_value(2)
@@ -114,7 +117,7 @@ auto get_cfg(int argc, char* argv[])
 
    ( "channel-cleanup-rate"
    , po::value<int>(&cfg.worker.channel.cleanup_rate)->default_value(128)
-   , "The rate channels will be  cleaned up if"
+   , "The rate channels will be cleaned up if"
      " no publish activity is observed. Incremented on every publication"
      " on the channel.")
 
@@ -139,6 +142,8 @@ auto get_cfg(int argc, char* argv[])
    , "The size of the password sent to the app.")
 
    ("mms-key", po::value<std::string>(&cfg.worker.core.mms_key))
+
+   ("mms-host", po::value<std::string>(&cfg.worker.core.mms_host))
 
    ( "redis-host1"
    , po::value<std::string>(&redis_host1)->default_value("127.0.0.1:6379")

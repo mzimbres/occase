@@ -41,10 +41,10 @@ struct core_cfg {
    int pwd_size; 
 
    // Websocket port.
-   unsigned short port;
+   unsigned short db_port;
 
    // Port of the stats server.
-   unsigned short http_port;
+   unsigned short adm_port;
 
    // The size of the tcp backlog.
    int max_listen_connections;
@@ -53,11 +53,11 @@ struct core_cfg {
    // user in the image server.
    std::string mms_key;
 
-   // Db host.
-   std::string adm_host {"http://127.0.0.1:445/"};
+   // DB host.
+   std::string adm_host;
 
    // The host where images are served.
-   std::string mms_host {"http://127.0.0.1:444/"};
+   std::string mms_host;
 };
 
 struct db_worker_cfg {
@@ -638,12 +638,12 @@ private:
          // functions should be called instead of using empty.
          ws_acceptor.run( *this
                         , ctx
-                        , cfg.port
+                        , cfg.db_port
                         , cfg.max_listen_connections);
 
          http_acceptor.run( *this
                           , ctx
-                          , cfg.http_port
+                          , cfg.adm_port
                           , cfg.max_listen_connections);
       }
    }

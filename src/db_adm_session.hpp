@@ -5,22 +5,49 @@
 #include <memory>
 
 #include "net.hpp"
+#include "post.hpp"
 #include "db_worker.hpp"
 
 namespace rt
 {
 
-std::string const adm_html =
-"<!DOCTYPE html>\n"
-"<html>\n"
-"<body>\n"
-"\n"
-"<h1>Occase administration pannel</h1>\n"
-"\n"
-"<p>Posts.</p>\n"
-"\n"
-"</body>\n"
-"</html>\n";
+auto make_adm_page(std::vector<post> const& posts)
+{
+   json j;
+   j["items"] = posts;
+
+   std::string page;
+   page += "<!DOCTYPE html>\n";
+   page += "<html>\n";
+   page += "<body>\n";
+   page += "\n";
+   page += "<h1>Occase administration pannel</h1>\n";
+   page += "\n";
+   page += "<p>Posts.</p>\n";
+   page += "\n";
+   page += j.dump();
+   page += "\n";
+   page += "<a href=\"http://127.0.0.1:9091/delete\">This is a link</a>";
+   page += "</body>\n";
+   page += "</html>\n";
+
+   return page;
+}
+
+auto post_del_ok()
+{
+   std::string page;
+   page += "<!DOCTYPE html>\n";
+   page += "<html>\n";
+   page += "<body>\n";
+   page += "\n";
+   page += "<p>Post deletion: Success.</p>\n";
+   page += "\n";
+   page += "</body>\n";
+   page += "</html>\n";
+
+   return page;
+}
 
 template <class Session>
 class db_worker;
@@ -89,15 +116,8 @@ private:
 
       switch (request_.method()) {
          case http::verb::get:  get_handler();  break;
-         case http::verb::post: post_handler(); break;
          default: default_handler(); break;
       }
-   }
-
-   void post_handler()
-   {
-      // In the future we will accept delete commands here.
-      default_handler();
    }
 
    void get_handler()
@@ -112,9 +132,17 @@ private:
          << stats
          << "\n";
       } else if (request_.target() == "/posts") {
+         log(loglevel::debug, "Posts have requested.");
+         auto const posts = worker_.get_posts(0);
          response_.set(http::field::content_type, "text/html");
          boost::beast::ostream(response_.body())
-         << adm_html << "\n";
+         << make_adm_page(posts);
+      } else if (request_.target() == "/delete") {
+         log(loglevel::info, "Post deletion.");
+         // TODO: Check credentials to allow post deletion.
+         response_.set(http::field::content_type, "text/html");
+         boost::beast::ostream(response_.body())
+         << post_del_ok();
       } else {
          response_.result(http::status::not_found);
          response_.set(http::field::content_type, "text/plain");

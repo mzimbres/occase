@@ -49,7 +49,7 @@ exes += $(db_name)
 exes += $(menu_name)
 exes += $(mms_name)
 exes += $(key_gen_name)
-exes += tests
+exes += db_tests
 exes += aedis
 exes += simulation
 
@@ -110,7 +110,7 @@ Makefile.dep:
 simulation: % : %.o $(client_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
-tests: % : %.o $(client_objs) $(common_objs)
+db_tests: % : %.o $(client_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
 $(db_name): % : %.o $(db_objs) $(common_objs) $(aedis_objs) 

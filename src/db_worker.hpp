@@ -1032,6 +1032,21 @@ public:
       return wstats;
    }
 
+   std::vector<post> get_posts(int id) const noexcept
+   {
+      try {
+         std::vector<post> posts;
+         none_channel.get_posts( id
+                               , std::back_inserter(posts)
+                               , cfg.max_posts_on_sub);
+         return posts;
+      } catch (std::exception const& e) {
+         log(loglevel::info, "get_posts: {}", e.what());
+      }
+
+      return {};
+   }
+
    auto& get_ioc() const noexcept
       { return ioc; }
 

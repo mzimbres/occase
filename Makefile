@@ -62,9 +62,11 @@ common_objs += crypto.o
 db_objs =
 db_objs += redis.o
 db_objs += utils.o
+db_objs += net.o
 
 mms_objs =
 mms_objs += mms_session.o
+mms_objs += net.o
 
 client_objs =
 client_objs += test_clients.o

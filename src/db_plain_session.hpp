@@ -4,6 +4,7 @@
 
 #include "net.hpp"
 #include "db_session.hpp"
+#include "db_adm_plain_session.hpp"
 
 namespace rt
 {
@@ -19,6 +20,7 @@ public:
    using worker_type = db_worker<db_plain_session>;
    using arg_type = worker_type&;
    using psession_type = proxy_session<db_plain_session>;
+   using db_adm_session_type = db_adm_plain_session<db_plain_session>;
 
 private:
    stream_type stream;

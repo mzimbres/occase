@@ -279,62 +279,6 @@ auto get_cfg(int argc, char* argv[])
    return cfg;
 }
 
-auto load_ssl(ssl::context& ctx, occase_db_cfg const& cfg)
-{
-   boost::system::error_code ec;
-
-   // At the moment we do not have certificate with password.
-   ctx.set_password_callback( [](auto n, auto k) { return ""; }
-                            , ec);
-
-   if (ec) {
-      log(loglevel::emerg, "{}", ec.message());
-      return false;
-   }
-
-   ec = {};
-
-   ctx.set_options(
-      ssl::context::default_workarounds |
-      ssl::context::no_sslv2 |
-      ssl::context::single_dh_use, ec);
-
-   if (ec) {
-      log(loglevel::emerg, "{}", ec.message());
-      return false;
-   }
-
-   ec = {};
-
-   ctx.use_certificate_chain_file(cfg.ssl_cert_file, ec);
-
-   if (ec) {
-      log(loglevel::emerg, "{}", ec.message());
-      return false;
-   }
-
-   ec = {};
-
-   ctx.use_private_key_file( cfg.ssl_priv_key_file
-                           , ssl::context::file_format::pem);
-
-   if (ec) {
-      log(loglevel::emerg, "{}", ec.message());
-      return false;
-   }
-
-   ec = {};
-
-   ctx.use_tmp_dh_file(cfg.ssl_dh_file, ec);
-
-   if (ec) {
-      log(loglevel::emerg, "{}", ec.message());
-      return false;
-   }
-
-   return true;
-}
-
 int main(int argc, char* argv[])
 {
    try {
@@ -351,7 +295,12 @@ int main(int argc, char* argv[])
       ssl::context ctx {ssl::context::tlsv12};
 
       if (cfg.with_ssl()) {
-         if (!load_ssl(ctx, cfg))
+         auto const b =
+            load_ssl( ctx
+                    , cfg.ssl_cert_file
+                    , cfg.ssl_priv_key_file
+                    , cfg.ssl_dh_file);
+         if (!b)
             return 1;
 
          db_worker<db_ssl_session> db {cfg.worker, ctx};

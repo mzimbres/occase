@@ -31,6 +31,36 @@
  *
  */
 
+namespace
+{
+
+// TODO: Replace this function with boost::split. See db_adm_session.
+
+/* Can be used to get the filename or the file extension.
+*
+*    s = "/" for file name.
+*    s = "." for file extension.
+*
+* For example foo.bar will result in "foo" and "bar".
+*/
+std::pair<boost::beast::string_view, boost::beast::string_view>
+split(boost::beast::string_view path, char const s)
+{
+   if (std::empty(path))
+      return {};
+
+   if (path.back() == s)
+      path = path.substr(0, std::size(path) - 1);
+
+   auto const pos = path.rfind(s);
+   if (pos == std::string::npos)
+      return {};
+
+   return {path.substr(0, pos), path.substr(pos + 1)};
+}
+
+}
+
 namespace {
 
 void create_dir(const char *dir)

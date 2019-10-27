@@ -27,9 +27,6 @@
 #include "channel.hpp"
 #include "db_session.hpp"
 #include "acceptor_mgr.hpp"
-#include "db_adm_session.hpp"
-#include "db_adm_ssl_session.hpp"
-#include "db_adm_plain_session.hpp"
 
 namespace rt
 {
@@ -144,8 +141,10 @@ private:
    // Accepts websocket connections.
    acceptor_mgr<WebSocketSession> ws_acceptor;
 
+   using db_adm_session_type = typename WebSocketSession::db_adm_session_type;
+
    // Provides some statistics about the server.
-   acceptor_mgr<db_adm_ssl_session<WebSocketSession>> http_acceptor;
+   acceptor_mgr<db_adm_session_type> http_acceptor;
 
    // Signal handler.
    net::signal_set signal_set;

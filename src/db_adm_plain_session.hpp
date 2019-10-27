@@ -1,6 +1,7 @@
 #pragma once
 
 #include "net.hpp"
+#include "db_adm_session.hpp"
 
 namespace rt
 {

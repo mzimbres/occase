@@ -110,7 +110,14 @@ facade::on_menu_pub( boost::system::error_code const& ec
 
    if (menu_pub_queue.front() == request::remove_post) {
       assert(!std::empty(data));
-      assert(std::stoi(data.front()) == 1);
+
+      // There are two ways a post can be deleted, either by the user
+      // or if it is an innapropriate post, by the person monitoring
+      // them. This makes it possible that the deletion returns zero,
+      // which means some of them deleted it first.
+      auto const n = std::stoi(data.front());
+      boost::ignore_unused(n);
+      assert(n == 0 || n == 1);
    }
 
    //if (menu_pub_queue.front() != request::posts) {
@@ -243,7 +250,7 @@ void facade::post(std::string const& msg, int id)
    menu_pub_queue.push(request::post);
 }
 
-void facade::remove_post( int id, std::string const& msg)
+void facade::remove_post(int id, std::string const& msg)
 {
    auto cmd = multi()
             + zremrangebyscore(cfg.posts_key, id)

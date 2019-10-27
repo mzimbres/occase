@@ -22,7 +22,7 @@ public:
 
 private:
    stream_type stream;
-   db_worker<db_plain_session>& w;
+   arg_type w;
    std::shared_ptr<psession_type> psession;
 
 public:

@@ -154,7 +154,7 @@ auto make_post_del_ok()
 
 }
 
-template <class Session>
+template <class WebSocketSession>
 class db_worker;
 
 struct worker_stats {
@@ -184,33 +184,35 @@ std::ostream& operator<<(std::ostream& os, worker_stats const& stats)
    return os;
 }
 
-template <class Session>
-class db_adm_session :
-   public std::enable_shared_from_this<db_adm_session<Session>> {
+template <class WebSocketSession, class Derived>
+class db_adm_session {
 public:
-   using worker_type = db_worker<Session>;
+   using worker_type = db_worker<WebSocketSession>;
    using arg_type = worker_type&;
 
 private:
-   tcp::socket socket_;
    beast::flat_buffer buffer_{8192};
    http::request<http::dynamic_body> request_;
    http::response<http::dynamic_body> response_;
-   net::steady_timer deadline_;
-   arg_type worker_;
 
-   void read_request()
+   Derived& derived() { return static_cast<Derived&>(*this); }
+
+   void do_read()
    {
-      auto self = this->shared_from_this();
-      auto handler = [self](beast::error_code ec, std::size_t n)
+      auto self = derived().shared_from_this();
+
+      auto handler = [self](auto ec, auto n)
       {
          boost::ignore_unused(n);
+        
+         if (ec == http::error::end_of_stream)
+             return self->derived().do_eof();
 
          if (!ec)
              self->process_request();
       };
 
-      http::async_read(socket_, buffer_, request_, handler);
+      http::async_read(derived().stream(), buffer_, request_, handler);
    }
 
    void process_request()
@@ -247,11 +249,11 @@ private:
 
       response_.set(http::field::content_type, "text/html");
 
-      auto const posts = worker_.get_posts(std::stoi(foo.back()));
+      auto const posts = derived().db().get_posts(std::stoi(foo.back()));
 
       boost::beast::ostream(response_.body())
-      << html::make_adm_page( worker_.get_cfg().mms_host
-                            , worker_.get_cfg().adm_host
+      << html::make_adm_page( derived().db().get_cfg().mms_host
+                            , derived().db().get_cfg().adm_host
                             , posts);
    }
 
@@ -272,7 +274,7 @@ private:
          return;
       }
 
-      worker_.delete_post( std::stoi(foo.back())
+      derived().db().delete_post( std::stoi(foo.back())
                          , foo[1]
                          , std::stoll(foo[2]));
 
@@ -312,7 +314,7 @@ private:
          get_default_handler();
       }
 
-      write_response();
+      do_write();
    }
 
    void default_handler()
@@ -323,57 +325,50 @@ private:
           << "Invalid request-method '"
           << request_.method_string().to_string()
           << "'";
-      write_response();
+      do_write();
    }
 
    void stats_handler()
    {
       response_.set(http::field::content_type, "text/csv");
       boost::beast::ostream(response_.body())
-      << worker_.get_stats()
+      << derived().db().get_stats()
       << "\n";
    }
 
-   void write_response()
+   void do_write()
    {
-      auto self = this->shared_from_this();
+      auto self = derived().shared_from_this();
 
       response_.set(http::field::content_length, response_.body().size());
 
-      auto handler = [self](auto ec, std::size_t)
-      {
-         self->socket_.shutdown(tcp::socket::shutdown_send, ec);
-         self->deadline_.cancel();
-      };
+      auto handler = [self](auto ec, std::size_t n)
+         { self->on_write(ec, n); };
 
-      http::async_write(socket_, response_, handler);
+      http::async_write(derived().stream(), response_, handler);
    }
 
-   void check_deadline()
+   void
+   on_write(beast::error_code ec, std::size_t bytes_transferred)
    {
-      auto self = this->shared_from_this();
+      boost::ignore_unused(bytes_transferred);
 
-      auto handler = [self](boost::beast::error_code ec)
-      {
-          if (!ec)
-             self->socket_.close(ec);
-      };
+      if (ec) {
+         log( loglevel::debug
+            , "Error on db_adm_session: {0}"
+            , ec.message());
+      }
 
-      deadline_.async_wait(handler);
+      return derived().do_eof();
    }
-
 
 public:
-   db_adm_session(tcp::socket socket, arg_type w, ssl::context& ctx)
-   : socket_ {std::move(socket)}
-   , deadline_ { socket_.get_executor(), std::chrono::seconds(30)}
-   , worker_ {w}
-   { }
-
-   void run()
+   void start()
    {
-       read_request();
-       check_deadline();
+      beast::get_lowest_layer(
+          derived().stream()).expires_after(std::chrono::seconds(30));
+
+     do_read();
    }
 };
 

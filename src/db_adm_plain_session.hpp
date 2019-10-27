@@ -32,6 +32,9 @@ public:
 
    void run()
    {
+      beast::get_lowest_layer(stream_)
+         .expires_after(std::chrono::seconds(30));
+
       this->start();
    }
 

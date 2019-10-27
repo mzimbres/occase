@@ -28,6 +28,7 @@
 #include "db_session.hpp"
 #include "acceptor_mgr.hpp"
 #include "db_adm_session.hpp"
+#include "db_adm_ssl_session.hpp"
 #include "db_adm_plain_session.hpp"
 
 namespace rt
@@ -144,7 +145,7 @@ private:
    acceptor_mgr<WebSocketSession> ws_acceptor;
 
    // Provides some statistics about the server.
-   acceptor_mgr<db_adm_plain_session<WebSocketSession>> http_acceptor;
+   acceptor_mgr<db_adm_ssl_session<WebSocketSession>> http_acceptor;
 
    // Signal handler.
    net::signal_set signal_set;

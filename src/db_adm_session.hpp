@@ -190,8 +190,10 @@ public:
    using worker_type = db_worker<WebSocketSession>;
    using arg_type = worker_type&;
 
-private:
+protected:
    beast::flat_buffer buffer_{8192};
+
+private:
    http::request<http::dynamic_body> request_;
    http::response<http::dynamic_body> response_;
 
@@ -365,9 +367,6 @@ private:
 public:
    void start()
    {
-      beast::get_lowest_layer(
-          derived().stream()).expires_after(std::chrono::seconds(30));
-
      do_read();
    }
 };

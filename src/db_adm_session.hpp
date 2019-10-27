@@ -3,6 +3,7 @@
 #include <memory>
 #include <chrono>
 #include <algorithm>
+#include <boost/algorithm/string.hpp>
 
 #include "net.hpp"
 #include "post.hpp"
@@ -11,41 +12,32 @@
 namespace rt
 {
 
-struct target4 {
-   std::string a;
-   std::string b;
-   std::string c;
-   std::string d;
-};
-
-target4 split4(beast::string_view target)
+// Transfroms a target in the form
+//
+//    /a/b/c/ or a/b or /a/b/ or a/b/c/
+//
+// into
+//
+//   a/b/c
+//
+beast::string_view prepare_target(beast::string_view t, char s)
 {
-   // /a/b/c/d
-   auto const foo = split(target, '/');
+   if (std::empty(t))
+      return {};
 
-   auto const d =
-      std::string( foo.second.data()
-                 , std::size(foo.second));
+   auto const b1 = t.front() == s;
+   auto const b2 = t.back() == s;
 
-   // /a/b/c
-   auto const bar = split(foo.first, '/');
+   if (b1 && b2)
+      return t.substr(1, std::size(t) - 1);
 
-   auto const c =
-      std::string( bar.second.data()
-                 , std::size(bar.second));
+   if (b1)
+      return t.substr(1, std::size(t));
 
-   // /a/b
-   auto const foobar = split(bar.first, '/');
+   if (b2)
+      return t.substr(0, std::size(t) - 1);
 
-   auto const b =
-      std::string( foobar.second.data()
-                 , std::size(bar.second));
-
-   auto const a =
-      std::string( foobar.first.data()
-                 , std::size(bar.first));
-
-   return {a, b, c, d};
+   return t;
 }
 
 namespace html
@@ -206,7 +198,6 @@ private:
    http::response<http::dynamic_body> response_;
    net::steady_timer deadline_;
    arg_type worker_;
-   worker_stats stats {};
 
    void read_request()
    {
@@ -241,27 +232,49 @@ private:
    //
    //    /posts/post_id/
    //
-   void get_posts_handler(beast::string_view target)
+   void get_posts_handler(std::string const& target)
    {
-      auto const foo = split(target, '/');
-      auto const str =
-         std::string( foo.second.data()
-                    , std::size(foo.second));
+      std::vector<std::string> foo;
+      boost::split(foo, target, boost::is_any_of("/"));
 
-      auto const posts = worker_.get_posts(std::stoi(str));
+      if (std::size(foo) != 2) {
+         log( loglevel::debug
+            , "Error: get_posts_handler target has wrong size: {0}"
+            , std::size(foo));
+         get_default_handler();
+         return;
+      }
+
       response_.set(http::field::content_type, "text/html");
+
+      auto const posts = worker_.get_posts(std::stoi(foo.back()));
+
       boost::beast::ostream(response_.body())
       << html::make_adm_page( worker_.get_cfg().mms_host
                             , worker_.get_cfg().adm_host
                             , posts);
    }
 
-   void get_delete_handler(beast::string_view target)
+   // Expects a target in the from
+   //
+   // /delete/from/to/post_id
+   //
+   void get_delete_handler(std::string const& target)
    {
-      auto const t4 = split4(target);
-      auto const post_id = std::stoi(t4.d);
-      code_type const to = std::stoll(t4.c);
-      worker_.delete_post(post_id, t4.b, to);
+      std::vector<std::string> foo;
+      boost::split(foo, target, boost::is_any_of("/"));
+
+      if (std::size(foo) != 4) {
+         log( loglevel::debug
+            , "Error: get_delete_handler target has wrong size: {0}"
+            , std::size(foo));
+         get_default_handler();
+         return;
+      }
+
+      worker_.delete_post( std::stoi(foo.back())
+                         , foo[1]
+                         , std::stoll(foo[2]));
 
       response_.set(http::field::content_type, "text/html");
       boost::beast::ostream(response_.body())
@@ -281,20 +294,16 @@ private:
          response_.result(http::status::ok);
          response_.set(http::field::server, "occase-db");
 
-         auto const target = request_.target();
-         std::cout << target << std::endl;
+         auto const t = prepare_target(request_.target(), '/');
+         std::string const target {t.data(), std::size(t)};
 
-         if (target == "/stats") {
-            stats = worker_.get_stats();
-            response_.set(http::field::content_type, "text/csv");
-            boost::beast::ostream(response_.body())
-            << stats
-            << "\n";
-         } else if (target.compare(0, 6, "/posts") == 0) {
-            log(loglevel::debug, "Http post request received.");
+         log(loglevel::debug, "get_handler: {0}.", target);
+
+         if (target == "stats") {
+            stats_handler();
+         } else if (target.compare(0, 5, "posts") == 0) {
             get_posts_handler(target);
-         } else if (target.compare(0, 7, "/delete") == 0) {
-            log(loglevel::info, "Post deletion.");
+         } else if (target.compare(0, 6, "delete") == 0) {
             get_delete_handler(target);
          } else {
             get_default_handler();
@@ -315,6 +324,14 @@ private:
           << request_.method_string().to_string()
           << "'";
       write_response();
+   }
+
+   void stats_handler()
+   {
+      response_.set(http::field::content_type, "text/csv");
+      boost::beast::ostream(response_.body())
+      << worker_.get_stats()
+      << "\n";
    }
 
    void write_response()
@@ -349,7 +366,7 @@ private:
 public:
    db_adm_session(tcp::socket socket, arg_type w, ssl::context& ctx)
    : socket_ {std::move(socket)}
-   , deadline_ { socket_.get_executor(), std::chrono::seconds(60)}
+   , deadline_ { socket_.get_executor(), std::chrono::seconds(30)}
    , worker_ {w}
    { }
 

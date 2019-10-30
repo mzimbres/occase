@@ -36,10 +36,10 @@ LDFLAGS += -lsodium
 LDFLAGS += -lssl
 LDFLAGS += -lcrypto
 
-CPPFLAGS = -std=c++17
+CPPFLAGS += -std=c++17
 CPPFLAGS += -I. -I$./src -I$(boost_inc_dir)
-CPPFLAGS += -Wall -Werror=format-security
 CPPFLAGS += $(pkg-config --cflags libsodium)
+CPPFLAGS += $(CXXFLAGS)
 CPPFLAGS += #-O2
 
 VPATH = ./src

@@ -17,4 +17,4 @@ redis-cli flushall
 
 # We start the server and put it on the background. Consider starting
 # many server instances.
-./occase-db test.conf
+./occase-db ./tests/test.conf

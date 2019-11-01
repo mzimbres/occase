@@ -31,12 +31,10 @@ public:
    , w_ {w}
    { }
 
-   void run()
+   void run(std::chrono::seconds s)
    {
-      beast::get_lowest_layer(stream_)
-         .expires_after(std::chrono::seconds(30));
-
-      this->start();
+      beast::get_lowest_layer(stream_).expires_after(s);
+      start();
    }
 
    stream_type& stream()
@@ -51,7 +49,7 @@ public:
 
    worker_type& db() { return w_; }
 
-   void do_eof()
+   void do_eof(std::chrono::seconds)
    {
       beast::error_code ec;
       stream_.socket().shutdown(tcp::socket::shutdown_send, ec);

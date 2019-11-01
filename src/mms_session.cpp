@@ -146,21 +146,21 @@ beast::string_view mime_type(beast::string_view path)
 mms_session::mms_session( tcp::socket socket
                         , arg_type arg
                         , ssl::context& ctx)
-: socket(std::move(socket))
-, deadline {socket.get_executor(), std::chrono::seconds(60)}
-, cfg {arg}
+: stream_(std::move(socket))
+, worker_ {arg}
 { }
 
-void mms_session::run()
+// TODO: Start the timeout here, not on the constructor.
+void mms_session::run(std::chrono::seconds s)
 {
+   beast::get_lowest_layer(stream_).expires_after(s);
+
    auto self = shared_from_this();
    auto f = [self](auto ec, auto n)
       { self->on_read_header(ec, n); };
 
-   header_parser.body_limit(cfg.body_limit);
-   http::async_read_header(socket, buffer, header_parser, f);
-
-   check_deadline();
+   header_parser.body_limit(worker_.get_cfg().body_limit);
+   http::async_read_header(stream_, buffer, header_parser, f);
 }
 
 struct splited_target {
@@ -214,8 +214,8 @@ void mms_session::post_handler()
    std::string path;
 
    auto const st = make_splited_target(header_parser.get().target());
-   if (is_valid(st, cfg.mms_key)) {
-      path = cfg.doc_root + "/" + make_img_path(st.filename);
+   if (is_valid(st, worker_.get_cfg().mms_key)) {
+      path = worker_.get_cfg().doc_root + "/" + make_img_path(st.filename);
 
       log(loglevel::debug , "Post dir: {0}", path);
 
@@ -263,7 +263,7 @@ void mms_session::post_handler()
    auto f = [self](auto ec, auto n)
       { self->on_read_post_body(ec, n); };
 
-   http::async_read(socket, buffer, *body_parser, f);
+   http::async_read(stream_, buffer, *body_parser, f);
 }
 
 void mms_session::get_handler()
@@ -275,8 +275,8 @@ void mms_session::get_handler()
    std::string path;
 
    auto const st = make_splited_target(header_parser.get().target());
-   if (is_valid(st, cfg.mms_key)) {
-      path = cfg.doc_root + "/" + make_img_path(st.filename) + "/";
+   if (is_valid(st, worker_.get_cfg().mms_key)) {
+      path = worker_.get_cfg().doc_root + "/" + make_img_path(st.filename) + "/";
       path.append(st.filename.data(), std::size(st.filename));
       path += ".";
       path.append(st.extension.data(), std::size(st.extension));
@@ -321,12 +321,9 @@ void mms_session::get_handler()
 
    auto self = shared_from_this();
    auto f = [self](auto ec, auto)
-   {
-       self->socket.shutdown(tcp::socket::shutdown_send, ec);
-       self->deadline.cancel();
-   };
+      { self->stream_.socket().shutdown(tcp::socket::shutdown_send, ec); };
 
-   http::async_write(socket, *file_body_resp, f);
+   http::async_write(stream_, *file_body_resp, f);
 }
 
 void
@@ -378,28 +375,9 @@ void mms_session::write_response()
 {
    auto self = shared_from_this();
    auto f = [self](auto ec, auto)
-   {
-      self->socket.shutdown(tcp::socket::shutdown_send, ec);
+      { self->stream_.socket().shutdown(tcp::socket::shutdown_send, ec); };
 
-      if (ec)
-         log(loglevel::info, "write_response: {0}", ec.message());
-
-      self->deadline.cancel();
-   };
-
-   http::async_write(socket, resp, f);
-}
-
-void mms_session::check_deadline()
-{
-   auto self = shared_from_this();
-   auto f = [self](auto ec)
-   {
-      if (!ec)
-          self->socket.close(ec);
-   };
-
-   deadline.async_wait(f);
+   http::async_write(stream_, resp, f);
 }
 
 }

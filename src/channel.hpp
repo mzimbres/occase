@@ -185,6 +185,9 @@ public:
                          , id
                          , comp);
 
+      if (point == std::end(items))
+         return false;
+
       if (point->id != id)
          return false;
 

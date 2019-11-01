@@ -37,7 +37,11 @@ private:
 
          log(loglevel::info, "listener::on_accept: {0}", ec.message());
       } else {
-         std::make_shared<Session>(std::move(peer), w, ctx)->run();
+         auto const n = w.get_cfg().http_session_timeout;
+         std::make_shared< Session
+                         >( std::move(peer)
+                          , w
+                          , ctx)->run(std::chrono::seconds {n});
       }
 
       do_accept(w, ctx);

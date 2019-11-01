@@ -220,10 +220,6 @@ private:
 
    void do_send(msg_entry entry);
 
-public:
-   // NOTE: We cannot access the bases class members here since it is
-   // not constructed yet.
-
    void finish()
    {
       try {
@@ -258,6 +254,11 @@ public:
       }
    }
 
+
+public:
+   // NOTE: We cannot access the bases class members here since it is
+   // not constructed yet.
+
    template <class Body, class Allocator>
    void run(http::request<Body, http::basic_fields<Allocator>> req)
    {
@@ -270,12 +271,10 @@ public:
       };
 
       derived().ws().set_option(wstm);
+      auto const name = derived().db().get_cfg().server_name;
 
-      auto f = [](websocket::response_type& res)
-      {
-         res.set( http::field::server
-                , std::string(BOOST_BEAST_VERSION_STRING) + " occase-db");
-      };
+      auto f = [=](websocket::response_type& res)
+         { res.set(http::field::server, name); };
 
       derived().ws().set_option(websocket::stream_base::decorator(f));
 

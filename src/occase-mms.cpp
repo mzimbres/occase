@@ -111,7 +111,13 @@ int main(int argc, char* argv[])
       net::io_context ioc {1};
       ssl::context ctx {ssl::context::tlsv12};
       acceptor_mgr<mms_session> lst {ioc};
-      lst.run(cfg.session_cfg, ctx, cfg.port, cfg.max_listen_connections);
+      mms_worker worker {cfg.session_cfg};
+
+      lst.run( worker
+             , ctx
+             , cfg.port
+             , cfg.max_listen_connections);
+
       ioc.run();
    } catch(std::exception const& e) {
       log(loglevel::notice, e.what());

@@ -56,6 +56,15 @@ struct core_cfg {
 
    // The host where images are served.
    std::string mms_host;
+
+   // The maximum duration time for a http session.
+   int http_session_timeout {30};
+
+   // SSL shutdown timeout.
+   int ssl_shutdown_timeout {30};
+
+   // The server name.
+   std::string server_name {"occase-db"};
 };
 
 struct db_worker_cfg {

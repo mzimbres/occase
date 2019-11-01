@@ -199,8 +199,10 @@ private:
    {
       boost::ignore_unused(bytes_transferred);
 
-      if (ec == http::error::end_of_stream)
-          return derived().do_eof();
+      if (ec == http::error::end_of_stream) {
+         auto const n = derived().db().get_cfg().ssl_shutdown_timeout;
+         return derived().do_eof(std::chrono::seconds {n});
+      }
 
       if (ec) {
          log(loglevel::debug, "db_adm_session: {0}", ec.message());
@@ -374,8 +376,8 @@ private:
             , "Error on db_adm_session: {0}"
             , ec.message());
       }
-
-      return derived().do_eof();
+      auto const n = derived().db().get_cfg().ssl_shutdown_timeout;
+      return derived().do_eof(std::chrono::seconds {n});
    }
 
 public:

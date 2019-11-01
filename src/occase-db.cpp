@@ -137,6 +137,16 @@ auto get_cfg(int argc, char* argv[])
    , po::value<int>(&cfg.worker.core.pwd_size)->default_value(10)
    , "The size of the password sent to the app.")
 
+   ( "http-session-timeout"
+   , po::value<int>(&cfg.worker.core.http_session_timeout)->default_value(30))
+
+   ( "ssl-shutdown-timeout"
+   , po::value<int>(&cfg.worker.core.ssl_shutdown_timeout)->default_value(30))
+
+   ( "server-name"
+   , po::value<std::string>(&cfg.worker.core.server_name)
+     ->default_value("occase-db"))
+
    ("mms-key", po::value<std::string>(&cfg.worker.core.mms_key))
 
    ("mms-host", po::value<std::string>(&cfg.worker.core.mms_host))

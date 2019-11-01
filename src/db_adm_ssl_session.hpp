@@ -55,13 +55,12 @@ public:
    , w_ {w}
    { }
 
-   void run()
+   void run(std::chrono::seconds s)
    {
-      beast::get_lowest_layer(stream_)
-         .expires_after(std::chrono::seconds(30));
+      beast::get_lowest_layer(stream_).expires_after(s);
 
-      // Perform the SSL handshake
-      // Note, this is the buffered version of the handshake.
+      // Perform the SSL handshake. Note, this is the buffered version
+      // of the handshake.
       stream_.async_handshake(
           ssl::stream_base::server,
           this->buffer_.data(),
@@ -82,10 +81,9 @@ public:
 
    worker_type& db() { return w_; }
 
-   void do_eof()
+   void do_eof(std::chrono::seconds ssl_timeout)
    {
-       beast::get_lowest_layer(stream_)
-          .expires_after(std::chrono::seconds(30));
+       beast::get_lowest_layer(stream_).expires_after(ssl_timeout);
 
        // Perform the SSL shutdown
        stream_.async_shutdown(

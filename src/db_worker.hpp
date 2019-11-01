@@ -42,9 +42,6 @@ struct core_cfg {
    // Websocket port.
    unsigned short db_port;
 
-   // Port of the stats server.
-   unsigned short adm_port;
-
    // The size of the tcp backlog.
    int max_listen_connections;
 
@@ -53,7 +50,7 @@ struct core_cfg {
    std::string mms_key;
 
    // DB host.
-   std::string adm_host;
+   std::string db_host;
 
    // The host where images are served.
    std::string mms_host;
@@ -138,13 +135,11 @@ private:
    // Generates passwords that are sent to the app.
    pwd_gen pwdgen;
 
-   // Accepts websocket connections.
-   acceptor_mgr<WebSocketSession> ws_acceptor;
-
    using db_adm_session_type = typename WebSocketSession::db_adm_session_type;
 
-   // Provides some statistics about the server.
-   acceptor_mgr<db_adm_session_type> http_acceptor;
+   // Accepts both http connections used by the administrative api or
+   // websocket connection used by the database.
+   acceptor_mgr<db_adm_session_type> acceptor_;
 
    // Signal handler.
    net::signal_set signal_set;
@@ -646,15 +641,10 @@ private:
          // We can begin to accept websocket connections. NOTICE: It may
          // be better to use acceptor::is_open to determine if the run
          // functions should be called instead of using empty.
-         ws_acceptor.run( *this
-                        , ctx
-                        , cfg.db_port
-                        , cfg.max_listen_connections);
-
-         http_acceptor.run( *this
-                          , ctx
-                          , cfg.adm_port
-                          , cfg.max_listen_connections);
+         acceptor_.run( *this
+                      , ctx
+                      , cfg.db_port
+                      , cfg.max_listen_connections);
       }
    }
 
@@ -917,6 +907,41 @@ private:
       shutdown_impl();
    }
 
+   // WARNING: Do not call this function from the signal handler.
+   void shutdown()
+   {
+      shutdown_impl();
+
+      boost::system::error_code ec;
+      signal_set.cancel(ec);
+      if (ec) {
+         log( loglevel::info
+            , "db_worker::shutdown: {0}"
+            , ec.message());
+      }
+   }
+
+   void shutdown_impl()
+   {
+      log(loglevel::notice, "Shutdown has been requested.");
+
+      log( loglevel::notice
+         , "Number of sessions that will be closed: {0}"
+         , std::size(sessions));
+
+      acceptor_.shutdown();
+
+      auto f = [](auto o)
+      {
+         if (auto s = o.second.lock())
+            s->shutdown();
+      };
+
+      std::for_each(std::begin(sessions), std::end(sessions), f);
+
+      db.disconnect();
+   }
+
 public:
    db_worker(db_worker_cfg cfg, ssl::context& c)
    : ctx {c}
@@ -924,8 +949,7 @@ public:
    , ch_cfg {cfg.channel}
    , ws_timeouts_ {cfg.timeouts}
    , db {cfg.db, ioc}
-   , ws_acceptor {ioc}
-   , http_acceptor {ioc}
+   , acceptor_ {ioc}
    , signal_set {ioc, SIGINT, SIGTERM}
    {
       auto f = [this](auto const& ec, auto n)
@@ -991,49 +1015,12 @@ public:
       return ev_res::unknown;
    }
 
-
    auto const& get_timeouts() const noexcept
       { return ws_timeouts_;}
    auto& get_ws_stats() noexcept
       { return ws_stats_;}
    auto const& get_ws_stats() const noexcept
       { return ws_stats_; }
-
-   // WARNING: Do not call this function from the signal handler.
-   void shutdown()
-   {
-      shutdown_impl();
-
-      boost::system::error_code ec;
-      signal_set.cancel(ec);
-      if (ec) {
-         log( loglevel::info
-            , "db_worker::shutdown: {0}"
-            , ec.message());
-      }
-   }
-
-   void shutdown_impl()
-   {
-      log(loglevel::notice, "Shutdown has been requested.");
-
-      log( loglevel::notice
-         , "Number of sessions that will be closed: {0}"
-         , std::size(sessions));
-
-      ws_acceptor.shutdown();
-      http_acceptor.shutdown();
-
-      auto f = [](auto o)
-      {
-         if (auto s = o.second.lock())
-            s->shutdown();
-      };
-
-      std::for_each(std::begin(sessions), std::end(sessions), f);
-
-      db.disconnect();
-   }
 
    worker_stats get_stats() const noexcept
    {

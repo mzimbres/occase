@@ -75,6 +75,11 @@ public:
       return stream_;
    }
 
+   stream_type release_stream()
+   {
+      return std::move(stream_);
+   }
+
    worker_type& db() { return w_; }
 
    void do_eof()

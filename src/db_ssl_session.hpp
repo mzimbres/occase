@@ -25,31 +25,18 @@ public:
    using db_adm_session_type = db_adm_ssl_session<db_ssl_session>;
 
 private:
-   stream_type stream;
+   stream_type stream_;
    db_worker<db_ssl_session>& w;
    std::shared_ptr<psession_type> psession;
 
-   void on_handshake(beast::error_code ec)
-   {
-      if (ec) {
-         log( loglevel::debug
-            , "db_ssl_session::on_handshake: {0}."
-            , ec.message());
-
-         return;
-      }
-
-      accept();
-   }
-
 public:
    explicit
-   db_ssl_session(tcp::socket&& stream, arg_type w_, ssl::context& ctx)
-   : stream(std::move(stream), ctx)
+   db_ssl_session(beast::ssl_stream<beast::tcp_stream>&& stream, arg_type w_)
+   : stream_(std::move(stream))
    , w {w_}
    { }
 
-   stream_type& ws() { return stream; }
+   stream_type& ws() { return stream_; }
    worker_type& db() { return w; }
 
    std::weak_ptr<psession_type> get_proxy_session(bool make_new_session)
@@ -60,19 +47,6 @@ public:
       }
 
       return psession;
-   }
-
-   void run()
-   {
-      beast::get_lowest_layer(stream)
-         .expires_after(std::chrono::seconds(30));
-
-      auto self = shared_from_this();
-
-      auto f = [self](auto ec)
-         { self->on_handshake(ec); };
-
-      stream.next_layer().async_handshake(ssl::stream_base::server,f);
    }
 };
 

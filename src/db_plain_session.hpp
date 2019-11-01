@@ -23,18 +23,18 @@ public:
    using db_adm_session_type = db_adm_plain_session<db_plain_session>;
 
 private:
-   stream_type stream;
+   stream_type stream_;
    arg_type w;
    std::shared_ptr<psession_type> psession;
 
 public:
    explicit
-   db_plain_session(tcp::socket&& stream, arg_type w_, ssl::context& ctx)
-   : stream(std::move(stream))
+   db_plain_session(beast::tcp_stream&& stream, arg_type w_)
+   : stream_(std::move(stream))
    , w {w_}
    { }
 
-   stream_type& ws() { return stream; }
+   stream_type& ws() { return stream_; }
    worker_type& db() { return w; }
 
    std::weak_ptr<psession_type> get_proxy_session(bool make_new_session)
@@ -45,11 +45,6 @@ public:
       }
 
       return psession;
-   }
-
-   void run()
-   {
-      accept();
    }
 };
 

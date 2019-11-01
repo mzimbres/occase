@@ -54,7 +54,7 @@ auto make_img(std::string const& mms_host, std::string const& name)
 }
 
 auto
-make_del_post_link( std::string const& adm_host
+make_del_post_link( std::string const& db_host
                   , std::string const& from
                   , std::string const& to
                   , std::string const& post_id)
@@ -64,7 +64,7 @@ make_del_post_link( std::string const& adm_host
    std::string del;
    del += "<td>";
    del += "<a href=\"";
-   del += adm_host;
+   del += db_host;
    del += target;
    del += "\">Delete</a>";
    del += "</td>";
@@ -73,7 +73,7 @@ make_del_post_link( std::string const& adm_host
 
 auto
 make_img_row( std::string const& mms_host
-            , std::string const& adm_host
+            , std::string const& db_host
             , post const& p) noexcept
 {
    try {
@@ -81,7 +81,7 @@ make_img_row( std::string const& mms_host
       auto const images = j.at("images").get<std::vector<std::string>>();
       std::string row;
       row += "<tr>";
-      row += make_del_post_link( adm_host
+      row += make_del_post_link( db_host
                                , p.from
                                , std::to_string(p.to)
                                , std::to_string(p.id));
@@ -99,7 +99,7 @@ make_img_row( std::string const& mms_host
 }
 
 auto make_adm_page( std::string const& mms_host
-                  , std::string const& adm_host
+                  , std::string const& db_host
                   , std::vector<post> const& posts)
 {
    // This is kind of weird, the database itself does not need to know
@@ -108,7 +108,7 @@ auto make_adm_page( std::string const& mms_host
 
    auto acc = [&](auto init, auto const& p)
    {
-      init += make_img_row(mms_host, adm_host, p);
+      init += make_img_row(mms_host, db_host, p);
       return init;
    };
 
@@ -194,35 +194,53 @@ protected:
    beast::flat_buffer buffer_{8192};
 
 private:
-   http::request<http::dynamic_body> request_;
-   http::response<http::dynamic_body> response_;
+   http::request<http::dynamic_body> req_;
+   http::response<http::dynamic_body> resp_;
 
    Derived& derived() { return static_cast<Derived&>(*this); }
+
+   void on_read(beast::error_code ec, std::size_t bytes_transferred)
+   {
+      boost::ignore_unused(bytes_transferred);
+
+      if (ec == http::error::end_of_stream)
+          return derived().do_eof();
+
+      if (ec) {
+         log(loglevel::debug, "db_adm_session: {0}", ec.message());
+         return;
+      }
+
+      if (websocket::is_upgrade(req_)) {
+         log(loglevel::debug, "db_adm_session: Websocket upgrade");
+         beast::get_lowest_layer(derived().stream()).expires_never();
+
+         std::make_shared< WebSocketSession
+                         >( std::move(derived().release_stream())
+                          , derived().db()
+                          )->run(std::move(req_));
+         return;
+      }
+
+      process_request();
+   }
 
    void do_read()
    {
       auto self = derived().shared_from_this();
 
       auto handler = [self](auto ec, auto n)
-      {
-         boost::ignore_unused(n);
-        
-         if (ec == http::error::end_of_stream)
-             return self->derived().do_eof();
+         { self->on_read(ec, n); };
 
-         if (!ec)
-             self->process_request();
-      };
-
-      http::async_read(derived().stream(), buffer_, request_, handler);
+      http::async_read(derived().stream(), buffer_, req_, handler);
    }
 
    void process_request()
    {
-      response_.version(request_.version());
-      response_.keep_alive(false);
+      resp_.version(req_.version());
+      resp_.keep_alive(false);
 
-      switch (request_.method()) {
+      switch (req_.method()) {
          case http::verb::get:  get_handler();  break;
          default: default_handler(); break;
       }
@@ -249,13 +267,13 @@ private:
          return;
       }
 
-      response_.set(http::field::content_type, "text/html");
+      resp_.set(http::field::content_type, "text/html");
 
       auto const posts = derived().db().get_posts(std::stoi(foo.back()));
 
-      boost::beast::ostream(response_.body())
+      boost::beast::ostream(resp_.body())
       << html::make_adm_page( derived().db().get_cfg().mms_host
-                            , derived().db().get_cfg().adm_host
+                            , derived().db().get_cfg().db_host
                             , posts);
    }
 
@@ -280,25 +298,25 @@ private:
                          , foo[1]
                          , std::stoll(foo[2]));
 
-      response_.set(http::field::content_type, "text/html");
-      boost::beast::ostream(response_.body())
+      resp_.set(http::field::content_type, "text/html");
+      boost::beast::ostream(resp_.body())
       << html::make_post_del_ok();
    }
 
    void get_default_handler()
    {
-      response_.result(http::status::not_found);
-      response_.set(http::field::content_type, "text/plain");
-      beast::ostream(response_.body()) << "File not found\r\n";
+      resp_.result(http::status::not_found);
+      resp_.set(http::field::content_type, "text/plain");
+      beast::ostream(resp_.body()) << "File not found\r\n";
    }
 
    void get_handler()
    {
       try {
-         response_.result(http::status::ok);
-         response_.set(http::field::server, "occase-db");
+         resp_.result(http::status::ok);
+         resp_.set(http::field::server, "occase-db");
 
-         auto const t = prepare_target(request_.target(), '/');
+         auto const t = prepare_target(req_.target(), '/');
          std::string const target {t.data(), std::size(t)};
 
          log(loglevel::debug, "get_handler: {0}.", target);
@@ -321,19 +339,19 @@ private:
 
    void default_handler()
    {
-      response_.result(http::status::bad_request);
-      response_.set(http::field::content_type, "text/plain");
-      beast::ostream(response_.body())
+      resp_.result(http::status::bad_request);
+      resp_.set(http::field::content_type, "text/plain");
+      beast::ostream(resp_.body())
           << "Invalid request-method '"
-          << request_.method_string().to_string()
+          << req_.method_string().to_string()
           << "'";
       do_write();
    }
 
    void stats_handler()
    {
-      response_.set(http::field::content_type, "text/csv");
-      boost::beast::ostream(response_.body())
+      resp_.set(http::field::content_type, "text/csv");
+      boost::beast::ostream(resp_.body())
       << derived().db().get_stats()
       << "\n";
    }
@@ -342,12 +360,12 @@ private:
    {
       auto self = derived().shared_from_this();
 
-      response_.set(http::field::content_length, response_.body().size());
+      resp_.set(http::field::content_length, resp_.body().size());
 
       auto handler = [self](auto ec, std::size_t n)
          { self->on_write(ec, n); };
 
-      http::async_write(derived().stream(), response_, handler);
+      http::async_write(derived().stream(), resp_, handler);
    }
 
    void

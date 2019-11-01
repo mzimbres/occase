@@ -100,12 +100,8 @@ auto get_cfg(int argc, char* argv[])
    , po::value<int>(&cfg.worker.core.max_listen_connections)->default_value(511)
    , "The size of the tcp backlog.")
 
-   ( "adm-port"
-   , po::value<unsigned short>(&cfg.worker.core.adm_port)->default_value(445)
-   , "The port used for administration and statistics.")
-
-   ( "adm-host"
-   , po::value<std::string>(&cfg.worker.core.adm_host))
+   ( "db-host"
+   , po::value<std::string>(&cfg.worker.core.db_host))
 
    ( "handshake-timeout"
    , po::value<int>(&cfg.handshake_timeout)->default_value(2)

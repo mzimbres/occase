@@ -143,7 +143,7 @@ private:
       }
    }
 
-   void on_accept(boost::system::error_code ec)
+   void on_run(boost::system::error_code ec)
    {
       if (ec) {
          if (ec == beast::error::timeout) {
@@ -258,12 +258,9 @@ public:
       }
    }
 
-   void accept()
+   template <class Body, class Allocator>
+   void run(http::request<Body, http::basic_fields<Allocator>> req)
    {
-      // Turn off the timeout on the tcp_stream, because
-      // the websocket stream has its own timeout system.
-      beast::get_lowest_layer(derived().ws()).expires_never();
-
       using timeout_type = websocket::stream_base::timeout;
 
       timeout_type wstm
@@ -276,8 +273,8 @@ public:
 
       auto f = [](websocket::response_type& res)
       {
-          res.set( http::field::server
-                 , std::string(BOOST_BEAST_VERSION_STRING) + " occase-db");
+         res.set( http::field::server
+                , std::string(BOOST_BEAST_VERSION_STRING) + " occase-db");
       };
 
       derived().ws().set_option(websocket::stream_base::decorator(f));
@@ -298,9 +295,9 @@ public:
 
       auto self = derived().shared_from_this();
       auto handler2 = [self](auto ec)
-         { self->on_accept(ec); };
+         { self->on_run(ec); };
 
-      derived().ws().async_accept(handler2);
+      derived().ws().async_accept(req, handler2);
    }
 
    // Messages for which persist is true will be persisted on the

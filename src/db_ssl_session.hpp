@@ -19,14 +19,13 @@ class db_ssl_session
 public:
    using stream_type =
       websocket::stream<beast::ssl_stream<beast::tcp_stream>>;
-   using worker_type = db_worker<db_ssl_session>;
+   using worker_type = db_worker<db_adm_ssl_session>;
    using arg_type = worker_type&;
    using psession_type = proxy_session<db_ssl_session>;
-   using db_adm_session_type = db_adm_ssl_session<db_ssl_session>;
 
 private:
    stream_type stream_;
-   db_worker<db_ssl_session>& w;
+   worker_type& w;
    std::shared_ptr<psession_type> psession;
 
 public:

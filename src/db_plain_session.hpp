@@ -17,14 +17,13 @@ class db_plain_session
    , public std::enable_shared_from_this<db_plain_session> {
 public:
    using stream_type = websocket::stream<beast::tcp_stream>;
-   using worker_type = db_worker<db_plain_session>;
+   using worker_type = db_worker<db_adm_plain_session>;
    using arg_type = worker_type&;
    using psession_type = proxy_session<db_plain_session>;
-   using db_adm_session_type = db_adm_plain_session<db_plain_session>;
 
 private:
    stream_type stream_;
-   arg_type w;
+   worker_type& w;
    std::shared_ptr<psession_type> psession;
 
 public:

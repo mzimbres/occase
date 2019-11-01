@@ -6,19 +6,19 @@
 namespace rt
 {
 
-template <class WebSocketSession>
+template <class AdmSession>
 class db_worker;
 
-template <class WebSocketSession>
+class db_plain_session;
+
 class db_adm_plain_session
-    : public db_adm_session< WebSocketSession
-                           , db_adm_plain_session<WebSocketSession>>
-    , public
-      std::enable_shared_from_this<db_adm_plain_session<WebSocketSession>> {
+   : public db_adm_session<db_adm_plain_session>
+   , public std::enable_shared_from_this<db_adm_plain_session> {
 public:
    using stream_type = beast::tcp_stream;
-   using worker_type = db_worker<WebSocketSession>;
+   using worker_type = db_worker<db_adm_plain_session>;
    using arg_type = worker_type&;
+   using db_session_type = db_plain_session;
 
 private:
    beast::tcp_stream stream_;

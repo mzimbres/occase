@@ -27,6 +27,8 @@
 #include "channel.hpp"
 #include "db_session.hpp"
 #include "acceptor_mgr.hpp"
+#include "db_plain_session.hpp"
+#include "db_ssl_session.hpp"
 
 namespace rt
 {
@@ -81,9 +83,11 @@ struct pwd_queue_item {
    std::string pwd;
 };
 
-template <class WebSocketSession>
+template <class AdmSession>
 class db_worker {
 private:
+   using db_session_type = typename AdmSession::db_session_type;
+
    net::io_context ioc {1};
    ssl::context& ctx;
 
@@ -98,7 +102,7 @@ private:
 
    // Maps a user id in to a websocket session.
    std::unordered_map< std::string
-                     , std::weak_ptr<WebSocketSession>
+                     , std::weak_ptr<db_session_type>
                      > sessions;
 
    // The channels are stored in a vector and the channel hash codes
@@ -106,27 +110,27 @@ private:
    // tmp_channels is used as sentinel to perform fast linear
    // searches.
    channels_type tmp_channels;
-   std::vector<channel<WebSocketSession>> channel_objs;
+   std::vector<channel<db_session_type>> channel_objs;
 
    // Apps that do not register for any product channels (the seconds
    // item in the menu) will receive posts from any channel. This is
    // the channel that will store the web socket channels for this
    // case.
-   channel<WebSocketSession> none_channel;
+   channel<db_session_type> none_channel;
 
    // Facade to redis.
    redis::facade db;
 
    // Queue of user posts waiting for an id that has been requested
    // from redis.
-   std::queue<post_queue_item<WebSocketSession>> post_queue;
+   std::queue<post_queue_item<db_session_type>> post_queue;
 
    // Queue with sessions waiting for a user id that are retrieved
    // from redis.
-   std::queue<pwd_queue_item<WebSocketSession>> reg_queue;
+   std::queue<pwd_queue_item<db_session_type>> reg_queue;
 
    // Queue of users waiting to be checked for login.
-   std::queue<pwd_queue_item<WebSocketSession>> login_queue;
+   std::queue<pwd_queue_item<db_session_type>> login_queue;
 
    // The last post id that this channel has received from reidis
    // pubsub menu channel.
@@ -135,11 +139,9 @@ private:
    // Generates passwords that are sent to the app.
    pwd_gen pwdgen;
 
-   using db_adm_session_type = typename WebSocketSession::db_adm_session_type;
-
    // Accepts both http connections used by the administrative api or
    // websocket connection used by the database.
-   acceptor_mgr<db_adm_session_type> acceptor_;
+   acceptor_mgr<AdmSession> acceptor_;
 
    // Signal handler.
    net::signal_set signal_set;
@@ -171,7 +173,7 @@ private:
          , std::size(channel_objs));
    }
 
-   ev_res on_app_login(json const& j, std::shared_ptr<WebSocketSession> s)
+   ev_res on_app_login(json const& j, std::shared_ptr<db_session_type> s)
    {
       auto const user = j.at("user").get<std::string>();
       s->set_id(user);
@@ -186,7 +188,7 @@ private:
       return ev_res::login_ok;
    }
 
-   ev_res on_app_register(json const& j, std::shared_ptr<WebSocketSession> s)
+   ev_res on_app_register(json const& j, std::shared_ptr<db_session_type> s)
    {
       auto const empty = std::empty(reg_queue);
       reg_queue.push({s, {}});
@@ -196,7 +198,7 @@ private:
       return ev_res::register_ok;
    }
 
-   ev_res on_app_subscribe(json const& j, std::shared_ptr<WebSocketSession> s)
+   ev_res on_app_subscribe(json const& j, std::shared_ptr<db_session_type> s)
    {
       auto const channels = j.at("channels").get<channels_type>();
       auto const filters = j.at("filters").get<channels_type>();
@@ -317,7 +319,7 @@ private:
       return ev_res::subscribe_ok;
    }
 
-   ev_res on_app_chat_msg(json j, std::shared_ptr<WebSocketSession> s)
+   ev_res on_app_chat_msg(json j, std::shared_ptr<db_session_type> s)
    {
       // Consider searching the sessions map if the user in this worker
       // and send him his message directly to avoid overloading the redis
@@ -346,7 +348,7 @@ private:
       return ev_res::chat_msg_ok;
    }
 
-   ev_res on_app_presence(json j, std::shared_ptr<WebSocketSession> s)
+   ev_res on_app_presence(json j, std::shared_ptr<db_session_type> s)
    {
       // Consider searching the sessions map if the user in this worker
       // and send him his message directly to avoid overloading the redis
@@ -362,7 +364,7 @@ private:
       return ev_res::presence_ok;
    }
 
-   ev_res on_app_publish(json j, std::shared_ptr<WebSocketSession> s)
+   ev_res on_app_publish(json j, std::shared_ptr<db_session_type> s)
    {
       auto items = j.at("items").get<std::vector<post>>();
 
@@ -416,7 +418,7 @@ private:
    }
 
 
-   ev_res on_app_del_post(json j, std::shared_ptr<WebSocketSession> s)
+   ev_res on_app_del_post(json j, std::shared_ptr<db_session_type> s)
    {
       // A post should be deleted from the database as well as from each
       // worker, so that users do not receive posts from products that
@@ -436,7 +438,7 @@ private:
       return ev_res::delete_ok;
    }
 
-   ev_res on_app_filenames(json j, std::shared_ptr<WebSocketSession> s)
+   ev_res on_app_filenames(json j, std::shared_ptr<db_session_type> s)
    {
       auto const n = sz::mms_filename_min_size;
       auto f = [this, n]()
@@ -982,7 +984,7 @@ public:
       }
    }
 
-   ev_res on_app( std::shared_ptr<WebSocketSession> s
+   ev_res on_app( std::shared_ptr<db_session_type> s
                 , std::string msg) noexcept
    {
       try {

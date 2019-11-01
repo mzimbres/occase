@@ -154,7 +154,7 @@ auto make_post_del_ok()
 
 }
 
-template <class WebSocketSession>
+template <class AdmSession>
 class db_worker;
 
 struct worker_stats {
@@ -184,12 +184,8 @@ std::ostream& operator<<(std::ostream& os, worker_stats const& stats)
    return os;
 }
 
-template <class WebSocketSession, class Derived>
+template <class Derived>
 class db_adm_session {
-public:
-   using worker_type = db_worker<WebSocketSession>;
-   using arg_type = worker_type&;
-
 protected:
    beast::flat_buffer buffer_{8192};
 
@@ -215,7 +211,7 @@ private:
          log(loglevel::debug, "db_adm_session: Websocket upgrade");
          beast::get_lowest_layer(derived().stream()).expires_never();
 
-         std::make_shared< WebSocketSession
+         std::make_shared< typename Derived::db_session_type
                          >( std::move(derived().release_stream())
                           , derived().db()
                           )->run(std::move(req_));

@@ -16,7 +16,7 @@ void to_json(json& j, post const& e)
            , {"to", e.to}
            , {"filter", e.filter}
            , {"features", e.features}
-           , {"date", e.date}
+           , {"date", e.date.count()}
            , {"range_values", e.range_values}
            };
 }
@@ -29,7 +29,7 @@ void from_json(json const& j, post& e)
   e.to = j.at("to").get<code_type>();
   e.filter = j.at("filter").get<code_type>();
   e.features = j.at("features").get<code_type>();
-  e.date = j.at("date").get<date_type>();
+  e.date = date_type {j.at("date").get<long int>()};
   e.range_values = j.at("range_values").get<std::vector<int>>();
 }
 

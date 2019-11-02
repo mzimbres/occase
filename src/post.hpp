@@ -1,8 +1,9 @@
 #pragma once
 
-#include <vector>
 #include <array>
+#include <vector>
 #include <string>
+#include <chrono>
 #include <ostream>
 #include <cstdint>
 
@@ -26,7 +27,7 @@ constexpr std::size_t mms_filename_min_size = a + b + c;
 
 using code_type = std::uint64_t;
 using channels_type = std::vector<code_type>;
-using date_type = long int;
+using date_type = std::chrono::seconds;
 
 struct post {
    int id;
@@ -35,7 +36,7 @@ struct post {
    code_type to;
    code_type filter;
    code_type features;
-   date_type date = 0; // Milliseconds.
+   date_type date {0};
    std::vector<int> range_values;
 };
 

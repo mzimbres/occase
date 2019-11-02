@@ -133,6 +133,9 @@ auto get_cfg(int argc, char* argv[])
    , "The maximum number of messages that is allowed to be sent to "
      "the user when he subscribes to his channels.")
 
+   ( "post-interval"
+   , po::value<long int>(&cfg.worker.core.post_interval)->default_value(40))
+
    ( "password-size"
    , po::value<int>(&cfg.worker.core.pwd_size)->default_value(10)
    , "The size of the password sent to the app.")

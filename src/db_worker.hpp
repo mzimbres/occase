@@ -68,7 +68,10 @@ struct core_cfg {
 
    // Only one app post will be allowed in this time interval
    // (seconds).
-   date_type post_interval {40};
+   long int post_interval {40};
+
+   auto get_post_interval() const noexcept
+      { return std::chrono::seconds {post_interval}; }
 };
 
 struct db_worker_cfg {
@@ -420,11 +423,10 @@ private:
       using namespace std::chrono;
 
       auto const date =
-         duration_cast< milliseconds
-                      >(system_clock::now().time_since_epoch());
+         duration_cast<seconds>(system_clock::now().time_since_epoch());
 
       // App posts are also restricted in posts/day.
-      auto const d = s->get_last_post_date() + seconds {cfg.post_interval};
+      auto const d = s->get_last_post_date() + cfg.get_post_interval();
       if (d > date) {
          // They are trying to publish too early.
          json resp;
@@ -437,7 +439,7 @@ private:
       // It is important not to thrust the *from* field in the json
       // command.
       items.front().from = s->get_id();
-      items.front().date = date.count();
+      items.front().date = date;
       post_queue.push({s, items.front()});
       db.request_post_id();
       return ev_res::publish_ok;
@@ -749,16 +751,18 @@ private:
       ack["cmd"] = "publish_ack";
       ack["result"] = "ok";
       ack["id"] = post_queue.front().item.id;
-      ack["date"] = post_queue.front().item.date;
+      ack["date"] = post_queue.front().item.date.count();
       auto ack_str = ack.dump();
 
       if (auto s = post_queue.front().session.lock()) {
          using namespace std::chrono;
          s->send(std::move(ack_str), true);
-         milliseconds const ms {post_queue.front().item.date};
-         auto const secs = duration_cast<seconds>(ms);
-         s->set_last_post_date(secs);
-         db.update_last_post_timestamp(s->get_id(), secs);
+         s->set_last_post_date(post_queue.front().item.date);
+
+         db.update_last_post_timestamp(
+            s->get_id(),
+            post_queue.front().item.date);
+
       } else {
          // If we get here the user is not online anymore. This should be a
          // very rare situation since requesting an id takes milliseconds.

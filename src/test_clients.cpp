@@ -1,5 +1,7 @@
 #include "test_clients.hpp"
 
+#include <chrono>
+
 #include "menu.hpp"
 #include "client_session.hpp"
 #include "session_launcher.hpp"
@@ -55,7 +57,7 @@ std::string make_post_cmd(code_type channel, code_type filter)
                  , channel
                  , filter
                  , 0
-                 , 0
+                 , std::chrono::seconds {0}
                  , {}};
    json j;
    j["cmd"] = "publish";
@@ -663,7 +665,7 @@ int publisher2::pub( code_type channel
              , channel
              , filter
              , 0
-             , 0
+             , std::chrono::seconds {0}
              , {}};
 
    json j_msg;

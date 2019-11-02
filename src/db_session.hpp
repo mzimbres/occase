@@ -55,9 +55,6 @@ struct ws_timeouts {
 
 template <class Derived>
 class db_session {
-public:
-   using date_type = std::chrono::seconds;
-
 private:
    static constexpr auto menu_codes_size = 32;
 

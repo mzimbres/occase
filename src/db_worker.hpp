@@ -57,14 +57,18 @@ struct core_cfg {
    // The host where images are served.
    std::string mms_host;
 
-   // The maximum duration time for a http session.
+   // The maximum duration time for a http session in seconds.
    int http_session_timeout {30};
 
-   // SSL shutdown timeout.
+   // SSL shutdown timeout in seconds.
    int ssl_shutdown_timeout {30};
 
    // The server name.
    std::string server_name {"occase-db"};
+
+   // Only one app post will be allowed in this time interval
+   // (seconds).
+   date_type post_interval {40};
 };
 
 struct db_worker_cfg {
@@ -394,7 +398,7 @@ private:
       // is valid and will not be refused later. This prevents the pub
       // items from being incremented on an invalid message. May be
       // overkill since we do not expect the app to contain so severe
-      // bugs but we have care for server exploitation.
+      // bugs but we never thrust the client.
       auto const cend = std::cend(tmp_channels);
       auto const match =
          std::lower_bound( std::cbegin(tmp_channels)
@@ -415,17 +419,29 @@ private:
 
       using namespace std::chrono;
 
-      // It is important to not thrust the *from* field in the json
+      auto const date =
+         duration_cast< milliseconds
+                      >(system_clock::now().time_since_epoch());
+
+      // App posts are also restricted in posts/day.
+      auto const d = s->get_last_post_date() + seconds {cfg.post_interval};
+      if (d > date) {
+         // They are trying to publish too early.
+         json resp;
+         resp["cmd"] = "publish_ack";
+         resp["result"] = "fail";
+         s->send(resp.dump(), false);
+         return ev_res::publish_fail;
+      }
+
+      // It is important not to thrust the *from* field in the json
       // command.
       items.front().from = s->get_id();
-
-      auto const tse = system_clock::now().time_since_epoch();
-      items.front().date = duration_cast<milliseconds>(tse).count();
+      items.front().date = date.count();
       post_queue.push({s, items.front()});
       db.request_post_id();
       return ev_res::publish_ok;
    }
-
 
    ev_res on_app_del_post(json j, std::shared_ptr<db_session_type> s)
    {
@@ -737,7 +753,12 @@ private:
       auto ack_str = ack.dump();
 
       if (auto s = post_queue.front().session.lock()) {
+         using namespace std::chrono;
          s->send(std::move(ack_str), true);
+         milliseconds const ms {post_queue.front().item.date};
+         auto const secs = duration_cast<seconds>(ms);
+         s->set_last_post_date(secs);
+         db.update_last_post_timestamp(s->get_id(), secs);
       } else {
          // If we get here the user is not online anymore. This should be a
          // very rare situation since requesting an id takes milliseconds.
@@ -831,15 +852,15 @@ private:
          db.request_user_id();
    }
 
-   void on_db_user_data(std::vector<std::string> const& data) noexcept
+   void on_db_user_data(std::vector<std::string> const& fields) noexcept
    {
       try {
          assert(!std::empty(login_queue));
+         assert(std::size(fields) == 2);
 
          if (auto s = login_queue.front().session.lock()) {
             auto const digest = make_hex_digest(login_queue.front().pwd);
-            if (data.back() != digest) {
-               // Incorrect pwd.
+            if (fields[0] != digest) { // Incorrect pwd?
                json resp;
                resp["cmd"] = "login_ack";
                resp["result"] = "fail";
@@ -854,11 +875,11 @@ private:
             } else {
                auto const ss = sessions.insert({s->get_id(), s});
                if (!ss.second) {
-                  // Somebody is exploiting the server? Each app gets a
-                  // different id and therefore there should never be
-                  // more than one session with the same id. For now, I
-                  // will simply override the old session and disregard
-                  // any pending messages.
+                  // There should never be more than one session with
+                  // the same id. For now, I will simply override the
+                  // old session and disregard any pending messages.
+                  // In Principle, if the session is still online, it
+                  // should not contain any messages anyway.
 
                   // The old session has to be shutdown first
                   if (auto old_ss = ss.first->second.lock()) {
@@ -876,6 +897,10 @@ private:
                   ss.first->second = s;
                }
 
+               // The string containing the timestamp in the database
+               // is stored in seconds.
+               auto const timestamp = std::stol(fields[1]);
+               s->set_last_post_date(std::chrono::seconds {timestamp});
                db.on_user_online(s->get_id());
                db.retrieve_chat_msgs(s->get_id());
 

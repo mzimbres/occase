@@ -171,12 +171,9 @@ auto set(std::string const& key, std::string const& value)
 }
 
 inline
-auto hset( std::string const& key
-         , std::string const& field
-         , std::string const& value)
+auto hset(std::initializer_list<std::string const> const& l)
 {
-   auto par = {key, field, value};
-   return resp_assemble("HSET", std::begin(par), std::end(par));
+   return resp_assemble("HSET", std::begin(l), std::end(l));
 }
 
 inline
@@ -184,6 +181,15 @@ auto hget(std::string const& key, std::string const& field)
 {
    auto par = {key, field};
    return resp_assemble("HGET", std::begin(par), std::end(par));
+}
+
+inline
+auto hmget( std::string const& key
+          , std::string const& field1
+          , std::string const& field2)
+{
+   auto par = {key, field1, field2};
+   return resp_assemble("HMGET", std::begin(par), std::end(par));
 }
 
 inline

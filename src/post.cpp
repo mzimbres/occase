@@ -29,7 +29,7 @@ void from_json(json const& j, post& e)
   e.to = j.at("to").get<code_type>();
   e.filter = j.at("filter").get<code_type>();
   e.features = j.at("features").get<code_type>();
-  e.date = j.at("date").get<long int>();
+  e.date = j.at("date").get<date_type>();
   e.range_values = j.at("range_values").get<std::vector<int>>();
 }
 

@@ -55,12 +55,15 @@ struct ws_timeouts {
 
 template <class Derived>
 class db_session {
-private:
-   beast::multi_buffer buffer;
+public:
+   using date_type = std::chrono::seconds;
 
-   // The pong counter is used to decide when the login timeout
-   // occurrs, at the moment it is hardcoded to 2.
-   int pong_counter = 0;
+private:
+   static constexpr auto menu_codes_size = 32;
+
+   using menu_codes_type =
+      boost::container::static_vector< std::uint64_t
+                                     , menu_codes_size>;
 
    struct msg_entry {
       std::string msg;
@@ -68,21 +71,17 @@ private:
       bool persist;
    };
 
+   beast::multi_buffer buffer;
+   // The pong counter is used to decide when the login timeout
+   // occurrs, at the moment it is hardcoded to 2.
+   int pong_counter = 0;
    std::deque<msg_entry> msg_queue;
-
    bool closing = false;
-
    std::string user_id;
-
    std::uint64_t any_of_features = 0;
-
-   static constexpr auto menu_codes_size = 32;
-
-   using menu_codes_type =
-      boost::container::static_vector< std::uint64_t
-                                     , menu_codes_size>;
-
    menu_codes_type menu_codes;
+   // Seconds since epoch.
+   date_type last_post_date {0};
 
    Derived& derived() { return static_cast<Derived&>(*this); }
 
@@ -203,11 +202,8 @@ private:
          case ev_res::register_fail:
          case ev_res::login_fail:
          case ev_res::subscribe_fail:
-         case ev_res::publish_fail:
          case ev_res::chat_msg_fail:
          case ev_res::delete_fail:
-         case ev_res::filenames_fail:
-         case ev_res::presence_fail:
          case ev_res::unknown:
          {
             shutdown();
@@ -376,8 +372,15 @@ public:
 
    auto const& get_id() const noexcept
       { return user_id;}
+
    auto is_logged_in() const noexcept
       { return !std::empty(user_id);};
+
+   void set_last_post_date(date_type date) noexcept
+      { last_post_date = date; }
+
+   auto get_last_post_date() const noexcept
+      { return last_post_date; }
 };
 
 }

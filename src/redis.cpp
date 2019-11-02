@@ -279,15 +279,33 @@ void facade::request_user_id()
 void facade::register_user(std::string const& user, std::string const& pwd)
 {
    auto const key =  cfg.user_data_prefix_key + user;
-   ss_menu_pub.send(hset(key, "password", pwd));
+
+   std::initializer_list<std::string const> const par
+   { key
+   , "password",  pwd
+   , "last_post", "0"
+   };
+
+   ss_menu_pub.send(hset(par));
    menu_pub_queue.push(request::register_user);
 }
 
 void facade::retrieve_user_data(std::string const& user)
 {
    auto const key =  cfg.user_data_prefix_key + user;
-   ss_menu_pub.send(hget(key, "password"));
+   ss_menu_pub.send(hmget(key, "password", "last_post"));
    menu_pub_queue.push(request::user_data);
+}
+
+void
+facade::update_last_post_timestamp( std::string const& user
+                                  , std::chrono::seconds secs)
+{
+   auto const key =  cfg.user_data_prefix_key + user;
+   std::initializer_list<std::string const> const l =
+   { key, "last_post", std::to_string(secs.count())};
+   ss_menu_pub.send(hset(l));
+   menu_pub_queue.push(request::last_post_timestamp);
 }
 
 void facade::retrieve_posts(int begin)

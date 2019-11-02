@@ -22,6 +22,7 @@ enum class request
 , remove_post
 , get_chat_msgs
 , presence
+, last_post_timestamp
 , ignore
 };
 
@@ -266,6 +267,14 @@ public:
    //   redis::request::user_data
    //
    void retrieve_user_data(std::string const& user_id);
+
+   // Updates the user last post timestamp. Completes with
+   //
+   //   redis::request::last_post_timestamp
+   //
+   void
+   update_last_post_timestamp( std::string const& user_id
+                             , std::chrono::seconds secs);
 
    // Closes all stablished connections with redis.
    void disconnect();

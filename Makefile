@@ -75,7 +75,7 @@ aedis_objs =
 aedis_objs += redis_session.o
 
 menu_dump_objs =
-menu_dump_objs += fipe.o
+menu_dump_objs += csv.o
 
 exe_objs = $(addsuffix .o, $(exes))
 

@@ -9,8 +9,8 @@
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
 
+#include "csv.hpp"
 #include "menu.hpp"
-#include "fipe.hpp"
 #include "post.hpp"
 
 using namespace rt;
@@ -177,7 +177,13 @@ int impl(menu_op const& op)
    auto const raw_menu = get_file_as_str(minfo.file, op.sim_length);
    auto menu_str = raw_menu;
    if (op.fipe)
-      menu_str = fipe_dump(raw_menu, menu::sep, op.fipe_tipo, '\n');
+      menu_str = fipe_dump( raw_menu
+                          , menu::sep
+                          , op.fipe_tipo
+                          , '\n'
+                          , 7
+                          , 1
+                          , ';');
 
    menu m {menu_str};
 

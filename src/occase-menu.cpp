@@ -9,7 +9,6 @@
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
 
-#include "csv.hpp"
 #include "menu.hpp"
 #include "post.hpp"
 
@@ -20,9 +19,7 @@ struct menu_op {
    int oformat;
    int depth;
    std::string channels_file;
-   std::string fipe_tipo;
    bool validate = false;
-   bool fipe = false;
 };
 
 std::string gen_sim_menu(int l)
@@ -175,17 +172,7 @@ int impl(menu_op const& op)
    menu_info minfo = convert_to_menu_info(op.channels_file);
 
    auto const raw_menu = get_file_as_str(minfo.file, op.sim_length);
-   auto menu_str = raw_menu;
-   if (op.fipe)
-      menu_str = fipe_dump( raw_menu
-                          , menu::sep
-                          , op.fipe_tipo
-                          , '\n'
-                          , 7
-                          , 1
-                          , ';');
-
-   menu m {menu_str};
+   menu m {raw_menu};
 
    if (op.oformat == 3) {
       menu_view<0> view {m, op.depth};
@@ -218,12 +205,12 @@ int main(int argc, char* argv[])
         " 3: \tOutput hash codes at certain depth (see -d option).\n"
         " 4: \tPacks the output in json format ready to be used by the app. "
         "Will automatically use field-separator ';' and --validate.\n"
-        " 5: \tPacks the output in json format ready to be loaded on redis."
-      )
+        " 5: \tPacks the output in json format ready to be loaded on redis.")
+
       ("sim-length,l"
       , po::value<int>(&op.sim_length)->default_value(2)
-      , "Length of simulated children. Used only if -f is not provided."
-      )
+      , "Length of simulated children. Used only if -f is not provided.")
+
       ("depth,d"
       , po::value<int>(&op.depth)->default_value(std::numeric_limits<int>::max())
       , "Influences the output.")
@@ -232,20 +219,9 @@ int main(int argc, char* argv[])
       , po::value<std::string>(&op.channels_file)
       , "The file containing the channels.")
 
-      ("fipe-tipo,k"
-      , po::value<std::string>(&op.fipe_tipo)->default_value("1")
-      , "Controls which field of the fipe table is read:\n"
-        " 1: Cars.\n"
-        " 2: Motorcycles.\n"
-        " 3: Trucks.\n"
-      )
       ("validate,v",
        "Checks whether all leaf nodes have at least the depth "
-       " specified in --depth."
-      )
-      ("fipe,g",
-       "The input file is in fipe format."
-      )
+       " specified in --depth.")
    ;
 
    po::positional_options_description pos;
@@ -263,9 +239,6 @@ int main(int argc, char* argv[])
 
    if (vm.count("validate"))
       op.validate = true;
-
-   if (vm.count("fipe"))
-      op.fipe = true;
 
    return impl(op);
 }

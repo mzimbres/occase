@@ -12,17 +12,10 @@ srcdir = .
 confdir = /etc/$(pkg_name)
 systemddir = /lib/systemd/system
 
-bin_final_dir = $(DESTDIR)$(bindir)/
+bin_final_dir = $(DESTDIR)$(bindir)
 doc_final_dir = $(DESTDIR)$(docdir)
 conf_final_dir = $(DESTDIR)$(confdir)
 service_final_dir = $(DESTDIR)$(systemddir)
-
-db_name = $(pkg_name)-db
-mms_name = $(pkg_name)-mms
-menu_name = $(pkg_name)-menu
-key_gen_name = $(pkg_name)-key-gen
-db_monitor_name = $(pkg_name)-db-monitor
-menu_gen_name = $(pkg_name)-menu-gen
 
 boost_inc_dir = /opt/boost_1_71_0/include
 boost_lib_dir = /opt/boost_1_71_0/lib
@@ -40,15 +33,16 @@ CPPFLAGS += -std=c++17
 CPPFLAGS += -I. -I$./src -I$(boost_inc_dir)
 CPPFLAGS += $(pkg-config --cflags libsodium)
 CPPFLAGS += $(CXXFLAGS)
-CPPFLAGS += #-O2
+CPPFLAGS += -g #-O2
 
 VPATH = ./src
 
 exes =
-exes += $(db_name)
-exes += $(menu_name)
-exes += $(mms_name)
-exes += $(key_gen_name)
+exes += occase-db
+exes += occase-menu
+exes += occase-mms
+exes += occase-key-gen
+exes += occase-csv
 exes += db_tests
 exes += aedis
 exes += simulation
@@ -74,9 +68,6 @@ client_objs += test_clients.o
 aedis_objs =
 aedis_objs += redis_session.o
 
-menu_dump_objs =
-menu_dump_objs += csv.o
-
 exe_objs = $(addsuffix .o, $(exes))
 
 lib_objs =
@@ -84,7 +75,6 @@ lib_objs += $(db_objs)
 lib_objs += $(mms_objs)
 lib_objs += $(client_objs)
 lib_objs += $(aedis_objs)
-lib_objs += $(menu_dump_objs)
 lib_objs += $(common_objs)
 
 srcs =
@@ -115,47 +105,48 @@ simulation: % : %.o $(client_objs) $(common_objs)
 db_tests: % : %.o $(client_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
-$(db_name): % : %.o $(db_objs) $(common_objs) $(aedis_objs) 
+occase-db: % : %.o $(db_objs) $(common_objs) $(aedis_objs) 
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_CONCURRENCY_HINT_1=BOOST_ASIO_CONCURRENCY_HINT_UNSAFE
 
-$(mms_name): % : %.o $(mms_objs) $(common_objs) $(aedis_objs)
+occase-mms: % : %.o $(mms_objs) $(common_objs) $(aedis_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_CONCURRENCY_HINT_1=BOOST_ASIO_CONCURRENCY_HINT_UNSAFE
 
-$(menu_name): % : %.o $(menu_dump_objs) $(common_objs)
+occase-menu: % : %.o $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(ext_libs) -lfmt -lsodium
 
 aedis: % : %.o $(aedis_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
-$(key_gen_name): % : %.o  $(common_objs)
+occase-key-gen: % : %.o  $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) -lfmt -lsodium
 
-#load-tool: load-tool.sh.in
-#	sed s/toolname/$(menu_name)/ < $^ > $@
-#	chmod +x $@
+occase-csv: % : %.o
+	$(CXX) -o $@ $^ $(CPPFLAGS) $(ext_libs)
 
 install: all
-	install -D $(db_name) --target-directory $(bin_final_dir)
-	install -D $(mms_name) --target-directory $(bin_final_dir)
-	install -D $(menu_name) --target-directory $(bin_final_dir)
-	install -D $(key_gen_name) --target-directory $(bin_final_dir)
-	install -D scripts/$(db_monitor_name) $(bin_final_dir)
-	install -D scripts/$(menu_gen_name) $(bin_final_dir)
-	install -D config/$(db_name).conf $(conf_final_dir)/$(db_name).conf
-	install -D config/$(mms_name).conf $(conf_final_dir)/$(mms_name).conf
+	install -D occase-db --target-directory $(bin_final_dir)
+	install -D occase-mms --target-directory $(bin_final_dir)
+	install -D occase-menu --target-directory $(bin_final_dir)
+	install -D occase-key-gen --target-directory $(bin_final_dir)
+	install -D occase-csv --target-directory $(bin_final_dir)
+	install -D scripts/occase-db-monitor $(bin_final_dir)
+	install -D scripts/occase-menu-gen $(bin_final_dir)
+	install -D config/occase-db.conf $(conf_final_dir)/occase-db.conf
+	install -D config/occase-mms.conf $(conf_final_dir)/occase-mms.conf
 	install -D doc/management.txt $(doc_final_dir)/management.txt
 	install -D doc/intro.txt $(doc_final_dir)/intro.txt
 	install -D doc/posts.txt $(doc_final_dir)/posts.txt
 
 uninstall:
-	rm -f $(bin_final_dir)$(db_name)
-	rm -f $(bin_final_dir)$(mms_name)
-	rm -f $(bin_final_dir)$(menu_name)
-	rm -f $(bin_final_dir)$(key_gen_name)
-	rm -f scripts/$(bin_final_dir)$(db_monitor_name)
-	rm -f scripts/$(bin_final_dir)$(menu_gen_name)
-	rm -f $(conf_final_dir)/$(db_name).conf
-	rm -f $(conf_final_dir)/$(mms_name).conf
+	rm -f $(bin_final_dir)/occase-db
+	rm -f $(bin_final_dir)/occase-mms
+	rm -f $(bin_final_dir)/occase-menu
+	rm -f $(bin_final_dir)/occase-key-gen
+	rm -f $(bin_final_dir)/occase-csv
+	rm -f scripts/$(bin_final_dir)/occase-db-monitor
+	rm -f scripts/$(bin_final_dir)/occase-menu-gen
+	rm -f $(conf_final_dir)/occase-db.conf
+	rm -f $(conf_final_dir)/occase-mms.conf
 	rm -f $(doc_final_dir)/management.txt
 	rm -f $(doc_final_dir)/intro.txt
 	rm -f $(doc_final_dir)/posts.txt

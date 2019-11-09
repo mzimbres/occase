@@ -37,6 +37,7 @@ public:
 
    stream_type& ws() { return stream_; }
    worker_type& db() { return w; }
+   worker_type const& db() const { return w; }
 
    std::weak_ptr<psession_type> get_proxy_session(bool make_new_session)
    {

@@ -56,11 +56,7 @@ struct ws_timeouts {
 template <class Derived>
 class db_session {
 private:
-   static constexpr auto menu_codes_size = 32;
-
-   using menu_codes_type =
-      boost::container::static_vector< std::uint64_t
-                                     , menu_codes_size>;
+   static constexpr auto sub_channels_size = 32;
 
    struct msg_entry {
       std::string msg;
@@ -68,17 +64,20 @@ private:
       bool persist;
    };
 
-   beast::multi_buffer buffer;
+   beast::multi_buffer buffer_;
    // The pong counter is used to decide when the login timeout
    // occurrs, at the moment it is hardcoded to 2.
-   int pong_counter = 0;
-   std::deque<msg_entry> msg_queue;
-   bool closing = false;
-   std::string user_id;
-   std::uint64_t any_of_features = 0;
-   menu_codes_type menu_codes;
+   int pong_counter_ = 0;
+   std::deque<msg_entry> msg_queue_;
+   bool closing_ = false;
+   std::string user_id_;
+   code_type any_of_features_ = 0;
+
+   boost::container::static_vector<
+      code_type, sub_channels_size> sub_channels_;
+
    // Seconds since epoch.
-   date_type last_post_date {0};
+   date_type last_post_date_ {0};
 
    Derived& derived() { return static_cast<Derived&>(*this); }
 
@@ -88,7 +87,7 @@ private:
       auto handler = [self](auto ec, auto n)
          { self->on_read(ec, n); };
 
-      derived().ws().async_read(buffer, handler);
+      derived().ws().async_read(buffer_, handler);
    }
 
    void do_write(std::string const& msg)
@@ -102,7 +101,6 @@ private:
       derived().ws().async_write(net::buffer(msg), handler);
    }
 
-
    void on_read(boost::system::error_code ec, std::size_t bytes_transferred)
    {
       boost::ignore_unused(bytes_transferred);
@@ -111,12 +109,12 @@ private:
          finish();
          log( loglevel::debug
             , "db_session::on_read: {0}. User {1}"
-            , ec.message(), user_id);
+            , ec.message(), user_id_);
          return;
       }
 
-      auto msg = beast::buffers_to_string(buffer.data());
-      buffer.consume(std::size(buffer));
+      auto msg = beast::buffers_to_string(buffer_.data());
+      buffer_.consume(std::size(buffer_));
       auto self = derived().shared_from_this();
       auto const r = derived().db().on_app(self, std::move(msg));
       handle_ev(r);
@@ -179,17 +177,17 @@ private:
          return;
       }
 
-      msg_queue.pop_front();
+      msg_queue_.pop_front();
 
-      if (std::empty(msg_queue))
+      if (std::empty(msg_queue_))
          return; // No more message to send to the client.
 
       // Do not move the front msg. If the write fail we will want to
       // save the message in the database or whatever.
-      if (msg_queue.front().menu_msg) {
-         do_write(*msg_queue.front().menu_msg);
+      if (msg_queue_.front().menu_msg) {
+         do_write(*msg_queue_.front().menu_msg);
       } else {
-         do_write(msg_queue.front().msg);
+         do_write(msg_queue_.front().msg);
       }
    }
 
@@ -225,23 +223,23 @@ private:
                { return !o.persist; };
 
             auto const point =
-               std::remove_if( std::begin(msg_queue)
-                             , std::end(msg_queue)
+               std::remove_if( std::begin(msg_queue_)
+                             , std::end(msg_queue_)
                              , cond);
 
-            auto const d = std::distance(std::begin(msg_queue), point);
+            auto const d = std::distance(std::begin(msg_queue_), point);
             std::vector<std::string> msgs;
             msgs.reserve(d);
 
             auto const transformer = [](auto item)
                { return std::move(item.msg); };
 
-            std::transform( std::make_move_iterator(std::begin(msg_queue))
+            std::transform( std::make_move_iterator(std::begin(msg_queue_))
                           , std::make_move_iterator(point)
                           , std::back_inserter(msgs)
                           , transformer);
 
-            derived().db().on_session_dtor(std::move(user_id), std::move(msgs));
+            derived().db().on_session_dtor(std::move(user_id_), std::move(msgs));
          }
       } catch (...) {
       }
@@ -278,7 +276,7 @@ public:
          if (kind == beast::websocket::frame_type::close) {
          } else if (kind == beast::websocket::frame_type::ping) {
          } else if (kind == beast::websocket::frame_type::pong) {
-            if (++pong_counter > 1 && !is_logged_in())
+            if (++pong_counter_ > 1 && !is_logged_in())
                shutdown();
          }
       };
@@ -297,48 +295,48 @@ public:
    void send(std::string msg, bool persist)
    {
       assert(!std::empty(msg));
-      auto const is_empty = std::empty(msg_queue);
+      auto const is_empty = std::empty(msg_queue_);
 
-      msg_queue.push_back({std::move(msg), {}, persist});
+      msg_queue_.push_back({std::move(msg), {}, persist});
 
-      if (is_empty && !closing)
-         do_write(msg_queue.front().msg);
+      if (is_empty && !closing_)
+         do_write(msg_queue_.front().msg);
    }
 
    void send_post( std::shared_ptr<std::string> msg
                  , std::uint64_t filter
                  , std::uint64_t features)
    {
-      if (any_of_features != 0) {
-         if ((any_of_features & features) == 0)
+      if (any_of_features_ != 0) {
+         if ((any_of_features_ & features) == 0)
             return;
       }
 
-      if (!std::empty(menu_codes)) {
+      if (!std::empty(sub_channels_)) {
          auto const match =
-            std::binary_search( std::begin(menu_codes)
-                              , std::end(menu_codes)
+            std::binary_search( std::begin(sub_channels_)
+                              , std::end(sub_channels_)
                               , filter);
          if (!match)
             return;
       }
 
-      auto const is_empty = std::empty(msg_queue);
+      auto const is_empty = std::empty(msg_queue_);
 
-      msg_queue.push_back({{}, msg, false});
+      msg_queue_.push_back({{}, msg, false});
 
-      if (is_empty && !closing)
-         do_write(*msg_queue.front().menu_msg);
+      if (is_empty && !closing_)
+         do_write(*msg_queue_.front().menu_msg);
    }
 
    void shutdown()
    {
-      if (closing)
+      if (closing_)
          return;
 
-      log(loglevel::debug, "db_session::shutdown: {0}.", user_id);
+      log(loglevel::debug, "db_session::shutdown: {0}.", user_id_);
 
-      closing = true;
+      closing_ = true;
 
       auto self = derived().shared_from_this();
       auto handler = [self](auto ec)
@@ -349,35 +347,35 @@ public:
    }
 
    void set_id(std::string id)
-      { user_id = std::move(id); };
+      { user_id_ = std::move(id); };
 
    // Sets the any_of filter, used to filter posts sent with send_post
    // above. If the filter is non-null the post features will be
    // required to contain at least one bit set that is also set in the
    // argument passed here.
    void set_any_of_features(code_type o)
-      { any_of_features = o; }
+      { any_of_features_ = o; }
 
-   void set_filter(channels_type const& codes)
+   void set_filter(std::vector<code_type> const& codes)
    {
-      auto const min = std::min(ssize(codes), menu_codes_size);
-      menu_codes.clear();
+      auto const min = std::min(ssize(codes), sub_channels_size);
+      sub_channels_.clear();
       std::copy( std::cbegin(codes)
                , std::cbegin(codes) + min
-               , std::back_inserter(menu_codes));
+               , std::back_inserter(sub_channels_));
    }
 
    auto const& get_id() const noexcept
-      { return user_id;}
+      { return user_id_;}
 
    auto is_logged_in() const noexcept
-      { return !std::empty(user_id);};
+      { return !std::empty(user_id_);};
 
    void set_last_post_date(date_type date) noexcept
-      { last_post_date = date; }
+      { last_post_date_ = date; }
 
    auto get_last_post_date() const noexcept
-      { return last_post_date; }
+      { return last_post_date_; }
 };
 
 }

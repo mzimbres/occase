@@ -141,7 +141,7 @@ int impl(menu_op const& op)
       auto const elem = convert_to_menu_elem(op.channels_file);
       auto const codes = menu_elems_to_codes(elem);
 
-      channels_type channels;
+      std::vector<code_type> channels;
       channels.reserve(std::size(codes));
 
       auto f = [&](auto const& code)

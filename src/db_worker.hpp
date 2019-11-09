@@ -34,30 +34,32 @@ namespace rt
 {
 
 struct core_cfg {
-   // The maximum number of channels that is allowed to be sent to the
+   // The maximum number of channels that are allowed to be sent to the
    // user on subscribe.
    int max_posts_on_sub; 
 
    // The size of the password sent to the app when it registers.
    int pwd_size; 
 
-   // Websocket port.
+   // The port on which the database listens.
    unsigned short db_port;
 
-   // The size of the tcp backlog.
+   // TCP backlog size.
    int max_listen_connections;
 
    // The key used to generate authenticated filenames that will be
    // user in the image server.
    std::string mms_key;
 
-   // DB host.
+   // The host name of this db. This is used by the adm interface when the html
+   // pages are generated.
    std::string db_host;
 
-   // The host where images are served.
+   // The host where images are served and posted. It must have the
+   // form http://occase.de/
    std::string mms_host;
 
-   // The maximum duration time for a http session in seconds.
+   // The maximum duration time for the adm http session in seconds.
    int http_session_timeout {30};
 
    // SSL shutdown timeout in seconds.
@@ -66,8 +68,12 @@ struct core_cfg {
    // The server name.
    std::string server_name {"occase-db"};
 
-   // Only one app post will be allowed in this time interval
-   // (seconds).
+   // The password required to access the adm html pages.
+   std::string adm_pwd;
+
+   // Only one app post will be allowed in this time interval (seconds). trying
+   // to post before this time has alapsed will be refused and an error is sent
+   // to the app.
    long int post_interval {40};
 
    auto get_post_interval() const noexcept
@@ -104,14 +110,13 @@ class db_worker {
 private:
    using db_session_type = typename AdmSession::db_session_type;
 
-   net::io_context ioc {1};
-   ssl::context& ctx;
-
-   core_cfg const cfg;
+   net::io_context ioc_ {1};
+   ssl::context& ctx_;
+   core_cfg const core_cfg_;
 
    // There are hundreds of thousends of channels typically, so we
    // store the configuration only once here.
-   channel_cfg const ch_cfg;
+   channel_cfg const channel_cfg_;
 
    ws_timeouts const ws_timeouts_;
    ws_stats ws_stats_;
@@ -119,74 +124,74 @@ private:
    // Maps a user id in to a websocket session.
    std::unordered_map< std::string
                      , std::weak_ptr<db_session_type>
-                     > sessions;
+                     > sessions_;
 
    // The channels are stored in a vector and the channel hash codes
    // separately in another vector. The last element in the
-   // tmp_channels is used as sentinel to perform fast linear
+   // channel_codes_ is used as sentinel to perform fast linear
    // searches.
-   channels_type tmp_channels;
-   std::vector<channel<db_session_type>> channel_objs;
+   std::vector<code_type> channel_codes_;
+   std::vector<channel<db_session_type>> channels_;
 
    // Apps that do not register for any product channels (the seconds
    // item in the menu) will receive posts from any channel. This is
    // the channel that will store the web socket channels for this
    // case.
-   channel<db_session_type> none_channel;
+   channel<db_session_type> root_channel_;
 
    // Facade to redis.
-   redis::facade db;
+   redis::facade db_;
 
    // Queue of user posts waiting for an id that has been requested
    // from redis.
-   std::queue<post_queue_item<db_session_type>> post_queue;
+   std::queue<post_queue_item<db_session_type>> post_queue_;
 
    // Queue with sessions waiting for a user id that are retrieved
    // from redis.
-   std::queue<pwd_queue_item<db_session_type>> reg_queue;
+   std::queue<pwd_queue_item<db_session_type>> reg_queue_;
 
    // Queue of users waiting to be checked for login.
-   std::queue<pwd_queue_item<db_session_type>> login_queue;
+   std::queue<pwd_queue_item<db_session_type>> login_queue_;
 
    // The last post id that this channel has received from reidis
    // pubsub menu channel.
-   int last_post_id = 0;
+   int last_post_id_ = 0;
 
    // Generates passwords that are sent to the app.
-   pwd_gen pwdgen;
+   pwd_gen pwdgen_;
 
    // Accepts both http connections used by the administrative api or
    // websocket connection used by the database.
    acceptor_mgr<AdmSession> acceptor_;
 
    // Signal handler.
-   net::signal_set signal_set;
+   net::signal_set signal_set_;
 
    void init()
    {
       auto handler = [this](auto data, auto const& req)
          { on_db_event(std::move(data), req); };
 
-      db.set_on_msg_handler(handler);
-      db.run();
+      db_.set_on_msg_handler(handler);
+      db_.run();
    }
 
    void create_channels()
    {
-      assert(std::empty(channel_objs));
+      assert(std::empty(channels_));
 
       // Reserve the exact amount of memory that will be needed. The
       // vector with the channels will also hold the sentinel to make
       // linear searches faster.
-      channel_objs.resize(std::size(tmp_channels));
+      channels_.resize(std::size(channel_codes_));
 
       // Inserts an element that will be used as sentinel on linear
       // searches.
-      tmp_channels.push_back(0);
+      channel_codes_.push_back(0);
 
       log( loglevel::info
          , "Number of channels created: {0}"
-         , std::size(channel_objs));
+         , std::size(channels_));
    }
 
    ev_res on_app_login(json const& j, std::shared_ptr<db_session_type> s)
@@ -197,27 +202,27 @@ private:
       auto const pwd = j.at("password").get<std::string>();
 
       // We do not have to serialize the calls to retrieve_user_data
-      // since this will be done by the db object.
-      login_queue.push({s, pwd});
-      db.retrieve_user_data(s->get_id());
+      // since this will be done by the db_ object.
+      login_queue_.push({s, pwd});
+      db_.retrieve_user_data(s->get_id());
 
       return ev_res::login_ok;
    }
 
    ev_res on_app_register(json const& j, std::shared_ptr<db_session_type> s)
    {
-      auto const empty = std::empty(reg_queue);
-      reg_queue.push({s, {}});
+      auto const empty = std::empty(reg_queue_);
+      reg_queue_.push({s, {}});
       if (empty)
-         db.request_user_id();
+         db_.request_user_id();
 
       return ev_res::register_ok;
    }
 
    ev_res on_app_subscribe(json const& j, std::shared_ptr<db_session_type> s)
    {
-      auto const channels = j.at("channels").get<channels_type>();
-      auto const filters = j.at("filters").get<channels_type>();
+      auto const channels = j.at("channels").get<std::vector<code_type>>();
+      auto const filters = j.at("filters").get<std::vector<code_type>>();
 
       auto const b0 =
          std::is_sorted(std::cbegin(channels), std::cend(channels));
@@ -245,10 +250,10 @@ private:
       // If the second channels are empty, the app wants posts from all
       // channels, otherwise we have to traverse the individual channels.
       if (std::empty(channels)) {
-         none_channel.add_member(psession, ch_cfg.cleanup_rate);
-         none_channel.get_posts( app_last_post_id
-                               , std::back_inserter(items)
-                               , cfg.max_posts_on_sub);
+         root_channel_.add_member(psession, channel_cfg_.cleanup_rate);
+         root_channel_.get_posts( app_last_post_id
+                                , std::back_inserter(items)
+                                , core_cfg_.max_posts_on_sub);
       } else {
          // We will use the following algorithm
          // 1. Search the first channel the user subscribed to.
@@ -256,9 +261,9 @@ private:
          // not subscribed to.
          //
          // NOTICE: Remember to skip the sentinel.
-         auto const cend = std::cend(tmp_channels);
+         auto const cend = std::cend(channel_codes_);
          auto match =
-            std::lower_bound( std::cbegin(tmp_channels)
+            std::lower_bound( std::cbegin(channel_codes_)
                             , std::prev(cend)
                             , channels.front());
 
@@ -272,11 +277,11 @@ private:
                // return immediately. Ideally we would stop traversion
                // the channels, but this is not possible inside the
                // for_each, would have to write a loop.
-               if (ssize(items) >= cfg.max_posts_on_sub)
+               if (ssize(items) >= core_cfg_.max_posts_on_sub)
                   return;
 
                // Sets the sentinel
-               tmp_channels.back() = code;
+               channel_codes_.back() = code;
 
                // Linear search with sentinel.
                while (*match != code)
@@ -288,28 +293,28 @@ private:
                }
 
                auto const i =
-                  std::distance(std::cbegin(tmp_channels), match);
+                  std::distance(std::cbegin(channel_codes_), match);
 
-               channel_objs[i].add_member(psession, ch_cfg.cleanup_rate);
+               channels_[i].add_member(psession, channel_cfg_.cleanup_rate);
 
-               auto const n = cfg.max_posts_on_sub - ssize(items);
+               auto const n = core_cfg_.max_posts_on_sub - ssize(items);
                assert(n >= 0);
 
-               channel_objs[i].get_posts( app_last_post_id
+               channels_[i].get_posts( app_last_post_id
                                         , std::back_inserter(items)
                                         , n);
             };
 
             // There is a limit on how many channels the app is allowed
             // to subscribe to.
-            auto const d = std::min(ssize(channels), ch_cfg.max_sub);
+            auto const d = std::min(ssize(channels), channel_cfg_.max_sub);
 
             std::for_each( std::cbegin(channels)
                          , std::cbegin(channels) + d
                          , f);
          }
 
-         assert(ssize(items) <= cfg.max_posts_on_sub);
+         assert(ssize(items) <= core_cfg_.max_posts_on_sub);
 
          std::sort(std::begin(items), std::end(items));
 
@@ -347,7 +352,7 @@ private:
       std::initializer_list<std::string> param = {msg};
 
       auto const to = j.at("to").get<std::string>();
-      db.store_chat_msg( to
+      db_.store_chat_msg( to
                        , std::make_move_iterator(std::begin(param))
                        , std::make_move_iterator(std::end(param)));
 
@@ -375,7 +380,7 @@ private:
       auto msg = j.dump();
       std::initializer_list<std::string> param = {msg};
       auto const to = j.at("to").get<std::string>();
-      db.send_presence(to, msg);
+      db_.send_presence(to, msg);
 
       return ev_res::presence_ok;
    }
@@ -402,9 +407,9 @@ private:
       // items from being incremented on an invalid message. May be
       // overkill since we do not expect the app to contain so severe
       // bugs but we never thrust the client.
-      auto const cend = std::cend(tmp_channels);
+      auto const cend = std::cend(channel_codes_);
       auto const match =
-         std::lower_bound( std::cbegin(tmp_channels)
+         std::lower_bound( std::cbegin(channel_codes_)
                          , std::prev(cend)
                          , items.front().to);
 
@@ -426,7 +431,7 @@ private:
          duration_cast<seconds>(system_clock::now().time_since_epoch());
 
       // App posts are also restricted in posts/day.
-      auto const d = s->get_last_post_date() + cfg.get_post_interval();
+      auto const d = s->get_last_post_date() + core_cfg_.get_post_interval();
       if (d > date) {
          // They are trying to publish too early.
          json resp;
@@ -440,8 +445,8 @@ private:
       // command.
       items.front().from = s->get_id();
       items.front().date = date;
-      post_queue.push({s, items.front()});
-      db.request_post_id();
+      post_queue_.push({s, items.front()});
+      db_.request_post_id();
       return ev_res::publish_ok;
    }
 
@@ -455,7 +460,7 @@ private:
       // it.
       auto const post_id = j.at("id").get<int>();
       j["from"] = s->get_id();
-      db.remove_post(post_id, j.dump());
+      db_.remove_post(post_id, j.dump());
 
       json resp;
       resp["cmd"] = "delete_ack";
@@ -470,9 +475,9 @@ private:
       auto const n = sz::mms_filename_min_size;
       auto f = [this, n]()
       {
-         auto const filename = pwdgen(n);
-         auto const digest = make_hex_digest(filename, cfg.mms_key);
-         return digest + "/" + filename;
+         auto const filename = pwdgen_(n);
+         auto const digest = make_hex_digest(filename, core_cfg_.mms_key);
+         return core_cfg_.mms_host + digest + "/" + filename;
       };
 
       std::vector<std::string> names;
@@ -491,12 +496,12 @@ private:
    void on_db_chat_msg( std::string const& user_id
                       , std::vector<std::string> msgs)
    {
-      auto const match = sessions.find(user_id);
-      if (match == std::end(sessions)) {
+      auto const match = sessions_.find(user_id);
+      if (match == std::end(sessions_)) {
          // The user went offline. We have to enqueue the message again.
          // This is difficult to test since the retrieval of messages
          // from the database is pretty fast.
-         db.store_chat_msg( user_id
+         db_.store_chat_msg( user_id
                           , std::make_move_iterator(std::begin(msgs))
                           , std::make_move_iterator(std::end(msgs)));
          return;
@@ -542,9 +547,9 @@ private:
          // We have to save the menu and retrieve the menu messages from the
          // database. Only after that we will bind and listen for websocket
          // connections.
-         tmp_channels = j.at("channels").get<channels_type>();
-         std::sort(std::begin(tmp_channels), std::end(tmp_channels));
-         db.retrieve_posts(0);
+         channel_codes_ = j.at("channels").get<std::vector<code_type>>();
+         std::sort(std::begin(channel_codes_), std::end(channel_codes_));
+         db_.retrieve_posts(0);
 
          log( loglevel::info
             , "Success retrieving channels from redis.");
@@ -569,12 +574,12 @@ private:
       auto const to = j.at("to").get<code_type>();
 
       // Now we perform a binary search of the channel hash code
-      // calculated above in the tmp_channels to determine in which
+      // calculated above in the channel_codes_ to determine in which
       // channel it shall be published. Notice we exclude the sentinel
       // from the search.
-      auto const cend = std::cend(tmp_channels);
+      auto const cend = std::cend(channel_codes_);
       auto const match =
-         std::lower_bound( std::cbegin(tmp_channels)
+         std::lower_bound( std::cbegin(channel_codes_)
                          , std::prev(cend)
                          , to);
 
@@ -598,13 +603,13 @@ private:
 
       // The channel has been found, we can now calculate the offset in
       // the channels array.
-      auto const i = std::distance(std::cbegin(tmp_channels), match);
+      auto const i = std::distance(std::cbegin(channel_codes_), match);
 
       if (j.contains("cmd")) {
          auto const post_id = j.at("id").get<int>();
          auto const from = j.at("from").get<std::string>();
-         auto const r1 = channel_objs[i].remove_post(post_id, from);
-         auto const r2 = none_channel.remove_post(post_id, from);
+         auto const r1 = channels_[i].remove_post(post_id, from);
+         auto const r2 = root_channel_.remove_post(post_id, from);
          if (!r1 || !r2) 
             log( loglevel::notice
                , "Failed to remove post {0} from channel {1}. User {2}"
@@ -619,17 +624,17 @@ private:
       // Parsing will throw and error.
       auto const item = j.get<post>();
 
-      if (item.id > last_post_id)
-         last_post_id = item.id;
+      if (item.id > last_post_id_)
+         last_post_id_ = item.id;
 
-      channel_objs[i].broadcast(item);
-      none_channel.broadcast(item);
+      channels_[i].broadcast(item);
+      root_channel_.broadcast(item);
    }
 
    void on_db_presence(std::string const& user_id, std::string msg)
    {
-      auto const match = sessions.find(user_id);
-      if (match == std::end(sessions)) {
+      auto const match = sessions_.find(user_id);
+      if (match == std::end(sessions_)) {
          // If the user went offline, we should not be receiving this
          // message. However there may be a timespan where this can
          // happen wo I will simply log.
@@ -653,7 +658,7 @@ private:
       // Create the channels only if its empty since this function is
       // also called when the connection to redis is lost and
       // restablished. 
-      auto const empty = std::empty(channel_objs);
+      auto const empty = std::empty(channels_);
       if (empty)
          create_channels();
 
@@ -671,9 +676,9 @@ private:
          // be better to use acceptor::is_open to determine if the run
          // functions should be called instead of using empty.
          acceptor_.run( *this
-                      , ctx
-                      , cfg.db_port
-                      , cfg.max_listen_connections);
+                      , ctx_
+                      , core_cfg_.db_port
+                      , core_cfg_.max_listen_connections);
       }
    }
 
@@ -740,9 +745,9 @@ private:
    void on_db_post_id(std::string const& post_id_str)
    {
       auto const post_id = std::stoi(post_id_str);
-      post_queue.front().item.id = post_id;
-      json const j_item = post_queue.front().item;
-      db.post(j_item.dump(), post_id);
+      post_queue_.front().item.id = post_id;
+      json const j_item = post_queue_.front().item;
+      db_.post(j_item.dump(), post_id);
 
       // It is important that the publisher receives this message before
       // any user sends him a user message about the post. He needs a
@@ -750,18 +755,18 @@ private:
       json ack;
       ack["cmd"] = "publish_ack";
       ack["result"] = "ok";
-      ack["id"] = post_queue.front().item.id;
-      ack["date"] = post_queue.front().item.date.count();
+      ack["id"] = post_queue_.front().item.id;
+      ack["date"] = post_queue_.front().item.date.count();
       auto ack_str = ack.dump();
 
-      if (auto s = post_queue.front().session.lock()) {
+      if (auto s = post_queue_.front().session.lock()) {
          using namespace std::chrono;
          s->send(std::move(ack_str), true);
-         s->set_last_post_date(post_queue.front().item.date);
+         s->set_last_post_date(post_queue_.front().item.date);
 
-         db.update_last_post_timestamp(
+         db_.update_last_post_timestamp(
             s->get_id(),
-            post_queue.front().item.date);
+            post_queue_.front().item.date);
 
       } else {
          // If we get here the user is not online anymore. This should be a
@@ -774,12 +779,12 @@ private:
 
          std::initializer_list<std::string> param = {ack_str};
 
-         db.store_chat_msg( std::move(post_queue.front().item.from)
+         db_.store_chat_msg( std::move(post_queue_.front().item.from)
                           , std::make_move_iterator(std::begin(param))
                           , std::make_move_iterator(std::end(param)));
       }
 
-      post_queue.pop();
+      post_queue_.pop();
    }
 
    void on_db_publish()
@@ -798,25 +803,25 @@ private:
       //    restablished. In this case we have to retrieve all the
       //    messages that may have arrived while we were offline.
 
-      if (std::empty(tmp_channels)) {
-         db.retrieve_menu();
+      if (std::empty(channel_codes_)) {
+         db_.retrieve_menu();
       } else {
-         db.retrieve_posts(1 + last_post_id);
+         db_.retrieve_posts(1 + last_post_id_);
       }
    }
 
    void on_db_user_id(std::string const& id)
    {
-      assert(!std::empty(reg_queue));
+      assert(!std::empty(reg_queue_));
 
-      while (!std::empty(reg_queue)) {
-         if (auto session = reg_queue.front().session.lock()) {
-            reg_queue.front().pwd = pwdgen(cfg.pwd_size);
+      while (!std::empty(reg_queue_)) {
+         if (auto session = reg_queue_.front().session.lock()) {
+            reg_queue_.front().pwd = pwdgen_(core_cfg_.pwd_size);
 
             // A hashed version of the password is stored in the
             // database.
-            auto const digest = make_hex_digest(reg_queue.front().pwd);
-            db.register_user(id, digest);
+            auto const digest = make_hex_digest(reg_queue_.front().pwd);
+            db_.register_user(id, digest);
             session->set_id(id);
             return;
          }
@@ -825,17 +830,17 @@ private:
          // in the queue, if all of them are also not online anymore the
          // requested id is lost. Very unlikely to happen since the
          // communication with redis is very fast.
-         reg_queue.pop();
+         reg_queue_.pop();
       }
    }
 
    void on_db_register()
    {
-      assert(!std::empty(reg_queue));
-      if (auto session = reg_queue.front().session.lock()) {
+      assert(!std::empty(reg_queue_));
+      if (auto session = reg_queue_.front().session.lock()) {
          auto const& id = session->get_id();
-         db.on_user_online(id);
-         auto const new_user = sessions.insert({id, session});
+         db_.on_user_online(id);
+         auto const new_user = sessions_.insert({id, session});
 
          // It would be a bug if this id were already in the map since we
          // have just registered it.
@@ -845,25 +850,25 @@ private:
          resp["cmd"] = "register_ack";
          resp["result"] = "ok";
          resp["id"] = id;
-         resp["password"] = reg_queue.front().pwd;
+         resp["password"] = reg_queue_.front().pwd;
          session->send(resp.dump(), false);
       } else {
          // The user is not online anymore. The requested id is lost.
       }
 
-      reg_queue.pop();
-      if (!std::empty(reg_queue))
-         db.request_user_id();
+      reg_queue_.pop();
+      if (!std::empty(reg_queue_))
+         db_.request_user_id();
    }
 
    void on_db_user_data(std::vector<std::string> const& fields) noexcept
    {
       try {
-         assert(!std::empty(login_queue));
+         assert(!std::empty(login_queue_));
          assert(std::size(fields) == 2);
 
-         if (auto s = login_queue.front().session.lock()) {
-            auto const digest = make_hex_digest(login_queue.front().pwd);
+         if (auto s = login_queue_.front().session.lock()) {
+            auto const digest = make_hex_digest(login_queue_.front().pwd);
             if (fields[0] != digest) { // Incorrect pwd?
                json resp;
                resp["cmd"] = "login_ack";
@@ -874,10 +879,10 @@ private:
                log( loglevel::debug
                   , "Login failed for {1}:{2}."
                   , s->get_id()
-                  , login_queue.front().pwd);
+                  , login_queue_.front().pwd);
 
             } else {
-               auto const ss = sessions.insert({s->get_id(), s});
+               auto const ss = sessions_.insert({s->get_id(), s});
                if (!ss.second) {
                   // There should never be more than one session with
                   // the same id. For now, I will simply override the
@@ -905,8 +910,8 @@ private:
                // is stored in seconds.
                auto const timestamp = std::stol(fields[1]);
                s->set_last_post_date(std::chrono::seconds {timestamp});
-               db.on_user_online(s->get_id());
-               db.retrieve_chat_msgs(s->get_id());
+               db_.on_user_online(s->get_id());
+               db_.retrieve_chat_msgs(s->get_id());
 
                json resp;
                resp["cmd"] = "login_ack";
@@ -921,7 +926,7 @@ private:
       } catch (...) {
       }
 
-      login_queue.pop();
+      login_queue_.pop();
    }
 
    void on_signal(boost::system::error_code const& ec, int n)
@@ -953,7 +958,7 @@ private:
       shutdown_impl();
 
       boost::system::error_code ec;
-      signal_set.cancel(ec);
+      signal_set_.cancel(ec);
       if (ec) {
          log( loglevel::info
             , "db_worker::shutdown: {0}"
@@ -967,7 +972,7 @@ private:
 
       log( loglevel::notice
          , "Number of sessions that will be closed: {0}"
-         , std::size(sessions));
+         , std::size(sessions_));
 
       acceptor_.shutdown();
 
@@ -977,25 +982,25 @@ private:
             s->shutdown();
       };
 
-      std::for_each(std::begin(sessions), std::end(sessions), f);
+      std::for_each(std::begin(sessions_), std::end(sessions_), f);
 
-      db.disconnect();
+      db_.disconnect();
    }
 
 public:
    db_worker(db_worker_cfg cfg, ssl::context& c)
-   : ctx {c}
-   , cfg {cfg.core}
-   , ch_cfg {cfg.channel}
+   : ctx_ {c}
+   , core_cfg_ {cfg.core}
+   , channel_cfg_ {cfg.channel}
    , ws_timeouts_ {cfg.timeouts}
-   , db {cfg.db, ioc}
-   , acceptor_ {ioc}
-   , signal_set {ioc, SIGINT, SIGTERM}
+   , db_ {cfg.db, ioc_}
+   , acceptor_ {ioc_}
+   , signal_set_ {ioc_, SIGINT, SIGTERM}
    {
       auto f = [this](auto const& ec, auto n)
          { on_signal(ec, n); };
 
-      signal_set.async_wait(f);
+      signal_set_.async_wait(f);
 
       init();
    }
@@ -1003,20 +1008,20 @@ public:
    void on_session_dtor( std::string const& user_id
                        , std::vector<std::string> msgs)
    {
-      auto const match = sessions.find(user_id);
-      if (match == std::end(sessions))
+      auto const match = sessions_.find(user_id);
+      if (match == std::end(sessions_))
          return;
 
-      sessions.erase(match);
+      sessions_.erase(match);
 
-      db.on_user_offline(user_id);
+      db_.on_user_offline(user_id);
 
       if (!std::empty(msgs)) {
          log( loglevel::debug
             , "Sending user messages back to the database: {0}"
             , user_id);
 
-         db.store_chat_msg( std::move(user_id)
+         db_.store_chat_msg( std::move(user_id)
                           , std::make_move_iterator(std::begin(msgs))
                           , std::make_move_iterator(std::end(msgs)));
       }
@@ -1067,11 +1072,11 @@ public:
       worker_stats wstats {};
 
       wstats.number_of_sessions = ws_stats_.number_of_sessions;
-      wstats.worker_post_queue_size = ssize(post_queue);
-      wstats.worker_reg_queue_size = ssize(reg_queue);
-      wstats.worker_login_queue_size = ssize(login_queue);
-      wstats.db_post_queue_size = db.get_post_queue_size();
-      wstats.db_chat_queue_size = db.get_chat_queue_size();
+      wstats.worker_post_queue_size = ssize(post_queue_);
+      wstats.worker_reg_queue_size = ssize(reg_queue_);
+      wstats.worker_login_queue_size = ssize(login_queue_);
+      wstats.db_post_queue_size = db_.get_post_queue_size();
+      wstats.db_chat_queue_size = db_.get_chat_queue_size();
 
       return wstats;
    }
@@ -1080,9 +1085,9 @@ public:
    {
       try {
          std::vector<post> posts;
-         none_channel.get_posts( id
-                               , std::back_inserter(posts)
-                               , cfg.max_posts_on_sub);
+         root_channel_.get_posts( id
+                                , std::back_inserter(posts)
+                                , core_cfg_.max_posts_on_sub);
          return posts;
       } catch (std::exception const& e) {
          log(loglevel::info, "get_posts: {}", e.what());
@@ -1092,16 +1097,16 @@ public:
    }
 
    auto& get_ioc() const noexcept
-      { return ioc; }
+      { return ioc_; }
 
    void run()
    {
-      ioc.run();
+      ioc_.run();
    }
 
    auto const& get_cfg() const noexcept
    {
-      return cfg;
+      return core_cfg_;
    }
 
    void delete_post( int post_id
@@ -1115,7 +1120,7 @@ public:
       j["from"] = from;
       j["id"] = post_id;
       j["to"] = to;
-      db.remove_post(post_id, j.dump());
+      db_.remove_post(post_id, j.dump());
    }
 };
 

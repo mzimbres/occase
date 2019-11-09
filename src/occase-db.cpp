@@ -100,6 +100,9 @@ auto get_cfg(int argc, char* argv[])
    , po::value<int>(&cfg.worker.core.max_listen_connections)->default_value(511)
    , "The size of the tcp backlog.")
 
+   ( "adm-password"
+   , po::value<std::string>(&cfg.worker.core.adm_pwd))
+
    ( "db-host"
    , po::value<std::string>(&cfg.worker.core.db_host))
 

@@ -66,8 +66,8 @@ std::string make_post_cmd(code_type channel, code_type filter)
 }
 
 std::vector<pub_helper>
-channel_codes( channels_type const& channels
-             , channels_type const& filters)
+channel_codes( std::vector<code_type> const& channels
+             , std::vector<code_type> const& filters)
 {
    std::vector<pub_helper> ret;
    for (auto i = 0; i < ssize(channels); ++i)
@@ -87,8 +87,8 @@ void check_result( json const& j
 }
 
 std::string
-make_sub_payload( channels_type const& channels
-                , channels_type const& filters)
+make_sub_payload( std::vector<code_type> const& channels
+                , std::vector<code_type> const& filters)
 {
    json j_sub;
    j_sub["cmd"] = "subscribe";

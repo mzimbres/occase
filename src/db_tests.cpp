@@ -29,8 +29,8 @@ using namespace rt::cli;
 namespace po = boost::program_options;
 
 struct options {
-   channels_type channels;
-   channels_type filters;
+   std::vector<code_type> channels;
+   std::vector<code_type> filters;
    std::string host {"127.0.0.1"};
    std::string port {"8080"};
    int n_publishers = 10;
@@ -80,7 +80,7 @@ struct options {
    }
 };
 
-channels_type make_channels(std::string const& filename)
+std::vector<code_type> make_channels(std::string const& filename)
 {
    if (std::empty(filename))
       throw std::runtime_error("Filename cannot be empty.");
@@ -90,7 +90,7 @@ channels_type make_channels(std::string const& filename)
    std::ifstream ifs {filename};
    auto const content = std::string {iter_type {ifs}, {}};
    auto const j = json::parse(content);
-   return j.at("channels").get<channels_type>();
+   return j.at("channels").get<std::vector<code_type>>();
 }
 
 class timer {

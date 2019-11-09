@@ -14,7 +14,7 @@ namespace rt
 
 // Transfroms a target in the form
 //
-//    /a/b/c/ or a/b or /a/b/ or a/b/c/
+//    /a/b/.../c/ or a/b or /a/b/.../ or a/b/.../c/
 //
 // into
 //
@@ -43,24 +43,31 @@ beast::string_view prepare_target(beast::string_view t, char s)
 namespace html
 {
 
-auto make_img(std::string const& mms_host, std::string const& name)
+auto make_img(std::string const& url)
 {
    std::string img;
    img += "<img src=\"";
-   img += mms_host;
-   img += name;
+   img += url;
    img += "\">";
    return img;
 }
 
+// The delete target has the form
+//
+//    /delete/from/to/post_id/password
+//
 auto
 make_del_post_link( std::string const& db_host
                   , std::string const& from
                   , std::string const& to
-                  , std::string const& post_id)
+                  , std::string const& post_id
+                  , std::string const& pwd)
 {
-   // The delete target has the form /delete/from/to/post_id
-   auto const target = "delete/" + from + "/" + to + "/" + post_id;
+   auto const target = "delete/"
+                     + from    + "/"
+                     + to      + "/"
+                     + post_id + "/"
+                     + pwd;
    std::string del;
    del += "<td>";
    del += "<a href=\"";
@@ -72,9 +79,25 @@ make_del_post_link( std::string const& db_host
 }
 
 auto
-make_img_row( std::string const& mms_host
-            , std::string const& db_host
-            , post const& p) noexcept
+make_next_link( std::string const& db_host
+              , int post_id
+              , std::string const& pwd)
+{
+   auto const target = "posts/"
+                     + std::to_string(post_id) + "/"
+                     + pwd;
+   std::string s;
+   s += "<a href=\"";
+   s += db_host;
+   s += target;
+   s += "\">Next</a>";
+   return s;
+}
+
+auto
+make_img_row( std::string const& db_host
+            , post const& p
+            , std::string const& pwd) noexcept
 {
    try {
       auto const j = json::parse(p.body);
@@ -84,10 +107,11 @@ make_img_row( std::string const& mms_host
       row += make_del_post_link( db_host
                                , p.from
                                , std::to_string(p.to)
-                               , std::to_string(p.id));
+                               , std::to_string(p.id)
+                               , pwd);
       for (auto const& s : images) {
          row += "<td>";
-         row += make_img(mms_host, s);
+         row += make_img(s);
          row += "</td>";
       }
       row += "</tr>";
@@ -98,9 +122,10 @@ make_img_row( std::string const& mms_host
    return std::string{};
 }
 
-auto make_adm_page( std::string const& mms_host
-                  , std::string const& db_host
-                  , std::vector<post> const& posts)
+auto make_adm_page( std::string const& db_host
+                  , std::vector<post> const& posts
+                  , std::string const& pwd
+                  , int post_id)
 {
    // This is kind of weird, the database itself does not need to know
    // anything about the body of the post. But to monitor what users
@@ -108,7 +133,7 @@ auto make_adm_page( std::string const& mms_host
 
    auto acc = [&](auto init, auto const& p)
    {
-      init += make_img_row(mms_host, db_host, p);
+      init += make_img_row(db_host, p, pwd);
       return init;
    };
 
@@ -131,6 +156,7 @@ auto make_adm_page( std::string const& mms_host
    page += "<p>Posts</p>";
    page += table;
    page += "\n";
+   page += make_next_link(db_host, post_id + 25, pwd);
    page += "</body>";
    page += "</html>";
 
@@ -246,59 +272,95 @@ private:
 
    // Expects a target in the form
    //
-   //    /posts/post_id
+   //    /posts/post_id/password
    //
    // or
    //
-   //    /posts/post_id/
+   //    /posts/post_id/password/
    //
-   void get_posts_handler(std::string const& target)
+   void get_posts_handler(std::string const& target) noexcept
    {
-      std::vector<std::string> foo;
-      boost::split(foo, target, boost::is_any_of("/"));
+      try {
+         std::vector<std::string> foo;
+         boost::split(foo, target, boost::is_any_of("/"));
 
-      if (std::size(foo) != 2) {
+         if (std::size(foo) != 3) {
+            log( loglevel::debug
+               , "Error: get_posts_handler target has wrong size: {0}"
+               , std::size(foo));
+            get_default_handler();
+            return;
+         }
+
+         auto const& db = derived().db();
+
+         if (foo.back() != db.get_cfg().adm_pwd) {
+            log( loglevel::debug
+               , "Error: get_posts_handler target has wrong password: {0}"
+               , foo.back());
+            get_default_handler();
+            return;
+         }
+
+         resp_.set(http::field::content_type, "text/html");
+
+         auto const post_id = std::stoi(foo[1]);
+         auto const posts = db.get_posts(post_id);
+
+         boost::beast::ostream(resp_.body())
+         << html::make_adm_page( db.get_cfg().db_host
+                               , posts
+                               , db.get_cfg().adm_pwd
+                               , post_id);
+
+      } catch (std::exception const& e) {
          log( loglevel::debug
-            , "Error: get_posts_handler target has wrong size: {0}"
-            , std::size(foo));
-         get_default_handler();
-         return;
+            , "get_posts_handler: {0}"
+            , e.what());
       }
-
-      resp_.set(http::field::content_type, "text/html");
-
-      auto const posts = derived().db().get_posts(std::stoi(foo.back()));
-
-      boost::beast::ostream(resp_.body())
-      << html::make_adm_page( derived().db().get_cfg().mms_host
-                            , derived().db().get_cfg().db_host
-                            , posts);
    }
 
    // Expects a target in the from
    //
-   // /delete/from/to/post_id
+   // /delete/from/to/post_id/password
    //
-   void get_delete_handler(std::string const& target)
+   void get_delete_handler(std::string const& target) noexcept
    {
-      std::vector<std::string> foo;
-      boost::split(foo, target, boost::is_any_of("/"));
+      try {
+         std::vector<std::string> foo;
+         boost::split(foo, target, boost::is_any_of("/"));
 
-      if (std::size(foo) != 4) {
+         if (std::size(foo) != 5) {
+            log( loglevel::debug
+               , "Error: get_delete_handler target has wrong size: {0}"
+               , std::size(foo));
+            get_default_handler();
+            return;
+         }
+
+         auto& db = derived().db();
+
+         if (foo.back() != db.get_cfg().adm_pwd) {
+            log( loglevel::debug
+               , "Error: get_delete_handler target has wrong password: {0}"
+               , foo.back());
+            get_default_handler();
+            return;
+         }
+
+         db.delete_post( std::stoi(foo[3])
+                       , foo[1]
+                       , std::stoll(foo[2]));
+
+         resp_.set(http::field::content_type, "text/html");
+         boost::beast::ostream(resp_.body())
+         << html::make_post_del_ok();
+
+      } catch (std::exception const& e) {
          log( loglevel::debug
-            , "Error: get_delete_handler target has wrong size: {0}"
-            , std::size(foo));
-         get_default_handler();
-         return;
+            , "get_delete_handler: {0}"
+            , e.what());
       }
-
-      derived().db().delete_post( std::stoi(foo.back())
-                         , foo[1]
-                         , std::stoll(foo[2]));
-
-      resp_.set(http::field::content_type, "text/html");
-      boost::beast::ostream(resp_.body())
-      << html::make_post_del_ok();
    }
 
    void get_default_handler()

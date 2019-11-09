@@ -23,7 +23,7 @@ namespace rt::cli
 constexpr auto menu_size = 2;
 using menu_type = std::array<menu_elem, menu_size>;
 using menu_code_type = std::array<menu_channel_elem_type, menu_size>;
-using menu_code_type2 = std::array<channels_type, menu_size>;
+using menu_code_type2 = std::array<std::vector<code_type>, menu_size>;
 
 menu_code_type create_channels(menu_type const& menus);
 menu_code_type2 create_channels2(menu_type const& menus);
@@ -65,8 +65,8 @@ public:
    struct options_type {
       login user;
       int n_publishers;
-      channels_type channels;
-      channels_type filters;
+      std::vector<code_type> channels;
+      std::vector<code_type> filters;
    };
 
 private:
@@ -99,8 +99,8 @@ class leave_after_sub_ack {
 public:
    struct options_type {
       login user;
-      channels_type channels;
-      channels_type filters;
+      std::vector<code_type> channels;
+      std::vector<code_type> filters;
    };
 
 private:
@@ -208,8 +208,8 @@ public:
    struct options_type {
       login user;
       int n_repliers;
-      channels_type channels;
-      channels_type filters;
+      std::vector<code_type> channels;
+      std::vector<code_type> filters;
    };
 
 private:
@@ -246,8 +246,8 @@ class publisher2 {
 public:
    struct options_type {
       login user;
-      channels_type channels;
-      channels_type filters;
+      std::vector<code_type> channels;
+      std::vector<code_type> filters;
    };
 
 private:

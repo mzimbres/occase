@@ -85,17 +85,17 @@ public:
    using psession_type = proxy_session<Session>;
 
 private:
-   int insertions_on_inactivity = 0;
-   std::vector<std::weak_ptr<psession_type>> members;
-   std::vector<post> items;
+   int insertions_on_inactivity_ = 0;
+   std::vector<std::weak_ptr<psession_type>> members_;
+   std::vector<post> items_;
 
    template <class F>
    auto cleanup_traversal(F f)
    {
-      auto end = std::size(members);
+      auto end = std::size(members_);
       decltype(end) begin = 0;
       while (begin != end) {
-         if (auto s = members[begin].lock()) {
+         if (auto s = members_[begin].lock()) {
             // The user is online. Send him a message and continue.
             if (auto ss = s->session.lock()) {
                f(ss);
@@ -111,86 +111,92 @@ private:
          --end;
 
          if (begin != end)
-            std::swap(members[begin], members[end]);
+            std::swap(members_[begin], members_[end]);
       }
       
-      auto const n = std::size(members);
-      members.resize(begin + 1);
+      auto const n = std::size(members_);
+      members_.resize(begin + 1);
       return n - begin + 1;
    }
 
-   // Returns the number of posts removed.
-   auto remove_expired(std::chrono::seconds now, std::chrono::seconds exp)
+   // Returns the expired posts.
+   auto
+   remove_expired_posts( std::chrono::seconds now
+                       , std::chrono::seconds exp)
    {
       auto f = [this, exp, now](auto const& p)
          { return (p.date + exp) < now; };
 
       auto point =
-         std::partition_point( std::begin(items)
-                             , std::end(items)
+         std::partition_point( std::begin(items_)
+                             , std::end(items_)
                              , f);
 
       auto point2 =
-         std::rotate( std::begin(items)
+         std::rotate( std::begin(items_)
                     , point
-                    , std::end(items));
+                    , std::end(items_));
 
-      auto const n = std::distance(point2, std::end(items));
-      items.erase(point2, std::end(items));
-      return n;
+      auto const n = std::distance(point2, std::end(items_));
+
+      std::vector<post> expired;
+
+      std::copy( point2
+               , std::end(items_)
+               , std::back_inserter(expired));
+
+      items_.erase(point2, std::end(items_));
+
+      return expired;
    }
 
-   auto
-   store_item( post item
-             , std::chrono::seconds now
-             , std::chrono::seconds exp)
+   void add_post(post item)
    {
       // We have to ensure this vector stays ordered according to
       // publish ids. Most of the time there will be no problem, but
       // it still may happen that messages are routed to us out of
       // order. Insertion sort is necessary.
-      items.push_back(std::move(item));
+      items_.push_back(std::move(item));
 
-      auto prev = std::prev(std::end(items));
+      auto prev = std::prev(std::end(items_));
 
       // Sorted insertion.
-      std::rotate( std::upper_bound(std::begin(items), prev, *prev)
+      std::rotate( std::upper_bound(std::begin(items_), prev, *prev)
                  , prev
-                 , std::end(items));
-
-      return remove_expired(now, exp);
+                 , std::end(items_));
    }
 
 public:
    auto
    broadcast( post item
             , std::chrono::seconds now
-            , std::chrono::seconds expiration)
+            , std::chrono::seconds exp)
    {
-      json j_pub;
-      j_pub["cmd"] = "post";
-      j_pub["items"] = std::vector<post>{item};
+      json j;
+      j["cmd"] = "post";
+      j["items"] = std::vector<post>{item};
 
       auto const filter = item.filter;
       auto const features = item.features;
-      auto msg = std::make_shared<std::string>(j_pub.dump());
-      auto const n = store_item(std::move(item), now, expiration);
+      auto msg = std::make_shared<std::string>(j.dump());
+      add_post(std::move(item));
+      auto const expired = remove_expired_posts(now, exp);
 
       auto f = [msg, features, filter](auto session)
          { session->send_post(msg, filter, features); };
 
       cleanup_traversal(f);
-      insertions_on_inactivity = 0;
-      return n;
+      insertions_on_inactivity_ = 0;
+      return expired;
    }
 
    void add_member(std::weak_ptr<psession_type> s, int cleanup_rate)
    {
-      members.push_back(s);
+      members_.push_back(s);
 
-      if (++insertions_on_inactivity == cleanup_rate) {
+      if (++insertions_on_inactivity_ == cleanup_rate) {
          cleanup_traversal([](auto){});
-         insertions_on_inactivity = 0;
+         insertions_on_inactivity_ = 0;
       }
    }
 
@@ -201,14 +207,14 @@ public:
          { return a < b.id; };
 
       auto const point =
-         std::upper_bound( std::cbegin(items)
-                         , std::cend(items)
+         std::upper_bound( std::cbegin(items_)
+                         , std::cend(items_)
                          , id
                          , comp);
 
       // The number of posts that the app did not yet received from
       // this channel.
-      auto const n = std::distance(point, std::cend(items));
+      auto const n = std::distance(point, std::cend(items_));
       auto const d = std::min(n, max);
       std::copy(point, point + d, inserter);
    }
@@ -220,12 +226,12 @@ public:
       { return a.id < b; };
 
       auto const point =
-         std::lower_bound( std::begin(items)
-                         , std::end(items)
+         std::lower_bound( std::begin(items_)
+                         , std::end(items_)
                          , id
                          , comp);
 
-      if (point == std::end(items))
+      if (point == std::end(items_))
          return false;
 
       if (point->id != id)
@@ -234,7 +240,7 @@ public:
       if (point->from != from)
          return false;
 
-      items.erase(point);
+      items_.erase(point);
       return true;
    }
 };

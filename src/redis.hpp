@@ -165,7 +165,7 @@ public:
    //
    //    redis::request::menu.
    //
-   void retrieve_menu();
+   void retrieve_channels();
 
    // Instructs redis to notify the worker on new messages to the
    // user.  Once a notification arrives the server proceeds with the

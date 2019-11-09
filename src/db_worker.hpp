@@ -632,17 +632,42 @@ private:
       auto const now =
          duration_cast<seconds>(system_clock::now().time_since_epoch());
 
-      auto const exp = channel_cfg_.get_post_expiration();
+      auto const post_exp = channel_cfg_.get_post_expiration();
 
-      root_channel_.broadcast(item, now, exp);
+      auto expired1 = root_channel_.broadcast(item, now, post_exp);
+      auto expired2 = channels_[i].broadcast(item, now, post_exp);
 
-      auto const n = channels_[i].broadcast(item, now, exp);
+      expired1.insert( std::end(expired1)
+                     , std::make_move_iterator(std::begin(expired2))
+                     , std::make_move_iterator(std::end(expired2)));
 
-      if (n != 0) {
+      std::sort( std::begin(expired1)
+               , std::end(expired1));
+
+      auto new_end =
+         std::unique( std::begin(expired1)
+                    , std::end(expired1));
+
+      expired1.erase(new_end, std::end(expired1));
+
+      // NOTE: When we issue the delete command to the other
+      // databases, we are in fact also send a delete cmd to ourselves
+      // and in this case the deletions will fail (they have already
+      // been removed). This is not bad since it simplifies the code
+      // and there are also tipicaly not so many posts in each
+      // deletion, it presents no performance problems in any case.
+
+      auto f = [this](auto const& p)
+         { delete_post(p.id, p.from, p.to); };
+
+      std::for_each( std::cbegin(expired1)
+                   , std::cend(expired1)
+                   , f);
+
+      if (!std::empty(expired1)) {
          log( loglevel::info
-            , "Expired posts removed from {0}: {1}"
-            , to
-            , n);
+            , "Number of expired posts removed: {0}"
+            , std::size(expired1));
       }
    }
 
@@ -819,7 +844,7 @@ private:
       //    messages that may have arrived while we were offline.
 
       if (std::empty(channel_codes_)) {
-         db_.retrieve_menu();
+         db_.retrieve_channels();
       } else {
          db_.retrieve_posts(1 + last_post_id_);
       }

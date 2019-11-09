@@ -59,7 +59,7 @@ void facade::on_chat_pub_conn()
 {
 }
 
-void facade::retrieve_menu()
+void facade::retrieve_channels()
 {
    ss_menu_pub.send(get(cfg.channels_key));
    menu_pub_queue.push(request::menu);

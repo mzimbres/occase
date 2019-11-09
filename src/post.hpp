@@ -43,6 +43,14 @@ inline
 auto operator<(post const& a, post const& b) noexcept
    { return a.id < b.id; }
 
+inline
+auto operator==(post const& a, post const& b) noexcept
+   { return a.id == b.id; }
+
+inline
+auto operator!=(post const& a, post const& b) noexcept
+   { return !operator==(a, b); }
+
 void to_json(json& j, post const& e);
 void from_json(json const& j, post& e);
 

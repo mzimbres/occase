@@ -2,6 +2,7 @@
 
 #include <deque>
 #include <string>
+#include <chrono>
 #include <memory>
 #include <vector>
 #include <algorithm>
@@ -21,7 +22,6 @@ namespace rt
  *
  *    1. Add sessions very often.
  *    2. Traverse the sessions on every publication in the channel.
- *       Some channels have high publication rate.
  *
  *    To avoid having to remove sessions from the channel we
  *    introduced the proxy pointers, see db_session for more
@@ -45,17 +45,18 @@ namespace rt
  *
  * THOUGHTS
  *  
- *    - Report channel statistics.
- *    - Since we use a std::vector as the underlying container, the
- *      average memory used will be only half of the memory allocated.
- *      This happens because vectors allocate doubling the current
- *      size.  This is nice to avoid reallocations very often, but
- *      given that we may have thousands of vectors. There will be too
- *      much memory wasted. To deal with that we have to release
- *      excess memory once a stable number of users has been reached,
- *      letting only a small margin for growth. A std::deque could be
- *      also an option but memory would be more fragmented, which is
- *      not good for traversal.
+ *    Report channel statistics.
+ *
+ *    Since we use a std::vector as the underlying container, the
+ *    average memory used will be only half of the memory allocated.
+ *    This happens because vectors allocate doubling the current
+ *    size.  This is nice to avoid reallocations very often, but
+ *    given that we may have thousands of vectors. There will be too
+ *    much memory wasted. To deal with that we have to release
+ *    excess memory once a stable number of users has been reached,
+ *    letting only a small margin for growth. A std::deque could be
+ *    also an option but memory would be more fragmented, which is
+ *    not good for traversal.
  */
 
 struct channel_cfg {
@@ -66,6 +67,15 @@ struct channel_cfg {
    // The maximum number of channels a user is allowed to subscribe
    // to. Remaining channels will be ignored.
    int max_sub; 
+
+   // Time after which the post is considered expired. Input in
+   // seconds.
+   int post_expiration;
+
+   auto get_post_expiration() const
+   {
+      return std::chrono::seconds {post_expiration};
+   }
 };
 
 template <class Session>
@@ -109,7 +119,31 @@ private:
       return n - begin + 1;
    }
 
-   void store_item(post item)
+   // Returns the number of posts removed.
+   auto remove_expired(std::chrono::seconds now, std::chrono::seconds exp)
+   {
+      auto f = [this, exp, now](auto const& p)
+         { return (p.date + exp) < now; };
+
+      auto point =
+         std::partition_point( std::begin(items)
+                             , std::end(items)
+                             , f);
+
+      auto point2 =
+         std::rotate( std::begin(items)
+                    , point
+                    , std::end(items));
+
+      auto const n = std::distance(point2, std::end(items));
+      items.erase(point2, std::end(items));
+      return n;
+   }
+
+   auto
+   store_item( post item
+             , std::chrono::seconds now
+             , std::chrono::seconds exp)
    {
       // We have to ensure this vector stays ordered according to
       // publish ids. Most of the time there will be no problem, but
@@ -123,10 +157,15 @@ private:
       std::rotate( std::upper_bound(std::begin(items), prev, *prev)
                  , prev
                  , std::end(items));
+
+      return remove_expired(now, exp);
    }
 
 public:
-   void broadcast(post item)
+   auto
+   broadcast( post item
+            , std::chrono::seconds now
+            , std::chrono::seconds expiration)
    {
       json j_pub;
       j_pub["cmd"] = "post";
@@ -135,13 +174,14 @@ public:
       auto const filter = item.filter;
       auto const features = item.features;
       auto msg = std::make_shared<std::string>(j_pub.dump());
-      store_item(std::move(item));
+      auto const n = store_item(std::move(item), now, expiration);
 
       auto f = [msg, features, filter](auto session)
          { session->send_post(msg, filter, features); };
 
       cleanup_traversal(f);
       insertions_on_inactivity = 0;
+      return n;
    }
 
    void add_member(std::weak_ptr<psession_type> s, int cleanup_rate)

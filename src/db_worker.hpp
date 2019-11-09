@@ -627,8 +627,23 @@ private:
       if (item.id > last_post_id_)
          last_post_id_ = item.id;
 
-      channels_[i].broadcast(item);
-      root_channel_.broadcast(item);
+      using namespace std::chrono;
+
+      auto const now =
+         duration_cast<seconds>(system_clock::now().time_since_epoch());
+
+      auto const exp = channel_cfg_.get_post_expiration();
+
+      root_channel_.broadcast(item, now, exp);
+
+      auto const n = channels_[i].broadcast(item, now, exp);
+
+      if (n != 0) {
+         log( loglevel::info
+            , "Expired posts removed from {0}: {1}"
+            , to
+            , n);
+      }
    }
 
    void on_db_presence(std::string const& user_id, std::string msg)

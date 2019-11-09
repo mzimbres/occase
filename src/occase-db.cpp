@@ -78,161 +78,45 @@ auto get_cfg(int argc, char* argv[])
 
    po::options_description desc("Options");
    desc.add_options()
-   ("help,h"
-   , "Produces help message")
-
-   ("git-sha1,v"
-   , "The git SHA1 the server was built.")
-
-   ("config"
-   , po::value<std::string>(&conf_file)
-   , "The file containing the configuration.")
-
+   ("help,h", "Produces help message. See the config file for explanation.")
+   ("git-sha1,v", "The git SHA1 the server was built.")
+   ("config", po::value<std::string>(&conf_file) , "The file containing the configuration.")
    ("ssl-certificate-file", po::value<std::string>(&cfg.ssl_cert_file))
    ("ssl-private-key-file", po::value<std::string>(&cfg.ssl_priv_key_file))
    ("ssl-dh-file", po::value<std::string>(&cfg.ssl_dh_file))
-
-   ( "db-port"
-   , po::value<unsigned short>(&cfg.worker.core.db_port)->default_value(8080)
-   , "Server listening port.")
-
-   ( "max-listen-connections"
-   , po::value<int>(&cfg.worker.core.max_listen_connections)->default_value(511)
-   , "The size of the tcp backlog.")
-
-   ( "adm-password"
-   , po::value<std::string>(&cfg.worker.core.adm_pwd))
-
-   ( "db-host"
-   , po::value<std::string>(&cfg.worker.core.db_host))
-
-   ( "handshake-timeout"
-   , po::value<int>(&cfg.handshake_timeout)->default_value(2)
-   , "Refer to the documentation in Beast for what its meaning.")
-
-   ( "idle-timeout"
-   , po::value<int>(&cfg.idle_timeout)->default_value(2)
-   , "Refer to the documentation in Beast for what its meaning.")
-
-   ( "channel-cleanup-rate"
-   , po::value<int>(&cfg.worker.channel.cleanup_rate)->default_value(128)
-   , "The rate channels will be cleaned up if"
-     " no publish activity is observed. Incremented on every publication"
-     " on the channel.")
-
-   ( "max-channels-subscribe"
-   , po::value<int>(&cfg.worker.channel.max_sub)->default_value(1024)
-   , "The maximum number of channels the user is allowed to subscribe to."
-     " Remaining channels will be ignored.")
-
-   ( "log-level"
-   , po::value<std::string>(&cfg.loglevel)->default_value("notice")
-   , "Control the amount of information that is output in the logs. "
-     " Available options are: emerg, alert, crit, err, warning, notice, "
-     " info, debug.")
-
-   ( "max-posts-on-subscribe"
-   , po::value<int>(&cfg.worker.core.max_posts_on_sub)->default_value(50)
-   , "The maximum number of messages that is allowed to be sent to "
-     "the user when he subscribes to his channels.")
-
-   ( "post-interval"
-   , po::value<long int>(&cfg.worker.core.post_interval)->default_value(40))
-
-   ( "password-size"
-   , po::value<int>(&cfg.worker.core.pwd_size)->default_value(10)
-   , "The size of the password sent to the app.")
-
-   ( "http-session-timeout"
-   , po::value<int>(&cfg.worker.core.http_session_timeout)->default_value(30))
-
-   ( "ssl-shutdown-timeout"
-   , po::value<int>(&cfg.worker.core.ssl_shutdown_timeout)->default_value(30))
-
-   ( "server-name"
-   , po::value<std::string>(&cfg.worker.core.server_name)
-     ->default_value("occase-db"))
-
+   ("db-port", po::value<unsigned short>(&cfg.worker.core.db_port)->default_value(8080))
+   ("max-listen-connections", po::value<int>(&cfg.worker.core.max_listen_connections)->default_value(511))
+   ("adm-password", po::value<std::string>(&cfg.worker.core.adm_pwd))
+   ("db-host", po::value<std::string>(&cfg.worker.core.db_host))
+   ("handshake-timeout", po::value<int>(&cfg.handshake_timeout)->default_value(2))
+   ("idle-timeout", po::value<int>(&cfg.idle_timeout)->default_value(2))
+   ("post-expiration", po::value<int>(&cfg.worker.channel.post_expiration)->default_value(2160))
+   ("channel-cleanup-rate", po::value<int>(&cfg.worker.channel.cleanup_rate)->default_value(128))
+   ("max-channels-subscribe", po::value<int>(&cfg.worker.channel.max_sub)->default_value(1024))
+   ("log-level", po::value<std::string>(&cfg.loglevel)->default_value("notice"))
+   ("max-posts-on-subscribe", po::value<int>(&cfg.worker.core.max_posts_on_sub)->default_value(50))
+   ("post-interval", po::value<long int>(&cfg.worker.core.post_interval)->default_value(40))
+   ("password-size", po::value<int>(&cfg.worker.core.pwd_size)->default_value(10))
+   ("http-session-timeout", po::value<int>(&cfg.worker.core.http_session_timeout)->default_value(30))
+   ("ssl-shutdown-timeout", po::value<int>(&cfg.worker.core.ssl_shutdown_timeout)->default_value(30))
+   ("server-name", po::value<std::string>(&cfg.worker.core.server_name)->default_value("occase-db"))
    ("mms-key", po::value<std::string>(&cfg.worker.core.mms_key))
-
    ("mms-host", po::value<std::string>(&cfg.worker.core.mms_host))
-
-   ( "redis-host1"
-   , po::value<std::string>(&redis_host1)->default_value("127.0.0.1:6379")
-   , "Address of the first redis server in the format ip:port.")
-
-   ( "redis-host2"
-   , po::value<std::string>(&redis_host2)->default_value("127.0.0.1:6379")
-   , "Address of the second redis server in the format ip:port.")
-
-   ( "redis-sentinels"
-   , po::value<std::vector<std::string>>(&sentinels)
-   , "A list of sentinel addresses in the form ip1:port1 ip2:port2.")
-
-   ( "redis-max-pipeline-size"
-   , po::value<int>(&cfg.worker.db.ss_cfg1.max_pipeline_size)->
-       default_value(10000)
-   , "The maximum allowed size of pipelined commands in the redis "
-     " session.")
-
-   ( "redis-key-channels"
-   , po::value<std::string>(&cfg.worker.db.cfg.channels_key)->
-        default_value("channels")
-   , "Redis key holding the channels in json format.")
-
-   ( "redis-key-post-id"
-   , po::value<std::string>(&cfg.worker.db.cfg.post_id_key)->
-        default_value("post_id")
-   , "The Key used to store post ids.")
-
-   ( "redis-key-user-id"
-   , po::value<std::string>(&cfg.worker.db.cfg.user_id_key)->
-        default_value("user_id")
-   , "The Key used to store the user id counter.")
-
-   ( "redis-key-chat-msgs-counter"
-   , po::value<std::string>(&cfg.worker.db.cfg.chat_msgs_counter_key)->
-        default_value("chat_msgs_counter")
-   , "The name of the key used to store the number of user messages sent"
-     " so far.")
-
-   ( "redis-key-chat-msg-prefix"
-   , po::value<std::string>(&cfg.worker.db.cfg.chat_msg_prefix)->
-        default_value("msg")
-   , "That prefix that will be incorporated in the keys that hold"
-     " user messages.")
-
-   ( "redis-key-posts"
-   , po::value<std::string>(&cfg.worker.db.cfg.posts_key)->
-        default_value("posts")
-   , "Redis key used to store posts (in a sorted set).")
-
-   ( "redis-key-user-data-prefix"
-   , po::value<std::string>(&cfg.worker.db.cfg.user_data_prefix_key)->default_value("id")
-   , "The prefix to every id holding user data (password for example).")
-
-   ("redis-conn-retry-interval"
-   , po::value<int>(&conn_retry_interval)->default_value(500)
-   , "Time in milliseconds the redis session should wait before trying "
-     "to reconnect to redis in case the connection was lost."
-   )
-
-   ("redis-user-msg-exp_time"
-   , po::value<int>(&cfg.worker.db.cfg.chat_msg_exp_time)->default_value(7 * 24 * 60 * 60)
-   , "Expiration time in seconds for redis user message keys."
-     " After the time has elapsed the keys will be deleted.")
-
-   ( "redis-offline-chat-msgs"
-   , po::value<int>(&cfg.worker.db.cfg.max_offline_chat_msgs)->default_value(100)
-   , "The maximum number of messages a user is allowed to accumulate "
-     " (when he is offline).")
-
-   ( "redis-key-menu-channel"
-   , po::value<std::string>(&cfg.worker.db.cfg.menu_channel_key)->
-        default_value("menu_channel")
-   , "The name of the redis channel where publish commands "
-     "are be broadcasted to all workers connected to this channel. "
-     "Which may or may not be on the same machine.")
+   ("redis-host1", po::value<std::string>(&redis_host1)->default_value("127.0.0.1:6379"))
+   ("redis-host2", po::value<std::string>(&redis_host2)->default_value("127.0.0.1:6379"))
+   ("redis-sentinels", po::value<std::vector<std::string>>(&sentinels))
+   ("redis-max-pipeline-size", po::value<int>(&cfg.worker.db.ss_cfg1.max_pipeline_size)->default_value(10000))
+   ("redis-key-channels", po::value<std::string>(&cfg.worker.db.cfg.channels_key)->default_value("channels"))
+   ("redis-key-post-id", po::value<std::string>(&cfg.worker.db.cfg.post_id_key)->default_value("post_id"))
+   ("redis-key-user-id", po::value<std::string>(&cfg.worker.db.cfg.user_id_key)->default_value("user_id"))
+   ("redis-key-chat-msgs-counter", po::value<std::string>(&cfg.worker.db.cfg.chat_msgs_counter_key)->default_value("chat_msgs_counter"))
+   ("redis-key-chat-msg-prefix", po::value<std::string>(&cfg.worker.db.cfg.chat_msg_prefix)->default_value("msg"))
+   ("redis-key-posts", po::value<std::string>(&cfg.worker.db.cfg.posts_key)->default_value("posts"))
+   ("redis-key-user-data-prefix", po::value<std::string>(&cfg.worker.db.cfg.user_data_prefix_key)->default_value("id"))
+   ("redis-conn-retry-interval", po::value<int>(&conn_retry_interval)->default_value(500))
+   ("redis-user-msg-exp_time", po::value<int>(&cfg.worker.db.cfg.chat_msg_exp_time)->default_value(7 * 24 * 60 * 60))
+   ("redis-offline-chat-msgs", po::value<int>(&cfg.worker.db.cfg.max_offline_chat_msgs)->default_value(100))
+   ("redis-key-menu-channel", po::value<std::string>(&cfg.worker.db.cfg.menu_channel_key)->default_value("menu_channel"))
    ;
 
    po::positional_options_description pos;

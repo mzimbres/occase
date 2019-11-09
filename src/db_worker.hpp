@@ -223,6 +223,7 @@ private:
    {
       auto const channels = j.at("channels").get<std::vector<code_type>>();
       auto const filters = j.at("filters").get<std::vector<code_type>>();
+      auto const ranges = j.at("ranges").get<std::vector<int>>();
 
       auto const b0 =
          std::is_sorted(std::cbegin(channels), std::cend(channels));
@@ -241,8 +242,10 @@ private:
       auto const any_of_features = j.at("any_of_features").get<code_type>();
       auto const app_last_post_id = j.at("last_post_id").get<int>();
 
-      s->set_any_of_features(any_of_features);
-      s->set_filter(filters);
+      s->set_any_of_filter(any_of_features);
+      s->set_sub_channels(filters);
+      s->set_ranges(ranges);
+
       auto psession = s->get_proxy_session(true);
 
       std::vector<post> items;

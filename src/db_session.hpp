@@ -57,6 +57,7 @@ template <class Derived>
 class db_session {
 private:
    static constexpr auto sub_channels_size = 32;
+   static constexpr auto ranges_size = 5;
 
    struct msg_entry {
       std::string msg;
@@ -71,10 +72,13 @@ private:
    std::deque<msg_entry> msg_queue_;
    bool closing_ = false;
    std::string user_id_;
-   code_type any_of_features_ = 0;
+   code_type any_of_filter = 0;
 
    boost::container::static_vector<
       code_type, sub_channels_size> sub_channels_;
+
+   boost::container::static_vector<
+      code_type, ranges_size> ranges_;
 
    // Seconds since epoch.
    date_type last_post_date_ {0};
@@ -303,12 +307,10 @@ public:
          do_write(msg_queue_.front().msg);
    }
 
-   void send_post( std::shared_ptr<std::string> msg
-                 , std::uint64_t filter
-                 , std::uint64_t features)
+   void send_post(std::shared_ptr<std::string> msg, post const& p)
    {
-      if (any_of_features_ != 0) {
-         if ((any_of_features_ & features) == 0)
+      if (any_of_filter != 0) {
+         if ((any_of_filter & p.features) == 0)
             return;
       }
 
@@ -316,9 +318,23 @@ public:
          auto const match =
             std::binary_search( std::begin(sub_channels_)
                               , std::end(sub_channels_)
-                              , filter);
+                              , p.filter);
          if (!match)
             return;
+      }
+
+      if (!std::empty(ranges_)) {
+         auto const min =
+            std::min( ssize(ranges_) / 2
+                    , ssize(p.range_values));
+
+         for (auto i = 0; i < min; ++i) {
+            auto const a = ranges_[2 * i];
+            auto const b = ranges_[2 * i + 1];
+            auto const v = p.range_values[i];
+            if (v < a || b < v)
+               return; // Not in range.
+         }
       }
 
       auto const is_empty = std::empty(msg_queue_);
@@ -353,16 +369,25 @@ public:
    // above. If the filter is non-null the post features will be
    // required to contain at least one bit set that is also set in the
    // argument passed here.
-   void set_any_of_features(code_type o)
-      { any_of_features_ = o; }
+   void set_any_of_filter(code_type o)
+      { any_of_filter = o; }
 
-   void set_filter(std::vector<code_type> const& codes)
+   void set_sub_channels(std::vector<code_type> const& codes)
    {
       auto const min = std::min(ssize(codes), sub_channels_size);
       sub_channels_.clear();
       std::copy( std::cbegin(codes)
                , std::cbegin(codes) + min
                , std::back_inserter(sub_channels_));
+   }
+
+   void set_ranges(std::vector<int> const& ranges)
+   {
+      auto const min = std::min(ssize(ranges), ranges_size);
+      ranges_.clear();
+      std::copy( std::cbegin(ranges)
+               , std::cbegin(ranges) + min
+               , std::back_inserter(ranges_));
    }
 
    auto const& get_id() const noexcept

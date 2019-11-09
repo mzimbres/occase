@@ -168,22 +168,22 @@ private:
 
 public:
    auto
-   broadcast( post item
+   broadcast( post p
             , std::chrono::seconds now
             , std::chrono::seconds exp)
    {
       json j;
       j["cmd"] = "post";
-      j["items"] = std::vector<post>{item};
+      j["items"] = std::vector<post>{p};
 
-      auto const filter = item.filter;
-      auto const features = item.features;
-      auto msg = std::make_shared<std::string>(j.dump());
-      add_post(std::move(item));
+      auto const msg = std::make_shared<std::string>(j.dump());
+
+      add_post(p);
+
       auto const expired = remove_expired_posts(now, exp);
 
-      auto f = [msg, features, filter](auto session)
-         { session->send_post(msg, filter, features); };
+      auto f = [msg, &p](auto session)
+         { session->send_post(msg, p); };
 
       cleanup_traversal(f);
       insertions_on_inactivity_ = 0;

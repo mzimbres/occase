@@ -4,6 +4,8 @@
 
 #include "logger.hpp"
 
+using namespace aedis;
+
 namespace rt::redis
 {
 

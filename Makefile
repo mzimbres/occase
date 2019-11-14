@@ -44,7 +44,7 @@ exes += occase-mms
 exes += occase-key-gen
 exes += occase-csv
 exes += db_tests
-exes += aedis
+exes += aedis_example
 exes += simulation
 
 common_objs += menu.o
@@ -55,7 +55,6 @@ common_objs += crypto.o
 
 db_objs =
 db_objs += redis.o
-db_objs += utils.o
 db_objs += net.o
 
 mms_objs =
@@ -66,7 +65,7 @@ client_objs =
 client_objs += test_clients.o
 
 aedis_objs =
-aedis_objs += redis_session.o
+aedis_objs += aedis.o
 
 exe_objs = $(addsuffix .o, $(exes))
 
@@ -114,7 +113,7 @@ occase-mms: % : %.o $(mms_objs) $(common_objs) $(aedis_objs)
 occase-menu: % : %.o $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(ext_libs) -lfmt -lsodium
 
-aedis: % : %.o $(aedis_objs) $(common_objs)
+aedis_example: % : %.o $(aedis_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
 occase-key-gen: % : %.o  $(common_objs)

@@ -3,7 +3,7 @@
 #include <string>
 
 #include "utils.hpp"
-#include "redis_session.hpp"
+#include "aedis.hpp"
 
 namespace rt::redis
 {
@@ -97,8 +97,8 @@ struct db_cfg {
 // backup strategies, for the first case backup is very important, for
 // the second, not so much.
 struct config {
-   session_cfg ss_cfg1;
-   session_cfg ss_cfg2;
+   aedis::session_cfg ss_cfg1;
+   aedis::session_cfg ss_cfg2;
    db_cfg cfg;
 };
 
@@ -114,22 +114,22 @@ private:
 
    // The Session used to subscribe to posts. No commands should be
    // posted here (with the exception of subscribe and unsubscribe).
-   session ss_menu_sub;
+   aedis::session ss_menu_sub;
 
    // The session that deals with the publication of posts and the
    // registration of users. On startup it will also be used to
    // retrieve posts to load the workers.
-   session ss_menu_pub;
+   aedis::session ss_menu_pub;
    std::queue<request> menu_pub_queue;
 
    // The session used to subscribe to keyspace notifications e.g.
    // when the user receives a message. Again, no commands should be
    // posted here (with the exception of subscribe and unsubscribe)
-   session ss_chat_sub;
+   aedis::session ss_chat_sub;
 
    // Session used to store and retrieve user messages whose notification
    // arrived on session ss_chat_sub.
-   session ss_chat_pub;
+   aedis::session ss_chat_pub;
    std::queue<req_item> chat_pub_queue;
 
    msg_handler_type worker_handler;
@@ -191,6 +191,7 @@ public:
    template <class Iter>
    void store_chat_msg(std::string id, Iter begin, Iter end)
    {
+      using namespace aedis;
       auto const key = cfg.chat_msg_prefix + id;
       auto cmd_str = multi()
                    + incr(cfg.chat_msgs_counter_key)

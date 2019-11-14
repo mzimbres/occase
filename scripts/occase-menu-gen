@@ -6,8 +6,8 @@ if [ $# -ne 1 ]; then
 fi
 
 dir=$1
-depth=3
-version=3
+depth=2
+version=2
 
 menu0=${dir}/locations.txt:${depth}:${version}
 menu1=${dir}/products.txt:${depth}:${version}

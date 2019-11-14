@@ -10,13 +10,6 @@
 namespace rt
 {
 
-class logger {
-   std::string const indent;
-public:
-   logger(std::string indent_, bool log_on_stderr);
-   ~logger();
-};
-
 enum class loglevel
 { emerg
 , alert
@@ -53,21 +46,19 @@ int to_syslog_prio(loglevel ll)
 
 namespace global {extern loglevel logfilter;}
 
-inline
-auto ignore_log(loglevel ll)
-{
-   return ll > global::logfilter;
+inline                                                                                                                                                      
+auto ignore_log(loglevel ll)                                                                                                                                
+{                                                                                                                                                           
+   return ll > global::logfilter;                                                                                                                           
 }
 
 template <class... Args>
 void log(loglevel ll, char const* fmt, Args const& ... args)
 {
-   if (ignore_log(ll))
+   if (ll > global::logfilter)
       return;
 
    std::clog << fmt::format(fmt, args...) << std::endl;
-   //auto const prio = to_syslog_prio(ll);
-   //syslog(prio, "%s", fmt::format(fmt, args...).data());
 }
 
 }

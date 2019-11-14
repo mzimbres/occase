@@ -65,7 +65,6 @@ client_objs =
 client_objs += test_clients.o
 
 aedis_objs =
-aedis_objs += aedis.o
 
 exe_objs = $(addsuffix .o, $(exes))
 

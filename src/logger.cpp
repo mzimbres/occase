@@ -1,14 +1,6 @@
 #include "logger.hpp"
 
-#include <iostream>
 #include <cassert>
-
-#include <errno.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-#include <string.h>
-
-#include "utils.hpp"
 
 namespace rt
 {

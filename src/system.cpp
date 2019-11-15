@@ -34,7 +34,7 @@ void set_fd_limits(int fds)
       , "getrlimit (soft, hard): ({0}, {1})"
       , rl.rlim_cur, rl.rlim_cur);
 
-   // Let us raise our limits.
+   // Let us raise the limits.
    rl.rlim_cur = fds;
    rl.rlim_max = fds;
 
@@ -49,70 +49,6 @@ void set_fd_limits(int fds)
    log( loglevel::info
       , "getrlimit (soft, hard): ({0}, {1})"
       , rl.rlim_cur, rl.rlim_cur);
-}
-
-pidfile_mgr::pidfile_mgr(std::string const& pidfile)
-: pidfile_ {pidfile}
-{
-   FILE *fp = fopen(pidfile_.data(), "w");
-   if (fp) {
-      log(loglevel::info, "Creating pid file {0}", pidfile_);
-      fprintf(fp,"%d\n",(int) getpid());
-      fclose(fp);
-   } else {
-      log(loglevel::info, "Unable to create pidfile");
-   }
-}
-
-pidfile_mgr::~pidfile_mgr()
-{
-   if (unlink(pidfile_.data()) == 0) {
-      log( loglevel::info
-         , "Pid file has been successfully removed: {0}"
-         , pidfile_);
-   }
-}
-
-void daemonize()
-{
-   if (fork() != 0)
-      exit(0);
-
-   setsid();
-
-   int fd;
-   if ((fd = open("/dev/null", O_RDWR, 0)) != -1) {
-      dup2(fd, STDIN_FILENO);
-      dup2(fd, STDOUT_FILENO);
-      dup2(fd, STDERR_FILENO);
-      if (fd > STDERR_FILENO)
-         close(fd);
-   }
-}
-
-void drop_root_priviledges()
-{
-   if (getuid() != 0)
-      return;
-
-   if (setgid(getgid()) == -1) {
-       log(loglevel::err, "{0}", strerror(errno));
-       return;
-   }
-
-   if (setuid(getuid()) == -1) {
-       log(loglevel::err, "{0}", strerror(errno));
-       return;
-   }
-
-   loglevel ll = loglevel::notice;
-   auto const* s = "Success: Cannot regain root privileges";
-   if (setuid(0) == -1) {
-      s = strerror(errno);
-      ll = loglevel::err;
-   }
-
-   log(ll, s);
 }
 
 }

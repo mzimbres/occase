@@ -1,5 +1,7 @@
 #include "redis.hpp"
 
+#include <boost/core/ignore_unused.hpp>
+
 #include <fmt/format.h>
 
 #include "logger.hpp"
@@ -11,10 +13,10 @@ namespace rt::redis
 
 facade::facade(config const& cfg, net::io_context& ioc)
 : cfg(cfg.cfg)
-, ss_menu_sub {cfg.ss_cfg1, ioc, fmt::format("db-menu_sub")}
-, ss_menu_pub {cfg.ss_cfg1, ioc, fmt::format("db-menu_pub")}
-, ss_chat_sub {cfg.ss_cfg2, ioc, fmt::format("db-chat_sub")}
-, ss_chat_pub {cfg.ss_cfg2, ioc, fmt::format("db-chat_pub")}
+, ss_menu_sub {ioc, cfg.ss_cfg1, "db-menu_sub"}
+, ss_menu_pub {ioc, cfg.ss_cfg1, "db-menu_pub"}
+, ss_chat_sub {ioc, cfg.ss_cfg2, "db-chat_sub"}
+, ss_chat_pub {ioc, cfg.ss_cfg2, "db-chat_pub"}
 , worker_handler([](auto const& data, auto const& req) {})
 {
    // Sets on connection handlers.

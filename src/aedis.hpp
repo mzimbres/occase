@@ -19,31 +19,19 @@
 
 #include <fmt/format.h>
 
-#include "net.hpp"
-#include "utils.hpp"
 #include "logger.hpp"
 
 namespace aedis
 {
 
-struct session_cfg {
-   std::string host;
-   std::string port;
+namespace net = boost::asio;
+namespace ip = net::ip;
+using tcp = ip::tcp;
 
-   // A list of redis sentinels e.g. ip1:port1 ip2:port2 ...
-   std::vector<std::string> sentinels;
-
-   std::chrono::milliseconds conn_retry_interval {500};
-
-   // We have to restrict the length of the pipeline to not block
-   // redis for long periods.
-   int max_pipeline_size {10000};
-};
-
-namespace priv
+namespace resp
 {
 
-struct resp_buffer {
+struct buffer {
    std::string data;
    std::vector<std::string> res;
 };
@@ -110,50 +98,50 @@ std::size_t get_length(char const* p)
 template < class AsyncStream
          , class Handler>
 struct read_resp_op {
-   AsyncStream& stream;
-   Handler handler;
-   resp_buffer* buffer = nullptr;
-   int start = 0;
-   int counter = 1;
-   bool bulky_str_read = false;
+   AsyncStream& stream_;
+   Handler handler_;
+   resp::buffer* buffer_ = nullptr;
+   int start_ = 0;
+   int counter_ = 1;
+   bool bulky_read_ = false;
 
-   read_resp_op( AsyncStream& stream_
-               , resp_buffer* buffer_
-               , Handler handler_)
-   : stream(stream_)
-   , handler(std::move(handler_))
-   , buffer(buffer_)
+   read_resp_op( AsyncStream& stream
+               , resp::buffer* buffer
+               , Handler handler)
+   : stream_(stream)
+   , handler_(std::move(handler))
+   , buffer_(buffer)
    { }
 
    void operator()( boost::system::error_code const& ec, std::size_t n
-                  , int start_ = 0)
+                  , int start = 0)
    {
-      switch (start = start_) {
+      switch (start_ = start) {
          for (;;) {
             case 1:
-            net::async_read_until( stream, net::dynamic_buffer(buffer->data)
+            net::async_read_until( stream_, net::dynamic_buffer(buffer_->data)
                                  , "\r\n", std::move(*this));
             return; default:
 
             if (ec || n < 3) {
-               handler(ec);
+               handler_(ec);
                return;
             }
 
             auto str_flag = false;
-            if (bulky_str_read) {
-               buffer->res.push_back(buffer->data.substr(0, n - 2));
-               --counter;
+            if (bulky_read_) {
+               buffer_->res.push_back(buffer_->data.substr(0, n - 2));
+               --counter_;
             } else {
-               if (counter != 0) {
-                  switch (buffer->data.front()) {
+               if (counter_ != 0) {
+                  switch (buffer_->data.front()) {
                      case '$':
                      {
                         // TODO: Do not push in the vector but find a way to
                         // report nil.
-                        if (buffer->data.compare(1, 2, "-1") == 0) {
-                           buffer->res.push_back({});
-                           --counter;
+                        if (buffer_->data.compare(1, 2, "-1") == 0) {
+                           buffer_->res.push_back({});
+                           --counter_;
                         } else {
                            str_flag = true;
                         }
@@ -163,14 +151,14 @@ struct read_resp_op {
                      case '-':
                      case ':':
                      {
-                        buffer->res.push_back(buffer->data.substr(1, n - 3));
-                        --counter;
+                        buffer_->res.push_back(buffer_->data.substr(1, n - 3));
+                        --counter_;
                      }
                      break;
                      case '*':
                      {
-                        //assert(counter == 1);
-                        counter = get_length(buffer->data.data() + 1);
+                        //assert(counter_ == 1);
+                        counter_ = get_length(buffer_->data.data() + 1);
                      }
                      break;
                      default:
@@ -179,14 +167,14 @@ struct read_resp_op {
                }
             }
 
-            buffer->data.erase(0, n);
+            buffer_->data.erase(0, n);
 
-            if (counter == 0) {
-               handler(boost::system::error_code{});
+            if (counter_ == 0) {
+               handler_(boost::system::error_code{});
                return;
             }
 
-            bulky_str_read = str_flag;
+            bulky_read_ = str_flag;
          }
       }
    }
@@ -200,16 +188,16 @@ asio_handler_is_continuation( read_resp_op< AsyncReadStream
                                           , ReadHandler
                                           >* this_handler)
 {
-   return this_handler->start == 0 ? true
+   return this_handler->start_ == 0 ? true
       : boost_asio_handler_cont_helpers::is_continuation(
-            this_handler->handler);
+            this_handler->handler_);
 }
 
 template < class AsyncStream
          , class CompletionToken>
-BOOST_ASIO_INITFN_RESULT_TYPE(CompletionToken, void(boost::beast::error_code))
+BOOST_ASIO_INITFN_RESULT_TYPE(CompletionToken, void(boost::system::error_code))
 async_read_resp( AsyncStream& s
-               , resp_buffer* buffer
+               , resp::buffer* buffer
                , CompletionToken&& handler)
 {
    using read_handler_signature = void (boost::system::error_code const&);
@@ -236,14 +224,14 @@ auto rpush(std::string const& key, Iter begin, Iter end)
 {
    auto const d = std::distance(begin, end);
 
-   auto payload = priv::make_cmd_header(2 + d)
-                + priv::make_bulky_item("RPUSH")
-                + priv::make_bulky_item(key);
+   auto payload = resp::make_cmd_header(2 + d)
+                + resp::make_bulky_item("RPUSH")
+                + resp::make_bulky_item(key);
 
    auto cmd_str = std::accumulate( begin
                                  , end
                                  , std::move(payload)
-                                 , priv::accumulator{});
+                                 , resp::accumulator{});
    return cmd_str;
 }
 
@@ -252,84 +240,84 @@ auto lpush(std::string const& key, Iter begin, Iter end)
 {
    auto const d = std::distance(begin, end);
 
-   auto payload = priv::make_cmd_header(2 + d)
-                + priv::make_bulky_item("LPUSH")
-                + priv::make_bulky_item(key);
+   auto payload = resp::make_cmd_header(2 + d)
+                + resp::make_bulky_item("LPUSH")
+                + resp::make_bulky_item(key);
 
    auto cmd_str = std::accumulate( begin
                                  , end
                                  , std::move(payload)
-                                 , priv::accumulator{});
+                                 , resp::accumulator{});
    return cmd_str;
 }
 
 inline
 auto multi()
 {
-   return priv::resp_assemble("MULTI");
+   return resp::resp_assemble("MULTI");
 }
 
 inline
 auto exec()
 {
-   return priv::resp_assemble("EXEC");
+   return resp::resp_assemble("EXEC");
 }
 
 inline
 auto incr(std::string const& key)
 {
-   return priv::resp_assemble("INCR", key);
+   return resp::resp_assemble("INCR", key);
 }
 
 inline
 auto lpop(std::string const& key)
 {
-   return priv::resp_assemble("LPOP", key);
+   return resp::resp_assemble("LPOP", key);
 }
 
 inline
 auto subscribe(std::string const& key)
 {
-   return priv::resp_assemble("SUBSCRIBE", key);
+   return resp::resp_assemble("SUBSCRIBE", key);
 }
 
 inline
 auto unsubscribe(std::string const& key)
 {
-   return priv::resp_assemble("UNSUBSCRIBE", key);
+   return resp::resp_assemble("UNSUBSCRIBE", key);
 }
 
 inline
 auto get(std::string const& key)
 {
-   return priv::resp_assemble("GET", key);
+   return resp::resp_assemble("GET", key);
 }
 
 inline
 auto publish(std::string const& key, std::string const& msg)
 {
    auto par = {key, msg};
-   return priv::resp_assemble("PUBLISH", std::begin(par), std::end(par));
+   return resp::resp_assemble("PUBLISH", std::begin(par), std::end(par));
 }
 
 inline
 auto set(std::string const& key, std::string const& value)
 {
    auto par = {key, value};
-   return priv::resp_assemble("SET", std::begin(par), std::end(par));
+   return resp::resp_assemble("SET", std::begin(par), std::end(par));
 }
 
 inline
 auto hset(std::initializer_list<std::string const> const& l)
 {
-   return priv::resp_assemble("HSET", std::begin(l), std::end(l));
+   return resp::resp_assemble("HSET", std::begin(l), std::end(l));
 }
 
 inline
 auto hget(std::string const& key, std::string const& field)
 {
    auto par = {key, field};
-   return priv::resp_assemble("HGET", std::begin(par), std::end(par));
+   return resp::resp_assemble("HGET", std::begin(par), std::end(par));
 }
 
 inline
@@ -338,21 +326,21 @@ auto hmget( std::string const& key
           , std::string const& field2)
 {
    auto par = {key, field1, field2};
-   return priv::resp_assemble("HMGET", std::begin(par), std::end(par));
+   return resp::resp_assemble("HMGET", std::begin(par), std::end(par));
 }
 
 inline
 auto expire(std::string const& key, int secs)
 {
    auto par = {key, std::to_string(secs)};
-   return priv::resp_assemble("EXPIRE", std::begin(par), std::end(par));
+   return resp::resp_assemble("EXPIRE", std::begin(par), std::end(par));
 }
 
 inline
 auto zadd(std::string const& key, int score, std::string const& value)
 {
    auto par = {key, std::to_string(score), value};
-   return priv::resp_assemble("ZADD", std::begin(par), std::end(par));
+   return resp::resp_assemble("ZADD", std::begin(par), std::end(par));
 }
 
 inline
@@ -363,7 +351,7 @@ auto zrange(std::string const& key, int min, int max)
               , std::to_string(max)
               };
 
-   return priv::resp_assemble("zrange", std::begin(par), std::end(par));
+   return resp::resp_assemble("zrange", std::begin(par), std::end(par));
 }
 
 inline
@@ -379,7 +367,7 @@ auto zrangebyscore(std::string const& key, int min, int max)
               //, std::string {"withscores"}
               };
 
-   return priv::resp_assemble("zrangebyscore", std::begin(par), std::end(par));
+   return resp::resp_assemble("zrangebyscore", std::begin(par), std::end(par));
 }
 
 inline
@@ -387,7 +375,7 @@ auto zremrangebyscore(std::string const& key, int score)
 {
    auto const s = std::to_string(score);
    auto par = {key, s, s};
-   return priv::resp_assemble("ZREMRANGEBYSCORE", std::begin(par), std::end(par));
+   return resp::resp_assemble("ZREMRANGEBYSCORE", std::begin(par), std::end(par));
 }
 
 inline
@@ -398,21 +386,21 @@ auto lrange(std::string const& key, int min, int max)
               , std::to_string(max)
               };
 
-   return priv::resp_assemble("lrange", std::begin(par), std::end(par));
+   return resp::resp_assemble("lrange", std::begin(par), std::end(par));
 }
 
 inline
 auto del(std::string const& key)
 {
    auto par = {key};
-   return priv::resp_assemble("del", std::begin(par), std::end(par));
+   return resp::resp_assemble("del", std::begin(par), std::end(par));
 }
 
 inline
 auto llen(std::string const& key)
 {
    auto par = {key};
-   return priv::resp_assemble("llen", std::begin(par), std::end(par));
+   return resp::resp_assemble("llen", std::begin(par), std::end(par));
 }
 
 class session {
@@ -425,16 +413,32 @@ public:
    using msg_handler_type =
       std::function<void( boost::system::error_code const&
                         , std::vector<std::string>)>;
+  struct config {
+     std::string host {"127.0.0.1"};
+     std::string port {"6379"};
+     int max_pipeline_size {256};
+
+     // If the connection to redis is lost, the session tries to reconnect with
+     // this interval. This will be removed after the implementation of redis
+     // sentinel is finished.
+     std::chrono::milliseconds conn_retry_interval {500};
+
+     // A list of redis sentinels e.g. ip1:port1 ip2:port2 ...
+     // Not yet in use.
+     std::vector<std::string> sentinels;
+  };
 
 private:
-   std::string id;
-   session_cfg cfg;
-   net::ip::tcp::resolver resolver;
-   net::ip::tcp::socket socket;
-   net::steady_timer timer;
-   priv::resp_buffer buffer;
-   std::queue<std::string> msg_queue;
-   int pipeline_counter = 0;
+   std::string id_;
+   config cfg_;
+   net::ip::tcp::resolver resolver_;
+   net::ip::tcp::socket socket_;
+
+   // This variable will be removed after the redis sentinel implementation. 
+   net::steady_timer timer_;
+   resp::buffer buffer_;
+   std::queue<std::string> msg_queue_;
+   int pipeline_counter_ = 0;
 
    msg_handler_type on_msg_handler = [](auto const&, auto) {};
    on_conn_handler_type on_conn_handler = [](){};
@@ -442,26 +446,26 @@ private:
 
    void start_reading_resp()
    {
-      buffer.res.clear();
+      buffer_.res.clear();
 
       auto handler = [this](auto const& ec)
          { on_resp(ec); };
 
-      priv::async_read_resp(socket, &buffer, handler);
+      resp::async_read_resp(socket_, &buffer_, handler);
    }
 
    void on_resolve( boost::system::error_code const& ec
                   , net::ip::tcp::resolver::results_type results)
    {
       if (ec) {
-         log(rt::loglevel::warning, "{0}/on_resolve: {1}.", id, ec.message());
+         log(rt::loglevel::warning, "{0}/on_resolve: {1}.", id_, ec.message());
          return;
       }
 
       auto handler = [this](auto ec, auto iter)
          { on_connect(ec, iter); };
 
-      net::async_connect(socket, results, handler);
+      net::async_connect(socket_, results, handler);
    }
 
    void on_connect( boost::system::error_code const& ec
@@ -473,7 +477,7 @@ private:
 
       log( rt::loglevel::info
          , "{0}/on_connect: Success connecting to {1}"
-         , id
+         , id_
          , endpoint);
 
       start_reading_resp();
@@ -481,10 +485,10 @@ private:
       // Consumes any messages that have been eventually posted while the
       // connection was not established, or consumes msgs when a
       // connection to redis is restablished.
-      if (!std::empty(msg_queue)) {
+      if (!std::empty(msg_queue_)) {
          log( rt::loglevel::debug
             , "{0}/on_connect: Number of messages {1}"
-            , id, std::size(msg_queue));
+            , id_, std::size(msg_queue_));
          do_write();
       }
 
@@ -500,18 +504,18 @@ private:
    void on_resp(boost::system::error_code const& ec)
    {
       if (ec) {
-         log(rt::loglevel::warning, "{0}/on_resp1: {1}.", id, ec.message());
+         log(rt::loglevel::warning, "{0}/on_resp1: {1}.", id_, ec.message());
          auto const b1 = ec == net::error::eof;
          auto const b2 = ec == net::error::connection_reset;
          if (b1 || b2) {
             // Redis has cleanly closed the connection, we try to
             // reconnect.
-            timer.expires_after(cfg.conn_retry_interval);
+            timer_.expires_after(cfg_.conn_retry_interval);
 
             auto const handler = [this](auto const& ec)
                { on_conn_closed(ec); };
 
-            timer.async_wait(handler);
+            timer_.async_wait(handler);
             return;
          }
 
@@ -527,21 +531,21 @@ private:
 
          log( rt::loglevel::warning
             , "{0}/on_resp2: Unhandled error '{1}'."
-            , id, ec.message());
+            , id_, ec.message());
 
          return;
       }
 
-      on_msg_handler(ec, std::move(buffer.res));
+      on_msg_handler(ec, std::move(buffer_.res));
 
       start_reading_resp();
 
-      if (std::empty(msg_queue))
+      if (std::empty(msg_queue_))
          return;
 
-      msg_queue.pop();
+      msg_queue_.pop();
 
-      if (!std::empty(msg_queue))
+      if (!std::empty(msg_queue_))
          do_write();
    }
 
@@ -549,7 +553,7 @@ private:
    {
       if (ec) {
          log( rt::loglevel::info, "{0}/on_write: {1}."
-            , id, ec.message());
+            , id_, ec.message());
          return;
       }
    }
@@ -559,7 +563,7 @@ private:
       auto handler = [this](auto ec, auto n)
          { on_write(ec, n); };
 
-      net::async_write(socket, net::buffer(msg_queue.front()), handler);
+      net::async_write(socket_, net::buffer(msg_queue_.front()), handler);
    }
 
    void on_conn_closed(boost::system::error_code ec)
@@ -573,15 +577,15 @@ private:
          }
 
          log( rt::loglevel::warning, "{0}/on_conn_closed: {1}"
-            , id, ec.message());
+            , id_, ec.message());
 
          return;
       }
 
       // Given that the peer has shutdown the connection (I think)
       // we do not need to call shutdown.
-      //socket.shutdown(net::ip::tcp::socket::shutdown_both, ec);
-      socket.close(ec);
+      //socket_.shutdown(net::ip::tcp::socket::shutdown_both, ec);
+      socket_.close(ec);
 
       // Instead of simply trying to reconnect I will run the
       // resolver again. This will be changes when sentinel
@@ -590,18 +594,17 @@ private:
    }
 
 public:
-   session(session_cfg cfg_, net::io_context& ioc, std::string id_)
-   : id(id_)
-   , cfg {cfg_}
-   , resolver {ioc} 
-   , socket {ioc}
-   , timer {ioc, std::chrono::steady_clock::time_point::max()}
+   session( net::io_context& ioc
+          , config cfg
+          , std::string id = {})
+   : id_(id)
+   , cfg_ {std::move(cfg)}
+   , resolver_ {ioc} 
+   , socket_ {ioc}
+   , timer_ {ioc, std::chrono::steady_clock::time_point::max()}
    {
-      if (cfg.max_pipeline_size < 1)
-         throw std::runtime_error("redis::session: Invalid max pipeline size.");
-
-      if (std::empty(cfg_.sentinels))
-         throw std::runtime_error("redis::session: No sentinels provided.");
+      if (cfg_.max_pipeline_size < 1)
+         cfg_.max_pipeline_size = 1;
    }
 
    void set_on_conn_handler(on_conn_handler_type handler)
@@ -616,52 +619,52 @@ public:
    void send(std::string msg)
    {
       auto const max_pp_size_reached =
-         pipeline_counter >= cfg.max_pipeline_size;
+         pipeline_counter_ >= cfg_.max_pipeline_size;
 
       if (max_pp_size_reached) {
-         pipeline_counter = 0;
+         pipeline_counter_ = 0;
       }
 
-      auto const is_empty = std::empty(msg_queue);
+      auto const is_empty = std::empty(msg_queue_);
 
-      if (is_empty || std::size(msg_queue) == 1 || max_pp_size_reached) {
-         msg_queue.push(std::move(msg));
+      if (is_empty || std::size(msg_queue_) == 1 || max_pp_size_reached) {
+         msg_queue_.push(std::move(msg));
       } else {
-         msg_queue.back() += msg; // Uses pipeline.
-         ++pipeline_counter;
+         msg_queue_.back() += msg; // Uses pipeline.
+         ++pipeline_counter_;
       }
 
-      if (is_empty && socket.is_open())
+      if (is_empty && socket_.is_open())
          do_write();
    }
 
    void close()
    {
       boost::system::error_code ec;
-      socket.shutdown(net::ip::tcp::socket::shutdown_send, ec);
+      socket_.shutdown(net::ip::tcp::socket::shutdown_send, ec);
 
       if (ec) {
-         log(rt::loglevel::warning, "{0}/close: {1}.", id, ec.message());
+         log(rt::loglevel::warning, "{0}/close: {1}.", id_, ec.message());
       }
 
       ec = {};
-      socket.close(ec);
+      socket_.close(ec);
       if (ec) {
-         log(rt::loglevel::warning, "{0}/close: {1}.", id, ec.message());
+         log(rt::loglevel::warning, "{0}/close: {1}.", id_, ec.message());
       }
 
-      timer.cancel();
+      timer_.cancel();
    }
 
 
    void run()
    {
-      //auto addr = split(cfg.sentinels.front());
+      //auto addr = split(cfg_.sentinels.front());
       //std::cout << addr.first << " -- " << addr.second << std::endl;
 
       // Calling sync resolve to avoid starting a new thread.
       boost::system::error_code ec;
-      auto res = resolver.resolve(cfg.host, cfg.port, ec);
+      auto res = resolver_.resolve(cfg_.host, cfg_.port, ec);
       on_resolve(ec, res);
    }
 };

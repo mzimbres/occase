@@ -5,16 +5,9 @@
 #include <cstring>
 #include <iostream>
 
-#include <boost/asio.hpp>
-#include <boost/program_options/options_description.hpp>
-#include <boost/program_options/parsers.hpp>
-#include <boost/program_options/variables_map.hpp>
-
 #include "aedis.hpp"
 
 using namespace aedis;
-
-namespace po = boost::program_options;
 
 auto const pub_handler = [](auto const& ec, auto const& data)
 {
@@ -28,10 +21,10 @@ auto const pub_handler = [](auto const& ec, auto const& data)
    std::cout << std::endl;
 };
 
-void pub(session_cfg const& cfg, int count, char const* channel)
+void pub(session::config const& cfg, int count, char const* channel)
 {
-   boost::asio::io_context ioc;
-   session pub_session(cfg, ioc, "1");
+   net::io_context ioc;
+   session pub_session(ioc, cfg);
    pub_session.set_msg_handler(pub_handler);
    for (auto i = 0; i < count; ++i)
       pub_session.send(publish(channel, std::to_string(i)));
@@ -64,9 +57,9 @@ struct sub_arena {
    session s;
 
    sub_arena( net::io_context& ioc
-            , session_cfg const& cfg
+            , session::config const& cfg
             , std::string channel)
-   : s(cfg, ioc, "1")
+   : s(ioc, cfg, "1")
    {
       s.set_msg_handler(sub_on_msg_handler);
 
@@ -78,17 +71,17 @@ struct sub_arena {
    }
 };
 
-void sub(session_cfg const& cfg, char const* channel)
+void sub(session::config const& cfg, char const* channel)
 {
    net::io_context ioc;
    sub_arena arena(ioc, cfg, channel);
    ioc.run();
 }
 
-void transaction(session_cfg const& cfg)
+void transaction(session::config const& cfg)
 {
-   boost::asio::io_context ioc;
-   session ss(cfg, ioc, "1");
+   net::io_context ioc;
+   session ss(ioc, cfg);
    ss.set_msg_handler(pub_handler);
 
    auto c1 = multi()
@@ -102,10 +95,10 @@ void transaction(session_cfg const& cfg)
    ioc.run();
 }
 
-void expire(session_cfg const& cfg)
+void expire(session::config const& cfg)
 {
-   boost::asio::io_context ioc;
-   session ss(cfg, ioc, "1");
+   net::io_context ioc;
+   session ss(ioc, cfg);
    ss.set_msg_handler(pub_handler);
 
    auto c1 = multi()
@@ -119,10 +112,10 @@ void expire(session_cfg const& cfg)
    ioc.run();
 }
 
-void zadd(session_cfg const& cfg)
+void zadd(session::config const& cfg)
 {
-   boost::asio::io_context ioc;
-   session ss(cfg, ioc, "1");
+   net::io_context ioc;
+   session ss(ioc, cfg);
    ss.set_msg_handler(pub_handler);
 
    auto c1 = zadd("foo", 1, "bar1")
@@ -137,10 +130,10 @@ void zadd(session_cfg const& cfg)
    ioc.run();
 }
 
-void zrangebyscore(session_cfg const& cfg)
+void zrangebyscore(session::config const& cfg)
 {
-   boost::asio::io_context ioc;
-   session ss(cfg, ioc, "1");
+   net::io_context ioc;
+   session ss(ioc, cfg);
    ss.set_msg_handler(pub_handler);
 
    auto c1 = zrangebyscore("foo", 2, -1);
@@ -151,24 +144,22 @@ void zrangebyscore(session_cfg const& cfg)
    ioc.run();
 }
 
-void zrange(session_cfg const& cfg)
+void zrange(session::config const& cfg)
 {
-   boost::asio::io_context ioc;
-   session ss(cfg, ioc, "1");
+   net::io_context ioc;
+   session ss(ioc, cfg);
    ss.set_msg_handler(pub_handler);
 
-   auto c1 = zrange("foo", 2, -1);
-
-   ss.send(c1);
+   ss.send(zrange("foo", 2, -1));
 
    ss.run();
    ioc.run();
 }
 
-void lrange(session_cfg const& cfg)
+void lrange(session::config const& cfg)
 {
-   boost::asio::io_context ioc;
-   session ss(cfg, ioc, "1");
+   net::io_context ioc;
+   session ss(ioc, cfg);
    ss.set_msg_handler(pub_handler);
 
    auto c1 = lrange("foo", 0, -1);
@@ -179,10 +170,10 @@ void lrange(session_cfg const& cfg)
    ioc.run();
 }
 
-void read_msg_op(session_cfg const& cfg)
+void read_msg_op(session::config const& cfg)
 {
-   boost::asio::io_context ioc;
-   session ss(cfg, ioc, "1");
+   net::io_context ioc;
+   session ss(ioc, cfg);
    ss.set_msg_handler(pub_handler);
 
    auto c1 = multi()
@@ -199,104 +190,37 @@ void read_msg_op(session_cfg const& cfg)
 int main(int argc, char* argv[])
 {
    try {
-      auto test = 0;
-      auto count = 0;
-      session_cfg cfg;
-      po::options_description desc("Options");
-      desc.add_options()
-      ("help,h", "Produces help message")
-      ( "port,p"
-      , po::value<std::string>(&cfg.port)->default_value("6379")
-      , "Redis server listening port."
-      )
+      if (argc == 1) {
+         std::cerr << "Usage: " << argv[0] << " n host port" << std::endl;
+         return 1;
+      }
 
-      ( "redis-sentinels"
-      , po::value<std::vector<std::string>>(&cfg.sentinels)
-      , "A list of sentinel addresses in the form ip1:port1 ip2:port2."
-      )
+      session::config cfg;
+      auto const n = std::stoi(argv[1]);
 
-      ("host,i"
-      , po::value<std::string>(&cfg.host)->default_value("127.0.0.1")
-      , "Redis server ip address."
-      )
-
-      ("Run mode,t"
-      , po::value<int>(&test)->default_value(-1)
-      , " 1 pub.\n"
-        " 2 sub.\n"
-        " 3 transaction.\n"
-        " 4 expire.\n"
-        " 5 zadd.\n"
-        " 6 zrangebyscore.\n"
-        " 7 zrange.\n"
-        " 8 lrange.\n"
-        " 9 read msg op.\n"
-      )
-
-      ("count,c"
-      , po::value<int>(&count)->default_value(20)
-      , "Count."
-      )
-      ;
-
-      po::variables_map vm;        
-      po::store(po::parse_command_line(argc, argv, desc), vm);
-      po::notify(vm);    
-
-      if (vm.count("help")) {
-         std::cout << desc << "\n";
-         return 0;
+      if (argc == 3) {
+         cfg.host = argv[2];
+         cfg.port = argv[3];
       }
 
       char const* channel = "foo";
 
-      if (test == 1) {
-         pub(cfg, count, channel);
-         return 0;
+      switch (n) {
+         case 0:
+         case 1: pub(cfg, 10, channel); break;
+         case 2: sub(cfg, channel); break;
+         case 3: transaction(cfg); break;
+         case 4: expire(cfg); break;
+         case 5: zadd(cfg); break;
+         case 6: zrangebyscore(cfg); break;
+         case 7: zrange(cfg); break;
+         case 8: lrange(cfg); break;
+         case 9: read_msg_op(cfg); break;
+         default:
+            std::cerr << "Option not available." << std::endl;
       }
-
-      if (test == 2) {
-         sub(cfg, channel);
-         return 0;
-      }
-
-      if (test == 3) {
-         transaction(cfg);
-         return 0;
-      }
-
-      if (test == 4) {
-         expire(cfg);
-         return 0;
-      }
-
-      if (test == 5) {
-         zadd(cfg);
-         return 0;
-      }
-
-      if (test == 6) {
-         zrangebyscore(cfg);
-         return 0;
-      }
-
-      if (test == 7) {
-         zrange(cfg);
-         return 0;
-      }
-
-      if (test == 8) {
-         lrange(cfg);
-         return 0;
-      }
-
-      if (test == 9) {
-         read_msg_op(cfg);
-         return 0;
-      }
-
-   } catch (std::exception& e) {
-      std::cerr << "Exception: " << e.what() << "\n";
+   } catch (std::exception const& e) {
+      std::cerr << e.what() << "\n";
    }
 
    return 0;

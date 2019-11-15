@@ -23,27 +23,6 @@ enum class loglevel
 
 void log_upto(std::string const& ll);
 
-inline
-int to_syslog_prio(loglevel ll)
-{
-   switch (ll)
-   {
-      case loglevel::emerg:    return LOG_EMERG;
-      case loglevel::alert:    return LOG_ALERT;
-      case loglevel::crit:     return LOG_CRIT;
-      case loglevel::err:      return LOG_ERR;
-      case loglevel::warning:  return LOG_WARNING;
-      case loglevel::notice:   return LOG_NOTICE;
-      case loglevel::info:     return LOG_INFO;
-      case loglevel::debug:    return LOG_DEBUG;
-      default:
-      {
-         assert(false);
-         return -1;
-      }
-   }
-}
-
 namespace global {extern loglevel logfilter;}
 
 inline                                                                                                                                                      

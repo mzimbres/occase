@@ -2,6 +2,7 @@
 
 #include <string>
 
+#include "net.hpp"
 #include "utils.hpp"
 #include "aedis.hpp"
 
@@ -97,8 +98,8 @@ struct db_cfg {
 // backup strategies, for the first case backup is very important, for
 // the second, not so much.
 struct config {
-   aedis::session_cfg ss_cfg1;
-   aedis::session_cfg ss_cfg2;
+   aedis::session::config ss_cfg1;
+   aedis::session::config ss_cfg2;
    db_cfg cfg;
 };
 

@@ -33,3 +33,10 @@ https://letsencrypt.org/donate
 Donating to EFF:
 https://eff.org/donate-le
 
+Alert dialogs on x, 2 minutes tapping and when decides to tap on x
+that was cleared
+Just to confirm the action
+
+Also change tab indicator color, bit invisible as white with same scaffold background
+
+May be inactive to be very light grey and indicator with an accent color

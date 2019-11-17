@@ -96,6 +96,8 @@ make_sub_payload( std::vector<code_type> const& channels
    j_sub["channels"] = channels;
    j_sub["filters"] = filters;
    j_sub["any_of_features"] = 0;
+   j_sub["ranges"] = std::vector<int>{};
+
    return j_sub.dump();
 }
 

@@ -4,28 +4,67 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <algorithm>
 
-#include "aedis.hpp"
+#include <aedis/aedis.hpp>
 
 using namespace aedis;
 
-auto const pub_handler = [](auto const& ec, auto const& data)
-{
-   if (ec)
-     throw std::runtime_error(ec.message());
+using args_type = std::initializer_list<std::string const>;
 
-  std::cout << "=======> ";
-   for (auto const& o : data)
-     std::cout << o << " ";
-
-   std::cout << std::endl;
-};
-
-void pub(session::config const& cfg, int count, char const* channel)
+void set_get()
 {
    net::io_context ioc;
-   session pub_session(ioc, cfg);
-   pub_session.set_msg_handler(pub_handler);
+   session ss {ioc};
+
+   auto c = set({"Name", "Marcelo"})
+          + get("Name");
+
+   ss.send(std::move(c));
+
+   ss.run();
+   ioc.run();
+}
+
+void transaction()
+{
+   net::io_context ioc;
+   session ss {ioc};
+
+   auto o = multi()
+          + set({"Age", "39"})
+          + incr("Age")
+          + get("Age")
+          + expire("Age", 10)
+          + exec();
+
+   ss.send(std::move(o));
+   ss.run();
+   ioc.run();
+}
+
+void rpush_vector()
+{
+   net::io_context ioc;
+   session ss {ioc};
+
+   std::vector<int> v1 {1 , 2, 3, 4, 5, 6, 7};
+   ss.send(rpush("a", v1) + lrange("a") + del("a"));
+
+   std::list<std::string> v2 {"one" ,"two", "three"};
+   ss.send(rpush("b", v2) + lrange("b") + del("b"));
+
+   std::set<std::string> v3 {"a" ,"b", "c"};
+   ss.send(rpush("c", v3) + lrange("c") + del("c"));
+
+   ss.run();
+   ioc.run();
+}
+
+void pub(int count, char const* channel)
+{
+   net::io_context ioc;
+   session pub_session(ioc);
    for (auto i = 0; i < count; ++i)
       pub_session.send(publish(channel, std::to_string(i)));
 
@@ -34,20 +73,19 @@ void pub(session::config const& cfg, int count, char const* channel)
    ioc.run();
 }
 
-auto const sub_on_msg_handler =
-   [i = 0]( auto const& ec, auto const& data) mutable
+auto msg_handler2 = [i = 0](auto ec, auto const& res) mutable
 {
    if (ec) 
       throw std::runtime_error(ec.message());
 
-   auto const n = std::stoi(data.back());
+   auto const n = std::stoi(res.back());
    if (n != i + 1)
       std::cout << "===============> Error." << std::endl;
    std::cout << "Counter: " << n << std::endl;
 
    i = n;
 
-   //for (auto const& o : data)
+   //for (auto const& o : res)
    //   std::cout << o << " ";
 
    //std::cout << std::endl;
@@ -57,11 +95,10 @@ struct sub_arena {
    session s;
 
    sub_arena( net::io_context& ioc
-            , session::config const& cfg
             , std::string channel)
-   : s(ioc, cfg, "1")
+   : s(ioc)
    {
-      s.set_msg_handler(sub_on_msg_handler);
+      s.set_msg_handler(msg_handler2);
 
       auto const on_conn_handler = [this, channel]()
          { s.send(subscribe(channel)); };
@@ -71,52 +108,17 @@ struct sub_arena {
    }
 };
 
-void sub(session::config const& cfg, char const* channel)
+void sub(char const* channel)
 {
    net::io_context ioc;
-   sub_arena arena(ioc, cfg, channel);
+   sub_arena arena(ioc, channel);
    ioc.run();
 }
 
-void transaction(session::config const& cfg)
+void zadd()
 {
    net::io_context ioc;
-   session ss(ioc, cfg);
-   ss.set_msg_handler(pub_handler);
-
-   auto c1 = multi()
-           + incr("pub_counter")
-           + publish("foo", "bar")
-           + exec();
-
-   ss.send(std::move(c1));
-
-   ss.run();
-   ioc.run();
-}
-
-void expire(session::config const& cfg)
-{
-   net::io_context ioc;
-   session ss(ioc, cfg);
-   ss.set_msg_handler(pub_handler);
-
-   auto c1 = multi()
-           + set("foo", "bar")
-           + expire("foo", 10)
-           + exec();
-
-   ss.send(std::move(c1));
-
-   ss.run();
-   ioc.run();
-}
-
-void zadd(session::config const& cfg)
-{
-   net::io_context ioc;
-   session ss(ioc, cfg);
-   ss.set_msg_handler(pub_handler);
+   session ss {ioc};
 
    auto c1 = zadd("foo", 1, "bar1")
            + zadd("foo", 2, "bar2")
@@ -130,11 +132,10 @@ void zadd(session::config const& cfg)
    ioc.run();
 }
 
-void zrangebyscore(session::config const& cfg)
+void zrangebyscore()
 {
    net::io_context ioc;
-   session ss(ioc, cfg);
-   ss.set_msg_handler(pub_handler);
+   session ss(ioc);
 
    auto c1 = zrangebyscore("foo", 2, -1);
 
@@ -144,11 +145,10 @@ void zrangebyscore(session::config const& cfg)
    ioc.run();
 }
 
-void zrange(session::config const& cfg)
+void zrange()
 {
    net::io_context ioc;
-   session ss(ioc, cfg);
-   ss.set_msg_handler(pub_handler);
+   session ss(ioc);
 
    ss.send(zrange("foo", 2, -1));
 
@@ -156,28 +156,13 @@ void zrange(session::config const& cfg)
    ioc.run();
 }
 
-void lrange(session::config const& cfg)
+void read_msg_op()
 {
    net::io_context ioc;
-   session ss(ioc, cfg);
-   ss.set_msg_handler(pub_handler);
-
-   auto c1 = lrange("foo", 0, -1);
-
-   ss.send(c1);
-
-   ss.run();
-   ioc.run();
-}
-
-void read_msg_op(session::config const& cfg)
-{
-   net::io_context ioc;
-   session ss(ioc, cfg);
-   ss.set_msg_handler(pub_handler);
+   session ss(ioc);
 
    auto c1 = multi()
-           + lrange("foo", 0, -1)
+           + lrange("foo")
            + del("foo")
            + exec();
 
@@ -206,16 +191,15 @@ int main(int argc, char* argv[])
       char const* channel = "foo";
 
       switch (n) {
-         case 0:
-         case 1: pub(cfg, 10, channel); break;
-         case 2: sub(cfg, channel); break;
-         case 3: transaction(cfg); break;
-         case 4: expire(cfg); break;
-         case 5: zadd(cfg); break;
-         case 6: zrangebyscore(cfg); break;
-         case 7: zrange(cfg); break;
-         case 8: lrange(cfg); break;
-         case 9: read_msg_op(cfg); break;
+         case 0: set_get(); break;
+         case 1: transaction(); break;
+         case 2: pub(10, channel); break;
+         case 3: sub(channel); break;
+         case 4: zadd(); break;
+         case 5: zrangebyscore(); break;
+         case 6: zrange(); break;
+         case 7: read_msg_op(); break;
+         case 8: rpush_vector(); break;
          default:
             std::cerr << "Option not available." << std::endl;
       }

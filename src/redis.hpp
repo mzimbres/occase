@@ -2,9 +2,10 @@
 
 #include <string>
 
+#include <aedis/aedis.hpp>
+
 #include "net.hpp"
 #include "utils.hpp"
-#include "aedis.hpp"
 
 namespace rt::redis
 {

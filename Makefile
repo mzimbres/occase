@@ -17,11 +17,8 @@ doc_final_dir = $(DESTDIR)$(docdir)
 conf_final_dir = $(DESTDIR)$(confdir)
 service_final_dir = $(DESTDIR)$(systemddir)
 
-boost_inc_dir = /opt/boost_1_71_0/include
-boost_lib_dir = /opt/boost_1_71_0/lib
-
 ext_libs =
-ext_libs += $(boost_lib_dir)/libboost_program_options.a
+ext_libs += /opt/boost_1_71_0/lib/libboost_program_options.a
 
 LDFLAGS = -lpthread
 LDFLAGS += -lfmt
@@ -30,7 +27,7 @@ LDFLAGS += -lssl
 LDFLAGS += -lcrypto
 
 CPPFLAGS += -std=c++17
-CPPFLAGS += -I. -I$./src -I$(boost_inc_dir)
+CPPFLAGS += -I. -I$./src -I/opt/boost_1_71_0/include -I/opt/aedis-1.0.0
 CPPFLAGS += $(pkg-config --cflags libsodium)
 CPPFLAGS += $(CXXFLAGS)
 CPPFLAGS += -g #-O2

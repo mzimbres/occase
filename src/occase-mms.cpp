@@ -24,7 +24,7 @@
 struct server_cfg {
    bool help = false;
    unsigned short port;
-   std::string loglevel;
+   rt::loglevel logfilter;
    rt::mms_session_cfg session_cfg;
    int max_listen_connections;
 };
@@ -35,6 +35,7 @@ auto get_cfg(int argc, char* argv[])
 {
    server_cfg cfg;
    std::string conf_file;
+   std::string logfilter_str;
 
    po::options_description desc("Options");
    desc.add_options()
@@ -57,7 +58,7 @@ auto get_cfg(int argc, char* argv[])
    , "Server listening port.")
 
    ( "log-level"
-   , po::value<std::string>(&cfg.loglevel)->default_value("debug")
+   , po::value<std::string>(&logfilter_str)->default_value("debug")
    , "Control the amount of information that is output in the logs. "
      " Available options are: emerg, alert, crit, err, warning, notice, "
      " info, debug.")
@@ -93,6 +94,7 @@ auto get_cfg(int argc, char* argv[])
       return server_cfg {true};
    }
 
+   cfg.logfilter = rt::to_loglevel<rt::loglevel>(logfilter_str);
    return cfg;
 }
 
@@ -106,7 +108,7 @@ int main(int argc, char* argv[])
          return 0;
 
       init_libsodium();
-      log_upto(cfg.loglevel);
+      log_upto(cfg.logfilter);
 
       net::io_context ioc {1};
       ssl::context ctx {ssl::context::tlsv12};

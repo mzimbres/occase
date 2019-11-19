@@ -28,7 +28,7 @@ struct occase_db_cfg {
    std::string ssl_cert_file;
    std::string ssl_priv_key_file;
    std::string ssl_dh_file;
-   std::string loglevel;
+   rt::loglevel logfilter;
 
    db_worker_cfg worker;
 
@@ -75,6 +75,7 @@ auto get_cfg(int argc, char* argv[])
    std::string redis_host1;
    std::string redis_host2;
    std::vector<std::string> sentinels;
+   std::string logfilter_str;
 
    po::options_description desc("Options");
    desc.add_options()
@@ -93,7 +94,7 @@ auto get_cfg(int argc, char* argv[])
    ("post-expiration", po::value<int>(&cfg.worker.channel.post_expiration)->default_value(2160))
    ("channel-cleanup-rate", po::value<int>(&cfg.worker.channel.cleanup_rate)->default_value(128))
    ("max-channels-subscribe", po::value<int>(&cfg.worker.channel.max_sub)->default_value(1024))
-   ("log-level", po::value<std::string>(&cfg.loglevel)->default_value("notice"))
+   ("log-level", po::value<std::string>(&logfilter_str)->default_value("notice"))
    ("max-posts-on-subscribe", po::value<int>(&cfg.worker.core.max_posts_on_sub)->default_value(50))
    ("post-interval", po::value<long int>(&cfg.worker.core.post_interval)->default_value(40))
    ("password-size", po::value<int>(&cfg.worker.core.pwd_size)->default_value(10))
@@ -157,21 +158,25 @@ auto get_cfg(int argc, char* argv[])
 
 
    std::chrono::milliseconds tmp {conn_retry_interval};
-   cfg.worker.db.ss_cfg1.conn_retry_interval = tmp;
-   cfg.worker.db.ss_cfg2.conn_retry_interval = tmp;
 
    auto const host1 = split2(redis_host1);
+   cfg.worker.db.ss_cfg1.conn_retry_interval = tmp;
    cfg.worker.db.ss_cfg1.host = host1.first;
    cfg.worker.db.ss_cfg1.port = host1.second;
+   cfg.worker.db.ss_cfg1.sentinels = sentinels;
+   cfg.worker.db.ss_cfg1.log_filter =
+      to_loglevel<aedis::log::level>(logfilter_str);
 
    auto const host2 = split2(redis_host2);
+   cfg.worker.db.ss_cfg2.conn_retry_interval = tmp;
    cfg.worker.db.ss_cfg2.host = host2.first;
    cfg.worker.db.ss_cfg2.port = host2.second;
-
-   cfg.worker.db.ss_cfg1.sentinels = sentinels;
    cfg.worker.db.ss_cfg2.sentinels = sentinels;
+   cfg.worker.db.ss_cfg2.log_filter =
+      to_loglevel<aedis::log::level>(logfilter_str);
 
    cfg.worker.timeouts = cfg.get_timeouts();
+   cfg.logfilter = to_loglevel<rt::loglevel>(logfilter_str);
    return cfg;
 }
 
@@ -186,7 +191,7 @@ int main(int argc, char* argv[])
          return 1;
 
       init_libsodium();
-      log_upto(cfg.loglevel);
+      log_upto(cfg.logfilter);
 
       ssl::context ctx {ssl::context::tlsv12};
 

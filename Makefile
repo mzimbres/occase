@@ -41,7 +41,6 @@ exes += occase-mms
 exes += occase-key-gen
 exes += occase-csv
 exes += db_tests
-exes += aedis_example
 exes += simulation
 
 common_objs += menu.o
@@ -61,15 +60,12 @@ mms_objs += net.o
 client_objs =
 client_objs += test_clients.o
 
-aedis_objs =
-
 exe_objs = $(addsuffix .o, $(exes))
 
 lib_objs =
 lib_objs += $(db_objs)
 lib_objs += $(mms_objs)
 lib_objs += $(client_objs)
-lib_objs += $(aedis_objs)
 lib_objs += $(common_objs)
 
 srcs =
@@ -100,17 +96,14 @@ simulation: % : %.o $(client_objs) $(common_objs)
 db_tests: % : %.o $(client_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
-occase-db: % : %.o $(db_objs) $(common_objs) $(aedis_objs) 
+occase-db: % : %.o $(db_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_CONCURRENCY_HINT_1=BOOST_ASIO_CONCURRENCY_HINT_UNSAFE
 
-occase-mms: % : %.o $(mms_objs) $(common_objs) $(aedis_objs)
+occase-mms: % : %.o $(mms_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_CONCURRENCY_HINT_1=BOOST_ASIO_CONCURRENCY_HINT_UNSAFE
 
 occase-menu: % : %.o $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(ext_libs) -lfmt -lsodium
-
-aedis_example: % : %.o $(aedis_objs) $(common_objs)
-	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
 occase-key-gen: % : %.o  $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) -lfmt -lsodium

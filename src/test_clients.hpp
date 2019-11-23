@@ -150,7 +150,7 @@ class simulator {
 public:
    struct options_type {
       login user;
-      int counter = 0;
+      int const counter = 0;
    };
 
 private:

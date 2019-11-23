@@ -349,6 +349,9 @@ int simulator::on_read( std::string msg
    if (cmd == "post") {
       auto items = j.at("items").get<std::vector<post>>();
 
+      if (op.counter == 0)
+         return 1;
+
       auto const f = [this, s](auto const& e)
          { send_chat_msg(e.from, e.id, s); };
 
@@ -422,7 +425,7 @@ simulator::send_chat_msg( std::string to, long long post_id
    j["type"] = "chat";
    j["refers_to"] = -1;
    j["to"] = to;
-   j["msg"] = "Message" + std::to_string(counter);
+   j["msg"] = "Message " + std::to_string(counter);
    j["post_id"] = post_id;
    j["is_sender_post"] = false;
    j["nick"] = nicks.at(n % std::size(nicks));

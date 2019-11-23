@@ -216,7 +216,7 @@ void facade::retrieve_chat_msgs(std::string const& user_id)
 {
    auto const key = cfg.chat_msg_prefix + user_id;
    auto cmd = multi()
-            + lrange(key, 0, -1)
+            + lrange(key)
             + del(key)
             + exec();
 
@@ -285,12 +285,11 @@ void facade::register_user(std::string const& user, std::string const& pwd)
    auto const key =  cfg.user_data_prefix_key + user;
 
    std::initializer_list<std::string const> const par
-   { key
-   , "password",  pwd
+   { "password",  pwd
    , "last_post", "0"
    };
 
-   ss_menu_pub.send(hset(par));
+   ss_menu_pub.send(hset(key, par));
    menu_pub_queue.push(request::register_user);
 }
 
@@ -307,8 +306,8 @@ facade::update_last_post_timestamp( std::string const& user
 {
    auto const key =  cfg.user_data_prefix_key + user;
    std::initializer_list<std::string const> const l =
-   { key, "last_post", std::to_string(secs.count())};
-   ss_menu_pub.send(hset(l));
+   { "last_post", std::to_string(secs.count())};
+   ss_menu_pub.send(hset(key, l));
    menu_pub_queue.push(request::last_post_timestamp);
 }
 

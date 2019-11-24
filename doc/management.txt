@@ -62,6 +62,19 @@ Ephemeral ports file
 
 /proc/sys/net/ipv4/ip_local_port_range
 
+To change the range edit /etc/sysctl.conf witho
+
+   # Increases the ip port range.
+   net.ipv4.ip_local_port_range = 1024 65535
+
+The number of open files
+
+   $ sudo ls -l /proc/21610/fd | wc -l
+
+To list the number of open tcp connections
+
+$ ss -s
+
 Certificate
 =======================================================================
 

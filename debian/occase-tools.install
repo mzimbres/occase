@@ -1,5 +1,6 @@
 occase-menu usr/bin
 occase-key-gen usr/bin
 occase-csv usr/bin
+occase-sim usr/bin
 scripts/occase-menu-gen usr/bin
 scripts/occase-db-monitor usr/bin

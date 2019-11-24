@@ -40,8 +40,8 @@ exes += occase-menu
 exes += occase-mms
 exes += occase-key-gen
 exes += occase-csv
+exes += occase-sim
 exes += db_tests
-exes += simulation
 
 common_objs += menu.o
 common_objs += system.o
@@ -90,7 +90,7 @@ Makefile.dep:
 
 -include Makefile.dep
 
-simulation: % : %.o $(client_objs) $(common_objs)
+occase-sim: % : %.o $(client_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
 db_tests: % : %.o $(client_objs) $(common_objs)
@@ -117,6 +117,7 @@ install: all
 	install -D occase-menu --target-directory $(bin_final_dir)
 	install -D occase-key-gen --target-directory $(bin_final_dir)
 	install -D occase-csv --target-directory $(bin_final_dir)
+	install -D occase-sim --target-directory $(bin_final_dir)
 	install -D scripts/occase-db-monitor $(bin_final_dir)
 	install -D scripts/occase-menu-gen $(bin_final_dir)
 	install -D config/occase-db.conf $(conf_final_dir)/occase-db.conf
@@ -131,6 +132,7 @@ uninstall:
 	rm -f $(bin_final_dir)/occase-menu
 	rm -f $(bin_final_dir)/occase-key-gen
 	rm -f $(bin_final_dir)/occase-csv
+	rm -f $(bin_final_dir)/occase-sim
 	rm -f scripts/$(bin_final_dir)/occase-db-monitor
 	rm -f scripts/$(bin_final_dir)/occase-menu-gen
 	rm -f $(conf_final_dir)/occase-db.conf

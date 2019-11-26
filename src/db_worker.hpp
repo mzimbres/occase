@@ -140,7 +140,7 @@ private:
    channel<db_session_type> root_channel_;
 
    // Facade to redis.
-   redis::facade db_;
+   redis db_;
 
    // Queue of user posts waiting for an id that has been requested
    // from redis.
@@ -728,54 +728,54 @@ private:
    // Keep the switch cases in the same sequence declared in the enum to
    // improve performance.
    void on_db_event( std::vector<std::string> data
-                   , redis::req_item const& req)
+                   , redis::response const& req)
    {
       switch (req.req)
       {
-         case redis::request::menu:
+         case redis::events::menu:
             on_db_menu(data);
             break;
 
-         case redis::request::chat_messages:
+         case redis::events::chat_messages:
             on_db_chat_msg(req.user_id, std::move(data));
             break;
 
-         case redis::request::post:
+         case redis::events::post:
             on_db_publish();
             break;
 
-         case redis::request::posts:
+         case redis::events::posts:
             on_db_posts(data);
             break;
 
-         case redis::request::post_id:
+         case redis::events::post_id:
             assert(std::size(data) == 1);
             on_db_post_id(data.back());
             break;
 
-         case redis::request::user_id:
+         case redis::events::user_id:
             assert(std::size(data) == 1);
             on_db_user_id(data.back());
             break;
 
-         case redis::request::user_data:
+         case redis::events::user_data:
             on_db_user_data(data);
             break;
 
-         case redis::request::register_user:
+         case redis::events::register_user:
             on_db_register();
             break;
 
-         case redis::request::menu_connect:
+         case redis::events::menu_connect:
             on_db_menu_connect();
             break;
 
-         case redis::request::channel_post:
+         case redis::events::channel_post:
             assert(std::size(data) == 1);
             on_db_channel_post(data.back());
             break;
 
-         case redis::request::presence:
+         case redis::events::presence:
             assert(std::size(data) == 1);
             on_db_presence(req.user_id, data.front());
             break;

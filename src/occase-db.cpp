@@ -107,17 +107,17 @@ auto get_cfg(int argc, char* argv[])
    ("redis-host2", po::value<std::string>(&redis_host2)->default_value("127.0.0.1:6379"))
    ("redis-sentinels", po::value<std::vector<std::string>>(&sentinels))
    ("redis-max-pipeline-size", po::value<int>(&cfg.worker.db.ss_cfg1.max_pipeline_size)->default_value(10000))
-   ("redis-key-channels", po::value<std::string>(&cfg.worker.db.cfg.channels_key)->default_value("channels"))
-   ("redis-key-post-id", po::value<std::string>(&cfg.worker.db.cfg.post_id_key)->default_value("post_id"))
-   ("redis-key-user-id", po::value<std::string>(&cfg.worker.db.cfg.user_id_key)->default_value("user_id"))
-   ("redis-key-chat-msgs-counter", po::value<std::string>(&cfg.worker.db.cfg.chat_msgs_counter_key)->default_value("chat_msgs_counter"))
-   ("redis-key-chat-msg-prefix", po::value<std::string>(&cfg.worker.db.cfg.chat_msg_prefix)->default_value("msg"))
-   ("redis-key-posts", po::value<std::string>(&cfg.worker.db.cfg.posts_key)->default_value("posts"))
-   ("redis-key-user-data-prefix", po::value<std::string>(&cfg.worker.db.cfg.user_data_prefix_key)->default_value("id"))
+   ("redis-key-channels", po::value<std::string>(&cfg.worker.db.channels_key)->default_value("channels"))
+   ("redis-key-post-id", po::value<std::string>(&cfg.worker.db.post_id_key)->default_value("post_id"))
+   ("redis-key-user-id", po::value<std::string>(&cfg.worker.db.user_id_key)->default_value("user_id"))
+   ("redis-key-chat-msgs-counter", po::value<std::string>(&cfg.worker.db.chat_msgs_counter_key)->default_value("chat_msgs_counter"))
+   ("redis-key-chat-msg-prefix", po::value<std::string>(&cfg.worker.db.chat_msg_prefix)->default_value("msg"))
+   ("redis-key-posts", po::value<std::string>(&cfg.worker.db.posts_key)->default_value("posts"))
+   ("redis-key-user-data-prefix", po::value<std::string>(&cfg.worker.db.user_data_prefix_key)->default_value("id"))
    ("redis-conn-retry-interval", po::value<int>(&conn_retry_interval)->default_value(500))
-   ("redis-user-msg-exp_time", po::value<int>(&cfg.worker.db.cfg.chat_msg_exp_time)->default_value(7 * 24 * 60 * 60))
-   ("redis-offline-chat-msgs", po::value<int>(&cfg.worker.db.cfg.max_offline_chat_msgs)->default_value(100))
-   ("redis-key-menu-channel", po::value<std::string>(&cfg.worker.db.cfg.menu_channel_key)->default_value("menu_channel"))
+   ("redis-user-msg-exp_time", po::value<int>(&cfg.worker.db.chat_msg_exp_time)->default_value(7 * 24 * 60 * 60))
+   ("redis-offline-chat-msgs", po::value<int>(&cfg.worker.db.max_offline_chat_msgs)->default_value(100))
+   ("redis-key-menu-channel", po::value<std::string>(&cfg.worker.db.menu_channel_key)->default_value("menu_channel"))
    ;
 
    po::positional_options_description pos;
@@ -150,11 +150,11 @@ auto get_cfg(int argc, char* argv[])
       return occase_db_cfg {-1};
    }
 
-   cfg.worker.db.cfg.chat_msg_prefix += ":";
-   cfg.worker.db.cfg.user_notify_prefix
-      = cfg.worker.db.cfg.notify_prefix
+   cfg.worker.db.chat_msg_prefix += ":";
+   cfg.worker.db.user_notify_prefix
+      = cfg.worker.db.notify_prefix
       + "0__:"
-      + cfg.worker.db.cfg.chat_msg_prefix;
+      + cfg.worker.db.chat_msg_prefix;
 
 
    std::chrono::milliseconds tmp {conn_retry_interval};

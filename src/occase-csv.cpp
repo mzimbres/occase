@@ -194,9 +194,14 @@ csv_dump( std::string const& str
       }
 
       if (std::size(fields) != std::size(perm)) {
-         std::cerr << "Incompatible permutation size: "
+         std::cerr << "Incompatible line size: "
                    << std::size(fields) << " != " << std::size(perm)
                    << std::endl;
+         std::cerr << "Line: ";
+	 std::copy( std::cbegin(fields)
+                  , std::cend(fields)
+                  , std::ostream_iterator<std::string>(std::cerr, " "));
+	 std::cerr << std::endl;
          return {};
       }
 

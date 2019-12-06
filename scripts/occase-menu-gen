@@ -1,23 +1,26 @@
 #!/bin/bash
 
-if [ $# -ne 1 ]; then
-   echo "Usage: $0 path"
+if [ $# -ne 3 ]; then
+   echo "Usage: $0 path location-depth products-depth"
    exit 1
 fi
 
 dir=$1
-depth=2
-version=2
+dir_tmp=tmp
+depth1=$2
+depth2=$3
 
-menu0=${dir}/locations.txt:${depth}:${version}
-menu1=${dir}/products.txt:${depth}:${version}
-menu2=${dir}/ex_details.txt:${depth}:${version}
-menu3=${dir}/in_details.txt:${depth}:${version}
+menu0=${dir}/locations.txt:${depth1}:1
+menu1=${dir}/products.txt:${depth2}:1
+menu2=${dir}/ex_details.txt:2:1
+menu3=${dir}/in_details.txt:2:1
 
-occase-menu -o 5 $menu0 > filters.txt
-occase-menu -o 5 $menu1 > channels.txt
-occase-menu -o 4 $menu0 > menu0.txt
-occase-menu -o 4 $menu1 > menu1.txt
-occase-menu -o 4 $menu2 > ex_details_menu.txt
-occase-menu -o 4 $menu3 > in_details_menu.txt
+mkdir -p $dir_tmp
+
+occase-menu -o 5 $menu0 > ${dir_tmp}/filters.txt
+occase-menu -o 5 $menu1 > ${dir_tmp}/channels.txt
+occase-menu -o 4 $menu0 > ${dir_tmp}/menu0.txt
+occase-menu -o 4 $menu1 > ${dir_tmp}/menu1.txt
+occase-menu -o 4 $menu2 > ${dir_tmp}/ex_details_menu.txt
+occase-menu -o 4 $menu3 > ${dir_tmp}/in_details_menu.txt
 

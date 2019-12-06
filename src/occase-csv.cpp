@@ -303,7 +303,7 @@ auto get_cfg(int argc, char* argv[])
       , "See --filter-index.")
 
       ("separator,p"
-      , po::value<char>(&cfg.separator)->default_value(';')
+      , po::value<char>(&cfg.separator)->default_value(':')
       , "The csv separator.")
 
       ("permutation,m"

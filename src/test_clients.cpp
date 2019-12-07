@@ -2,7 +2,6 @@
 
 #include <chrono>
 
-#include "menu.hpp"
 #include "client_session.hpp"
 #include "session_launcher.hpp"
 

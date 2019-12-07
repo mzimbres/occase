@@ -15,7 +15,6 @@
 #include <boost/program_options/variables_map.hpp>
 
 #include "net.hpp"
-#include "menu.hpp"
 #include "system.hpp"
 #include "test_clients.hpp"
 #include "client_session.hpp"

@@ -36,14 +36,11 @@ VPATH = ./src
 
 exes =
 exes += occase-db
-exes += occase-menu
 exes += occase-mms
 exes += occase-key-gen
-exes += occase-csv
 exes += occase-sim
 exes += db_tests
 
-common_objs += menu.o
 common_objs += system.o
 common_objs += logger.o
 common_objs += post.o
@@ -81,10 +78,6 @@ aux = Makefile
 
 all: $(exes)
 
-#.PHONY: release_hdr
-#release_hdr:
-#	$(srcdir)/mkreleasehdr.sh $(srcdir) > /dev/null 2>&1
-
 Makefile.dep:
 	-$(CXX) -MM ./src/*.cpp > $@
 
@@ -102,44 +95,32 @@ occase-db: % : %.o $(db_objs) $(common_objs)
 occase-mms: % : %.o $(mms_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_CONCURRENCY_HINT_1=BOOST_ASIO_CONCURRENCY_HINT_UNSAFE
 
-occase-menu: % : %.o $(common_objs)
-	$(CXX) -o $@ $^ $(CPPFLAGS) $(ext_libs) -lfmt -lsodium
-
 occase-key-gen: % : %.o  $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) -lfmt -lsodium
-
-occase-csv: % : %.o
-	$(CXX) -o $@ $^ $(CPPFLAGS) $(ext_libs)
 
 install: all
 	install -D occase-db --target-directory $(bin_final_dir)
 	install -D occase-mms --target-directory $(bin_final_dir)
-	install -D occase-menu --target-directory $(bin_final_dir)
 	install -D occase-key-gen --target-directory $(bin_final_dir)
-	install -D occase-csv --target-directory $(bin_final_dir)
 	install -D occase-sim --target-directory $(bin_final_dir)
 	install -D scripts/occase-db-monitor $(bin_final_dir)
-	install -D scripts/occase-menu-gen $(bin_final_dir)
+	install -D scripts/occase-tree-gen $(bin_final_dir)
 	install -D config/occase-db.conf $(conf_final_dir)/occase-db.conf
 	install -D config/occase-mms.conf $(conf_final_dir)/occase-mms.conf
 	install -D doc/management.txt $(doc_final_dir)/management.txt
 	install -D doc/intro.txt $(doc_final_dir)/intro.txt
-	install -D doc/posts.txt $(doc_final_dir)/posts.txt
 
 uninstall:
 	rm -f $(bin_final_dir)/occase-db
 	rm -f $(bin_final_dir)/occase-mms
-	rm -f $(bin_final_dir)/occase-menu
 	rm -f $(bin_final_dir)/occase-key-gen
-	rm -f $(bin_final_dir)/occase-csv
 	rm -f $(bin_final_dir)/occase-sim
 	rm -f scripts/$(bin_final_dir)/occase-db-monitor
-	rm -f scripts/$(bin_final_dir)/occase-menu-gen
+	rm -f scripts/$(bin_final_dir)/occase-tree-gen
 	rm -f $(conf_final_dir)/occase-db.conf
 	rm -f $(conf_final_dir)/occase-mms.conf
 	rm -f $(doc_final_dir)/management.txt
 	rm -f $(doc_final_dir)/intro.txt
-	rm -f $(doc_final_dir)/posts.txt
 	rmdir $(DESDIR)$(docdir)
 
 .PHONY: clean

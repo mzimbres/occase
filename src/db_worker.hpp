@@ -18,7 +18,6 @@
 #include <fmt/format.h>
 
 #include "net.hpp"
-#include "menu.hpp"
 #include "post.hpp"
 #include "utils.hpp"
 #include "redis.hpp"

@@ -9,7 +9,6 @@
 #include <utility>
 #include <stdexcept>
 
-#include "menu.hpp"
 #include "net.hpp"
 #include "post.hpp"
 #include "client_session.hpp"
@@ -19,14 +18,6 @@
 
 namespace rt::cli
 {
-
-constexpr auto menu_size = 2;
-using menu_type = std::array<menu_elem, menu_size>;
-using menu_code_type = std::array<menu_channel_elem_type, menu_size>;
-using menu_code_type2 = std::array<std::vector<code_type>, menu_size>;
-
-menu_code_type create_channels(menu_type const& menus);
-menu_code_type2 create_channels2(menu_type const& menus);
 
 template <class Mgr>
 class session_shell;

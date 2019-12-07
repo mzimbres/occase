@@ -4,7 +4,7 @@ To build this project you will need
    2. libfmt.
    3. boost > 1.71.
    4. libsodium.
-   4. openssl.
+   5. openssl.
 
 On debian systems 1. and 2. and 4. can be installed from packages
 

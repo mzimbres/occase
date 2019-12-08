@@ -2,38 +2,52 @@ The best way to understand what the occase is to play with it for a
 while. It is composed of many parts
 
   1. A realtime database used for chat messages and posts.
-  2. A http server that the app uses to post images.
+  2. A http server that the app uses to post and server images.
   3. Redis, that is used as message broker and database.
   4. The app, refered to as the occase-app.
 
 If we disregard images a typical deployment looks like this
-                                                                    
-         App1     App2    App3     App4    App5     App6          
-           \       /        \       /        \       /            
-            \     /          \     /          \     /             
-             \   /            \   /            \   /              
-              \ /              \ /              \ /               
-           occase-db1       occase-db2       occase-db3           
-                \               |               /                 
-                 \              |              /                  
-                  \             |             /                   
-                   \__________Redis__________/                    
+                                                                   
+                                                                   
+                                                                   
+                       _________ MMS + CDN _________                     
+                      /        /     |     \        \                    
+                     /        /      |      \        \                   
+  HTTP ------------ /        /       |       \        \                  
+                   /        /       / \       \        \                 
+                  /        /       /   \       \        \                
+                 /        /       /     \       \        \               
+                /        /       /       \       \        \              
+              App1     App2    App3     App4    App5     App6          
+                \       /        \       /        \       /            
+                 \     /          \     /          \     /             
+  Websocket ----- \   /            \   /            \   /              
+                   \ /              \ /              \ /               
+                occase-db        occase-db        occase-db            
+                     \               |               /                 
+                      \              |              /                  
+  TCP ---------------  \             |             /                   
+                        \__________Redis__________/                    
+
 
 The apps and the db's are connected via a websocket connection that is
-never closed by the server.  When app1 wants to send a chat message to
-app5 we have to following sequence of operations
+never closed by the server. When app1 wants to send a chat message to app5
+and both are online we have to following sequence of operations
 
-  1. App1 log in occase-db1 , that may not be same instance as the
-     peer app.
-  2. occase-db subscribes to notifications of messages that may be
-     sent to the App1.
-  3. App1 sends a message to rtdb1 that in turn send it to redis,
-     where it is stored in the apps queue.
-  4. If app5 is connected, redis sends a notification to App5 that
-     there is a new message.
-  5. occase-db2 retrieves the message from redis and sends it the app.
+  1. App5 logs in an occase-db instance, that may or may not be same
+     instance as the peer app.
+  2. occase-db subscribes to notifications of messages that are sent to
+     app5 and in the process it also retrieves any message that may have
+     been sent to app5 while it was offline and sent them to the app if
+     there was any.
+  3. App1 sends a message to its occase-db that in turn stores it in the
+     app5 message queue in redis.
+  4. Redis sends a notification to the occase-db instance where app5 is
+     connected that there is a new message to be retrieved.
+  5. That instance retrieves the message from redis and sends it the app,
+     whiping it out from the servers.
 
-The occase-db is a single threaded process, there is no limits on how
+The occase-db is a single threaded process and there is no limit on how
 many such services can be instantiated.
 
 App
@@ -48,22 +62,28 @@ The following types of messages are sent from the app to the server.
 
 In the case of posts we have the following
 
-  1. The app request filenames from the rtdb.
-  2. The app uses the filenames to post the images to the image
-     server. It will check if the filenames are valid.
-  3. When finished posting images, a post is sent to rtdb with the
-     links to the images.
+  1. App request filenames from occase-db.
+  2. App uses the filenames to post the images to occase-mms. The filename
+     signatures are checked.
+  3. When finished posting images, a post is sent to occase-db with the
+     links to the images where it is broadcasted to the apps that are
+     subscribed to the channel where it was published.
 
 This is a squetsh of arquitecture behind images
+   
+                                           app
+                                            /
+                                           /
+        HTTP-POST                         /                               
+  app ------------ occase-mms ------- CDN----- app
+                                          \                 
+                                           \                
+                                            \               
+                                           app             
+Posts
+-----
 
+The app can publish a post according to the rule
 
-                                        app1
-                                         /
-                                        /
-         HTTP                          /                               
-  app ---------- Img-Server ------- CDN----- app2
-                                       \                 
-                                        \                
-                                         \               
-                                        app3             
+  ==> Publish n post every k seconds <==
 

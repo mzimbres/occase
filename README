@@ -3,16 +3,7 @@ Documentation is available in the doc/ directory.
 
 For an introduction refer to the doc/intro.txt file.
 
-To create the details menu and use it in the app, for example
-
-$ ./menu_dump -o 4 menus/vehicle/in_details.txt:3:3 > ~/Public/menu_chat_app/data/in_details_menu.txt
-
-If you want to wipe out previous data from redis
-
-$ redis-cli flushall
-
-To Post and image to the image server
+To Post and image to the occase-mms
 
 curl -H 'Expect:' --data-binary @g3.jpeg http://127.0.0.1:8888/images/image.jpg -v
 
-./occase-csv -s 7 -r 1 -m -1,5,-1,-1,-1,7,-1,8,12,-1,11,-1,10 ~/menus/fipe/veiculos.csv

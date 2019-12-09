@@ -280,13 +280,19 @@ void redis::request_user_id()
    menu_pub_queue.push(events::user_id);
 }
 
-void redis::register_user(std::string const& user, std::string const& pwd)
+void
+redis::register_user( std::string const& user
+                    , std::string const& pwd
+                    , int n_allowed_posts
+                    , std::chrono::seconds deadline)
 {
    auto const key =  cfg_.user_data_prefix_key + user;
 
    std::initializer_list<std::string const> const par
    { "password",  pwd
-   , "last_post", "0"
+   , "allowed", std::to_string(n_allowed_posts)
+   , "remaining", std::to_string(n_allowed_posts)
+   , "deadline", std::to_string(deadline.count())
    };
 
    ss_menu_pub.send(hset(key, par));
@@ -296,19 +302,37 @@ void redis::register_user(std::string const& user, std::string const& pwd)
 void redis::retrieve_user_data(std::string const& user)
 {
    auto const key =  cfg_.user_data_prefix_key + user;
-   ss_menu_pub.send(hmget(key, "password", "last_post"));
+   ss_menu_pub.send(hmget(key, "password", "allowed", "remaining", "deadline"));
    menu_pub_queue.push(events::user_data);
 }
 
 void
-redis::update_last_post_timestamp( std::string const& user
-                                  , std::chrono::seconds secs)
+redis::update_post_deadline( std::string const& user
+                           , int n_allowed_posts
+                           , std::chrono::seconds deadline)
 {
    auto const key =  cfg_.user_data_prefix_key + user;
-   std::initializer_list<std::string const> const l =
-   { "last_post", std::to_string(secs.count())};
+
+   std::initializer_list<std::string const> l =
+   { "allowed", std::to_string(n_allowed_posts)
+   , "remaining", std::to_string(n_allowed_posts)
+   , "deadline", std::to_string(deadline.count())};
+
    ss_menu_pub.send(hset(key, l));
-   menu_pub_queue.push(events::last_post_timestamp);
+   menu_pub_queue.push(events::update_post_deadline);
+}
+
+void
+redis::update_remaining( std::string const& user_id
+                       , int remaining)
+{
+   auto const key =  cfg_.user_data_prefix_key + user_id;
+
+   std::initializer_list<std::string const> l =
+   { "remaining", std::to_string(remaining)};
+
+   ss_menu_pub.send(hset(key, l));
+   menu_pub_queue.push(events::ignore);
 }
 
 void redis::retrieve_posts(int begin)

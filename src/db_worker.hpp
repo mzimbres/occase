@@ -26,8 +26,8 @@
 #include "channel.hpp"
 #include "db_session.hpp"
 #include "acceptor_mgr.hpp"
-#include "db_plain_session.hpp"
 #include "db_ssl_session.hpp"
+#include "db_plain_session.hpp"
 
 namespace rt
 {
@@ -427,15 +427,9 @@ private:
          return ev_res::publish_fail;
       }
 
-      using namespace std::chrono;
-
-      auto const date =
-         duration_cast<seconds>(system_clock::now().time_since_epoch());
-
-      // App posts are also restricted in posts/day.
-      auto const d = s->get_last_post_date() + core_cfg_.get_post_interval();
-      if (d > date) {
-         // They are trying to publish too early.
+      // I do not check if the deadline is valid as it should always be
+      // according to the algorithm used.
+      if (s->get_remaining_posts() < 1) {
          json resp;
          resp["cmd"] = "publish_ack";
          resp["result"] = "fail";
@@ -443,10 +437,13 @@ private:
          return ev_res::publish_fail;
       }
 
+      using namespace std::chrono;
+
       // It is important not to thrust the *from* field in the json
       // command.
       items.front().from = s->get_id();
-      items.front().date = date;
+      items.front().date =
+         duration_cast<seconds>(system_clock::now().time_since_epoch());
       post_queue_.push({s, items.front()});
       db_.request_post_id();
       return ev_res::publish_ok;
@@ -802,13 +799,11 @@ private:
       auto ack_str = ack.dump();
 
       if (auto s = post_queue_.front().session.lock()) {
-         using namespace std::chrono;
          s->send(std::move(ack_str), true);
-         s->set_last_post_date(post_queue_.front().item.date);
 
-         db_.update_last_post_timestamp(
+         db_.update_remaining(
             s->get_id(),
-            post_queue_.front().item.date);
+            s->decrease_remaining_posts());
 
       } else {
          // If we get here the user is not online anymore. This should be a
@@ -854,6 +849,7 @@ private:
 
    void on_db_user_id(std::string const& id)
    {
+      using namespace std::chrono;
       assert(!std::empty(reg_queue_));
 
       while (!std::empty(reg_queue_)) {
@@ -863,7 +859,15 @@ private:
             // A hashed version of the password is stored in the
             // database.
             auto const digest = make_hex_digest(reg_queue_.front().pwd);
-            db_.register_user(id, digest);
+
+            auto const now =
+               duration_cast<seconds>(system_clock::now()
+                  .time_since_epoch());
+
+            auto const deadline = now + core_cfg_.get_post_interval();
+
+            // TODO: Replace 1 below with the value read from the database.
+            db_.register_user(id, digest, 1, deadline);
             session->set_id(id);
             return;
          }
@@ -907,7 +911,7 @@ private:
    {
       try {
          assert(!std::empty(login_queue_));
-         assert(std::size(fields) == 2);
+         assert(std::size(fields) == 4);
 
          if (auto s = login_queue_.front().session.lock()) {
             auto const digest = make_hex_digest(login_queue_.front().pwd);
@@ -948,12 +952,33 @@ private:
                   ss.first->second = s;
                }
 
-               // The string containing the timestamp in the database
-               // is stored in seconds.
-               auto const timestamp = std::stol(fields[1]);
-               s->set_last_post_date(std::chrono::seconds {timestamp});
+               using namespace std::chrono;
+               auto const n_allowed = std::stoi(fields.at(1));
+               auto const n_remaining = std::stoi(fields.at(2));
+               auto const deadline = seconds {std::stol(fields.at(3))};
+
+               s->set_post_deadline( n_allowed
+                                   , n_remaining
+                                   , deadline);
+
                db_.on_user_online(s->get_id());
                db_.retrieve_chat_msgs(s->get_id());
+
+               auto const now = duration_cast<seconds>(
+                  system_clock::now().time_since_epoch());
+
+               if (now > deadline) {
+                  // TODO: If the user logs in and his post deadline is
+                  // reached shortly afterwards, he won't be able to post
+                  // until he log in again. To overcome this we can update
+                  // the deadline with some precedence, say be introducing
+                  // a margin os time that is close the average value of
+                  // websocket sessions.
+                  db_.update_post_deadline(
+                        s->get_id(),
+                        n_allowed,
+                        now + core_cfg_.get_post_interval());
+               }
 
                json resp;
                resp["cmd"] = "login_ack";
@@ -965,7 +990,8 @@ private:
             // Very unlikely to happen since the communication with redis is
             // very fast.
          }
-      } catch (...) {
+      } catch (std::exception const& e) {
+         log(loglevel::crit, "on_user_data: {0}", e.what());
       }
 
       login_queue_.pop();

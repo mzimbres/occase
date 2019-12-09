@@ -28,7 +28,7 @@ public:
    , remove_post
    , get_chat_msgs
    , presence
-   , last_post_timestamp
+   , update_post_deadline
    , ignore
    };
 
@@ -175,7 +175,7 @@ public:
    //    redis::events::chat_messages
    //
    // Additionaly, this function also subscribes the worker to
-   // presence messages, which complete with
+   // presence messages, which completes with
    // 
    //    redis::events::presence
    //
@@ -258,8 +258,14 @@ public:
    // Register a user in the database. Completes with
    //
    //    redis::events::register_user
-   //           
-   void register_user(std::string const& user, std::string const& pwd);
+   //
+   // n_allowed_posts is the number of posts the user is allowed to publish
+   // until the deadline.
+   void
+   register_user( std::string const& user
+                , std::string const& pwd
+                , int n_allowed_posts
+                , std::chrono::seconds deadline);
 
    // Retrieves the user password (and possibly other data in the
    // future) from the database. Completes with 
@@ -270,11 +276,20 @@ public:
 
    // Updates the user last post timestamp. Completes with
    //
-   //   redis::events::last_post_timestamp
+   //   redis::events::update_post_deadline
    //
    void
-   update_last_post_timestamp( std::string const& user_id
-                             , std::chrono::seconds secs);
+   update_post_deadline( std::string const& user_id
+                       , int n_allowed_posts
+                       , std::chrono::seconds deadline);
+
+   // Updates the number of remaining posts. Completes with
+   //
+   //   redis::events::ignore
+   //
+   void
+   update_remaining( std::string const& user_id
+                   , int remaining);
 
    // Closes all stablished connections with redis.
    void disconnect();

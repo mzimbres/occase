@@ -80,15 +80,8 @@ private:
    boost::container::static_vector<
       code_type, ranges_size> ranges_;
 
-   // Deadline after which the user is not allowed to post anymore.
-   date_type post_deadline_ {0};
-
-   // The number of posts the user can publish in intervals between
-   // deadlines.
-   int n_allowed_posts_ = 0;
-
    // The number of posts the user can publish until the deadline.
-   int n_remaining_posts_ = 0;
+   int remaining_posts_ = 0;
 
    Derived& derived() { return static_cast<Derived&>(*this); }
 
@@ -403,27 +396,14 @@ public:
    auto is_logged_in() const noexcept
       { return !std::empty(user_id_);};
 
-   void set_post_deadline(
-      int n_allowed_posts,
-      int n_remaining_posts,
-      date_type deadline) noexcept
-   {
-      n_allowed_posts_ = n_allowed_posts;
-      n_remaining_posts_ = n_remaining_posts;
-      post_deadline_ = deadline;
-   }
-
-   auto get_post_deadline() const noexcept
-      { return post_deadline_; }
-
-   auto get_allowed_posts() const noexcept
-      { return n_allowed_posts_; }
+   void set_remaining_posts(int n) noexcept
+      { remaining_posts_ = n; }
 
    auto get_remaining_posts() const noexcept
-      { return n_remaining_posts_; }
+      { return remaining_posts_; }
 
    auto decrease_remaining_posts() noexcept
-      { return --n_remaining_posts_; }
+      { return --remaining_posts_; }
 };
 
 }

@@ -64,16 +64,18 @@ struct core_cfg {
    // SSL shutdown timeout in seconds.
    int ssl_shutdown_timeout {30};
 
-   // The server name.
+   // Server name.
    std::string server_name {"occase-db"};
 
    // The password required to access the adm html pages.
    std::string adm_pwd;
 
-   // Only one app post will be allowed in this time interval (seconds). trying
-   // to post before this time has alapsed will be refused and an error is sent
-   // to the app.
-   long int post_interval {40};
+   // The number of posts users are allowed to post until the deadline below is
+   // reached. This value is also configurable via adm api.
+   int allowed_posts = 0;
+
+   // The deadline for the number of posts defined above.
+   long int post_interval {100000};
 
    auto get_post_interval() const noexcept
       { return std::chrono::seconds {post_interval}; }
@@ -853,7 +855,7 @@ private:
       assert(!std::empty(reg_queue_));
 
       while (!std::empty(reg_queue_)) {
-         if (auto session = reg_queue_.front().session.lock()) {
+         if (auto s = reg_queue_.front().session.lock()) {
             reg_queue_.front().pwd = pwdgen_(core_cfg_.pwd_size);
 
             // A hashed version of the password is stored in the
@@ -866,9 +868,19 @@ private:
 
             auto const deadline = now + core_cfg_.get_post_interval();
 
-            // TODO: Replace 1 below with the value read from the database.
-            db_.register_user(id, digest, 1, deadline);
-            session->set_id(id);
+            db_.register_user( id
+                             , digest
+                             , core_cfg_.allowed_posts
+                             , deadline);
+
+            s->set_id(id);
+            s->set_remaining_posts(core_cfg_.allowed_posts);
+
+            log( loglevel::info
+               , "New user: {0}. Remaining posts {1}."
+               , id
+               , core_cfg_.allowed_posts);
+
             return;
          }
 
@@ -952,37 +964,40 @@ private:
                   ss.first->second = s;
                }
 
-               using namespace std::chrono;
-               auto const n_allowed = std::stoi(fields.at(1));
-               auto const n_remaining = std::stoi(fields.at(2));
-               auto const deadline = seconds {std::stol(fields.at(3))};
-
-               s->set_post_deadline( n_allowed
-                                   , n_remaining
-                                   , deadline);
-
                db_.on_user_online(s->get_id());
                db_.retrieve_chat_msgs(s->get_id());
 
+               using namespace std::chrono;
                auto const now = duration_cast<seconds>(
                   system_clock::now().time_since_epoch());
 
+               auto const allowed = std::stoi(fields.at(1));
+               auto remaining = std::stoi(fields.at(2));
+               auto const deadline = seconds {std::stol(fields.at(3))};
                if (now > deadline) {
-                  // TODO: If the user logs in and his post deadline is
-                  // reached shortly afterwards, he won't be able to post
-                  // until he log in again. To overcome this we can update
-                  // the deadline with some precedence, say be introducing
-                  // a margin os time that is close the average value of
-                  // websocket sessions.
+                  // Notice that a race can originate here if the adm api has
+                  // updated the number of allowed or remaining posts right
+                  // after these values have been retrieved from redis. This is
+                  // extremely unlikely as there are only a couple of micro
+                  // seconds for that to happen.
+                  // 
+                  // Once the user is logged in we should never again update
+                  // his post counters as that can overwrite values set over
+                  // the adm api. Reading it before setting is too complicated.
                   db_.update_post_deadline(
-                        s->get_id(),
-                        n_allowed,
-                        now + core_cfg_.get_post_interval());
+                     s->get_id(),
+                     allowed,
+                     now + core_cfg_.get_post_interval());
+
+                  remaining = allowed;
                }
+
+               s->set_remaining_posts(remaining);
 
                json resp;
                resp["cmd"] = "login_ack";
                resp["result"] = "ok";
+               resp["remaining_posts"] = remaining;
                s->send(resp.dump(), false);
             }
          } else {
@@ -991,7 +1006,7 @@ private:
             // very fast.
          }
       } catch (std::exception const& e) {
-         log(loglevel::crit, "on_user_data: {0}", e.what());
+         log(loglevel::crit, "on_db_user_data: {0}", e.what());
       }
 
       login_queue_.pop();

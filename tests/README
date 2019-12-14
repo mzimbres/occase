@@ -1,10 +1,7 @@
-This directory contains some example menus and some used in tests.
+This directory contains some test menus used in the tests
 
 Each directory is meant to contains two files
 
    1. The location file named "locations.txt" 
    2. The products file names "products.txt"
-
-The first file will become the first menu item in the app and the
-second obviously the second.
 

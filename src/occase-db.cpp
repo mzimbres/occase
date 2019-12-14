@@ -68,14 +68,11 @@ namespace po = boost::program_options;
 
 auto get_cfg(int argc, char* argv[])
 {
-   std::vector<std::string> ips;
    occase_db_cfg cfg;
-   int conn_retry_interval = 500;
    std::string conf_file;
-   std::string redis_host1;
-   std::string redis_host2;
    std::vector<std::string> sentinels;
    std::string logfilter_str;
+   int max_pipeline_size = 256;
 
    po::options_description desc("Options");
    desc.add_options()
@@ -104,10 +101,10 @@ auto get_cfg(int argc, char* argv[])
    ("server-name", po::value<std::string>(&cfg.worker.core.server_name)->default_value("occase-db"))
    ("mms-key", po::value<std::string>(&cfg.worker.core.mms_key))
    ("mms-host", po::value<std::string>(&cfg.worker.core.mms_host))
-   ("redis-host1", po::value<std::string>(&redis_host1)->default_value("127.0.0.1:6379"))
-   ("redis-host2", po::value<std::string>(&redis_host2)->default_value("127.0.0.1:6379"))
+   ("redis-host1", po::value<std::string>(&cfg.worker.db.ss_cfg1.name)->default_value("mymaster"))
+   ("redis-host2", po::value<std::string>(&cfg.worker.db.ss_cfg2.name)->default_value("mymaster"))
    ("redis-sentinels", po::value<std::vector<std::string>>(&sentinels))
-   ("redis-max-pipeline-size", po::value<int>(&cfg.worker.db.ss_cfg1.max_pipeline_size)->default_value(10000))
+   ("redis-max-pipeline-size", po::value<int>(&max_pipeline_size)->default_value(256))
    ("redis-key-channels", po::value<std::string>(&cfg.worker.db.channels_key)->default_value("channels"))
    ("redis-key-post-id", po::value<std::string>(&cfg.worker.db.post_id_key)->default_value("post_id"))
    ("redis-key-user-id", po::value<std::string>(&cfg.worker.db.user_id_key)->default_value("user_id"))
@@ -115,7 +112,6 @@ auto get_cfg(int argc, char* argv[])
    ("redis-key-chat-msg-prefix", po::value<std::string>(&cfg.worker.db.chat_msg_prefix)->default_value("msg"))
    ("redis-key-posts", po::value<std::string>(&cfg.worker.db.posts_key)->default_value("posts"))
    ("redis-key-user-data-prefix", po::value<std::string>(&cfg.worker.db.user_data_prefix_key)->default_value("id"))
-   ("redis-conn-retry-interval", po::value<int>(&conn_retry_interval)->default_value(500))
    ("redis-user-msg-exp_time", po::value<int>(&cfg.worker.db.chat_msg_exp_time)->default_value(7 * 24 * 60 * 60))
    ("redis-offline-chat-msgs", po::value<int>(&cfg.worker.db.max_offline_chat_msgs)->default_value(100))
    ("redis-key-menu-channel", po::value<std::string>(&cfg.worker.db.menu_channel_key)->default_value("menu_channel"))
@@ -157,22 +153,20 @@ auto get_cfg(int argc, char* argv[])
       + "0__:"
       + cfg.worker.db.chat_msg_prefix;
 
+   if (std::empty(sentinels)) {
+      std::cerr << "At least one redis sentinel required." << "\n";
+      return occase_db_cfg {-1};
+   }
 
-   std::chrono::milliseconds tmp {conn_retry_interval};
-
-   auto const host1 = split2(redis_host1);
-   cfg.worker.db.ss_cfg1.conn_retry_interval = tmp;
-   cfg.worker.db.ss_cfg1.host = host1.first;
-   cfg.worker.db.ss_cfg1.port = host1.second;
    cfg.worker.db.ss_cfg1.sentinels = sentinels;
+   cfg.worker.db.ss_cfg1.max_pipeline_size = max_pipeline_size;
+   cfg.worker.db.ss_cfg1.role = "master";
    cfg.worker.db.ss_cfg1.log_filter =
       to_loglevel<aedis::log::level>(logfilter_str);
 
-   auto const host2 = split2(redis_host2);
-   cfg.worker.db.ss_cfg2.conn_retry_interval = tmp;
-   cfg.worker.db.ss_cfg2.host = host2.first;
-   cfg.worker.db.ss_cfg2.port = host2.second;
    cfg.worker.db.ss_cfg2.sentinels = sentinels;
+   cfg.worker.db.ss_cfg2.max_pipeline_size = max_pipeline_size;
+   cfg.worker.db.ss_cfg2.role = "master";
    cfg.worker.db.ss_cfg2.log_filter =
       to_loglevel<aedis::log::level>(logfilter_str);
 

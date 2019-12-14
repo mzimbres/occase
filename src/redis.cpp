@@ -112,6 +112,9 @@ redis::on_menu_pub( boost::system::error_code const& ec
       return;
    }
 
+   // This session is not subscribed to any unsolicited message.
+   assert(!std::empty(menu_pub_queue));
+
    if (menu_pub_queue.front() == events::remove_post) {
       assert(!std::empty(data));
 
@@ -127,9 +130,6 @@ redis::on_menu_pub( boost::system::error_code const& ec
    //if (menu_pub_queue.front() != events::posts) {
    //   assert(!std::empty(data));
    //}
-
-   // This session is not subscribed to any unsolicited message.
-   assert(!std::empty(menu_pub_queue));
 
    if (menu_pub_queue.front() == events::ignore) {
       menu_pub_queue.pop();
@@ -161,6 +161,11 @@ redis::on_user_pub( boost::system::error_code const& ec
       response const item { events::chat_messages
                           , std::move(chat_pub_queue.front().user_id)};
 
+      // We expect at least one element in this vector, which corresponds
+      // to the case where there where no chat messages and the user was
+      // not registered, where the del command returns 0.
+      assert(!std::empty(data));
+      data.pop_back();
       worker_handler(std::move(data), item);
    }
 
@@ -225,7 +230,6 @@ void redis::retrieve_chat_msgs(std::string const& user_id)
    chat_pub_queue.push({events::ignore, {}});
    chat_pub_queue.push({events::ignore, {}});
    chat_pub_queue.push({events::get_chat_msgs, user_id});
-   chat_pub_queue.push({events::ignore, {}});
 }
 
 void redis::on_user_online(std::string const& id)
@@ -288,7 +292,7 @@ redis::register_user( std::string const& user
 {
    auto const key =  cfg_.user_data_prefix_key + user;
 
-   std::initializer_list<std::string const> const par
+   std::initializer_list<std::string> par
    { "password",  pwd
    , "allowed", std::to_string(n_allowed_posts)
    , "remaining", std::to_string(n_allowed_posts)
@@ -302,7 +306,7 @@ redis::register_user( std::string const& user
 void redis::retrieve_user_data(std::string const& user)
 {
    auto const key =  cfg_.user_data_prefix_key + user;
-   ss_menu_pub.send(hmget(key, "password", "allowed", "remaining", "deadline"));
+   ss_menu_pub.send(hmget(key, {"password", "allowed", "remaining", "deadline"}));
    menu_pub_queue.push(events::user_data);
 }
 
@@ -313,7 +317,7 @@ redis::update_post_deadline( std::string const& user
 {
    auto const key =  cfg_.user_data_prefix_key + user;
 
-   std::initializer_list<std::string const> l =
+   std::initializer_list<std::string> l =
    { "allowed", std::to_string(n_allowed_posts)
    , "remaining", std::to_string(n_allowed_posts)
    , "deadline", std::to_string(deadline.count())};
@@ -328,7 +332,7 @@ redis::update_remaining( std::string const& user_id
 {
    auto const key =  cfg_.user_data_prefix_key + user_id;
 
-   std::initializer_list<std::string const> l =
+   std::initializer_list<std::string> l =
    { "remaining", std::to_string(remaining)};
 
    ss_menu_pub.send(hset(key, l));

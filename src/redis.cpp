@@ -351,10 +351,18 @@ void redis::retrieve_posts(int begin)
 
 void redis::disconnect()
 {
-   ss_menu_sub.close();
-   ss_menu_pub.close();
-   ss_chat_sub.close();
-   ss_chat_pub.close();
+   ss_menu_sub.disable_reconnect();
+   ss_menu_pub.disable_reconnect();
+   ss_chat_sub.disable_reconnect();
+   ss_chat_pub.disable_reconnect();
+
+   ss_menu_sub.send(quit());
+   ss_menu_pub.send(quit());
+   menu_pub_queue.push(events::ignore);
+
+   ss_chat_sub.send(quit());
+   ss_chat_pub.send(quit());
+   chat_pub_queue.push({events::ignore, {}});
 }
 
 void redis::send_presence(std::string id, std::string msg)

@@ -291,7 +291,9 @@ public:
    update_remaining( std::string const& user_id
                    , int remaining);
 
-   // Closes all stablished connections with redis.
+   // Cleanly quits all stablished connections with redis, uses the redis
+   // QUIT command. This will cause redis to send all pending messages
+   // before quitting the session.
    void disconnect();
 
    auto get_post_queue_size() const noexcept

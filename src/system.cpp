@@ -15,7 +15,7 @@
 
 #include "logger.hpp"
 
-namespace rt
+namespace occase
 {
 
 void set_fd_limits(int fds)
@@ -30,9 +30,10 @@ void set_fd_limits(int fds)
       return;
    }
 
-   log( loglevel::info
-      , "getrlimit (soft, hard): ({0}, {1})"
-      , rl.rlim_cur, rl.rlim_cur);
+   log::write( log::level::info
+             , "getrlimit (soft, hard): ({0}, {1})"
+             , rl.rlim_cur
+             , rl.rlim_cur);
 
    // Let us raise the limits.
    rl.rlim_cur = fds;
@@ -40,15 +41,15 @@ void set_fd_limits(int fds)
 
    auto const r2 = setrlimit(RLIMIT_NOFILE, &rl);
    if (r2 == -1) {
-      log( loglevel::err
-         , "Unable to raise fd limits: {0}"
-         , strerror(errno));
+      log::write( log::level::err
+                , "Unable to raise fd limits: {0}"
+                , strerror(errno));
       return;
    }
 
-   log( loglevel::info
-      , "getrlimit (soft, hard): ({0}, {1})"
-      , rl.rlim_cur, rl.rlim_cur);
+   log::write( log::level::info
+             , "getrlimit (soft, hard): ({0}, {1})"
+             , rl.rlim_cur, rl.rlim_cur);
 }
 
 }

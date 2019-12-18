@@ -24,8 +24,8 @@
 struct server_cfg {
    bool help = false;
    unsigned short port;
-   rt::loglevel logfilter;
-   rt::mms_session_cfg session_cfg;
+   occase::log::level logfilter;
+   occase::mms_session_cfg session_cfg;
    int max_listen_connections;
 };
 
@@ -94,11 +94,11 @@ auto get_cfg(int argc, char* argv[])
       return server_cfg {true};
    }
 
-   cfg.logfilter = rt::to_loglevel<rt::loglevel>(logfilter_str);
+   cfg.logfilter = occase::log::to_level<occase::log::level>(logfilter_str);
    return cfg;
 }
 
-using namespace rt;
+using namespace occase;
 
 int main(int argc, char* argv[])
 {
@@ -108,7 +108,7 @@ int main(int argc, char* argv[])
          return 0;
 
       init_libsodium();
-      log_upto(cfg.logfilter);
+      log::upto(cfg.logfilter);
 
       net::io_context ioc {1};
       ssl::context ctx {ssl::context::tlsv12};
@@ -122,8 +122,8 @@ int main(int argc, char* argv[])
 
       ioc.run();
    } catch(std::exception const& e) {
-      log(loglevel::notice, e.what());
-      log(loglevel::notice, "Exiting with status 1 ...");
+      log::write(log::level::notice, e.what());
+      log::write(log::level::notice, "Exiting with status 1 ...");
       return 1;
    }
 }

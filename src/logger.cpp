@@ -2,19 +2,19 @@
 
 #include <cassert>
 
-namespace rt
-{
+namespace occase { namespace log {
 
 namespace global
 {
-loglevel logfilter = loglevel::notice;
+level filter = level::notice;
 }
 
-void log_upto(loglevel ll)
+void upto(level ll)
 {
-   global::logfilter = ll;
+   global::filter = ll;
 }
 
-} // rt
+}
+}
 
 

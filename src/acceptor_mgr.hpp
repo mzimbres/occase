@@ -7,7 +7,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-namespace rt
+namespace occase
 {
 
 template <class Session>
@@ -31,11 +31,11 @@ private:
    {
       if (ec) {
          if (ec == net::error::operation_aborted) {
-            log(loglevel::info, "Stopping accepting connections");
+            log::write(log::level::info, "Stopping accepting connections");
             return;
          }
 
-         log(loglevel::info, "listener::on_accept: {0}", ec.message());
+         log::write(log::level::info, "listener::on_accept: {0}", ec.message());
       } else {
          auto const n = w.get_cfg().http_session_timeout;
          std::make_shared< Session
@@ -68,9 +68,9 @@ public:
                    , &one, sizeof(one));
 
       if (ret == -1) {
-         log( loglevel::err
-            , "Unable to set socket option SO_REUSEPORT: {0}"
-            , strerror(errno));
+         log::write( log::level::err
+                   , "Unable to set socket option SO_REUSEPORT: {0}"
+                   , strerror(errno));
       }
 
       acceptor.bind(endpoint);
@@ -79,12 +79,12 @@ public:
       acceptor.listen(max_listen_connections, ec);
 
       if (ec) {
-         log(loglevel::info, "acceptor_mgr::run: {0}.", ec.message());
+         log::write(log::level::info, "acceptor_mgr::run: {0}.", ec.message());
       } else {
-         log( loglevel::info, "acceptor_mgr:run: Listening on {}"
-            , acceptor.local_endpoint());
-         log( loglevel::info, "acceptor_mgr:run: TCP backlog set to {}"
-            , max_listen_connections);
+         log::write( log::level::info, "acceptor_mgr:run: Listening on {}"
+                   , acceptor.local_endpoint());
+         log::write( log::level::info, "acceptor_mgr:run: TCP backlog set to {}"
+                   , max_listen_connections);
 
          do_accept(w, ctx);
       }
@@ -96,8 +96,8 @@ public:
          boost::system::error_code ec;
          acceptor.cancel(ec);
          if (ec) {
-            log( loglevel::info
-               , "acceptor_mgr::shutdown: {0}.", ec.message());
+            log::write( log::level::info
+                      , "acceptor_mgr::shutdown: {0}.", ec.message());
          }
       }
    }

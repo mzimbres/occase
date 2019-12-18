@@ -20,7 +20,7 @@
 #include "net.hpp"
 #include "post.hpp"
 
-namespace rt::cli
+namespace occase::cli
 {
 
 struct login {

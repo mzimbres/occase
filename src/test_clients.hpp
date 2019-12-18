@@ -16,7 +16,7 @@
 
 // Contains the implementation of many test clients.
 
-namespace rt::cli
+namespace occase::cli
 {
 
 template <class Mgr>

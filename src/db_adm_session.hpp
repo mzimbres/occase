@@ -9,7 +9,7 @@
 #include "post.hpp"
 #include "db_worker.hpp"
 
-namespace rt
+namespace occase
 {
 
 // Transfroms a target in the form
@@ -231,12 +231,12 @@ private:
       }
 
       if (ec) {
-         log(loglevel::debug, "db_adm_session: {0}", ec.message());
+         log::write(log::level::debug, "db_adm_session: {0}", ec.message());
          return;
       }
 
       if (websocket::is_upgrade(req_)) {
-         log(loglevel::debug, "db_adm_session: Websocket upgrade");
+         log::write(log::level::debug, "db_adm_session: Websocket upgrade");
          beast::get_lowest_layer(derived().stream()).expires_never();
 
          std::make_shared< typename Derived::db_session_type
@@ -285,9 +285,9 @@ private:
          boost::split(foo, target, boost::is_any_of("/"));
 
          if (std::size(foo) != 3) {
-            log( loglevel::debug
-               , "Error: get_posts_handler target has wrong size: {0}"
-               , std::size(foo));
+            log::write( log::level::debug
+                      , "Error: get_posts_handler target has wrong size: {0}"
+                      , std::size(foo));
             get_default_handler();
             return;
          }
@@ -295,9 +295,9 @@ private:
          auto const& db = derived().db();
 
          if (foo.back() != db.get_cfg().adm_pwd) {
-            log( loglevel::debug
-               , "Error: get_posts_handler target has wrong password: {0}"
-               , foo.back());
+            log::write( log::level::debug
+                      , "Error: get_posts_handler target has wrong password: {0}"
+                      , foo.back());
             get_default_handler();
             return;
          }
@@ -314,9 +314,9 @@ private:
                                , post_id);
 
       } catch (std::exception const& e) {
-         log( loglevel::debug
-            , "get_posts_handler: {0}"
-            , e.what());
+         log::write( log::level::debug
+                   , "get_posts_handler: {0}"
+                   , e.what());
       }
    }
 
@@ -331,9 +331,9 @@ private:
          boost::split(foo, target, boost::is_any_of("/"));
 
          if (std::size(foo) != 5) {
-            log( loglevel::debug
-               , "Error: get_delete_handler target has wrong size: {0}"
-               , std::size(foo));
+            log::write( log::level::debug
+                      , "Error: get_delete_handler target has wrong size: {0}"
+                      , std::size(foo));
             get_default_handler();
             return;
          }
@@ -341,9 +341,9 @@ private:
          auto& db = derived().db();
 
          if (foo.back() != db.get_cfg().adm_pwd) {
-            log( loglevel::debug
-               , "Error: get_delete_handler target has wrong password: {0}"
-               , foo.back());
+            log::write( log::level::debug
+                      , "Error: get_delete_handler target has wrong password: {0}"
+                      , foo.back());
             get_default_handler();
             return;
          }
@@ -357,9 +357,9 @@ private:
          << html::make_post_del_ok();
 
       } catch (std::exception const& e) {
-         log( loglevel::debug
-            , "get_delete_handler: {0}"
-            , e.what());
+         log::write( log::level::debug
+                   , "get_delete_handler: {0}"
+                   , e.what());
       }
    }
 
@@ -379,7 +379,7 @@ private:
          auto const t = prepare_target(req_.target(), '/');
          std::string const target {t.data(), std::size(t)};
 
-         log(loglevel::debug, "get_handler: {0}.", target);
+         log::write(log::level::debug, "get_handler: {0}.", target);
 
          if (target == "stats") {
             stats_handler();
@@ -434,9 +434,9 @@ private:
       boost::ignore_unused(bytes_transferred);
 
       if (ec) {
-         log( loglevel::debug
-            , "Error on db_adm_session: {0}"
-            , ec.message());
+         log::write( log::level::debug
+                   , "Error on db_adm_session: {0}"
+                   , ec.message());
       }
       auto const n = derived().db().get_cfg().ssl_shutdown_timeout;
       return derived().do_eof(std::chrono::seconds {n});

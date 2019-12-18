@@ -3,7 +3,7 @@
 #include "net.hpp"
 #include "db_adm_session.hpp"
 
-namespace rt
+namespace occase
 {
 
 template <class AdmSession>
@@ -27,9 +27,9 @@ private:
    void on_handshake(beast::error_code ec, std::size_t bytes_used)
    {
        if (ec) {
-          log( loglevel::info
-             , "db_adm_ssl_session::on_handshake: {0}"
-             , ec.message());
+          log::write( log::level::info
+                    , "db_adm_ssl_session::on_handshake: {0}"
+                    , ec.message());
            return;
        }
 
@@ -42,9 +42,9 @@ private:
    void on_shutdown(beast::error_code ec)
    {
       if (ec) {
-         log( loglevel::debug
-            , "db_adm_ssl_session::on_shutdown: {0}"
-            , ec.message());
+         log::write( log::level::debug
+                   , "db_adm_ssl_session::on_shutdown: {0}"
+                   , ec.message());
       }
    }
 

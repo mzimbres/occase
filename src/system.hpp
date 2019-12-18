@@ -2,7 +2,7 @@
 
 #include <string>
 
-namespace rt
+namespace occase
 {
 
 void set_fd_limits(int fds);

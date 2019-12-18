@@ -2,7 +2,7 @@
 
 #include <iterator>
 
-namespace rt
+namespace occase
 {
 
 template <class C>

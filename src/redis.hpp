@@ -7,7 +7,7 @@
 #include "net.hpp"
 #include "utils.hpp"
 
-namespace rt
+namespace occase
 {
 
 // Facade class to manage the communication with redis and hide
@@ -106,6 +106,26 @@ public:
       // The maximum number of chat messages a user is allowed to
       // accumulate on the server (when he is offline).
       int max_offline_chat_msgs {100};
+
+      // To spare space in the redis server we can user shorter fields string.
+      struct user_fields {
+         std::string password {"a"};
+         std::string allowed {"b"};
+         std::string remaining {"c"};
+         std::string deadline {"d"};
+      };
+
+      user_fields ufields;
+
+      auto is_valid() const noexcept
+      {
+         auto ret = std::empty(ufields.password)
+                  || std::empty(ufields.allowed)
+                  || std::empty(ufields.remaining)
+                  || std::empty(ufields.deadline);
+
+         return !ret;
+      }
    };
 
 private:

@@ -7,10 +7,9 @@
 
 #include <syslog.h>
 
-namespace rt
-{
+namespace occase { namespace log {
 
-enum class loglevel
+enum class level
 { emerg
 , alert
 , crit
@@ -22,7 +21,7 @@ enum class loglevel
 };
 
 template <class T>
-T to_loglevel(std::string const& ll)
+T to_level(std::string const& ll)
 {
    if (ll == "emerg")   return T::emerg;
    if (ll == "alert")   return T::alert;
@@ -36,24 +35,25 @@ T to_loglevel(std::string const& ll)
    return T::debug;
 }
 
-void log_upto(loglevel ll);
+void upto(level ll);
 
-namespace global {extern loglevel logfilter;}
+namespace global {extern level filter;}
 
 inline                                                                                                                                                      
-auto ignore_log(loglevel ll)                                                                                                                                
+auto ignore(level ll)                                                                                                                                
 {                                                                                                                                                           
-   return ll > global::logfilter;                                                                                                                           
+   return ll > global::filter;                                                                                                                           
 }
 
 template <class... Args>
-void log(loglevel ll, char const* fmt, Args const& ... args)
+void write(level ll, char const* fmt, Args const& ... args)
 {
-   if (ll > global::logfilter)
+   if (ll > global::filter)
       return;
 
    std::clog << fmt::format(fmt, args...) << std::endl;
 }
 
+}
 }
 

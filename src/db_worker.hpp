@@ -29,7 +29,7 @@
 #include "db_ssl_session.hpp"
 #include "db_plain_session.hpp"
 
-namespace rt
+namespace occase
 {
 
 struct core_cfg {
@@ -190,9 +190,9 @@ private:
       // searches.
       channel_codes_.push_back(0);
 
-      log( loglevel::info
-         , "Number of channels created: {0}"
-         , std::size(channels_));
+      log::write( log::level::info
+                , "Number of channels created: {0}"
+                , std::size(channels_));
    }
 
    ev_res on_app_login(json const& j, std::shared_ptr<db_session_type> s)
@@ -323,9 +323,9 @@ private:
          std::sort(std::begin(items), std::end(items));
 
          if (invalid_count != 0) {
-            log( loglevel::debug
-               , "db_worker::on_app_subscribe: Invalid channels {0}."
-               , invalid_count);
+            log::write( log::level::debug
+                      , "db_worker::on_app_subscribe: Invalid channels {0}."
+                      , invalid_count);
          }
       }
 
@@ -401,10 +401,10 @@ private:
          return ev_res::publish_fail;
       }
 
-      log( loglevel::debug
-         , "New post to channel {0}, from user {1}"
-         , items.front().to
-         , items.front().from);
+      log::write( log::level::debug
+                , "New post to channel {0}, from user {1}"
+                , items.front().to
+                , items.front().from);
 
       // Before we request a new pub id, we have to check that the post
       // is valid and will not be refused later. This prevents the pub
@@ -473,6 +473,14 @@ private:
 
    ev_res on_app_filenames(json j, std::shared_ptr<db_session_type> s)
    {
+      if (s->get_remaining_posts() < 1) {
+         json resp;
+         resp["cmd"] = "filenames_ack";
+         resp["result"] = "fail";
+         s->send(resp.dump(), false);
+         return ev_res::filenames_fail;
+      }
+
       auto const n = sz::mms_filename_min_size;
       auto f = [this, n]()
       {
@@ -488,9 +496,9 @@ private:
       resp["cmd"] = "filenames_ack";
       resp["result"] = "ok";
       resp["names"] = names;
-      s->send(resp.dump(), true);
+      s->send(resp.dump(), false);
 
-      return ev_res::delete_ok;
+      return ev_res::filenames_ok;
    }
 
    // Handlers for events we receive from the database.
@@ -528,16 +536,16 @@ private:
    {
       try {
          if (std::size(data) != 1) {
-            log( loglevel::emerg
-               , "Menu received from the database is empty. Exiting ...");
+            log::write( log::level::emerg
+                      , "Menu received from the database is empty. Exiting ...");
 
             shutdown();
             return;
          }
 
          if (std::empty(data.back())) {
-            log( loglevel::emerg
-               , "Menu received from the database is empty. Exiting ...");
+            log::write( log::level::emerg
+                      , "Menu received from the database is empty. Exiting ...");
 
             shutdown();
             return;
@@ -552,12 +560,12 @@ private:
          std::sort(std::begin(channel_codes_), std::end(channel_codes_));
          db_.retrieve_posts(0);
 
-         log( loglevel::info
-            , "Success retrieving channels from redis.");
+         log::write( log::level::info
+                   , "Success retrieving channels from redis.");
 
       } catch (...) {
-         log( loglevel::emerg
-            , "Unrecoverable error in: on_db_menu");
+         log::write( log::level::emerg
+                   , "Unrecoverable error in: on_db_menu");
          shutdown();
       }
    }
@@ -593,12 +601,12 @@ private:
          // We could in principle insert the post, but I am afraid this
          // could result in duplicated posts after we receive those from
          // the database.
-         log(loglevel::debug, "Channel could not be found: {0}", to);
+         log::write(log::level::debug, "Channel could not be found: {0}", to);
          return;
       }
 
       if (*match > to) {
-         log(loglevel::debug, "Channel could not be found: {0}", to);
+         log::write(log::level::debug, "Channel could not be found: {0}", to);
          return;
       }
 
@@ -612,11 +620,11 @@ private:
          auto const r1 = channels_[i].remove_post(post_id, from);
          auto const r2 = root_channel_.remove_post(post_id, from);
          if (!r1 || !r2) 
-            log( loglevel::notice
-               , "Failed to remove post {0} from channel {1}. User {2}"
-               , post_id
-               , to
-               , from);
+            log::write( log::level::notice
+                      , "Failed to remove post {0} from channel {1}. User {2}"
+                      , post_id
+                      , to
+                      , from);
 
          return;
       }
@@ -666,9 +674,9 @@ private:
                    , f);
 
       if (!std::empty(expired1)) {
-         log( loglevel::info
-            , "Number of expired posts removed: {0}"
-            , std::size(expired1));
+         log::write( log::level::info
+                   , "Number of expired posts removed: {0}"
+                   , std::size(expired1));
       }
    }
 
@@ -679,7 +687,7 @@ private:
          // If the user went offline, we should not be receiving this
          // message. However there may be a timespan where this can
          // happen wo I will simply log.
-         log(loglevel::warning, "Receiving presence after unsubscribe.");
+         log::write(log::level::warning, "Receiving presence after unsubscribe.");
          return;
       }
 
@@ -703,9 +711,9 @@ private:
       if (empty)
          create_channels();
 
-      log( loglevel::info
-         , "Number of messages received from the database: {0}"
-         , std::size(msgs));
+      log::write( log::level::info
+                , "Number of messages received from the database: {0}"
+                , std::size(msgs));
 
       auto loader = [this](auto const& msg)
          { on_db_channel_post(msg); };
@@ -814,7 +822,7 @@ private:
          // when the user connects again. It shall be difficult to test
          // this. It may be a hint that the ssystem is overloaded.
 
-         log(loglevel::notice, "Sending publish_ack to the database.");
+         log::write(log::level::notice, "Sending publish_ack to the database.");
 
          std::initializer_list<std::string> param = {ack_str};
 
@@ -876,10 +884,10 @@ private:
             s->set_id(id);
             s->set_remaining_posts(core_cfg_.allowed_posts);
 
-            log( loglevel::info
-               , "New user: {0}. Remaining posts {1}."
-               , id
-               , core_cfg_.allowed_posts);
+            log::write( log::level::info
+                      , "New user: {0}. Remaining posts {1}."
+                      , id
+                      , core_cfg_.allowed_posts);
 
             return;
          }
@@ -934,10 +942,10 @@ private:
                s->send(resp.dump(), false);
                s->shutdown();
 
-               log( loglevel::debug
-                  , "Login failed for {1}:{2}."
-                  , s->get_id()
-                  , login_queue_.front().pwd);
+               log::write( log::level::debug
+                         , "Login failed for {1}:{2}."
+                         , s->get_id()
+                         , login_queue_.front().pwd);
 
             } else {
                auto const ss = sessions_.insert({s->get_id(), s});
@@ -1006,7 +1014,7 @@ private:
             // very fast.
          }
       } catch (std::exception const& e) {
-         log(loglevel::crit, "on_db_user_data: {0}", e.what());
+         log::write(log::level::crit, "on_db_user_data: {0}", e.what());
       }
 
       login_queue_.pop();
@@ -1021,16 +1029,16 @@ private:
             return;
          }
 
-         log( loglevel::crit
-            , "listener::on_signal: Unhandled error '{0}'"
-            , ec.message());
+         log::write( log::level::crit
+                   , "listener::on_signal: Unhandled error '{0}'"
+                   , ec.message());
 
          return;
       }
 
-      log( loglevel::notice
-         , "Signal {0} has been captured. " 
-         , n);
+      log::write( log::level::notice
+                , "Signal {0} has been captured. " 
+                , n);
 
       shutdown_impl();
    }
@@ -1043,19 +1051,19 @@ private:
       boost::system::error_code ec;
       signal_set_.cancel(ec);
       if (ec) {
-         log( loglevel::info
-            , "db_worker::shutdown: {0}"
-            , ec.message());
+         log::write( log::level::info
+                   , "db_worker::shutdown: {0}"
+                   , ec.message());
       }
    }
 
    void shutdown_impl()
    {
-      log(loglevel::notice, "Shutdown has been requested.");
+      log::write(log::level::notice, "Shutdown has been requested.");
 
-      log( loglevel::notice
-         , "Number of sessions that will be closed: {0}"
-         , std::size(sessions_));
+      log::write( log::level::notice
+                , "Number of sessions that will be closed: {0}"
+                , std::size(sessions_));
 
       acceptor_.shutdown();
 
@@ -1100,9 +1108,9 @@ public:
       db_.on_user_offline(user_id);
 
       if (!std::empty(msgs)) {
-         log( loglevel::debug
-            , "Sending user messages back to the database: {0}"
-            , user_id);
+         log::write( log::level::debug
+                   , "Sending user messages back to the database: {0}"
+                   , user_id);
 
          db_.store_chat_msg( std::move(user_id)
                           , std::make_move_iterator(std::begin(msgs))
@@ -1137,7 +1145,7 @@ public:
                return on_app_register(j, s);
          }
       } catch (std::exception const& e) {
-         log(loglevel::debug, "db_worker::on_app: {0}.", e.what());
+         log::write(log::level::debug, "db_worker::on_app: {0}.", e.what());
       }
 
       return ev_res::unknown;
@@ -1173,7 +1181,7 @@ public:
                                 , core_cfg_.max_posts_on_sub);
          return posts;
       } catch (std::exception const& e) {
-         log(loglevel::info, "get_posts: {}", e.what());
+         log::write(log::level::info, "get_posts: {}", e.what());
       }
 
       return {};

@@ -21,14 +21,14 @@
 #include "db_adm_ssl_session.hpp"
 #include "db_adm_plain_session.hpp"
 
-using namespace rt;
+using namespace occase;
 
 struct occase_db_cfg {
    int help = 0; // 0: continue, 1: help, -1: error.
    std::string ssl_cert_file;
    std::string ssl_priv_key_file;
    std::string ssl_dh_file;
-   rt::loglevel logfilter;
+   occase::log::level logfilter;
 
    db_worker_cfg worker;
 
@@ -51,18 +51,6 @@ struct occase_db_cfg {
       return !r;
    }
 };
-
-std::pair<std::string, std::string> split2(std::string data)
-{
-   auto const pos = data.find_first_of(':');
-   if (pos == std::string::npos)
-      return {};
-
-   if (1 + pos == std::size(data))
-      return {};
-
-   return {data.substr(0, pos), data.substr(pos + 1)};
-}
 
 namespace po = boost::program_options;
 
@@ -162,16 +150,16 @@ auto get_cfg(int argc, char* argv[])
    cfg.worker.db.ss_cfg1.max_pipeline_size = max_pipeline_size;
    cfg.worker.db.ss_cfg1.role = "master";
    cfg.worker.db.ss_cfg1.log_filter =
-      to_loglevel<aedis::log::level>(logfilter_str);
+      log::to_level<aedis::log::level>(logfilter_str);
 
    cfg.worker.db.ss_cfg2.sentinels = sentinels;
    cfg.worker.db.ss_cfg2.max_pipeline_size = max_pipeline_size;
    cfg.worker.db.ss_cfg2.role = "master";
    cfg.worker.db.ss_cfg2.log_filter =
-      to_loglevel<aedis::log::level>(logfilter_str);
+      log::to_level<aedis::log::level>(logfilter_str);
 
    cfg.worker.timeouts = cfg.get_timeouts();
-   cfg.logfilter = to_loglevel<rt::loglevel>(logfilter_str);
+   cfg.logfilter = log::to_level<occase::log::level>(logfilter_str);
    return cfg;
 }
 
@@ -186,7 +174,7 @@ int main(int argc, char* argv[])
          return 1;
 
       init_libsodium();
-      log_upto(cfg.logfilter);
+      log::upto(cfg.logfilter);
 
       ssl::context ctx {ssl::context::tlsv12};
 
@@ -208,12 +196,12 @@ int main(int argc, char* argv[])
       db.run();
 
    } catch (std::exception const& e) {
-      log(loglevel::notice, e.what());
-      log(loglevel::notice, "Exiting with status 1 ...");
+      log::write(log::level::notice, e.what());
+      log::write(log::level::notice, "Exiting with status 1 ...");
       return 1;
    }
 
-   log(loglevel::notice, "Exiting with status 0 ...");
+   log::write(log::level::notice, "Exiting with status 0 ...");
    return 0;
 }
 

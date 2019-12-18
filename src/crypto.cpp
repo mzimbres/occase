@@ -32,7 +32,7 @@ std::string hash_to_string(hash_type const& hash)
 {
   std::string output;
   output.reserve(2 * std::size(hash));
-  for (auto i = 0; i < rt::ssize(hash); ++i) {
+  for (auto i = 0; i < occase::ssize(hash); ++i) {
     output.push_back(high_to_char(hash[i]));
     output.push_back(low_to_char(hash[i]));
   }
@@ -42,7 +42,7 @@ std::string hash_to_string(hash_type const& hash)
 
 }
 
-namespace rt
+namespace occase
 {
 
 pwd_gen::pwd_gen()

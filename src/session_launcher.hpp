@@ -20,7 +20,7 @@
  * or other sessions.
  */
 
-namespace rt::cli
+namespace occase::cli
 {
 
 struct launcher_cfg {

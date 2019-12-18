@@ -11,7 +11,7 @@
 #include "utils.hpp"
 #include "db_plain_session.hpp"
 
-namespace rt
+namespace occase
 {
 
 /* Operations

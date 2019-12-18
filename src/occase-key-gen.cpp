@@ -5,7 +5,7 @@
 
 #include "crypto.hpp"
 
-using namespace rt;
+using namespace occase;
 
 int main()
 {

@@ -22,8 +22,8 @@
 #include "client_session.hpp"
 #include "session_launcher.hpp"
 
-using namespace rt;
-using namespace rt::cli;
+using namespace occase;
+using namespace occase::cli;
 
 namespace po = boost::program_options;
 

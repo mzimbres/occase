@@ -3,7 +3,7 @@
 #include <string>
 #include <random>
 
-namespace rt
+namespace occase
 {
 
 void init_libsodium();

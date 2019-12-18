@@ -6,7 +6,7 @@
 #include "db_session.hpp"
 #include "db_adm_plain_session.hpp"
 
-namespace rt
+namespace occase
 {
 
 template <class Session>

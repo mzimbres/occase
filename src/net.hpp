@@ -23,7 +23,7 @@ namespace ssl = boost::asio::ssl;
 
 using tcp = net::ip::tcp;
 
-namespace rt
+namespace occase
 {
 
 inline

@@ -5,7 +5,7 @@
 #include "client_session.hpp"
 #include "session_launcher.hpp"
 
-namespace rt::cli
+namespace occase::cli
 {
 
 std::vector<std::string> const nicks
@@ -32,7 +32,7 @@ std::vector<std::string> const nicks
 , "Schwinger"
 };
 
-std::string make_login_cmd(rt::cli::login const& user)
+std::string make_login_cmd(occase::cli::login const& user)
 {
    json j;
    j["cmd"] = "login";
@@ -50,7 +50,7 @@ std::string make_post_cmd(code_type channel, code_type filter)
    sub["ex_details"] = std::vector<code_type>{};
    sub["in_details"] = std::vector<code_type>{};
 
-   rt::post item { -1
+   occase::post item { -1
                  , {}
                  , sub.dump()
                  , channel
@@ -60,7 +60,7 @@ std::string make_post_cmd(code_type channel, code_type filter)
                  , {}};
    json j;
    j["cmd"] = "publish";
-   j["items"] = std::vector<rt::post>{item};
+   j["items"] = std::vector<occase::post>{item};
    return j.dump();
 }
 

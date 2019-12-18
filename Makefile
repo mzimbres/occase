@@ -37,6 +37,7 @@ VPATH = ./src
 exes =
 exes += occase-db
 exes += occase-mms
+exes += occase-notify
 exes += occase-key-gen
 exes += occase-sim
 exes += db_tests
@@ -93,6 +94,9 @@ occase-db: % : %.o $(db_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_CONCURRENCY_HINT_1=BOOST_ASIO_CONCURRENCY_HINT_UNSAFE
 
 occase-mms: % : %.o $(mms_objs) $(common_objs)
+	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_CONCURRENCY_HINT_1=BOOST_ASIO_CONCURRENCY_HINT_UNSAFE
+
+occase-notify: % : %.o $(common_objs) net.o
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_CONCURRENCY_HINT_1=BOOST_ASIO_CONCURRENCY_HINT_UNSAFE
 
 occase-key-gen: % : %.o  $(common_objs)

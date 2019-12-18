@@ -16,7 +16,7 @@
 #include "logger.hpp"
 #include "utils.hpp"
 
-namespace rt
+namespace occase
 {
 
 template <class Session>
@@ -56,8 +56,8 @@ struct ws_timeouts {
 template <class Derived>
 class db_session {
 private:
-   static constexpr auto sub_channels_size = 32;
-   static constexpr auto ranges_size = 5;
+   static auto constexpr sub_channels_size = 32;
+   static auto constexpr ranges_size = 5;
 
    struct msg_entry {
       std::string msg;
@@ -72,7 +72,7 @@ private:
    std::deque<msg_entry> msg_queue_;
    bool closing_ = false;
    std::string user_id_;
-   code_type any_of_filter = 0;
+   code_type any_of_filter_ = 0;
 
    boost::container::static_vector<
       code_type, sub_channels_size> sub_channels_;
@@ -111,9 +111,9 @@ private:
 
       if (ec) {
          finish();
-         log( loglevel::debug
-            , "db_session::on_read: {0}. User {1}"
-            , ec.message(), user_id_);
+         log::write( log::level::debug
+                   , "db_session::on_read: {0}. User {1}"
+                   , ec.message(), user_id_);
          return;
       }
 
@@ -154,7 +154,7 @@ private:
          //if (ec)
          //   ed = ec.message();
 
-         //log( loglevel::debug
+         //log( log::level::debug
          //   , "db_session::on_accept1: {0}. Remote endpoint: {1}."
          //   , err
          //   , ed);
@@ -309,8 +309,8 @@ public:
 
    void send_post(std::shared_ptr<std::string> msg, post const& p)
    {
-      if (any_of_filter != 0) {
-         if ((any_of_filter & p.features) == 0)
+      if (any_of_filter_ != 0) {
+         if ((any_of_filter_ & p.features) == 0)
             return;
       }
 
@@ -350,7 +350,7 @@ public:
       if (closing_)
          return;
 
-      log(loglevel::debug, "db_session::shutdown: {0}.", user_id_);
+      log::write(log::level::debug, "db_session::shutdown: {0}.", user_id_);
 
       closing_ = true;
 
@@ -370,7 +370,7 @@ public:
    // required to contain at least one bit set that is also set in the
    // argument passed here.
    void set_any_of_filter(code_type o)
-      { any_of_filter = o; }
+      { any_of_filter_ = o; }
 
    void set_sub_channels(std::vector<code_type> const& codes)
    {

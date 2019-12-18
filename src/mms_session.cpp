@@ -87,7 +87,7 @@ void create_dir(const char *dir)
 
 }
 
-namespace rt
+namespace occase
 {
 
 /* This function receives as input the filename as specified above in
@@ -217,7 +217,7 @@ void mms_session::post_handler()
    if (is_valid(st, worker_.get_cfg().mms_key)) {
       path = worker_.get_cfg().doc_root + "/" + make_img_path(st.filename);
 
-      log(loglevel::debug , "Post dir: {0}", path);
+      log::write(log::level::debug , "Post dir: {0}", path);
 
       create_dir(path.data());
 
@@ -227,7 +227,7 @@ void mms_session::post_handler()
       path.append(st.extension.data(), std::size(st.extension));
    }
 
-   log(loglevel::debug , "Post full dir: {0}", path);
+   log::write(log::level::debug , "Post full dir: {0}", path);
 
    if (std::empty(path)) {
       resp.result(http::status::bad_request);
@@ -250,7 +250,7 @@ void mms_session::post_handler()
                                  , ec);
 
    if (ec) {
-      log(loglevel::info , "post_handler: {0}", ec.message());
+      log::write(log::level::info , "post_handler: {0}", ec.message());
       resp.result(http::status::bad_request);
       resp.set(http::field::content_type, "text/plain");
       beast::ostream(resp.body()) << "Error\r\n";
@@ -268,7 +268,7 @@ void mms_session::post_handler()
 
 void mms_session::get_handler()
 {
-   log( loglevel::debug
+   log::write( log::level::debug
       , "Get target: {0}"
       , header_parser.get().target());
 
@@ -282,7 +282,7 @@ void mms_session::get_handler()
       path.append(st.extension.data(), std::size(st.extension));
    }
 
-   log(loglevel::debug, "Get target path: {0}", path);
+   log::write(log::level::debug, "Get target path: {0}", path);
 
    if (std::empty(path)) {
       resp.result(http::status::not_found);
@@ -298,7 +298,7 @@ void mms_session::get_handler()
    body.open(path.data(), beast::file_mode::scan, ec);
 
    if (ec) {
-      log(loglevel::debug, "get_handler: {0}", ec.message());
+      log::write(log::level::debug, "get_handler: {0}", ec.message());
       resp.result(http::status::not_found);
       resp.set(http::field::content_type, "text/plain");
       beast::ostream(resp.body()) << "File not found.\r\n";
@@ -330,14 +330,16 @@ void
 mms_session::on_read_post_body( boost::system::error_code ec
                               , std::size_t n)
 {
-   log(loglevel::debug, "Body size: {0}.", n);
+   log::write(log::level::debug, "Body size: {0}.", n);
 
    if (ec) {
       // TODO: Use the correct code.
       resp.result(http::status::bad_request);
       resp.set(http::field::content_type, "text/plain");
       beast::ostream(resp.body()) << "File not found\r\n";
-      log(loglevel::info, "on_read_post_body: {0}.", ec.message());
+      log::write( log::level::info
+                , "on_read_post_body: {0}."
+                , ec.message());
    } else {
       resp.result(http::status::ok);
       resp.set(http::field::server, "occase-img");
@@ -349,9 +351,9 @@ mms_session::on_read_post_body( boost::system::error_code ec
 
 void mms_session::on_read_header(boost::system::error_code ec, std::size_t n)
 {
-   if (!ignore_log(loglevel::debug)) { // Optimization.
+   if (!log::ignore(log::level::debug)) { // Optimization.
       for (auto const& field : header_parser.get())
-         log(loglevel::debug, "Header: {0} = {1}", field.name(), field.value());
+         log::write(log::level::debug, "Header: {0} = {1}", field.name(), field.value());
    }
 
    resp.version(header_parser.get().version());

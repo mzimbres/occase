@@ -2,7 +2,7 @@
 
 #include "logger.hpp"
 
-namespace rt
+namespace occase
 {
 
 bool load_ssl( ssl::context& ctx
@@ -17,7 +17,7 @@ bool load_ssl( ssl::context& ctx
                             , ec);
 
    if (ec) {
-      log(loglevel::emerg, "{}", ec.message());
+      log::write(log::level::emerg, "{}", ec.message());
       return false;
    }
 
@@ -29,9 +29,9 @@ bool load_ssl( ssl::context& ctx
       ssl::context::single_dh_use, ec);
 
    if (ec) {
-      log( loglevel::emerg
-         , "load_ssl: set_options: {}"
-         , ec.message());
+      log::write( log::level::emerg
+                , "load_ssl: set_options: {}"
+                , ec.message());
       return false;
    }
 
@@ -40,9 +40,9 @@ bool load_ssl( ssl::context& ctx
    ctx.use_certificate_chain_file(ssl_cert_file, ec);
 
    if (ec) {
-      log( loglevel::emerg
-         , "load_ssl use_certificate_chain_file: {}"
-         , ec.message());
+      log::write( log::level::emerg
+                , "load_ssl use_certificate_chain_file: {}"
+                , ec.message());
       return false;
    }
 
@@ -52,9 +52,9 @@ bool load_ssl( ssl::context& ctx
                            , ssl::context::file_format::pem);
 
    if (ec) {
-      log( loglevel::emerg
-         , "load_ssl use_private_key_file: {}"
-         , ec.message());
+      log::write( log::level::emerg
+                , "load_ssl use_private_key_file: {}"
+                , ec.message());
       return false;
    }
 
@@ -63,9 +63,9 @@ bool load_ssl( ssl::context& ctx
    ctx.use_tmp_dh_file(ssl_dh_file, ec);
 
    if (ec) {
-      log( loglevel::emerg
-         , "load_ssl use_tmp_dh_file: {}"
-         , ec.message());
+      log::write( log::level::emerg
+                , "load_ssl use_tmp_dh_file: {}"
+                , ec.message());
       return false;
    }
 

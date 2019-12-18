@@ -2,7 +2,7 @@
 
 #include "net.hpp"
 
-namespace rt
+namespace occase
 {
 
 struct mms_session_cfg {

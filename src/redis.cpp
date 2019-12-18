@@ -8,7 +8,7 @@
 
 using namespace aedis;
 
-namespace rt
+namespace occase
 {
 
 redis::redis(config const& cfg, net::io_context& ioc)
@@ -19,6 +19,9 @@ redis::redis(config const& cfg, net::io_context& ioc)
 , ss_chat_pub {ioc, cfg.ss_cfg2, "db-chat_pub"}
 , worker_handler([](auto const& data, auto const& req) {})
 {
+   if (!cfg.is_valid())
+      throw std::runtime_error("Invalid redis user fields.");
+
    // Sets on connection handlers.
    auto on_conn_a = [this]() { on_menu_sub_conn(); };
    auto on_conn_b = [this]() { on_menu_pub_conn(); };
@@ -73,7 +76,7 @@ void redis::on_menu_sub( boost::system::error_code const& ec
                         , std::vector<std::string> data)
 {
    if (ec) {
-      log(loglevel::debug, "redis::on_menu_sub: {0}.", ec.message());
+      log::write(log::level::debug, "redis::on_menu_sub: {0}.", ec.message());
       return;
    }
 
@@ -105,9 +108,9 @@ redis::on_menu_pub( boost::system::error_code const& ec
                    , std::vector<std::string> data)
 {
    if (ec) {
-      log( loglevel::debug
-         , "redis::on_menu_pub: {0}."
-         , ec.message());
+      log::write( log::level::debug
+                , "redis::on_menu_pub: {0}."
+                , ec.message());
 
       return;
    }
@@ -145,7 +148,9 @@ redis::on_user_pub( boost::system::error_code const& ec
                    , std::vector<std::string> data)
 {
    if (ec) {
-      log(loglevel::debug, "redis::on_user_pub: {0}.", ec.message());
+      log::write( log::level::debug
+                , "redis::on_user_pub: {0}."
+                , ec.message());
       return;
    }
 
@@ -177,7 +182,9 @@ redis::on_user_sub( boost::system::error_code const& ec
                    , std::vector<std::string> data)
 {
    if (ec) {
-      log(loglevel::debug, "redis::on_user_sub: {0}.", ec.message());
+      log::write( log::level::debug
+                , "redis::on_user_sub: {0}."
+                , ec.message());
       return;
    }
 
@@ -293,10 +300,10 @@ redis::register_user( std::string const& user
    auto const key =  cfg_.user_data_prefix_key + user;
 
    std::initializer_list<std::string> par
-   { "password",  pwd
-   , "allowed", std::to_string(n_allowed_posts)
-   , "remaining", std::to_string(n_allowed_posts)
-   , "deadline", std::to_string(deadline.count())
+   { cfg_.ufields.password,  pwd
+   , cfg_.ufields.allowed, std::to_string(n_allowed_posts)
+   , cfg_.ufields.remaining, std::to_string(n_allowed_posts)
+   , cfg_.ufields.deadline, std::to_string(deadline.count())
    };
 
    ss_menu_pub.send(hset(key, par));
@@ -306,7 +313,13 @@ redis::register_user( std::string const& user
 void redis::retrieve_user_data(std::string const& user)
 {
    auto const key =  cfg_.user_data_prefix_key + user;
-   ss_menu_pub.send(hmget(key, {"password", "allowed", "remaining", "deadline"}));
+   auto l =
+   { cfg_.ufields.password
+   , cfg_.ufields.allowed
+   , cfg_.ufields.remaining
+   , cfg_.ufields.deadline};
+
+   ss_menu_pub.send(hmget(key, l));
    menu_pub_queue.push(events::user_data);
 }
 
@@ -318,9 +331,9 @@ redis::update_post_deadline( std::string const& user
    auto const key =  cfg_.user_data_prefix_key + user;
 
    std::initializer_list<std::string> l =
-   { "allowed", std::to_string(n_allowed_posts)
-   , "remaining", std::to_string(n_allowed_posts)
-   , "deadline", std::to_string(deadline.count())};
+   { cfg_.ufields.allowed, std::to_string(n_allowed_posts)
+   , cfg_.ufields.remaining, std::to_string(n_allowed_posts)
+   , cfg_.ufields.deadline, std::to_string(deadline.count())};
 
    ss_menu_pub.send(hset(key, l));
    menu_pub_queue.push(events::update_post_deadline);
@@ -333,7 +346,7 @@ redis::update_remaining( std::string const& user_id
    auto const key =  cfg_.user_data_prefix_key + user_id;
 
    std::initializer_list<std::string> l =
-   { "remaining", std::to_string(remaining)};
+   { cfg_.ufields.remaining, std::to_string(remaining)};
 
    ss_menu_pub.send(hset(key, l));
    menu_pub_queue.push(events::ignore);
@@ -341,9 +354,9 @@ redis::update_remaining( std::string const& user_id
 
 void redis::retrieve_posts(int begin)
 {
-   log( loglevel::debug
-      , "redis::retrieve_posts({0})."
-      , begin);
+   log::write( log::level::debug
+             , "redis::retrieve_posts({0})."
+             , begin);
 
    ss_menu_pub.send(zrangebyscore(cfg_.posts_key, begin, -1));
    menu_pub_queue.push(events::posts);

@@ -239,6 +239,7 @@ void notifier::on_db_conn()
    // notifier::on_db_event. Add a queue for that.
 
    ss_.send(psubscribe({rpush_str}));
+   ss_.send(psubscribe({del_str}));
    ss_.send(subscribe(cfg_.redis_token_channel));
 }
 

@@ -3,9 +3,11 @@
 #include <boost/core/ignore_unused.hpp>
 
 #include <fmt/format.h>
+#include <nlohmann/json.hpp>
 
 #include "logger.hpp"
 
+using json = nlohmann::json;
 using namespace aedis;
 
 namespace occase
@@ -385,6 +387,18 @@ void redis::send_presence(std::string id, std::string msg)
 
    auto const channel = cfg_.presence_channel_prefix + id;
    ss_chat_pub.send(publish(channel, msg));
+   chat_pub_queue.push({events::ignore, {}});
+}
+
+void redis::
+publish_token( std::string const& id
+             , std::string const& token)
+{
+   json jtoken;
+   jtoken["id"] = cfg_.chat_msg_prefix + id;
+   jtoken["token"] = token;
+
+   ss_chat_pub.send(publish(cfg_.token_channel, jtoken.dump()));
    chat_pub_queue.push({events::ignore, {}});
 }
 

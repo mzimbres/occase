@@ -131,7 +131,7 @@ void notifier::on_token(std::string const& token)
    using value_type = map_type::value_type;
 
    auto const j = json::parse(token);
-   auto const user = j.at("user").get<std::string>();
+   auto const user = j.at("id").get<std::string>();
    auto const value = j.at("token").get<std::string>();
 
    auto const match =
@@ -196,39 +196,48 @@ void notifier::on_db_event(
    boost::system::error_code ec,
    std::vector<std::string> resp)
 {
-   if (ec) {
-      log::write( log::level::debug
-                , "on_db_event: {1}."
-                , ec.message());
-      return;
-   }
+   try {
+      if (ec) {
+         log::write( log::level::debug
+                   , "on_db_event: {1}."
+                   , ec.message());
+         return;
+      }
 
-   // We are subscribed to two kinds of events.
-   //
-   // rpush:
-   // 
-   //    Happens when occase-db stores a user message in redis.
-   //
-   // publish:
-   //    
-   //    Happens when the user logs in and provides his fcm token, which
-   //    occase-db will publish so that we become aware of it.
-   //
+      // We are subscribed to two kinds of events.
+      //
+      // rpush:
+      // 
+      //    Happens when occase-db stores a user message in redis.
+      //
+      // publish:
+      //    
+      //    Happens when the user logs in and provides his fcm token, which
+      //    occase-db will publish so that we become aware of it.
+      //
 
-   if (is_ntf(resp, rpush_str)) {
-      on_rpush(resp.back());
-   } else if (is_ntf(resp, del_str)) {
-      on_del(resp.back());
-   } else if (is_token(resp, cfg_.redis_token_channel)) {
-      on_token(resp.back());
-   } else {
+      if (is_ntf(resp, rpush_str)) {
+         on_rpush(resp.back());
+      } else if (is_ntf(resp, del_str)) {
+         on_del(resp.back());
+      } else if (is_token(resp, cfg_.redis_token_channel)) {
+         on_token(resp.back());
+      } else {
+         log::write( log::level::notice
+                   , "on_db_event: Unknown redis event.");
+      }
+   } catch (std::exception const& e) {
       log::write( log::level::notice
-                , "on_db_event: Unknown redis event.");
+                , "on_db_event exception: {0}"
+                , e.what());
    }
 }
 
 void notifier::on_db_conn()
 {
+   // TODO: Filter the the reponses to these events in
+   // notifier::on_db_event. Add a queue for that.
+
    ss_.send(psubscribe({rpush_str}));
    ss_.send(subscribe(cfg_.redis_token_channel));
 }

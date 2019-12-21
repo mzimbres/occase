@@ -103,6 +103,7 @@ auto get_cfg(int argc, char* argv[])
    ("redis-user-msg-exp_time", po::value<int>(&cfg.worker.db.chat_msg_exp_time)->default_value(7 * 24 * 60 * 60))
    ("redis-offline-chat-msgs", po::value<int>(&cfg.worker.db.max_offline_chat_msgs)->default_value(100))
    ("redis-key-menu-channel", po::value<std::string>(&cfg.worker.db.menu_channel_key)->default_value("menu_channel"))
+   ("redis-token-channel", po::value<std::string>(&cfg.worker.db.token_channel)->default_value("tokens"))
    ;
 
    po::positional_options_description pos;

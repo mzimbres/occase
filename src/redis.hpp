@@ -98,6 +98,9 @@ public:
       // The prefix to every id holding user data (password for example).
       std::string user_data_prefix_key;
 
+      // The channel where user FCM tokens should be published.
+      std::string token_channel {"tokens"};
+
       // Expiration time for user message keys. Keys will be deleted on
       // expiration and all chat messages that have not been retrieved
       // are gone.
@@ -310,6 +313,15 @@ public:
    void
    update_remaining( std::string const& user_id
                    , int remaining);
+
+   // Publishes a user FCM token in the channel where occase-notify is
+   // listening. Completes with
+   //
+   //   redis::events::ignore
+   //
+   void
+   publish_token( std::string const& id
+                , std::string const& token);
 
    // Cleanly quits all stablished connections with redis, uses the redis
    // QUIT command. This will cause redis to send all pending messages

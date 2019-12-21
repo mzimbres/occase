@@ -203,9 +203,14 @@ private:
 
       auto const pwd = j.at("password").get<std::string>();
 
+      std::string token;
+      auto const match = j.find("token");
+      if (match != std::cend(j))
+         token = *match;
+
       // We do not have to serialize the calls to retrieve_user_data
       // since this will be done by the db_ object.
-      login_queue_.push({s, pwd});
+      login_queue_.push({s, pwd, token});
       db_.retrieve_user_data(s->get_id());
 
       return ev_res::login_ok;
@@ -213,8 +218,18 @@ private:
 
    ev_res on_app_register(json const& j, std::shared_ptr<db_session_type> s)
    {
+      // If the app sent us the token we have to make it available to
+      // occase-notify. For that we have to store it with the password and
+      // publish in the tokens channel toguether when we send the
+      // register_ack.
+
+      std::string token;
+      auto const match = j.find("token");
+      if (match != std::cend(j))
+         token = *match;
+
       auto const empty = std::empty(reg_queue_);
-      reg_queue_.push({s, {}});
+      reg_queue_.push({s, {}, token});
       if (empty)
          db_.request_user_id();
 
@@ -919,6 +934,11 @@ private:
          resp["id"] = id;
          resp["password"] = reg_queue_.front().pwd;
          session->send(resp.dump(), false);
+
+         if (!std::empty(reg_queue_.front().token))
+            db_.publish_token(
+               session->get_id(),
+               reg_queue_.front().token);
       } else {
          // The user is not online anymore. The requested id is lost.
       }
@@ -1008,6 +1028,11 @@ private:
                resp["result"] = "ok";
                resp["remaining_posts"] = remaining;
                s->send(resp.dump(), false);
+
+               if (!std::empty(login_queue_.front().token))
+                  db_.publish_token(
+                     s->get_id(),
+                     login_queue_.front().token);
             }
          } else {
             // The user is not online anymore. The requested id is lost.

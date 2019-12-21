@@ -6,6 +6,7 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/bind_executor.hpp>
+#include <boost/asio/deadline_timer.hpp>
 
 #include <boost/beast/ssl.hpp>
 #include <boost/beast/core.hpp>

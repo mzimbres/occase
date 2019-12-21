@@ -104,6 +104,7 @@ template <class WebSocketSession>
 struct pwd_queue_item {
    std::weak_ptr<WebSocketSession> session;
    std::string pwd;
+   std::string token;
 };
 
 template <class AdmSession>

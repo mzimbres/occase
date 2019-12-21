@@ -44,12 +44,12 @@ exes += db_tests
 
 common_objs += system.o
 common_objs += logger.o
-common_objs += post.o
 common_objs += crypto.o
 
 db_objs =
 db_objs += redis.o
 db_objs += net.o
+db_objs += post.o
 
 mms_objs =
 mms_objs += mms_session.o
@@ -57,6 +57,12 @@ mms_objs += net.o
 
 client_objs =
 client_objs += test_clients.o
+client_objs += post.o
+
+notify_objs =
+notify_objs += notifier.o
+notify_objs += net.o
+notify_objs += logger.o
 
 exe_objs = $(addsuffix .o, $(exes))
 
@@ -96,7 +102,7 @@ occase-db: % : %.o $(db_objs) $(common_objs)
 occase-mms: % : %.o $(mms_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_CONCURRENCY_HINT_1=BOOST_ASIO_CONCURRENCY_HINT_UNSAFE
 
-occase-notify: % : %.o $(common_objs) net.o
+occase-notify: % : %.o $(notify_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_CONCURRENCY_HINT_1=BOOST_ASIO_CONCURRENCY_HINT_UNSAFE
 
 occase-key-gen: % : %.o  $(common_objs)

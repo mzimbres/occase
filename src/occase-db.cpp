@@ -184,8 +184,10 @@ int main(int argc, char* argv[])
                     , cfg.ssl_cert_file
                     , cfg.ssl_priv_key_file
                     , cfg.ssl_dh_file);
-         if (!b)
+         if (!b) {
+            log::write(log::level::notice, "Unable to load ssl files.");
             return 1;
+         }
 
          db_worker<db_adm_ssl_session> db {cfg.worker, ctx};
          db.run();

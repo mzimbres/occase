@@ -190,6 +190,8 @@ redis::on_user_sub( boost::system::error_code const& ec
       return;
    }
 
+   // TODO: filter the quit command.
+
    //std::cout << "==> ";
    //for (auto const& m : data)
    //   std::cout << m << " ";

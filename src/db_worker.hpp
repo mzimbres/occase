@@ -376,12 +376,10 @@ private:
                        , std::make_move_iterator(std::begin(param))
                        , std::make_move_iterator(std::end(param)));
 
-      auto const is_sender_post = j.at("is_sender_post").get<bool>();
       auto const post_id = j.at("post_id").get<int>();
       json ack;
       ack["cmd"] = "message";
       ack["from"] = to;
-      ack["is_sender_post"] = !is_sender_post;
       ack["post_id"] = post_id;
       ack["type"] = "server_ack";
       ack["result"] = "ok";

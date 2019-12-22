@@ -394,6 +394,7 @@ publish_token( std::string const& id
              , std::string const& token)
 {
    json jtoken;
+   jtoken["cmd"] = "token";
    jtoken["id"] = cfg_.chat_msg_prefix + id;
    jtoken["token"] = token;
 

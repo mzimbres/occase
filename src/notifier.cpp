@@ -19,6 +19,22 @@ notifier::notifier(config const& cfg)
 
 void notifier::run()
 {
+   tcp::resolver resolver {ioc_};
+
+   boost::system::error_code ec;
+   fcm_results_ = resolver.resolve(
+      cfg_.ss_args.fcm_host,
+      cfg_.ss_args.fcm_port,
+      ec);
+
+   if (ec) {
+      log::write(
+         log::level::debug,
+         "run: {0}",
+         ec.message());
+      return;
+   }
+
    ss_.run();
    ioc_.run();
 }
@@ -32,9 +48,11 @@ void print(std::vector<std::string> const& resp)
    std::cout << std::endl;
 }
 
-void notifier::on_rpush(std::string const& key)
+void notifier::on_message(json j)
 {
-   if (!cfg_.fcm_valid()) {
+   auto const key = "chat:" + j.at("to").get<std::string>();
+
+   if (!cfg_.ss_args.fcm_valid()) {
       log::write( log::level::debug
                 , "rpush notification for {0}."
                 , key);
@@ -44,7 +62,7 @@ void notifier::on_rpush(std::string const& key)
    auto const match = tokens_.find(key);
    if (match == std::cend(tokens_)) {
       log::write( log::level::debug
-                , "on_rpush: No entry for key {0}."
+                , "on_message: No entry for key {0}."
                 , key);
       return;
    }
@@ -55,6 +73,8 @@ void notifier::on_rpush(std::string const& key)
                 , key);
       return;
    }
+
+   match->second.msg = std::move(j);
 
    // The token is available, we can launch the timer that if not canceled
    // by a del notification the fcm notification is sent.
@@ -67,7 +87,7 @@ void notifier::on_rpush(std::string const& key)
 
    if (ec) {
       log::write( log::level::info
-                , "on_rpush: {0}."
+                , "on_message: {0}."
                 , ec.message());
       return;
    }
@@ -83,8 +103,21 @@ void notifier::on_rpush(std::string const& key)
 
    }
 
-   auto f = [match](auto const& ec)
-   {
+   auto f = [this, match](auto const& ec) noexcept
+      { on_timeout(ec, match); };
+
+   match->second.timer.async_wait(f);
+
+   log::write( log::level::debug
+             , "Starting timer of {0}."
+             , key);
+}
+
+void notifier::on_timeout(
+   boost::system::error_code ec,
+   map_type::const_iterator match) noexcept
+{
+   try {
       if (ec == boost::asio::error::operation_aborted) {
          // Timer was cancelled, this means occase-db has retrieved the
          // message from redis on time. We have nothing to do.
@@ -98,14 +131,21 @@ void notifier::on_rpush(std::string const& key)
                 , match->first
                 , match->second.token);
 
-      // TODO: Make to https request.
-   };
+      // TODO: Limit the size of the message so that it does not get
+      // refused by fcm.
+      std::cout << match->second.msg.dump() << std::endl;
+      auto ntf_body = make_ntf_body(
+         match->second.msg.at("msg").get<std::string>(),
+         match->second.msg.at("nick").get<std::string>(),
+         match->second.token);
 
-   match->second.timer.async_wait(f);
-
-   log::write( log::level::debug
-             , "Starting timer of {0}."
-             , key);
+      std::make_shared<ntf_session>(ioc_, ctx_)->run(
+         cfg_.ss_args,
+         fcm_results_,
+         std::move(ntf_body));
+   } catch (std::exception const& e) {
+      log::write(log::level::debug, "Exception caught.");
+   }
 }
 
 void notifier::on_del(std::string const& key)
@@ -126,30 +166,60 @@ void notifier::on_del(std::string const& key)
    }
 }
 
-void notifier::on_token(std::string const& token)
+void notifier::on_pub(std::string const& token)
 {
    using value_type = map_type::value_type;
 
-   auto const j = json::parse(token);
-   auto const user = j.at("id").get<std::string>();
-   auto const value = j.at("token").get<std::string>();
+   // We receive two types on messages on these channel, user messages in
+   // the form
+   //
+   // { "cmd":"message"
+   // , "from":"6"
+   // , "is_sender_post":true
+   // , "msg":"g"
+   // , "nick":"uuuuu"
+   // , "post_id":4
+   // , "refers_to":-1
+   // , "to":"7"
+   // , "type":"chat"}
+   //
+   // And messages containing tokens
+   //
+   // { "id":"chat:6"
+   // , "token":"jdjdjdjdj" }
+   //
 
-   auto const match =
-      tokens_.insert(value_type {
-         user,
-         notifier_data {
-            value, net::steady_timer{ioc_}
+   auto j = json::parse(token);
+
+   auto const cmd = j.at("cmd").get<std::string>();
+
+   if (cmd == "message")
+      return on_message(std::move(j));
+
+   if (cmd == "token") {
+      auto const user = j.at("id").get<std::string>();
+      auto const value = j.at("token").get<std::string>();
+
+      auto const match =
+         tokens_.insert(value_type {
+            user,
+            notifier_data
+            { value
+            , token
+            , net::steady_timer {ioc_}
+            }
          }
-      }
-   );
+      );
 
-   if (!match.second)
-      match.first->second.token = value;
+      if (!match.second)
+         match.first->second.token = value;
 
-   log::write( log::level::debug
-             , "User {0} has token {1}."
-             , user
-             , value);
+      log::write( log::level::debug
+                , "User {0} has token: {1}."
+                , user
+                , value);
+      return;
+   }
 }
 
 auto
@@ -216,12 +286,10 @@ void notifier::on_db_event(
       //    occase-db will publish so that we become aware of it.
       //
 
-      if (is_ntf(resp, rpush_str)) {
-         on_rpush(resp.back());
-      } else if (is_ntf(resp, del_str)) {
+      if (is_ntf(resp, del_str)) {
          on_del(resp.back());
       } else if (is_token(resp, cfg_.redis_token_channel)) {
-         on_token(resp.back());
+         on_pub(resp.back());
       } else {
          log::write( log::level::notice
                    , "on_db_event: Unknown redis event.");
@@ -238,22 +306,26 @@ void notifier::on_db_conn()
    // TODO: Filter the the reponses to these events in
    // notifier::on_db_event. Add a queue for that.
 
-   ss_.send(psubscribe({rpush_str}));
+   //ss_.send(psubscribe({rpush_str}));
    ss_.send(psubscribe({del_str}));
    ss_.send(subscribe(cfg_.redis_token_channel));
 }
 
 void notifier::init()
 {
-   auto const b =
-      load_ssl( ctx_
-              , cfg_.ssl_cert_file
-              , cfg_.ssl_priv_key_file
-              , cfg_.ssl_dh_file);
-   if (!b) {
-      log::write(log::level::notice, "Unable to load ssl files.");
-      //return;
-   }
+   // We are not verifying server certificates at the moment.
+   //
+   //auto const b =
+   //   load_ssl( ctx_
+   //           , cfg_.ssl_cert_file
+   //           , cfg_.ssl_priv_key_file
+   //           , cfg_.ssl_dh_file);
+   //if (!b) {
+   //   log::write(log::level::notice, "Unable to load ssl files.");
+   //   //return;
+   //}
+
+   ctx_.set_verify_mode(ssl::verify_none);
 
    auto h = [this](auto data, auto const& req)
       { on_db_event(std::move(data), req); };

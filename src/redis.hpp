@@ -213,14 +213,19 @@ public:
    template <class Iter>
    void store_chat_msg(std::string id, Iter begin, Iter end)
    {
+      if (begin == end)
+         return;
+
       using namespace aedis;
       auto const key = cfg_.chat_msg_prefix + id;
       auto cmd_str = multi()
                    + incr(cfg_.chat_msgs_counter_key)
                    + rpush(key, begin, end)
                    + expire(key, cfg_.chat_msg_exp_time)
+                   + publish(cfg_.token_channel, *std::prev(end))
                    + exec();
 
+      chat_pub_queue.push({events::ignore, {}});
       chat_pub_queue.push({events::ignore, {}});
       chat_pub_queue.push({events::ignore, {}});
       chat_pub_queue.push({events::ignore, {}});

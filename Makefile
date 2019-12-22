@@ -41,6 +41,7 @@ exes += occase-notify
 exes += occase-key-gen
 exes += occase-sim
 exes += db_tests
+exes += notify-test
 
 common_objs += system.o
 common_objs += logger.o
@@ -107,6 +108,9 @@ occase-notify: % : %.o $(notify_objs)
 
 occase-key-gen: % : %.o  $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) -lfmt -lsodium
+
+notify-test: % : %.o
+	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_CONCURRENCY_HINT_1=BOOST_ASIO_CONCURRENCY_HINT_UNSAFE
 
 install: all
 	install -D occase-db --target-directory $(bin_final_dir)

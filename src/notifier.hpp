@@ -12,7 +12,7 @@ namespace occase
 {
 
 struct notifier_data {
-   std::string token {"Test"};
+   std::string token;
    boost::asio::steady_timer timer;
 
    auto has_token() const noexcept

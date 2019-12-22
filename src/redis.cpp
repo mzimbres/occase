@@ -190,13 +190,6 @@ redis::on_user_sub( boost::system::error_code const& ec
       return;
    }
 
-   // TODO: filter the quit command.
-
-   //std::cout << "==> ";
-   //for (auto const& m : data)
-   //   std::cout << m << " ";
-   //std::cout << std::endl;
-
    // Notifications that arrive here have the form.
    //
    //    message pc:6 {"cmd":"presence","from":"5","to":"6","type":"writing"} 
@@ -206,9 +199,14 @@ redis::on_user_sub( boost::system::error_code const& ec
    //
    // We are only interested in rpush and presence messages whose
    // prefix is given by cfg_.presence_channel_prefix.
+   //
+   // Sometimes we will also receive other kind of message like OK when we
+   // send the quit command and we have to filter them too. 
+
+   if (std::size(data) != 3)
+      return;
 
    if (data.back() == "rpush" && data.front() == "message") {
-      assert(std::size(data) == 3);
       auto const pos = std::size(cfg_.user_notify_prefix);
       auto const user_id = data[1].substr(pos);
       assert(!std::empty(user_id));
@@ -219,7 +217,6 @@ redis::on_user_sub( boost::system::error_code const& ec
    auto const size = std::size(cfg_.presence_channel_prefix);
    auto const r = data[1].compare(0, size, cfg_.presence_channel_prefix);
    if (data.front() == "message" && r == 0) {
-      assert(std::size(data) == 3);
       auto const user_id = data[1].substr(size);
       std::swap(data.front(), data.back());
       data.resize(1);

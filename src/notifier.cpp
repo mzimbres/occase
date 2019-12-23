@@ -135,8 +135,8 @@ void notifier::on_timeout(
       // refused by fcm.
       std::cout << match->second.msg.dump() << std::endl;
       auto ntf_body = make_ntf_body(
-         match->second.msg.at("msg").get<std::string>(),
          match->second.msg.at("nick").get<std::string>(),
+         match->second.msg.at("msg").get<std::string>(),
          match->second.token);
 
       std::make_shared<ntf_session>(ioc_, ctx_)->run(

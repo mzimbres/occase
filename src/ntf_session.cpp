@@ -10,8 +10,8 @@ namespace occase
 {
 
 std::string
-make_ntf_body( std::string const& msg_body
-             , std::string const& msg_title
+make_ntf_body( std::string const& msg_title
+             , std::string const& msg_body
              , std::string const& fcm_user_token)
 {
    json j;
@@ -129,7 +129,10 @@ void ntf_session::on_read(
       return;
    }
 
-   std::cout << res_ << std::endl;
+   if (res_.result() != beast::http::status::ok) {
+      log::write(log::level::debug, "Response status: fail.");
+      //std::cout << res_ << std::endl;
+   }
 
    beast::get_lowest_layer(stream_)
       .expires_after(std::chrono::seconds(timeout));

@@ -73,15 +73,7 @@ lib_objs += $(db_objs)
 lib_objs += $(mms_objs)
 lib_objs += $(client_objs)
 lib_objs += $(common_objs)
-
-srcs =
-srcs += $(lib_objs:.o=.cpp)
-srcs += $(lib_objs:.o=.hpp)
-srcs += $(addsuffix .cpp, $(exes))
-srcs += net.hpp
-srcs += test_clients.hpp
-srcs += session_launcher.hpp
-srcs += async_read_resp.hpp
+lib_objs += $(notify_objs)
 
 aux = Makefile
 

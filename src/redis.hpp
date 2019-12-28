@@ -211,7 +211,10 @@ public:
    // Used to asynchronously store messages on redis. On completion it
    // passes no event to the worker.
    template <class Iter>
-   void store_chat_msg(std::string id, Iter begin, Iter end)
+   void
+   store_chat_msg( std::string const& id
+                 , Iter begin
+                 , Iter end)
    {
       if (begin == end)
          return;
@@ -239,7 +242,9 @@ public:
    //
    //    redis::events::presence
    //
-   void send_presence(std::string id, std::string msg);
+   void
+   send_presence( std::string const& id
+                , std::string const& msg);
 
    // Adds the post in the sorted set containing all posts and
    // publishes the post on the channel where it is broadcasted

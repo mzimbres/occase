@@ -379,7 +379,9 @@ void redis::disconnect()
    chat_pub_queue.push({events::ignore, {}});
 }
 
-void redis::send_presence(std::string id, std::string msg)
+void redis::
+send_presence( std::string const& id
+             , std::string const& msg)
 {
    // The channel on which presence messages are sent has the
    // following form.

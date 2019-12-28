@@ -360,22 +360,33 @@ private:
       return ev_res::subscribe_ok;
    }
 
-   ev_res on_app_chat_msg(json j, std::shared_ptr<db_session_type> s)
+   ev_res
+   on_app_chat_msg( json j
+                  , std::shared_ptr<db_session_type> s)
    {
-      // Consider searching the sessions map if the user in this worker
-      // and send him his message directly to avoid overloading the redis
-      // server. This would be a big optimization in the case of small
-      // number of workers.
-
       j["from"] = s->get_id();
-      auto msg = j.dump();
-      std::initializer_list<std::string> param = {msg};
 
+      // If the user is online in this node we can send him a message
+      // directly.  This is important to reduce the amount of data in
+      // redis, occase-notify and to reduce the communication latency.
       auto const to = j.at("to").get<std::string>();
-      db_.store_chat_msg( to
-                       , std::make_move_iterator(std::begin(param))
-                       , std::make_move_iterator(std::end(param)));
+      auto const match = sessions_.find(to);
+      if (match == std::end(sessions_)) {
+         // The peer is either offline or not in this node. We have to
+         // store the message in the database (redis).
+         auto param = {j.dump()};
+         db_.store_chat_msg( to
+                           , std::make_move_iterator(std::begin(param))
+                           , std::make_move_iterator(std::end(param)));
+      } else {
+         // The peer is online and in this node, we can send him the
+         // message directly.
+         if (auto ss = match->second.lock())
+            ss->send(j.dump(), true);
+      }
 
+      // No need to store the ack in the database as the user will resend
+      // the message if the connection breaks and has to be restablished. 
       auto const post_id = j.at("post_id").get<int>();
       json ack;
       ack["cmd"] = "message";
@@ -383,22 +394,27 @@ private:
       ack["post_id"] = post_id;
       ack["type"] = "server_ack";
       ack["result"] = "ok";
+
       s->send(ack.dump(), false);
       return ev_res::chat_msg_ok;
    }
 
-   ev_res on_app_presence(json j, std::shared_ptr<db_session_type> s)
+   ev_res
+   on_app_presence( json j
+                  , std::shared_ptr<db_session_type> s)
    {
-      // Consider searching the sessions map if the user in this worker
-      // and send him his message directly to avoid overloading the redis
-      // server. This would be a big optimization in the case of small
-      // number of workers.
+      // See also comments in on_app_chat_msg.
 
       j["from"] = s->get_id();
-      auto msg = j.dump();
-      std::initializer_list<std::string> param = {msg};
+
       auto const to = j.at("to").get<std::string>();
-      db_.send_presence(to, msg);
+      auto const match = sessions_.find(to);
+      if (match == std::end(sessions_)) {
+         db_.send_presence(to, j.dump());
+      } else {
+         if (auto ss = match->second.lock())
+            ss->send(j.dump(), false);
+      }
 
       return ev_res::presence_ok;
    }
@@ -525,8 +541,8 @@ private:
          // This is difficult to test since the retrieval of messages
          // from the database is pretty fast.
          db_.store_chat_msg( user_id
-                          , std::make_move_iterator(std::begin(msgs))
-                          , std::make_move_iterator(std::end(msgs)));
+                           , std::make_move_iterator(std::begin(msgs))
+                           , std::make_move_iterator(std::end(msgs)));
          return;
       }
 
@@ -838,11 +854,10 @@ private:
 
          log::write(log::level::notice, "Sending publish_ack to the database.");
 
-         std::initializer_list<std::string> param = {ack_str};
-
+         auto param = {ack_str};
          db_.store_chat_msg( std::move(post_queue_.front().item.from)
-                          , std::make_move_iterator(std::begin(param))
-                          , std::make_move_iterator(std::end(param)));
+                           , std::make_move_iterator(std::begin(param))
+                           , std::make_move_iterator(std::end(param)));
       }
 
       post_queue_.pop();
@@ -1137,8 +1152,8 @@ public:
                    , user_id);
 
          db_.store_chat_msg( std::move(user_id)
-                          , std::make_move_iterator(std::begin(msgs))
-                          , std::make_move_iterator(std::end(msgs)));
+                           , std::make_move_iterator(std::begin(msgs))
+                           , std::make_move_iterator(std::end(msgs)));
       }
    }
 

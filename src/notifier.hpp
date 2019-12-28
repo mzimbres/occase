@@ -15,7 +15,7 @@ using json = nlohmann::json;
 namespace occase
 {
 
-struct notifier_data {
+struct user_entry {
    // Contains the user fcm token.
    std::string token;
 
@@ -38,8 +38,11 @@ public:
       std::string ssl_priv_key_file;
       std::string ssl_dh_file;
       std::string redis_token_channel;
+      std::string tokens_file;
       aedis::session::config ss;
       ntf_session::args ss_args;
+      int max_msg_size = 1000;
+      int tokens_write_interval = 60;
 
       // The interval we are willing to wait for occase-db to retrieve the
       // message from redis before we consider the user offline.
@@ -49,9 +52,14 @@ public:
       {
          return std::chrono::seconds {wait_interval};
       }
+
+      auto get_tokens_write_interval() const noexcept
+      {
+         return std::chrono::seconds {tokens_write_interval};
+      }
    };
 
-   using map_type = std::unordered_map<std::string, notifier_data>;
+   using map_type = std::unordered_map<std::string, user_entry>;
 
 private:
    net::io_context ioc_ {1};
@@ -63,6 +71,8 @@ private:
    // Maps the key holding the user messages in redis in an fcm token.
    map_type tokens_;
 
+   boost::asio::steady_timer tokens_file_timer_;
+
    void on_db_event(
       boost::system::error_code ec,
       std::vector<std::string> resp);
@@ -71,7 +81,7 @@ private:
    void init();
    void on_message(json j);
    void on_del(std::string const& key);
-   void on_pub(std::string const& token);
+   void on_publish(std::string const& token);
    void on_timeout(
       boost::system::error_code ec,
       map_type::const_iterator iter) noexcept;

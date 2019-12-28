@@ -1,11 +1,38 @@
 #include "notifier.hpp"
 
 #include <chrono>
+#include <fstream>
+#include <iterator>
+#include <sstream>
 
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
 using namespace aedis;
+
+namespace
+{
+
+auto
+make_tokens_file(occase::notifier::map_type const& m)
+{
+   auto f = [](auto init, auto const& o)
+   {
+      init += o.first;
+      init += "\n";
+      init += o.second.token;
+      init += "\n";
+      return init;
+   };
+
+   return
+      std::accumulate( std::cbegin(m)
+                     , std::cend(m)
+                     , std::string {}
+                     , f);
+}
+
+}
 
 namespace occase
 {
@@ -13,6 +40,7 @@ namespace occase
 notifier::notifier(config const& cfg)
 : cfg_ {cfg}
 , ss_ {ioc_, cfg.ss, "id"}
+, tokens_file_timer_ {ioc_}
 {
    init();
 }
@@ -131,12 +159,13 @@ void notifier::on_timeout(
                 , match->first
                 , match->second.token);
 
-      // TODO: Limit the size of the message so that it does not get
-      // refused by fcm.
-      std::cout << match->second.msg.dump() << std::endl;
+      auto msg = match->second.msg.at("msg").get<std::string>();
+      if (std::size(msg) > cfg_.max_msg_size)
+         msg.resize(cfg_.max_msg_size);
+
       auto ntf_body = make_ntf_body(
          match->second.msg.at("nick").get<std::string>(),
-         match->second.msg.at("msg").get<std::string>(),
+         msg,
          match->second.token);
 
       std::make_shared<ntf_session>(ioc_, ctx_)->run(
@@ -161,16 +190,16 @@ void notifier::on_del(std::string const& key)
    auto const n = match->second.timer.cancel();
    if (n > 0) {
       log::write( log::level::debug
-                , "Cancel notificaition to {0}."
+                , "Notificaition to {0} has been canceled."
                 , key);
    }
 }
 
-void notifier::on_pub(std::string const& token)
+void notifier::on_publish(std::string const& token)
 {
    using value_type = map_type::value_type;
 
-   // We receive two types on messages on these channel, user messages in
+   // We receive two types on messages in these channel, user messages in
    // the form
    //
    // { "cmd":"message"
@@ -181,15 +210,16 @@ void notifier::on_pub(std::string const& token)
    // , "post_id":4
    // , "refers_to":-1
    // , "to":"7"
-   // , "type":"chat"}
+   // , "type":"chat"
+   // }
    //
-   // And messages containing tokens
+   // and messages containing tokens
    //
    // { "id":"chat:6"
-   // , "token":"jdjdjdjdj" }
-   //
+   // , "token":"jdjdjdjdj"
+   // }
 
-   auto j = json::parse(token);
+   auto const j = json::parse(token);
 
    auto const cmd = j.at("cmd").get<std::string>();
 
@@ -199,11 +229,15 @@ void notifier::on_pub(std::string const& token)
    if (cmd == "token") {
       auto const user = j.at("id").get<std::string>();
       auto const value = j.at("token").get<std::string>();
+      if (std::empty(value)) {
+         tokens_.erase(user);
+         return;
+      }
 
       auto const match =
          tokens_.insert(value_type {
             user,
-            notifier_data
+            user_entry
             { value
             , token
             , net::steady_timer {ioc_}
@@ -213,6 +247,29 @@ void notifier::on_pub(std::string const& token)
 
       if (!match.second)
          match.first->second.token = value;
+
+      using namespace std::chrono;
+
+      auto const now = system_clock::now().time_since_epoch();
+      auto const expiry = tokens_file_timer_.expiry().time_since_epoch();
+      if (expiry < now) {
+         auto f = [this](auto ec)
+         {
+            assert(ec != boost::asio::error::operation_aborted);
+            std::ofstream ofs {cfg_.tokens_file};
+            ofs << make_tokens_file(tokens_);
+         };
+
+         boost::system::error_code ec;
+         auto const n =
+            tokens_file_timer_.expires_from_now(
+               cfg_.get_tokens_write_interval(),
+               ec);
+
+         assert(n == 0);
+
+         tokens_file_timer_.async_wait(f);
+      }
 
       log::write( log::level::debug
                 , "User {0} has token: {1}."
@@ -226,14 +283,10 @@ auto
 is_ntf( std::vector<std::string> const& resp
       , std::string const& ntf_str)
 {
-   // We want to check if we received the following notification.
+   // We want to check events in the following form
    //
    // pmessage __keyevent@0__:rpush __keyevent@0__:rpush a
    //
-
-   // NOTE: If occase-db ever uses rpush on any key other than for push
-   // chat messages, we will have to filter them here, perhaps nased on the
-   // key prefix.
 
    if (std::size(resp) != 4)
       return false;
@@ -274,22 +327,10 @@ void notifier::on_db_event(
          return;
       }
 
-      // We are subscribed to two kinds of events.
-      //
-      // rpush:
-      // 
-      //    Happens when occase-db stores a user message in redis.
-      //
-      // publish:
-      //    
-      //    Happens when the user logs in and provides his fcm token, which
-      //    occase-db will publish so that we become aware of it.
-      //
-
       if (is_ntf(resp, del_str)) {
          on_del(resp.back());
       } else if (is_token(resp, cfg_.redis_token_channel)) {
-         on_pub(resp.back());
+         on_publish(resp.back());
       } else {
          log::write( log::level::notice
                    , "on_db_event: Unknown redis event.");
@@ -303,28 +344,15 @@ void notifier::on_db_event(
 
 void notifier::on_db_conn()
 {
-   // TODO: Filter the the reponses to these events in
+   // TODO: Filter the reponses to the commands below in
    // notifier::on_db_event. Add a queue for that.
 
-   //ss_.send(psubscribe({rpush_str}));
    ss_.send(psubscribe({del_str}));
    ss_.send(subscribe(cfg_.redis_token_channel));
 }
 
 void notifier::init()
 {
-   // We are not verifying server certificates at the moment.
-   //
-   //auto const b =
-   //   load_ssl( ctx_
-   //           , cfg_.ssl_cert_file
-   //           , cfg_.ssl_priv_key_file
-   //           , cfg_.ssl_dh_file);
-   //if (!b) {
-   //   log::write(log::level::notice, "Unable to load ssl files.");
-   //   //return;
-   //}
-
    ctx_.set_verify_mode(ssl::verify_none);
 
    auto h = [this](auto data, auto const& req)
@@ -336,6 +364,29 @@ void notifier::init()
       { on_db_conn(); };
 
    ss_.set_on_conn_handler(g);
+
+   // Load the file with the tokens.
+   std::vector<std::string> tmp;
+
+   std::ifstream ifs {cfg_.tokens_file};
+   std::string buffer;
+   while (std::getline(ifs, buffer))
+      tmp.push_back(buffer);
+
+   auto const n = std::size(tmp);
+   if (n < 2)
+      return;
+
+   using value_type = map_type::value_type;
+   for (unsigned i = 0; i < n / 2; ++i) {
+      auto v = value_type
+      { tmp.at(2 * i)
+      , user_entry { tmp[2 * i + 1], {}
+                   , net::steady_timer {ioc_}}
+      };
+
+      tokens_.insert(std::move(v));
+   }
 }
 
 }

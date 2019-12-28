@@ -17,7 +17,9 @@ make_ntf_body( std::string const& msg_title
    json j;
    j["notification"]["title"] = msg_title;
    j["notification"]["body"] = msg_body;
+   j["notification"]["tag"] = "chat";
    j["priority"] = "high";
+   j["collapse_key"] = "chat";
    j["data"]["click_action"] = "FLUTTER_NOTIFICATION_CLICK";
    j["data"]["id"] = "1";
    j["data"]["status"] = "done";
@@ -133,6 +135,8 @@ void ntf_session::on_read(
       log::write(log::level::debug, "Response status: fail.");
       //std::cout << res_ << std::endl;
    }
+
+   std::cout << res_.body() << std::endl;
 
    beast::get_lowest_layer(stream_)
       .expires_after(std::chrono::seconds(timeout));

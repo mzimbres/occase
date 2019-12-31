@@ -201,24 +201,8 @@ replier::send_chat_msg( std::string to, long long post_id
    j["to"] = to;
    j["msg"] = "Tenho interesse nesse carro, podemos conversar?";
    j["post_id"] = post_id;
-   j["is_sender_post"] = false;
    j["nick"] = nicks.at(n % std::size(nicks));
-
-   s->send_msg(j.dump());
-}
-
-void
-replier::ack_chat( std::string to, long long post_id
-                 , std::shared_ptr<client_type> s
-                 , std::string const& type)
-{
-   json j;
-   j["cmd"] = "message";
-   j["type"] = type;
-   j["to"] = to;
-   j["post_id"] = post_id;
-   j["is_sender_post"] = false;
-   j["nick"] = "Zebu";
+   j["id"] = 23;
 
    s->send_msg(j.dump());
 }
@@ -368,9 +352,10 @@ int simulator::on_read( std::string msg
          // Used only by the app. Not in the tests.
          auto const post_id = j.at("post_id").get<long long>();
          auto const from = j.at("from").get<std::string>();
+         auto const id = j.at("id").get<int>();
 
-         ack_chat(from, post_id, s, "app_ack_received");
-         ack_chat(from, post_id, s, "app_ack_read");
+         ack_chat(from, post_id, id, s, "app_ack_received");
+         ack_chat(from, post_id, id, s, "app_ack_read");
          send_chat_msg(from, post_id, s);
          return 1;
       }
@@ -414,11 +399,13 @@ int simulator::on_closed(boost::system::error_code ec)
    return -1;
 };
 
-void
-simulator::send_chat_msg( std::string to, long long post_id
-                      , std::shared_ptr<client_type> s)
+void simulator::
+send_chat_msg( std::string to
+             , long long post_id
+             , std::shared_ptr<client_type> s)
 {
    auto const n = std::stoi(op.user.id);
+
    json j;
    j["cmd"] = "message";
    j["type"] = "chat";
@@ -426,24 +413,27 @@ simulator::send_chat_msg( std::string to, long long post_id
    j["to"] = to;
    j["msg"] = "Message " + std::to_string(counter);
    j["post_id"] = post_id;
-   j["is_sender_post"] = false;
    j["nick"] = nicks.at(n % std::size(nicks));
+   j["id"] = 22;
 
    s->send_msg(j.dump());
 }
 
-void
-simulator::ack_chat( std::string to, long long post_id
-                   , std::shared_ptr<client_type> s
-                   , std::string const& type)
+void simulator::
+ack_chat( std::string to
+        , long long post_id
+        , int id
+        , std::shared_ptr<client_type> s
+        , std::string const& type)
 {
    json j;
    j["cmd"] = "message";
    j["type"] = type;
    j["to"] = to;
    j["post_id"] = post_id;
-   j["is_sender_post"] = false;
    j["nick"] = "Zebu";
+   j["ack_id"] = id;
+   j["id"] = -1;
 
    s->send_msg(j.dump());
 }

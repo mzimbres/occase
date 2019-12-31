@@ -388,10 +388,12 @@ private:
       // No need to store the ack in the database as the user will resend
       // the message if the connection breaks and has to be restablished. 
       auto const post_id = j.at("post_id").get<int>();
+      auto const message_id = j.at("id").get<int>();
       json ack;
       ack["cmd"] = "message";
       ack["from"] = to;
       ack["post_id"] = post_id;
+      ack["ack_id"] = message_id;
       ack["type"] = "server_ack";
       ack["result"] = "ok";
 

@@ -79,39 +79,14 @@ int main(int argc, char* argv[])
       client_op op;
       po::options_description desc("Options");
       desc.add_options()
-         ("help,h", "App simulator.")
-         ( "port,p"
-         , po::value<std::string>(&op.port)->default_value("8080")
-         , "Server port."
-         )
-         ("ip,d"
-         , po::value<std::string>(&op.host)->default_value("127.0.0.1")
-         , "Server ip address."
-         )
-
-         ("listen-users,c"
-         , po::value<int>(&op.listen_users)->default_value(10)
-         , "Number of listen users."
-         )
-
-         ("number-of-replies,r"
-         , po::value<int>(&op.n_replies)->default_value(10)
-         , "The number of replies."
-         )
-
-         ("launch-interval,g"
-         , po::value<int>(&op.launch_interval)->default_value(100)
-         , "Interval used to launch test clients."
-         )
-
-         ("handshake-timeout,k"
-         , po::value<int>(&op.handshake_tm)->default_value(3)
-         , "Time before which the server should have given "
-           "up on the handshake in seconds.")
-
-         ("auth-timeout,l"
-         , po::value<int>(&op.auth_timeout)->default_value(3)
-         , "Time before which the server should giveup witing for auth cmd.")
+      ("help,h", "App simulator.")
+      ("port,p", po::value<std::string>(&op.port)->default_value("8080"), "Server port.")
+      ("ip,d", po::value<std::string>(&op.host)->default_value("127.0.0.1"), "Server ip address.")
+      ("listen-users,c", po::value<int>(&op.listen_users)->default_value(1), "Number of listen users.")
+      ("number-of-replies,r", po::value<int>(&op.n_replies)->default_value(1), "The number of replies.")
+      ("launch-interval,g", po::value<int>(&op.launch_interval)->default_value(100), "Interval used to launch test clients.")
+      ("handshake-timeout,k", po::value<int>(&op.handshake_tm)->default_value(3), "Time before which the server should have given up on the handshake (in seconds).")
+      ("auth-timeout,l", po::value<int>(&op.auth_timeout)->default_value(3), "Time before which the server should giveup witing for auth cmd.")
       ;
 
       po::variables_map vm;        

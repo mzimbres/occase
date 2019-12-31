@@ -71,10 +71,6 @@ private:
    void send_chat_msg( std::string user, long long id
                      , std::shared_ptr<client_type> s);
 
-   void ack_chat( std::string user, long long id
-                , std::shared_ptr<client_type> s
-                , std::string const& type);
-
 public:
    replier(options_type op_)
    : op(op_) { }
@@ -155,9 +151,12 @@ private:
    void send_chat_msg( std::string user, long long id
                      , std::shared_ptr<client_type> s);
 
-   void ack_chat( std::string user, long long id
-                , std::shared_ptr<client_type> s
-                , std::string const& type);
+   void
+   ack_chat( std::string user
+           , long long post_id
+           , int id
+           , std::shared_ptr<client_type> s
+           , std::string const& type);
 
 public:
    simulator(options_type op_)

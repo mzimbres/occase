@@ -305,7 +305,9 @@ private:
          resp_.set(http::field::content_type, "text/html");
 
          auto const post_id = std::stoi(foo[1]);
-         auto const posts = db.get_posts(post_id);
+
+         auto const posts =
+            db.get_posts(post_id, [](auto const&){return true;});
 
          boost::beast::ostream(resp_.body())
          << html::make_adm_page( db.get_cfg().db_host

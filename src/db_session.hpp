@@ -213,8 +213,6 @@ private:
       }
    }
 
-   void do_send(msg_entry entry);
-
    void finish()
    {
       try {
@@ -307,11 +305,11 @@ public:
          do_write(msg_queue_.front().msg);
    }
 
-   void send_post(std::shared_ptr<std::string> msg, post const& p)
+   auto ignore(post const& p) const noexcept
    {
       if (any_of_filter_ != 0) {
          if ((any_of_filter_ & p.features) == 0)
-            return;
+            return true;
       }
 
       if (!std::empty(sub_channels_)) {
@@ -320,7 +318,7 @@ public:
                               , std::end(sub_channels_)
                               , p.filter);
          if (!match)
-            return;
+            return true;
       }
 
       if (!std::empty(ranges_)) {
@@ -333,9 +331,17 @@ public:
             auto const b = ranges_[2 * i + 1];
             auto const v = p.range_values[i];
             if (v < a || b < v)
-               return; // Not in range.
+               return true; // Not in range.
          }
       }
+
+      return false;
+   }
+
+   void send_post(std::shared_ptr<std::string> msg, post const& p)
+   {
+      if (ignore(p))
+         return;
 
       auto const is_empty = std::empty(msg_queue_);
 

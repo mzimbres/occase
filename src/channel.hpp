@@ -199,8 +199,14 @@ public:
       }
    }
 
-   // Copies all items that are newer than id to inserter.
-   void get_posts(int id, inserter_type inserter, long int max) const
+   // Copies all items that are newer than id and that satistfies the
+   // predicate to inserter.
+   template <class UnaryPredicate>
+   void
+   get_posts( int id
+            , inserter_type inserter
+            , long int max
+            , UnaryPredicate pred) const
    {
       auto comp = [](auto const& a, auto const& b)
          { return a < b.id; };
@@ -215,7 +221,7 @@ public:
       // this channel.
       auto const n = std::distance(point, std::cend(items_));
       auto const d = std::min(n, max);
-      std::copy(point, point + d, inserter);
+      std::copy_if(point, point + d, inserter, pred);
    }
 
    // Removes a post if it exists in the channel.

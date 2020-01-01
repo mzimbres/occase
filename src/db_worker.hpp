@@ -267,13 +267,21 @@ private:
 
       std::vector<post> items;
 
+      auto pred = [s](auto const& p)
+         { return !s->ignore(p); };
+
       // If the second channels are empty, the app wants posts from all
       // channels, otherwise we have to traverse the individual channels.
       if (std::empty(channels)) {
-         root_channel_.add_member(psession, channel_cfg_.cleanup_rate);
-         root_channel_.get_posts( app_last_post_id
-                                , std::back_inserter(items)
-                                , core_cfg_.max_posts_on_sub);
+         root_channel_.add_member(
+            psession,
+            channel_cfg_.cleanup_rate);
+
+         root_channel_.get_posts(
+            app_last_post_id,
+            std::back_inserter(items),
+            core_cfg_.max_posts_on_sub,
+            pred);
       } else {
          // We will use the following algorithm
          // 1. Search the first channel the user subscribed to.
@@ -320,9 +328,11 @@ private:
                auto const n = core_cfg_.max_posts_on_sub - ssize(items);
                assert(n >= 0);
 
-               channels_[i].get_posts( app_last_post_id
-                                        , std::back_inserter(items)
-                                        , n);
+               channels_[i].get_posts(
+                  app_last_post_id,
+                  std::back_inserter(items),
+                  n,
+                  pred);
             };
 
             // There is a limit on how many channels the app is allowed
@@ -1213,13 +1223,19 @@ public:
       return wstats;
    }
 
-   std::vector<post> get_posts(int id) const noexcept
+   template <class UnaryPredicate>
+   std::vector<post>
+   get_posts(int id, UnaryPredicate pred) const noexcept
    {
       try {
          std::vector<post> posts;
-         root_channel_.get_posts( id
-                                , std::back_inserter(posts)
-                                , core_cfg_.max_posts_on_sub);
+
+         root_channel_.get_posts(
+            id,
+            std::back_inserter(posts),
+            core_cfg_.max_posts_on_sub,
+            pred);
+
          return posts;
       } catch (std::exception const& e) {
          log::write(log::level::info, "get_posts: {}", e.what());

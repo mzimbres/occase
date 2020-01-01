@@ -1,6 +1,6 @@
 [Unit]
 Description=Advanced realtime database.
-After=network.target redis.service sentinel.service
+After=network.target
 
 [Service]
 ExecStart=/usr/bin/occase-db /etc/occase/occase-db.conf

@@ -108,24 +108,28 @@ notify-test: % : %.o $(common_objs) ntf_session.o
 install: all
 	install -D occase-db --target-directory $(bin_final_dir)
 	install -D occase-mms --target-directory $(bin_final_dir)
+	install -D occase-notify --target-directory $(bin_final_dir)
 	install -D occase-key-gen --target-directory $(bin_final_dir)
 	install -D occase-sim --target-directory $(bin_final_dir)
 	install -D scripts/occase-db-monitor $(bin_final_dir)
 	install -D scripts/occase-tree-gen $(bin_final_dir)
 	install -D config/occase-db.conf $(conf_final_dir)/occase-db.conf
 	install -D config/occase-mms.conf $(conf_final_dir)/occase-mms.conf
+	install -D config/occase-notify.conf $(conf_final_dir)/occase-notify.conf
 	install -D doc/management.txt $(doc_final_dir)/management.txt
 	install -D doc/intro.txt $(doc_final_dir)/intro.txt
 
 uninstall:
 	rm -f $(bin_final_dir)/occase-db
 	rm -f $(bin_final_dir)/occase-mms
+	rm -f $(bin_final_dir)/occase-notify
 	rm -f $(bin_final_dir)/occase-key-gen
 	rm -f $(bin_final_dir)/occase-sim
 	rm -f scripts/$(bin_final_dir)/occase-db-monitor
 	rm -f scripts/$(bin_final_dir)/occase-tree-gen
 	rm -f $(conf_final_dir)/occase-db.conf
 	rm -f $(conf_final_dir)/occase-mms.conf
+	rm -f $(conf_final_dir)/occase-notify.conf
 	rm -f $(doc_final_dir)/management.txt
 	rm -f $(doc_final_dir)/intro.txt
 	rmdir $(DESDIR)$(docdir)

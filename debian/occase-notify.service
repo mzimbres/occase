@@ -1,0 +1,12 @@
+[Unit]
+Description=Push notification server.
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/occase-notify /etc/occase/occase-notify.conf
+ExecStop=/bin/kill -s INT $MAINPID
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+

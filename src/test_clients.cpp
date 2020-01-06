@@ -432,7 +432,7 @@ ack_chat( std::string to
    j["to"] = to;
    j["post_id"] = post_id;
    j["nick"] = "Zebu";
-   j["ack_id"] = id;
+   j["ack_ids"] = std::vector<int>{id};
    j["id"] = -1;
 
    s->send_msg(j.dump());

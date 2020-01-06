@@ -15,18 +15,18 @@ namespace occase
 class redis {
 public:
    enum class events
-   { menu
-   , chat_messages
+   { channels
+   , user_messages
    , post
    , posts
    , post_id
    , user_id
    , user_data
    , register_user
-   , menu_connect
+   , post_connect
    , channel_post
    , remove_post
-   , get_chat_msgs
+   , user_msgs_priv
    , presence
    , update_post_deadline
    , ignore
@@ -48,9 +48,15 @@ public:
    // backup strategies, for the first case backup is very important, for
    // the second, not so much.
    struct config {
-      aedis::session::config ss_cfg1;
-      aedis::session::config ss_cfg2;
-      //
+      // Redis session config for everything related to posts.
+      aedis::session::config ss_post;
+
+      // Redis session config for user credentials and data.
+      aedis::session::config ss_user;
+
+      // Redis session config for user messages.
+      aedis::session::config ss_msgs;
+
       // The name of the channel where *publish* commands are be sent.
       std::string menu_channel_key;
 
@@ -68,7 +74,7 @@ public:
       // This prefix will be used to form the channel where presence
       // messages sent to the user will be published e.g. prefix:102.
       // We use channel for presence since it does not have to be
-      // persisted. TODO: Read this value from the config file.
+      // persisted.
       std::string presence_channel_prefix = "pc:";
 
       // Redis keyspace notification prefix. When a key is touched redis
@@ -134,58 +140,56 @@ public:
 private:
    config const cfg_;
 
-   // The Session used to subscribe to posts. No commands should be
-   // posted here (with the exception of subscribe and unsubscribe).
-   aedis::session ss_menu_sub;
+   // Redis sessions to deal with posts.
+   aedis::session ss_post_sub_;
+   aedis::session ss_post_pub_;
+   std::queue<events> post_pub_queue_;
 
-   // The session that deals with the publication of posts and the
-   // registration of users. On startup it will also be used to
-   // retrieve posts to load the workers.
-   aedis::session ss_menu_pub;
-   std::queue<events> menu_pub_queue;
+   // Redis sessions used to deal with user messages and presence.
+   aedis::session ss_msgs_sub_;
+   aedis::session ss_msgs_pub_;
+   std::queue<response> msgs_pub_queue_;
 
-   // The session used to subscribe to keyspace notifications e.g.
-   // when the user receives a message. Again, no commands should be
-   // posted here (with the exception of subscribe and unsubscribe)
-   aedis::session ss_chat_sub;
+   // Redis sessions used to deal with user credentials.
+   aedis::session ss_user_pub_;
+   std::queue<events> user_pub_queue_;
 
-   // Session used to store and retrieve user messages whose notification
-   // arrived on session ss_chat_sub.
-   aedis::session ss_chat_pub;
-   std::queue<response> chat_pub_queue;
+   msg_handler_type ev_handler_;
 
-   msg_handler_type worker_handler;
-
-   void on_menu_sub( boost::system::error_code const& ec
+   void on_post_sub( boost::system::error_code const& ec
                    , std::vector<std::string> data);
 
-   void on_menu_pub( boost::system::error_code const& ec
+   void on_post_pub( boost::system::error_code const& ec
                    , std::vector<std::string> data);
 
-   void on_user_sub( boost::system::error_code const& ec
+   void on_msgs_sub( boost::system::error_code const& ec
+                   , std::vector<std::string> data);
+
+   void on_msgs_pub( boost::system::error_code const& ec
                    , std::vector<std::string> data);
 
    void on_user_pub( boost::system::error_code const& ec
                    , std::vector<std::string> data);
 
-   void on_menu_sub_conn();
-   void on_menu_pub_conn();
-   void on_chat_sub_conn();
-   void on_chat_pub_conn();
+   void on_post_sub_conn();
+   void on_post_pub_conn();
+   void on_msgs_sub_conn();
+   void on_msgs_pub_conn();
+   void on_user_pub_conn();
 
 public:
    redis(config const& cfg, net::io_context& ioc);
 
    // Incomming message will complete on this handler with
    // one of the possible codes defined in redis::events.
-   void set_on_msg_handler(msg_handler_type h)
-      { worker_handler = h; }
+   void set_event_handler(msg_handler_type h)
+      { ev_handler_ = h; }
 
    void run();
 
    // Retrieves the menu asynchronously. Complete with
    //
-   //    redis::events::menu.
+   //    redis::events::channels.
    //
    void retrieve_channels();
 
@@ -195,7 +199,7 @@ public:
    // we get to it. User messages will complete on workers callback
    // with
    // 
-   //    redis::events::chat_messages
+   //    redis::events::user_messages
    //
    // Additionaly, this function also subscribes the worker to
    // presence messages, which completes with
@@ -228,14 +232,14 @@ public:
                    + publish(cfg_.token_channel, *std::prev(end))
                    + exec();
 
-      chat_pub_queue.push({events::ignore, {}});
-      chat_pub_queue.push({events::ignore, {}});
-      chat_pub_queue.push({events::ignore, {}});
-      chat_pub_queue.push({events::ignore, {}});
-      chat_pub_queue.push({events::ignore, {}});
-      chat_pub_queue.push({events::ignore, {}});
+      msgs_pub_queue_.push({events::ignore, {}});
+      msgs_pub_queue_.push({events::ignore, {}});
+      msgs_pub_queue_.push({events::ignore, {}});
+      msgs_pub_queue_.push({events::ignore, {}});
+      msgs_pub_queue_.push({events::ignore, {}});
+      msgs_pub_queue_.push({events::ignore, {}});
 
-      ss_chat_pub.send(std::move(cmd_str));
+      ss_msgs_pub_.send(std::move(cmd_str));
    }
 
    // Sends presence to the user with id id. Completes with
@@ -277,9 +281,9 @@ public:
 
    // Retrieves user messages. Completes with the event
    //
-   //    redis::events::chat_messages
+   //    redis::events::user_messages
    //
-   void retrieve_chat_msgs(std::string const& user_id);
+   void retrieve_messages(std::string const& user_id);
    //
    // Requests a new user id from redis by increasing the last one.
    // Completes with
@@ -339,10 +343,10 @@ public:
    void disconnect();
 
    auto get_post_queue_size() const noexcept
-      { return ssize(menu_pub_queue);}
+      { return ssize(post_pub_queue_);}
 
    auto get_chat_queue_size() const noexcept
-      { return ssize(chat_pub_queue);}
+      { return ssize(msgs_pub_queue_);}
 };
 
 }

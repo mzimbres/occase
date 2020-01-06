@@ -150,17 +150,17 @@ int replier::on_read(std::string msg, std::shared_ptr<client_type> s)
          return 1; // Fix the server and remove this.
       }
 
-      if (type == "chat" || type == "chat_redirected") {
+      if (type == "chat") {
          std::cout << "Should not get here in the tests." << std::endl;
          return 1;
       }
 
       // Currently we make no use of these commands.
-      if (type == "app_ack_received") {
+      if (type == "chat_ack_received") {
          return 1;
       }
 
-      if (type == "app_ack_read") {
+      if (type == "chat_ack_read") {
          return 1;
       }
    }
@@ -196,6 +196,7 @@ replier::send_chat_msg( std::string to, long long post_id
    auto const n = std::stoi(op.user.id);
    json j;
    j["cmd"] = "message";
+   j["is_redirected"] = 0;
    j["type"] = "chat";
    j["refers_to"] = -1;
    j["to"] = to;
@@ -348,19 +349,19 @@ int simulator::on_read( std::string msg
       if (type == "server_ack")
          return 1; // Fix the server and remove this.
 
-      if (type == "chat" || type == "chat_redirected") {
+      if (type == "chat") {
          // Used only by the app. Not in the tests.
          auto const post_id = j.at("post_id").get<long long>();
          auto const from = j.at("from").get<std::string>();
          auto const id = j.at("id").get<int>();
 
-         ack_chat(from, post_id, id, s, "app_ack_received");
-         ack_chat(from, post_id, id, s, "app_ack_read");
+         ack_chat(from, post_id, id, s, "chat_ack_received");
+         ack_chat(from, post_id, id, s, "chat_ack_read");
          send_chat_msg(from, post_id, s);
          return 1;
       }
 
-      if (type == "app_ack_received" || type == "app_ack_read") {
+      if (type == "chat_ack_received" || type == "chat_ack_read") {
          if (++counter == op.counter) {
             counter = 0;
             return 1;
@@ -373,7 +374,7 @@ int simulator::on_read( std::string msg
          return 1;
       }
 
-      if (type == "app_ack_read") {
+      if (type == "chat_ack_read") {
          return 1;
       }
    }
@@ -408,6 +409,7 @@ send_chat_msg( std::string to
 
    json j;
    j["cmd"] = "message";
+   j["is_redirected"] = 0;
    j["type"] = "chat";
    j["refers_to"] = -1;
    j["to"] = to;

@@ -89,8 +89,9 @@ auto get_cfg(int argc, char* argv[])
    ("server-name", po::value<std::string>(&cfg.worker.core.server_name)->default_value("occase-db"))
    ("mms-key", po::value<std::string>(&cfg.worker.core.mms_key))
    ("mms-host", po::value<std::string>(&cfg.worker.core.mms_host))
-   ("redis-host1", po::value<std::string>(&cfg.worker.db.ss_cfg1.name)->default_value("mymaster"))
-   ("redis-host2", po::value<std::string>(&cfg.worker.db.ss_cfg2.name)->default_value("mymaster"))
+   ("redis-host-post", po::value<std::string>(&cfg.worker.db.ss_post.name)->default_value("mymaster"))
+   ("redis-host-msgs", po::value<std::string>(&cfg.worker.db.ss_msgs.name)->default_value("mymaster"))
+   ("redis-host-user", po::value<std::string>(&cfg.worker.db.ss_user.name)->default_value("mymaster"))
    ("redis-sentinels", po::value<std::vector<std::string>>(&sentinels))
    ("redis-max-pipeline-size", po::value<int>(&max_pipeline_size)->default_value(256))
    ("redis-key-channels", po::value<std::string>(&cfg.worker.db.channels_key)->default_value("channels"))
@@ -147,20 +148,27 @@ auto get_cfg(int argc, char* argv[])
       return occase_db_cfg {-1};
    }
 
-   cfg.worker.db.ss_cfg1.sentinels = sentinels;
-   cfg.worker.db.ss_cfg1.max_pipeline_size = max_pipeline_size;
-   cfg.worker.db.ss_cfg1.role = "master";
-   cfg.worker.db.ss_cfg1.log_filter =
+   cfg.worker.db.ss_post.sentinels = sentinels;
+   cfg.worker.db.ss_post.max_pipeline_size = max_pipeline_size;
+   cfg.worker.db.ss_post.role = "master";
+   cfg.worker.db.ss_post.log_filter =
       log::to_level<aedis::log::level>(logfilter_str);
 
-   cfg.worker.db.ss_cfg2.sentinels = sentinels;
-   cfg.worker.db.ss_cfg2.max_pipeline_size = max_pipeline_size;
-   cfg.worker.db.ss_cfg2.role = "master";
-   cfg.worker.db.ss_cfg2.log_filter =
+   cfg.worker.db.ss_msgs.sentinels = sentinels;
+   cfg.worker.db.ss_msgs.max_pipeline_size = max_pipeline_size;
+   cfg.worker.db.ss_msgs.role = "master";
+   cfg.worker.db.ss_msgs.log_filter =
+      log::to_level<aedis::log::level>(logfilter_str);
+
+   cfg.worker.db.ss_user.sentinels = sentinels;
+   cfg.worker.db.ss_user.max_pipeline_size = max_pipeline_size;
+   cfg.worker.db.ss_user.role = "master";
+   cfg.worker.db.ss_user.log_filter =
       log::to_level<aedis::log::level>(logfilter_str);
 
    cfg.worker.timeouts = cfg.get_timeouts();
    cfg.logfilter = log::to_level<occase::log::level>(logfilter_str);
+
    return cfg;
 }
 

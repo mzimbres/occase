@@ -174,7 +174,7 @@ private:
       auto handler = [this](auto data, auto const& req)
          { on_db_event(std::move(data), req); };
 
-      db_.set_on_msg_handler(handler);
+      db_.set_event_handler(handler);
       db_.run();
    }
 
@@ -780,11 +780,11 @@ private:
    {
       switch (req.req)
       {
-         case redis::events::menu:
+         case redis::events::channels:
             on_db_menu(data);
             break;
 
-         case redis::events::chat_messages:
+         case redis::events::user_messages:
             on_db_chat_msg(req.user_id, std::move(data));
             break;
 
@@ -814,7 +814,7 @@ private:
             on_db_register();
             break;
 
-         case redis::events::menu_connect:
+         case redis::events::post_connect:
             on_db_menu_connect();
             break;
 
@@ -1019,7 +1019,7 @@ private:
                }
 
                db_.on_user_online(s->get_id());
-               db_.retrieve_chat_msgs(s->get_id());
+               db_.retrieve_messages(s->get_id());
 
                using namespace std::chrono;
                auto const now = duration_cast<seconds>(

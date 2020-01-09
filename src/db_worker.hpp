@@ -112,7 +112,7 @@ class db_worker {
 private:
    using db_session_type = typename AdmSession::db_session_type;
 
-   net::io_context ioc_ {1};
+   net::io_context ioc_ {BOOST_ASIO_CONCURRENCY_HINT_UNSAFE};
    ssl::context& ctx_;
    core_cfg const core_cfg_;
 

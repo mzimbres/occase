@@ -18,7 +18,7 @@ int main(int argc, char** argv)
 
       log::upto(log::level::debug);
 
-      net::io_context ioc;
+      net::io_context ioc {BOOST_ASIO_CONCURRENCY_HINT_UNSAFE};
       ssl::context ctx{ssl::context::tlsv12_client};
       ctx.set_verify_mode(ssl::verify_none);
 

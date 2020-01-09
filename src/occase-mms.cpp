@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
       init_libsodium();
       log::upto(cfg.logfilter);
 
-      net::io_context ioc {1};
+      net::io_context ioc {BOOST_ASIO_CONCURRENCY_HINT_UNSAFE};
       ssl::context ctx {ssl::context::tlsv12};
       acceptor_mgr<mms_session> lst {ioc};
       mms_worker worker {cfg.session_cfg};

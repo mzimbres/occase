@@ -62,7 +62,7 @@ public:
    using map_type = std::unordered_map<std::string, user_entry>;
 
 private:
-   net::io_context ioc_ {1};
+   net::io_context ioc_ {BOOST_ASIO_CONCURRENCY_HINT_UNSAFE};
    config cfg_;
    ssl::context ctx_ {ssl::context::tlsv12};
    aedis::session ss_;

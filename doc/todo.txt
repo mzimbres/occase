@@ -21,6 +21,11 @@
    folder is ideal.
    - If you like Certbot, please consider supporting our work by:
 
-occase-notify: ./src/notifier.cpp:269: void
-occase::notifier::on_publish(const string&): Assertion `n == 0' failed.
-Aborted
+* Error caught on occase-notify
+
+   occase-notify: ./src/notifier.cpp:269: void
+   occase::notifier::on_publish(const string&): Assertion `n == 0' failed.
+   Aborted
+
+* Test when running three redis instances.
+

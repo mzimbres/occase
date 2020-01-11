@@ -1,7 +1,0 @@
-This directory contains some test menus used in the tests
-
-Each directory is meant to contains two files
-
-   1. The location file named "locations.txt" 
-   2. The products file names "products.txt"
-

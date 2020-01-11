@@ -56,7 +56,7 @@ struct ws_timeouts {
 template <class Derived>
 class db_session {
 private:
-   static auto constexpr sub_channels_size = 32;
+   static auto constexpr sub_channels_size = 64;
    static auto constexpr ranges_size = 5;
 
    struct msg_entry {

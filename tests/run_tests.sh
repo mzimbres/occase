@@ -10,8 +10,8 @@
 for (( i = 0 ; i < 2 ; ++i )); do
    echo "Starting test 1-a-$i"
    ./db_tests --test 1\
-              --publishers 1\
-              --listeners 1\
+              --publishers 2\
+              --listeners 100\
               --post-listeners 5\
               --channels tests/channels.txt\
               --filters tests/filters.txt\

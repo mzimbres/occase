@@ -1,9 +1,48 @@
 Redis
 =========================================================================
 
-You will need to enable keyspace notifications in redis.conf.
+We use three redis instances
 
-notify-keyspace-events "KA"
+  1. Post: Store the posts.
+  2. User: Stores user credentials and post limits.
+  3. Msgs: Chat messages persistency.
+
+  The config file for each instance can be found in the config
+  directory.
+
+  config/redis-common.conf
+  config/redis-post.conf
+  config/redis-user.conf
+  config/redis-msgs.conf
+
+  These files are included in the distribution redis files. The
+  version /etc/redis/* must have
+
+  $ chown redis:redis file
+
+- Keyspace notification must be enabled for the msgs redis server
+  (number 3. above). They are used to inform an occase-db instance
+  that a user has messages waiting.
+
+- Keyspace events is also needed at the moment by occase-notify. When
+  a user is online occase-db will retrieve the messages and delete
+  them from redis. The delete event is captured by occase notify to
+  avoid sending a push notifcation to the user.
+
+- The redis database file for posts and user credentials require safe
+  storage while the msgs not so much.
+
+- I am using port 600 for the sentinel to be able to make the port
+  range bigger for the occase-db.
+
+- Configure the redis sentinels
+
+   sentinel monitor post 127.0.0.1 1100 1
+   sentinel monitor user 127.0.0.1 1101 1
+   sentinel monitor msgs 127.0.0.1 1102 1
+
+- Edit the redis systemd server and sentinel service files to not
+  include pid file and forking.
 
 occase-db
 =========================================================================

@@ -29,3 +29,5 @@
 
 * Test when running three redis instances.
 
+* Generate passwords without touching redis using device generated
+  random numbers.

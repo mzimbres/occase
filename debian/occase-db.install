@@ -1,3 +1,6 @@
 occase-db usr/bin
 config/occase-db.conf etc/occase
 config/dhparam4096.pem etc/occase
+config/redis-post.conf etc/occase
+config/redis-user.conf etc/occase
+config/redis-msgs.conf etc/occase

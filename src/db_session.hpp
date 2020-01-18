@@ -56,8 +56,8 @@ struct ws_timeouts {
 template <class Derived>
 class db_session {
 private:
-   static auto constexpr sub_channels_size = 64;
-   static auto constexpr ranges_size = 5;
+   static auto constexpr sub_channels_size_ = 64;
+   static auto constexpr ranges_size_ = 2 * 3;
 
    struct msg_entry {
       std::string msg;
@@ -75,10 +75,10 @@ private:
    code_type any_of_filter_ = 0;
 
    boost::container::static_vector<
-      code_type, sub_channels_size> sub_channels_;
+      code_type, sub_channels_size_> sub_channels_;
 
    boost::container::static_vector<
-      code_type, ranges_size> ranges_;
+      code_type, ranges_size_> ranges_;
 
    // The number of posts the user can publish until the deadline.
    int remaining_posts_ = 0;
@@ -307,10 +307,9 @@ public:
 
    auto ignore(post const& p) const noexcept
    {
-      if (any_of_filter_ != 0) {
+      if (any_of_filter_ != 0)
          if ((any_of_filter_ & p.features) == 0)
             return true;
-      }
 
       if (!std::empty(sub_channels_)) {
          auto const match =
@@ -323,11 +322,11 @@ public:
 
       if (!std::empty(ranges_)) {
          auto const min =
-            std::min( ssize(ranges_) / 2
-                    , ssize(p.range_values));
+            std::min(ssize(ranges_) / 2,
+                     ssize(p.range_values));
 
          for (auto i = 0; i < min; ++i) {
-            auto const a = ranges_[2 * i];
+            auto const a = ranges_[2 * i + 0];
             auto const b = ranges_[2 * i + 1];
             auto const v = p.range_values[i];
             if (v < a || b < v)
@@ -380,7 +379,7 @@ public:
 
    void set_sub_channels(std::vector<code_type> const& codes)
    {
-      auto const min = std::min(ssize(codes), sub_channels_size);
+      auto const min = std::min(ssize(codes), sub_channels_size_);
       sub_channels_.clear();
       std::copy( std::cbegin(codes)
                , std::cbegin(codes) + min
@@ -389,7 +388,7 @@ public:
 
    void set_ranges(std::vector<int> const& ranges)
    {
-      auto const min = std::min(ssize(ranges), ranges_size);
+      auto const min = std::min(ssize(ranges), ranges_size_);
       ranges_.clear();
       std::copy( std::cbegin(ranges)
                , std::cbegin(ranges) + min

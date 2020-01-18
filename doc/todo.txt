@@ -31,3 +31,5 @@
 
 * Generate passwords without touching redis using device generated
   random numbers.
+
+* Use the notify field in the login command.

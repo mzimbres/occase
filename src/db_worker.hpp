@@ -515,13 +515,14 @@ private:
 
    ev_res on_app_filenames(json j, std::shared_ptr<db_session_type> s)
    {
-      if (s->get_remaining_posts() < 1) {
-         json resp;
-         resp["cmd"] = "filenames_ack";
-         resp["result"] = "fail";
-         s->send(resp.dump(), false);
-         return ev_res::filenames_fail;
-      }
+      // NOTE: Earlier I was sending fail if
+      //
+      //    if (s->get_remaining_posts() < 1)
+      //       ...
+      //
+      // This is incorrected however as it prevents people from
+      // sending paid posts in the future for example if they have
+      // used all its free posts.
 
       auto const n = sz::mms_filename_min_size;
       auto f = [this, n]()

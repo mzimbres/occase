@@ -18,10 +18,25 @@ namespace occase
 namespace sz
 {
 
-constexpr std::size_t a = 5;
-constexpr std::size_t b = 2;
+// The occase-db server generates filenames for multimedia files. In
+// occase-mms folders will be built from these filenames in the
+// following form
+//
+//    abcdefgh.jpg --> /a/b/cd/abcdefgh.jpg
+//
+// The total number of folders with depend on the size of the
+// character set that at the moment is 36.
+// 
+// To avoid collisions among filenames in the same directory we need
+// the d below. Given the size of the character set when d = 4 we
+// have 1679616 possible filenames in the same directory, which hugely
+// exceeds the expected values, which much be around 1000.
+
+constexpr std::size_t a = 1;
+constexpr std::size_t b = 1;
 constexpr std::size_t c = 2;
-constexpr std::size_t mms_filename_min_size = a + b + c;
+constexpr std::size_t d = 4;
+constexpr std::size_t mms_filename_size = a + b + c + d;
 
 }
 

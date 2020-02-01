@@ -9,10 +9,11 @@
 
 #include "utils.hpp"
 
-namespace {
+namespace
+{
+
 constexpr char hextable[] = "0123456789abcdef";
-constexpr char pwdchars[] =
-   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+constexpr char pwdchars[] = "abcdefghijklmnopqrstuvwxyz0123456789";
 
 //constexpr auto hash_size = crypto_generichash_BYTES;
 constexpr auto hash_size = crypto_generichash_BYTES_MIN;

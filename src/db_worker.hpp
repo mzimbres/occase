@@ -524,16 +524,17 @@ private:
       // sending paid posts in the future for example if they have
       // used all its free posts.
 
-      auto const n = sz::mms_filename_min_size;
-      auto f = [this, n]()
+      auto f = [this]()
       {
-         auto const filename = pwdgen_(n);
+         auto const filename = pwdgen_(sz::mms_filename_size);
          auto const digest = make_hex_digest(filename, core_cfg_.mms_key);
          return core_cfg_.mms_host + digest + "/" + filename;
       };
 
       std::vector<std::string> names;
-      std::generate_n(std::back_inserter(names), n, f);
+      std::generate_n(std::back_inserter(names),
+                      sz::mms_filename_size,
+                      f);
 
       json resp;
       resp["cmd"] = "filenames_ack";

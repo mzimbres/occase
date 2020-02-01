@@ -91,7 +91,7 @@ namespace occase
 {
 
 /* This function receives as input the filename as specified above in
- * the form a/b.c, that means B and returns the path where it should
+ * the form a/b.c, that means b and returns the path where it should
  * be stored, which will be a string with the form.
  *
  *    d/e/f
@@ -185,7 +185,7 @@ splited_target make_splited_target(beast::string_view target)
 
 auto is_valid(splited_target const& st, std::string const& mms_key)
 {
-   if (std::size(st.filename) < sz::mms_filename_min_size)
+   if (std::size(st.filename) < sz::mms_filename_size)
       return false;
 
    if (std::empty(st.digest))

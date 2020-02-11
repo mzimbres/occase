@@ -1,5 +1,6 @@
 #include "mms_session.hpp"
 
+#include <array>
 #include <fstream>
 #include <iostream>
 #include <filesystem>
@@ -13,53 +14,10 @@
 #include "logger.hpp"
 #include "crypto.hpp"
 
-/* The http target used by apps to post images has the following form.
- *
- *    a/b.c
- *
- * The different parts have the following meaning.
- *
- * a: The hex digest produced by the ws server that uses as input b
- *    and a key that is known only by the ws and the image server. If
- *    a and b do not belong to each other the image has not been
- *    authorized by the server to be posted.
- *
- * b: The is the file name produced by the ws server. It is randonly
- *    generated.
- * 
- * c: The file extension. 
- *
+/* The http target used by apps to post images has the form generated
+ * on db_worker::on_app_filenames plus perhaps a file extension the
+ * may be added by the app.
  */
-
-namespace
-{
-
-// TODO: Replace this function with boost::split. See db_adm_session.
-
-/* Can be used to get the filename or the file extension.
-*
-*    s = "/" for file name.
-*    s = "." for file extension.
-*
-* For example foo.bar will result in "foo" and "bar".
-*/
-std::pair<boost::beast::string_view, boost::beast::string_view>
-split(boost::beast::string_view path, char const s)
-{
-   if (std::empty(path))
-      return {};
-
-   if (path.back() == s)
-      path = path.substr(0, std::size(path) - 1);
-
-   auto const pos = path.rfind(s);
-   if (pos == std::string::npos)
-      return {};
-
-   return {path.substr(0, pos), path.substr(pos + 1)};
-}
-
-}
 
 namespace {
 
@@ -90,56 +48,94 @@ void create_dir(const char *dir)
 namespace occase
 {
 
-/* This function receives as input the filename as specified above in
- * the form a/b.c, that means b and returns the path where it should
- * be stored, which will be a string with the form.
- *
- *    d/e/f
- */
-std::string make_img_path(beast::string_view filename)
-{
-   std::string path;
-   path.append(filename.data(), 0, sz::a);
-   path.push_back('/');
-   path.append(filename.data(), sz::a, sz::b);
-   path.push_back('/');
-   path.append(filename.data(), sz::b, sz::c);
+using path_info = std::array<beast::string_view, 4>;
 
-   return path;
+// Expects a target in the form
+//
+//    /x/x/xx/filename:digest.jpg
+//
+// where the extension is optional.
+auto make_path_info(beast::string_view target)
+{
+   path_info pinfo;
+
+   std::array<char, 4> delimiters {{'/', '/', pwd_gen::sep, '.'}};
+   auto j = ssize(delimiters) - 1;
+   auto k = ssize(target);
+   for (auto i = k - 1; i >= 0; --i) {
+      if (target[i] == delimiters[j]) {
+         pinfo[j] = target.substr(i + 1, k - i - 1);
+         k = i;
+         --j;
+      }
+
+      if (j == 0) {
+         pinfo[j] = target.substr(1, k - 1);
+         break;
+      }
+   }
+
+   return pinfo;
+}
+
+// This function tests if the target the digest has been indeed
+// generated using the filename and the secret key shared only by
+// occase db and the occase mms.
+auto is_valid(path_info const& info, std::string const& mms_key)
+{
+   std::string const filename
+   { std::begin(info[1])
+   , std::end(info[1])};
+
+   auto const dir = make_rel_path(filename);
+   if (std::empty(dir))
+      return false;
+
+   if (dir.compare(0, std::size(dir), info[0].data(), std::size(info[0])) != 0)
+      return false;
+
+   auto const digest = make_hex_digest(filename, mms_key);
+   auto const digest_size = std::size(info[2]);
+   if (digest_size != std::size(digest))
+      return false;
+
+   return digest.compare(0, digest_size, info[2].data(), digest_size) == 0;
 }
 
 beast::string_view mime_type(beast::string_view path)
 {
     using beast::iequals;
+
     auto const ext = [&path]
     {
         auto const pos = path.rfind(".");
-        if(pos == beast::string_view::npos)
-            return beast::string_view{};
+        if (pos == beast::string_view::npos)
+           return beast::string_view{};
         return path.substr(pos);
     }();
 
-    if(iequals(ext, ".htm"))  return "text/html";
-    if(iequals(ext, ".html")) return "text/html";
-    if(iequals(ext, ".php"))  return "text/html";
-    if(iequals(ext, ".css"))  return "text/css";
-    if(iequals(ext, ".txt"))  return "text/plain";
-    if(iequals(ext, ".js"))   return "application/javascript";
-    if(iequals(ext, ".json")) return "application/json";
-    if(iequals(ext, ".xml"))  return "application/xml";
-    if(iequals(ext, ".swf"))  return "application/x-shockwave-flash";
-    if(iequals(ext, ".flv"))  return "video/x-flv";
-    if(iequals(ext, ".png"))  return "image/png";
-    if(iequals(ext, ".jpe"))  return "image/jpeg";
-    if(iequals(ext, ".jpeg")) return "image/jpeg";
-    if(iequals(ext, ".jpg"))  return "image/jpeg";
-    if(iequals(ext, ".gif"))  return "image/gif";
-    if(iequals(ext, ".bmp"))  return "image/bmp";
-    if(iequals(ext, ".ico"))  return "image/vnd.microsoft.icon";
-    if(iequals(ext, ".tiff")) return "image/tiff";
-    if(iequals(ext, ".tif"))  return "image/tiff";
-    if(iequals(ext, ".svg"))  return "image/svg+xml";
-    if(iequals(ext, ".svgz")) return "image/svg+xml";
+    if (iequals(ext, ".htm"))  return "text/html";
+    if (iequals(ext, ".html")) return "text/html";
+    if (iequals(ext, ".php"))  return "text/html";
+    if (iequals(ext, ".css"))  return "text/css";
+    if (iequals(ext, ".txt"))  return "text/plain";
+    if (iequals(ext, ".js"))   return "application/javascript";
+    if (iequals(ext, ".json")) return "application/json";
+    if (iequals(ext, ".xml"))  return "application/xml";
+    if (iequals(ext, ".swf"))  return "application/x-shockwave-flash";
+    if (iequals(ext, ".flv"))  return "video/x-flv";
+    if (iequals(ext, ".png"))  return "image/png";
+    if (iequals(ext, ".jpe"))  return "image/jpeg";
+    if (iequals(ext, ".jpeg")) return "image/jpeg";
+    if (iequals(ext, ".jpg"))  return "image/jpeg";
+    if (iequals(ext, ".gif"))  return "image/gif";
+    if (iequals(ext, ".bmp"))  return "image/bmp";
+    if (iequals(ext, ".ico"))  return "image/vnd.microsoft.icon";
+    if (iequals(ext, ".tiff")) return "image/tiff";
+    if (iequals(ext, ".tif"))  return "image/tiff";
+    if (iequals(ext, ".svg"))  return "image/svg+xml";
+    if (iequals(ext, ".svgz")) return "image/svg+xml";
+
     return "application/text";
 }
 
@@ -163,68 +159,26 @@ void mms_session::run(std::chrono::seconds s)
    http::async_read_header(stream_, buffer, header_parser, f);
 }
 
-struct splited_target {
-   beast::string_view digest;
-   beast::string_view filename;
-   beast::string_view extension;
-};
-
-splited_target make_splited_target(beast::string_view target)
-{
-   if (target.front() == '/')
-      target.remove_prefix(1);
-
-   // Splits the target in the form [A, B.C].
-   auto const pair1 = split(target, '/');
-
-   // Splits the filename from the extension, we end up with [B, C]
-   auto const pair2 = split(pair1.second, '.');
-
-   return {pair1.first, pair2.first, pair2.second};
-}
-
-auto is_valid(splited_target const& st, std::string const& mms_key)
-{
-   if (std::size(st.filename) < sz::mms_filename_size)
-      return false;
-
-   if (std::empty(st.digest))
-      return false;
-
-   if (std::empty(st.extension))
-      return false;
-
-   // TODO: Find a way to avoid contructing a filename as string.
-   std::string const as_str
-      { std::begin(st.filename)
-      , std::end(st.filename)};
-
-   auto const s = std::size(st.digest);
-
-   auto const digest = make_hex_digest(as_str, mms_key);
-
-   if (s != std::size(digest))
-      return false;
-
-   return digest.compare(0, s, st.digest.data(), s) == 0;
-}
-
 void mms_session::post_handler()
 {
-   std::string path;
+   auto const target = header_parser.get().target();
 
-   auto const st = make_splited_target(header_parser.get().target());
-   if (is_valid(st, worker_.get_cfg().mms_key)) {
-      path = worker_.get_cfg().doc_root + "/" + make_img_path(st.filename);
+   // Before posting we check if the digest and the filename have been
+   // produced by the same key.
+   std::string path;
+   auto const pinfo = make_path_info(target);
+   if (is_valid(pinfo, worker_.get_cfg().mms_key)) {
+      path = worker_.get_cfg().doc_root;
+      path.append(target.data(), std::size(target));
 
       log::write(log::level::debug , "Post dir: {0}", path);
 
-      create_dir(path.data());
+      auto full_dir = worker_.get_cfg().doc_root + "/";
+      full_dir.append(pinfo[0].data(), std::size(pinfo[0]));
 
-      path += "/";
-      path.append(st.filename.data(), std::size(st.filename));
-      path += ".";
-      path.append(st.extension.data(), std::size(st.extension));
+      log::write(log::level::debug , "MMS dir: {0}", full_dir);
+
+      create_dir(full_dir.data());
    }
 
    log::write(log::level::debug , "Post full dir: {0}", path);
@@ -268,19 +222,17 @@ void mms_session::post_handler()
 
 void mms_session::get_handler()
 {
-   log::write( log::level::debug
-      , "Get target: {0}"
-      , header_parser.get().target());
+   auto const target = header_parser.get().target();
+   log::write(log::level::debug, "Get target: {0}", target);
 
-   std::string path;
+   // NOTE: Early, I was checking if the digest part of the path (see
+   // db_worker::on_app_filenames) was indeed generated with the
+   // filename and the secret key. But this has some drawbacks as it
+   // does not allow us to change the key later. To simplify I will
+   // always server the images and think about this later.
 
-   auto const st = make_splited_target(header_parser.get().target());
-   if (is_valid(st, worker_.get_cfg().mms_key)) {
-      path = worker_.get_cfg().doc_root + "/" + make_img_path(st.filename) + "/";
-      path.append(st.filename.data(), std::size(st.filename));
-      path += ".";
-      path.append(st.extension.data(), std::size(st.extension));
-   }
+   auto path = worker_.get_cfg().doc_root;
+   path.append(target.data(), std::size(target));
 
    log::write(log::level::debug, "Get target path: {0}", path);
 

@@ -13,6 +13,9 @@ namespace
 {
 
 constexpr char hextable[] = "0123456789abcdef";
+
+// Do not change this character set without taking pwd_gen::sep into
+// consideration.
 constexpr char pwdchars[] = "abcdefghijklmnopqrstuvwxyz0123456789";
 
 //constexpr auto hash_size = crypto_generichash_BYTES;

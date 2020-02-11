@@ -33,5 +33,24 @@ void from_json(json const& j, post& e)
   e.range_values = j.at("range_values").get<std::vector<int>>();
 }
 
+std::string make_rel_path(std::string const& filename)
+{
+   if (std::size(filename) < sz::mms_filename_size)
+      return {};
+
+   std::string path;
+   path.append(filename.data(), 0, sz::a);
+
+   path.push_back('/');
+   path.append(filename.data(), 0 + sz::a
+              , sz::b);
+
+   path.push_back('/');
+   path.append(filename.data(), 0 + sz::a + sz::b
+              , sz::c);
+
+   return path;
+}
+
 }
 

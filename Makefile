@@ -55,6 +55,7 @@ db_objs += post.o
 mms_objs =
 mms_objs += mms_session.o
 mms_objs += net.o
+mms_objs += post.o
 
 client_objs =
 client_objs += test_clients.o

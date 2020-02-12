@@ -537,7 +537,7 @@ private:
       {
          auto const filename = pwdgen_(sz::mms_filename_size);
 
-         auto const path = make_rel_path(filename);
+         auto const path = make_rel_path(filename)
                          + "/"
                          + filename;
 

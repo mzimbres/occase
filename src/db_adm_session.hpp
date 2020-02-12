@@ -63,7 +63,7 @@ make_del_post_link( std::string const& db_host
                   , std::string const& post_id
                   , std::string const& pwd)
 {
-   auto const target = "delete/"
+   auto const target = "/delete/"
                      + from    + "/"
                      + to      + "/"
                      + post_id + "/"
@@ -83,7 +83,7 @@ make_next_link( std::string const& db_host
               , int post_id
               , std::string const& pwd)
 {
-   auto const target = "posts/"
+   auto const target = "/posts/"
                      + std::to_string(post_id) + "/"
                      + pwd;
    std::string s;

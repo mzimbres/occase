@@ -42,11 +42,11 @@ constexpr std::size_t mms_dir_size = 3 + a + b + c;
 
 }
 
-/* This function receives as input filename, and returns the relative
- * path where it should be stored, which will be a string with the
- * form.
+/* This function receives as input the filename and returns the
+ * relative path where it should be stored, which will be a string
+ * in the form.
  *
- *    x/y/zz
+ *    /x/y/zz
  *
  * The filename minimum length is expected to be mms_filename_size.
  * The length of the x, y and zz are as of sz::a, sz::b etc.

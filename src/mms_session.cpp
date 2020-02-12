@@ -54,7 +54,12 @@ using path_info = std::array<beast::string_view, 4>;
 //
 //    /x/x/xx/filename:digest.jpg
 //
-// where the extension is optional.
+// where the extension is optional and returns an array in the form
+//
+// a[0] = x/x/xx
+// a[1] = filename
+// a[2] = digest
+// a[3] = jpg
 auto make_path_info(beast::string_view target)
 {
    path_info pinfo;
@@ -70,7 +75,7 @@ auto make_path_info(beast::string_view target)
       }
 
       if (j == 0) {
-         pinfo[j] = target.substr(1, k - 1);
+         pinfo[0] = target.substr(1, k - 1);
          break;
       }
    }
@@ -83,18 +88,12 @@ auto make_path_info(beast::string_view target)
 // occase db and the occase mms.
 auto is_valid(path_info const& info, std::string const& mms_key)
 {
-   std::string const filename
-   { std::begin(info[1])
-   , std::end(info[1])};
+   std::string path = "/";
+   path.append(info[0].data(), std::size(info[0]));
+   path += "/";
+   path.append(info[1].data(), std::size(info[1]));
 
-   auto const dir = make_rel_path(filename);
-   if (std::empty(dir))
-      return false;
-
-   if (dir.compare(0, std::size(dir), info[0].data(), std::size(info[0])) != 0)
-      return false;
-
-   auto const digest = make_hex_digest(filename, mms_key);
+   auto const digest = make_hex_digest(path, mms_key);
    auto const digest_size = std::size(info[2]);
    if (digest_size != std::size(digest))
       return false;
@@ -163,21 +162,17 @@ void mms_session::post_handler()
 {
    auto const target = header_parser.get().target();
 
-   // Before posting we check if the digest and the filename have been
-   // produced by the same key.
+   // Before posting we check if the digest and the rest of the target
+   // have been produced by the same key.
    std::string path;
    auto const pinfo = make_path_info(target);
    if (is_valid(pinfo, worker_.get_cfg().mms_key)) {
       path = worker_.get_cfg().doc_root;
       path.append(target.data(), std::size(target));
-
       log::write(log::level::debug , "Post dir: {0}", path);
-
       auto full_dir = worker_.get_cfg().doc_root + "/";
       full_dir.append(pinfo[0].data(), std::size(pinfo[0]));
-
       log::write(log::level::debug , "MMS dir: {0}", full_dir);
-
       create_dir(full_dir.data());
    }
 
@@ -228,8 +223,8 @@ void mms_session::get_handler()
    // NOTE: Early, I was checking if the digest part of the path (see
    // db_worker::on_app_filenames) was indeed generated with the
    // filename and the secret key. But this has some drawbacks as it
-   // does not allow us to change the key later. To simplify I will
-   // always server the images and think about this later.
+   // does not allow us to change the key easily later. To simplify I
+   // will always server the images and think about this later.
 
    auto path = worker_.get_cfg().doc_root;
    path.append(target.data(), std::size(target));

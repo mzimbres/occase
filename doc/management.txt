@@ -1,7 +1,8 @@
 Redis
 =========================================================================
 
-We use three redis instances
+Information about how to configure the redis servers We use three
+redis instances
 
   1. Post: Store the posts.
   2. User: Stores user credentials and post limits.
@@ -10,7 +11,6 @@ We use three redis instances
   The config file for each instance can be found in the config
   directory.
 
-  config/redis-common.conf
   config/redis-post.conf
   config/redis-user.conf
   config/redis-msgs.conf
@@ -19,6 +19,9 @@ We use three redis instances
   version /etc/redis/* must have
 
   $ chown redis:redis file
+
+- The instance are managed by systemd templace files. See systemd
+  enable.
 
 - Keyspace notification must be enabled for the msgs redis server
   (number 3. above). They are used to inform an occase-db instance
@@ -32,7 +35,7 @@ We use three redis instances
 - The redis database file for posts and user credentials require safe
   storage while the msgs not so much.
 
-- I am using port 600 for the sentinel to be able to make the port
+- I am using port 1200 for the sentinel to be able to make the port
   range bigger for the occase-db.
 
 - Configure the redis sentinels
@@ -50,17 +53,16 @@ occase-db
 On startup occase-db will retrieve the menu from the server, if not
 available the process will exit with error. To load the menu on redis
 
-   $ redis-cli flushall 
+   $ redis-cli -p 1100 flushall 
    OK
-   $ load-tool path-to-menu
-   $ cat channels.txt | redis-cli -x set channels
+   $ cat channels.txt | redis-cli -p 1100 -x set channels
    OK
    $ sudo systemctl restart occase-db.service
 
 Once the server is running it is possible to monitor internal queue
 sizes and the current number of active sessions with the monitor tool
 
-   $ ./monitor.sh
+   $ occase-db-monitor
 
 File descriptors
 ==========================================================================

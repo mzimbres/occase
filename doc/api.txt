@@ -1,0 +1,141 @@
+Communication with occase db occurs over json
+
+These are the available commands
+
+   1. register
+   2. login
+   3. subscribe
+   4. publish
+   5. message
+   6. presence
+
+Below the description of each one.
+
+Register
+-----------------------------------------------------------------------------
+
+Used to request id and a password that are used to login the server and send
+messages to other users.
+
+Request
+
+   {"cmd": "register", "token": "fcm-token"}
+
+Response
+
+   { "cmd": "register_ack"
+   , "result" = "ok"
+   , "id": 22
+   , "password": "abcdefg"
+   }
+
+Description
+
+  - The field token in the request refers to the Firebase Cloud Messaging (FCM)
+    "token" and is used to send notifications to the user when he is offline.
+
+  - The field "result" can be either "ok" or "fail".
+
+  - The id and password returned must be stored by the app. It must be
+    retrieved only once.
+
+Login
+-----------------------------------------------------------------------------
+
+Used to log in the server
+
+Request
+
+   { "cmd": 'login'
+   , "user": 22
+   , "password": "abcdefg"
+   , "token": "fcm-token"
+   }
+
+Response
+
+   {"cmd":"login_ack","remaining_posts":3,"result":"ok"}
+
+Description
+   
+   - The fields "user" and "password" are those returned by the
+     register command.
+
+
+Subscribe
+-----------------------------------------------------------------------------
+
+Request
+
+   { "cmd": 'subscribe'
+   , "last_post_id": 10
+   , "filters": [1, 2, 3, 4, 5]
+   , "channels": [1, 2, 3, 4, 5, 6, 7, 8, 9]
+   , "any_of_features": 22394494
+   , "ranges": [0, 100, 22, 44, 33, 99]
+   }
+
+Response
+
+   {"cmd": "subscribe_ack", "result": "ok"}
+
+Description
+
+Publish
+-----------------------------------------------------------------------------
+
+Request
+
+{ "cmd": "publish"
+, "items": [post]
+};
+
+Post (unsolicited)
+-----------------------------------------------------------------------------
+
+   { "cmd":"post"
+   , "items":
+     [{ "body": "Body of the message here"
+      , "date": 1581622753
+      , "features": 1
+      , "filter": 844429225099265
+      , "from": "13"
+      , "id": 5
+      , "range_values": [27000, 2016, 150000]
+      , "to": 13194158407687
+      }]
+   }
+
+Message (unsolicited)
+-----------------------------------------------------------------------------
+
+Request
+
+   { "cmd":"message"
+   , "from":"13"
+   , "id":2
+   , "post_id":5
+   }
+
+Response
+
+   { "cmd":"message"
+   , "from": "13"
+   , "post_id": 5
+   , "ack_id":-1
+   , "type":"server_ack"
+   , "result": "ok"
+   }
+
+Description
+   
+   The whole message payload is sent.
+
+Message (unsolicited)
+------------------------------------------------------------------------
+
+   { "cmd": "presence"
+   , "from": "13"
+   , "to":"2"
+   }
+

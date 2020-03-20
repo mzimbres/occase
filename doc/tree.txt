@@ -1,0 +1,145 @@
+Posts
+-----
+
+A *post* is the central idea behind the occase. To understand how
+they work we have to first introduce the concept of a *menu*. First, a
+menu is composed of two entries (though it is flexible to deal with
+more)
+
+   menu = entry1 x entry2
+
+An entry aggregates related information in a tree like structure
+similar to how chapters, sections, subsections etc. are used to
+structure a book. For example
+
+       Location            |                  Car
+                           |                                                                     
+World                      | Car
+   Brazil                  |    Ferrari
+      Sao Paulo            |       GTC4                             
+         Sao Paulo         |          LUSSO 6.3 V12 690cv              
+         Atibaia           |             2018                         
+         Piracaia          |                Gasolina                  
+      Rio de Janeiro       |                   R$ 3.095.855,00           
+         Rio de Janeiro    |          LUSSO T V8 610cv                      
+         Teresópolis       |             2018                            
+         Macaé             |                Gasolina               
+   Germany                 |                   R$ 2.358.740,00 
+      Bayern               |    BMW                                                
+         München           |       116iA                                               
+      Baden-würtemberg     |          1.6 TB 16V 136cv 5p                                    
+         Stuttgart         |             2014                                            
+         Karlsruhe         |                Gasolina                                     
+         Offenburg         |                   R$ 70.100,00                              
+      Nordrhein-Westphalen |             2015                                                    
+         Köln              |                Gasolina                                
+         Düsseldorf        |                   R$ 72.558,00                               
+         Bochum            |       320iA                                              
+         Essen             |          2.0 TB M Sport ActiveFlex 16V 4p               
+   France                  |             2017                                   
+      Alsacia              |                Gasolina                                
+         Strasburg         |                   R$ 138.743,00                             
+                           |             2018                                      
+                           |                Gasolina
+                           |                   R$ 165.587,00
+                           |          2.0 Turbo/ActiveFlex 16V 184cv  4p
+                           |             2018
+                           |                Gasolina
+                           |                   R$ 142.940,00
+                           |             2019
+                           |                Gasolina
+                           |                   R$ 147.325,00
+   
+Some important things to notice
+
+   1. A deployment can use as many menu entries as it likes.
+
+   2. The *Location* menu entry has depth 4 whereas the entry *cars*
+      has depth 6. Sometimes it is convenient to omit the root node
+      and work with an *effective* depth defined to be the real depth
+      minus one.
+
+Menu codes
+----------
+
+It is not difficult to see that we can refer to each of the items in a
+menu entry by specifying its position in the menu entry. If we omit
+the root node like we said above, we see some of the codes are
+
+   [0, 1, 1] ===> Teresopolis
+   [1, 2, 0] ===> Köln
+   etc.
+
+A *post* on the other hand contains the code of each of the items in
+each menu entries the user wants to refer to. So a
+
+   BMW
+      320iAi 2.0 TB M Sport ActiveFlex 16V 4p
+         2018
+            Gasoline
+               R$ 165.587,00
+
+that is located in
+
+   Brazil
+      Sao Paulo
+         Atibaia
+
+is fully specified by the codes
+
+   [0, 0, 1] and [1, 1, 0, 1, 0, 0]
+
+The code is include in the json string sent by the app to the server,
+for example
+
+   { "from":"5"
+   , "id":33
+   , "msg":"Not an interesting message."
+   , "to":[[[0,0,1]],[[1,1,0,1,0,0]]]
+   }
+
+When an app receives these codes it can reconstruct the information to
+present it to the user. The user should notice that the code is
+represented as an array of integers that is contained inside other
+arrays. We will explain why it is this way after we introduce the
+channels.
+
+Channels (outdated)
+--------
+
+The app allows the user to filter the posts it receives. The filter
+mechanism is based on the depth of a channel. For example, in the
+locations menu above, at the depth two we have the states of each
+country, in the cars entry at the depth four we have the year the car
+has been produced. When the server is started it will read the menu
+and create the channels for a specific depth. If we use depth two for
+both menus above the server will combine therefore
+
+                                  
+   Sao Paulo                
+   Atibaia                  
+   Piracaia                 
+   Rio de Janeiro                
+   Teresópolis                   
+   Macaé                         
+   München                  GTC4      
+   Stuttgart         X      116iA     
+   Karlsruhe                320iA     
+   Offenburg                     
+   Köln                          
+   Düsseldorf                    
+   Bochum                   
+   Essen                         
+   Strasburg                     
+
+Which means 45 channels would be created. When the server receives a
+post it will read the codes up the the depth of each menu entry and
+with that find out which channel the post will be published in.
+
+When a user want to subscribe to some channels all it has to do is to
+send the codes of each menu entry. For example
+
+   [[[0,0], [0,1], [0,2], ...],[[1,1], [1,2], [2,0], ...]]
+
+and the server will combine the codes of all entries with each other.
+

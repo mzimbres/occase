@@ -19,8 +19,8 @@ mkdir -p $dir_tmp
 
 occase-tree -o 5 $menu0 > ${dir_tmp}/filters.txt
 occase-tree -o 5 $menu1 > ${dir_tmp}/channels.txt
-occase-tree -o 4 $menu0 > ${dir_tmp}/menu0.txt
-occase-tree -o 4 $menu1 > ${dir_tmp}/menu1.txt
-occase-tree -o 4 $menu2 > ${dir_tmp}/ex_details_menu.txt
-occase-tree -o 4 $menu3 > ${dir_tmp}/in_details_menu.txt
+occase-tree -l -o 4 $menu0 > ${dir_tmp}/menu0.txt
+occase-tree -l -o 4 $menu1 > ${dir_tmp}/menu1.txt
+occase-tree -l -o 4 $menu2 > ${dir_tmp}/ex_details_menu.txt
+occase-tree -l -o 4 $menu3 > ${dir_tmp}/in_details_menu.txt
 

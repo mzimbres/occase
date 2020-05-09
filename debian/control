@@ -1,8 +1,8 @@
 Source: occase
 Section: database
 Priority: optional
-Maintainer: Marcelo Zimbres <mzimbres@gmail.com>
-Build-Depends: debhelper (>=11~)
+Maintainer: Marcelo Zimbres Silva <mzimbres@gmail.com>
+Build-Depends: debhelper (>=11~), debhelper-compat (=12)
 Standards-Version: 4.1.4
 Homepage: http://www.occase.de
 

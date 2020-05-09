@@ -1,10 +1,10 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Contact: Marcelo Zimbres <mzimbres@gmail.com>
+Upstream-Contact: Marcelo Zimbres Silva <mzimbres@gmail.com>
 Upstream-Name: occase
 Source: http://www.occase.de
 
 Files:     *
-Copyright: Copyright 2018-2019  Marcelo Zimbres <mzimbres@gmail.com>
+Copyright: Copyright 2018-2020  Marcelo Zimbres Silva <mzimbres@gmail.com>
 License: Occase
- This program and source code owned by Marcelo Zimbres.
+ This program and source code owned by Marcelo Zimbres Silva.
 

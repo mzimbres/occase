@@ -1,8 +1,15 @@
 
 * Lintian complains about missing man pages.
 
+   W: occase-db: binary-without-manpage usr/bin/occase-db
+   W: occase-mms: binary-without-manpage usr/bin/occase-mms
+   W: occase-notify: binary-without-manpage usr/bin/occase-notify
    W: occase-tools: binary-without-manpage usr/bin/occase-db-monitor
    W: occase-tools: binary-without-manpage usr/bin/occase-key-gen
+   W: occase-tools: binary-without-manpage usr/bin/occase-sim
+   W: occase-tools: binary-without-manpage usr/bin/occase-tree-gen
+   W: occase source: debian-rules-uses-as-needed-linker-flag line 6
+   W: occase-notify: spelling-error-in-description notifcations notifications
 
 * Mesages frm letsencrypt.
 

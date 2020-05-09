@@ -20,7 +20,7 @@ service_final_dir = $(DESTDIR)$(systemddir)
 ext_libs =
 ext_libs += /opt/boost_1_71_0/lib/libboost_program_options.a
 
-LDFLAGS = -lpthread
+LDFLAGS += -lpthread
 LDFLAGS += -lfmt
 LDFLAGS += -lsodium
 LDFLAGS += -lssl
@@ -149,7 +149,7 @@ dist: $(tarball_name).tar.gz
 .PHONY: deb
 deb: dist
 	rm -rf tmp; mkdir tmp; mv $(tarball_name).tar.gz tmp; cd tmp; \
-	ln $(tarball_name).tar.gz occase_1.0.0.orig.tar.gz; \
+	ln $(tarball_name).tar.gz $(pkg_name)_$(pkg_version).orig.tar.gz; \
 	tar -xvvzf $(tarball_name).tar.gz; \
 	cd $(tarball_dir)/debian; debuild --no-sign -j1
 

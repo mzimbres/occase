@@ -2,10 +2,10 @@ occase (1.0.0-1) stable; urgency=low
 
   * Improvements.
 
- -- Marcelo Zimbres <mzimbres@gmail.com>  Sun, 20 Oct 2019 21:27:38 +0200
+ -- Marcelo Zimbres Silva <mzimbres@gmail.com>  Sun, 20 Oct 2019 21:27:38 +0200
 
 occase (1.0.0-0) stable; urgency=low
 
   * Initial release.
 
- -- Marcelo Zimbres <mzimbres@gmail.com>  Wed, 09 Oct 2019 21:27:38 +0200
+ -- Marcelo Zimbres Silva <mzimbres@gmail.com>  Wed, 09 Oct 2019 21:27:38 +0200

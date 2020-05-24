@@ -1,4 +1,3 @@
-occase-key-gen usr/bin
 occase-sim usr/bin
 scripts/occase-tree-gen usr/bin
 scripts/occase-db-monitor usr/bin

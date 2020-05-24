@@ -36,9 +36,7 @@ VPATH = ./src
 
 exes =
 exes += occase-db
-exes += occase-mms
 exes += occase-notify
-exes += occase-key-gen
 exes += occase-sim
 exes += db_tests
 exes += notify-test
@@ -51,11 +49,6 @@ db_objs =
 db_objs += redis.o
 db_objs += net.o
 db_objs += post.o
-
-mms_objs =
-mms_objs += mms_session.o
-mms_objs += net.o
-mms_objs += post.o
 
 client_objs =
 client_objs += test_clients.o
@@ -71,7 +64,6 @@ exe_objs = $(addsuffix .o, $(exes))
 
 lib_objs =
 lib_objs += $(db_objs)
-lib_objs += $(mms_objs)
 lib_objs += $(client_objs)
 lib_objs += $(common_objs)
 lib_objs += $(notify_objs)
@@ -94,42 +86,30 @@ db_tests: % : %.o $(client_objs) $(common_objs)
 occase-db: % : %.o $(db_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_DISABLE_THREADS
 
-occase-mms: % : %.o $(mms_objs) $(common_objs)
-	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_DISABLE_THREADS
-
 occase-notify: % : %.o $(notify_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_DISABLE_THREADS
-
-occase-key-gen: % : %.o  $(common_objs)
-	$(CXX) -o $@ $^ $(CPPFLAGS) -lfmt -lsodium
 
 notify-test: % : %.o $(common_objs) ntf_session.o
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_DISABLE_THREADS
 
 install: all
 	install -D occase-db --target-directory $(bin_final_dir)
-	install -D occase-mms --target-directory $(bin_final_dir)
 	install -D occase-notify --target-directory $(bin_final_dir)
-	install -D occase-key-gen --target-directory $(bin_final_dir)
 	install -D occase-sim --target-directory $(bin_final_dir)
 	install -D scripts/occase-db-monitor $(bin_final_dir)
 	install -D scripts/occase-tree-gen $(bin_final_dir)
 	install -D config/occase-db.conf $(conf_final_dir)/occase-db.conf
-	install -D config/occase-mms.conf $(conf_final_dir)/occase-mms.conf
 	install -D config/occase-notify.conf $(conf_final_dir)/occase-notify.conf
 	install -D doc/management.txt $(doc_final_dir)/management.txt
 	install -D doc/intro.txt $(doc_final_dir)/intro.txt
 
 uninstall:
 	rm -f $(bin_final_dir)/occase-db
-	rm -f $(bin_final_dir)/occase-mms
 	rm -f $(bin_final_dir)/occase-notify
-	rm -f $(bin_final_dir)/occase-key-gen
 	rm -f $(bin_final_dir)/occase-sim
 	rm -f scripts/$(bin_final_dir)/occase-db-monitor
 	rm -f scripts/$(bin_final_dir)/occase-tree-gen
 	rm -f $(conf_final_dir)/occase-db.conf
-	rm -f $(conf_final_dir)/occase-mms.conf
 	rm -f $(conf_final_dir)/occase-notify.conf
 	rm -f $(doc_final_dir)/management.txt
 	rm -f $(doc_final_dir)/intro.txt

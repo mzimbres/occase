@@ -2,36 +2,26 @@ Source: occase
 Section: database
 Priority: optional
 Maintainer: Marcelo Zimbres Silva <mzimbres@gmail.com>
-Build-Depends: debhelper (>=11~), debhelper-compat (=12)
-Standards-Version: 4.1.4
+Build-Depends: debhelper (>=11~), debhelper-compat (=12), libboost-program-options-dev, nlohmann-json3-dev, libfmt-dev
+Standards-Version: 4.5.0
 Homepage: http://www.occase.de
+Vcs-Browser: https://github.com/mzimbres/tsvtree
+Vcs-Git: https://github.com/mzimbres/tsvtree.git
+Rules-Requires-Root: binary-targets
 
 Package: occase-db
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
-Replaces:
- occase-db (<< 1.0.0-1),
+Replaces: occase-db (<< 1.0.0-1)
 Description: Realtime database for the occase app (server).
  A sigle threaded database that uses websocket and scales per process.
  .
  This package contains only the database.
 
-Package: occase-mms
-Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}
-Replaces:
- occase-mms (<< 1.0.0-1),
-Description: Multimedia server used by the occase app (server).
- A very simple single threaded Http server used to post and get
- multimedia data.
- .
- This package contains only the server.
-
 Package: occase-tools
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
-Replaces:
- occase-tools (<< 1.0.0-1),
+Replaces: occase-tools (<< 1.0.0-1)
 Description: Tools to configure and monitor the occase servers.
  Contains the tools to configure and monitor the occase server.
  For example load redis with the channels, display current number of
@@ -42,8 +32,7 @@ Description: Tools to configure and monitor the occase servers.
 Package: occase-notify
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
-Replaces:
- occase-notify (<< 1.0.0-1),
+Replaces: occase-notify (<< 1.0.0-1)
 Description: Push notification server used by the occase app.
  A single threaded server that notifes users that send push notifcations to
  users that are not online.

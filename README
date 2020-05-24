@@ -3,7 +3,3 @@ Documentation is available in the doc/ directory.
 
 For an introduction refer to the doc/intro.txt file.
 
-To Post and image to the occase-mms
-
-curl -H 'Expect:' --data-binary @g3.jpeg http://127.0.0.1:8888/images/image.jpg -v
-

@@ -9,7 +9,7 @@ To build this project you will need
 On debian systems 1. and 2. and 4. can be installed from packages
 
    $ sudo apt-get install nlohmann-json3-dev
-   $ sudo apt-get install libfmt3-dev
+   $ sudo apt-get install libfmt-dev
    $ sudo apt-get install libsodium-dev
    $ sudo apt-get install libssl-dev
 

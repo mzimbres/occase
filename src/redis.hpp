@@ -15,8 +15,7 @@ namespace occase
 class redis {
 public:
    enum class events
-   { channels
-   , user_messages
+   { user_messages
    , post
    , posts
    , post_id
@@ -59,9 +58,6 @@ public:
 
       // The name of the channel where *publish* commands are be sent.
       std::string menu_channel_key;
-
-      // Key in redis holding the menu in json format.
-      std::string channels_key;
 
       // The key used to store posts in redis.
       std::string posts_key;
@@ -186,12 +182,6 @@ public:
       { ev_handler_ = h; }
 
    void run();
-
-   // Retrieves the menu asynchronously. Complete with
-   //
-   //    redis::events::channels.
-   //
-   void retrieve_channels();
 
    // Instructs redis to notify the worker on new messages to the
    // user.  Once a notification arrives the server proceeds with the

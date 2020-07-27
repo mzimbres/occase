@@ -41,7 +41,7 @@ std::string make_login_cmd(occase::cli::login const& user)
    return j.dump();
 }
 
-std::string make_post_cmd(code_type channel, code_type filter)
+std::string make_post_cmd(code_type filter)
 {
    json sub;
    sub["msg"] = "Not an interesting message.";
@@ -53,7 +53,6 @@ std::string make_post_cmd(code_type channel, code_type filter)
    occase::post item { -1
                  , {}
                  , sub.dump()
-                 , channel
                  , filter
                  , 0
                  , std::chrono::seconds {0}
@@ -65,13 +64,11 @@ std::string make_post_cmd(code_type channel, code_type filter)
 }
 
 std::vector<pub_helper>
-channel_codes( std::vector<code_type> const& channels
-             , std::vector<code_type> const& filters)
+channel_codes(std::vector<code_type> const& filters)
 {
    std::vector<pub_helper> ret;
-   for (auto i = 0; i < ssize(channels); ++i)
-      for (auto j = 0; j < ssize(filters); ++j)
-         ret.push_back({-1, channels.at(i), filters.at(j)});
+   for (auto j = 0; j < ssize(filters); ++j)
+      ret.push_back({-1, filters.at(j)});
 
    return ret;
 }
@@ -85,14 +82,11 @@ void check_result( json const& j
       throw std::runtime_error(error);
 }
 
-std::string
-make_sub_payload( std::vector<code_type> const& channels
-                , std::vector<code_type> const& filters)
+std::string make_sub_payload(std::vector<code_type> const& filters)
 {
    json j_sub;
    j_sub["cmd"] = "subscribe";
    j_sub["last_post_id"] = 0;
-   j_sub["channels"] = channels;
    j_sub["filters"] = filters;
    j_sub["any_of_features"] = 0;
    j_sub["ranges"] = std::vector<int>{};
@@ -108,15 +102,13 @@ int replier::on_read(std::string msg, std::shared_ptr<client_type> s)
    if (cmd == "login_ack") {
       check_result(j, "ok", "replier::login_ack");
 
-      to_receive_posts = op.n_publishers
-                       * std::size(op.channels)
-                       * std::size(op.filters);
+      to_receive_posts = op.n_publishers * std::size(op.filters);
 
       std::cout << "Sub: User " << op.user
                 << " expects: " << to_receive_posts
                 << std::endl;
 
-      s->send_msg(make_sub_payload(op.channels, op.filters));
+      s->send_msg(make_sub_payload(op.filters));
       return 1;
    }
 
@@ -219,7 +211,7 @@ leave_after_sub_ack::on_read( std::string msg
    auto const cmd = j.at("cmd").get<std::string>();
    if (cmd == "login_ack") {
       check_result(j, "ok", "leave_after_sub_ack::login_ack");
-      s->send_msg(make_sub_payload(op.channels, op.filters));
+      s->send_msg(make_sub_payload(op.filters));
       return 1;
    }
 
@@ -265,7 +257,7 @@ leave_after_n_posts::on_read( std::string msg
    if (cmd == "login_ack") {
       check_result(j, "ok", "leave_after_n_posts::login_ack");
 
-      s->send_msg(make_sub_payload({}, {}));
+      s->send_msg(make_sub_payload({}));
       return 1;
    }
 
@@ -321,7 +313,7 @@ int simulator::on_read( std::string msg
    auto const cmd = j.at("cmd").get<std::string>();
    if (cmd == "login_ack") {
       check_result(j, "ok", "simulator::login_ack");
-      s->send_msg(make_sub_payload({}, {}));
+      s->send_msg(make_sub_payload({}));
       return 1;
    }
 
@@ -450,13 +442,13 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
    if (cmd == "login_ack") {
       check_result(j, "ok", "publisher::login_ack");
 
-      auto const pub_codes = channel_codes(op.channels, op.filters);
+      auto const pub_codes = channel_codes(op.filters);
       auto pusher = [this](auto const& o)
          { pub_stack.push(o); };
 
       std::for_each(std::begin(pub_codes), std::end(pub_codes), pusher);
 
-      s->send_msg(make_sub_payload(op.channels, op.filters));
+      s->send_msg(make_sub_payload(op.filters));
       return 1;
    }
 
@@ -556,7 +548,6 @@ int publisher::handle_msg(std::shared_ptr<client_type> s)
       json j_sub;
       j_sub["cmd"] = "delete";
       j_sub["id"] = pub_stack.top().id;
-      j_sub["to"] = pub_stack.top().channel;
       s->send_msg(j_sub.dump());
    }
 
@@ -578,10 +569,7 @@ int publisher::on_closed(boost::system::error_code ec)
 
 int publisher::send_post(std::shared_ptr<client_type> s) const
 {
-   auto const str =
-      make_post_cmd( pub_stack.top().channel
-                   , pub_stack.top().filter);
-
+   auto const str = make_post_cmd(pub_stack.top().filter);
    s->send_msg(str);
    return 1;
 }
@@ -596,9 +584,9 @@ int publisher2::on_read(std::string msg, std::shared_ptr<client_type> s)
    if (cmd == "login_ack") {
       check_result(j, "ok", "publisher2::login_ack");
 
-      auto const pub_codes = channel_codes(op.channels, op.filters);
+      auto const pub_codes = channel_codes(op.filters);
       auto f = [s, this](auto const& o)
-         { pub(o.channel, o.filter, s); };
+         { pub(o.filter, s); };
 
       // Sending the publishes without waiting for the acks is not the
       // expected way to use the server. At the moment however nothing
@@ -644,9 +632,7 @@ int publisher2::on_closed(boost::system::error_code ec)
    return -1;
 };
 
-int publisher2::pub( code_type channel
-                   , code_type filter
-                   , std::shared_ptr<client_type> s) const
+int publisher2::pub(code_type filter, std::shared_ptr<client_type> s) const
 {
    json sub;
    sub["msg"] = "Not an interesting message.";
@@ -658,7 +644,6 @@ int publisher2::pub( code_type channel
    post item { -1
              , op.user.id
              , sub.dump()
-             , channel
              , filter
              , 0
              , std::chrono::seconds {0}
@@ -805,7 +790,7 @@ int early_close::on_handshake(std::shared_ptr<client_type> s)
 
 void early_close::send_post(std::shared_ptr<client_type> s) const
 {
-   auto const str = make_post_cmd(0, 0);
+   auto const str = make_post_cmd(0);
    s->send_msg(str, -1);
 }
 

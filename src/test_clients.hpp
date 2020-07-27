@@ -56,7 +56,6 @@ public:
    struct options_type {
       login user;
       int n_publishers;
-      std::vector<code_type> channels;
       std::vector<code_type> filters;
    };
 
@@ -86,7 +85,6 @@ class leave_after_sub_ack {
 public:
    struct options_type {
       login user;
-      std::vector<code_type> channels;
       std::vector<code_type> filters;
    };
 
@@ -170,9 +168,9 @@ public:
 
 /* This class is meant to perform the following test
  *
- * 1. Log in with menu versions 0 to get the server send us the menus.
- * 2. Subscribe to all channels received in 1.
- * 3. Send a publish to one of the channels.
+ * 1. Log in.
+ * 2. Subscribe.
+ * 3. Publish a post.
  * 4. Wait for the publish ack.
  * 5. Wait the for the publish to be forwarded back.
  * 6. Wait for a user_msg directed to publish that has been sent,
@@ -189,7 +187,6 @@ public:
 
 struct pub_helper {
    int id;
-   code_type channel;
    code_type filter;
 };
 
@@ -198,7 +195,6 @@ public:
    struct options_type {
       login user;
       int n_repliers;
-      std::vector<code_type> channels;
       std::vector<code_type> filters;
    };
 
@@ -236,7 +232,6 @@ class publisher2 {
 public:
    struct options_type {
       login user;
-      std::vector<code_type> channels;
       std::vector<code_type> filters;
    };
 
@@ -247,9 +242,7 @@ private:
    int msg_counter;
    std::vector<int> post_ids;
 
-   int pub( code_type channel
-          , code_type filter
-          , std::shared_ptr<client_type> s) const;
+   int pub(code_type filter, std::shared_ptr<client_type> s) const;
 
 public:
    publisher2(options_type op_)

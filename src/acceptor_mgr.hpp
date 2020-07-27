@@ -14,14 +14,14 @@ template <class Session>
 class acceptor_mgr {
 private:
    using arg_type = typename Session::arg_type;
-   net::ip::tcp::acceptor acceptor;
+   net::ip::tcp::acceptor acceptor_;
 
    void do_accept(arg_type w, ssl::context& ctx)
    {
       auto handler = [this, &w, &ctx](auto const& ec, auto socket)
          { on_accept(w, ctx, ec, std::move(socket)); };
 
-      acceptor.async_accept(handler);
+      acceptor_.async_accept(handler);
    }
 
    void on_accept( arg_type w
@@ -49,8 +49,11 @@ private:
 
 public:
    acceptor_mgr(net::io_context& ioc)
-   : acceptor {ioc}
+   : acceptor_ {ioc}
    { }
+
+   auto is_open() const noexcept
+      { return acceptor_.is_open(); }
 
    void run( arg_type w
            , ssl::context& ctx
@@ -58,11 +61,11 @@ public:
            , int max_listen_connections)
    {
       tcp::endpoint endpoint {tcp::v4(), port};
-      acceptor.open(endpoint.protocol());
+      acceptor_.open(endpoint.protocol());
 
       int one = 1;
       auto const ret =
-         setsockopt( acceptor.native_handle()
+         setsockopt( acceptor_.native_handle()
                    , SOL_SOCKET
                    , SO_REUSEPORT
                    , &one, sizeof(one));
@@ -73,16 +76,16 @@ public:
                    , strerror(errno));
       }
 
-      acceptor.bind(endpoint);
+      acceptor_.bind(endpoint);
 
       boost::system::error_code ec;
-      acceptor.listen(max_listen_connections, ec);
+      acceptor_.listen(max_listen_connections, ec);
 
       if (ec) {
          log::write(log::level::info, "acceptor_mgr::run: {0}.", ec.message());
       } else {
          log::write( log::level::info, "acceptor_mgr:run: Listening on {}"
-                   , acceptor.local_endpoint());
+                   , acceptor_.local_endpoint());
          log::write( log::level::info, "acceptor_mgr:run: TCP backlog set to {}"
                    , max_listen_connections);
 
@@ -92,9 +95,9 @@ public:
 
    void shutdown()
    {
-      if (acceptor.is_open()) {
+      if (acceptor_.is_open()) {
          boost::system::error_code ec;
-         acceptor.cancel(ec);
+         acceptor_.cancel(ec);
          if (ec) {
             log::write( log::level::info
                       , "acceptor_mgr::shutdown: {0}.", ec.message());

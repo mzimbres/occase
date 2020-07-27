@@ -61,7 +61,6 @@ struct post {
    int id;
    std::string from;
    std::string body;
-   code_type to;
    code_type filter;
    code_type features;
    date_type date {0};

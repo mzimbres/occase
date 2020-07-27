@@ -1,3 +1,6 @@
+* LOADING Redis is loading the dataset in memory
+
+This error should be handled in the client and not passed to the occase-db?
 
 * Clear lintian warnings
 

@@ -63,10 +63,6 @@ struct channel_cfg {
    // activity is observed.
    int cleanup_rate; 
 
-   // The maximum number of channels a user is allowed to subscribe
-   // to. Remaining channels will be ignored.
-   int max_sub; 
-
    // Time after which the post is considered expired. Input in
    // seconds.
    int post_expiration;

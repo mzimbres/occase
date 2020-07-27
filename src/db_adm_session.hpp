@@ -54,18 +54,16 @@ auto make_img(std::string const& url)
 
 // The delete target has the form
 //
-//    /delete/from/to/post_id/password
+//    /delete/from/post_id/password
 //
 auto
 make_del_post_link( std::string const& db_host
                   , std::string const& from
-                  , std::string const& to
                   , std::string const& post_id
                   , std::string const& pwd)
 {
    auto const target = "/delete/"
                      + from    + "/"
-                     + to      + "/"
                      + post_id + "/"
                      + pwd;
    std::string del;
@@ -106,7 +104,6 @@ make_img_row( std::string const& db_host
       row += "<tr>";
       row += make_del_post_link( db_host
                                , p.from
-                               , std::to_string(p.to)
                                , std::to_string(p.id)
                                , pwd);
       for (auto const& s : images) {
@@ -159,21 +156,6 @@ auto make_adm_page( std::string const& db_host
    page += make_next_link(db_host, post_id + 25, pwd);
    page += "</body>";
    page += "</html>";
-
-   return page;
-}
-
-auto make_post_del_ok()
-{
-   std::string page;
-   page += "<!DOCTYPE html>\n";
-   page += "<html>\n";
-   page += "<body>\n";
-   page += "\n";
-   page += "<p>Post deletion: Success.</p>\n";
-   page += "\n";
-   page += "</body>\n";
-   page += "</html>\n";
 
    return page;
 }
@@ -324,7 +306,7 @@ private:
 
    // Expects a target in the from
    //
-   // /delete/from/to/post_id/password
+   // /delete/from/post_id/password
    //
    void get_delete_handler(std::string const& target) noexcept
    {
@@ -350,13 +332,10 @@ private:
             return;
          }
 
-         db.delete_post( std::stoi(foo[3])
-                       , foo[1]
-                       , std::stoll(foo[2]));
+         db.delete_post(std::stoi(foo[2]), foo[1]);
 
          resp_.set(http::field::content_type, "text/html");
-         boost::beast::ostream(resp_.body())
-         << html::make_post_del_ok();
+         boost::beast::ostream(resp_.body()) << "Ok";
 
       } catch (std::exception const& e) {
          log::write( log::level::debug

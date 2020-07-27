@@ -78,12 +78,6 @@ void redis::on_user_pub_conn()
 {
 }
 
-void redis::retrieve_channels()
-{
-   ss_post_pub_.send(get(cfg_.channels_key));
-   post_pub_queue_.push(events::channels);
-}
-
 void redis::on_post_sub( boost::system::error_code const& ec
                         , std::vector<std::string> data)
 {

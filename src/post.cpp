@@ -13,7 +13,6 @@ void to_json(json& j, post const& e)
    j = json{ {"id", e.id}
            , {"from", e.from}
            , {"body", e.body}
-           , {"to", e.to}
            , {"filter", e.filter}
            , {"features", e.features}
            , {"date", e.date.count()}
@@ -26,7 +25,6 @@ void from_json(json const& j, post& e)
   e.id = j.at("id").get<int>();
   e.from = j.at("from").get<std::string>();
   e.body = j.at("body").get<std::string>();
-  e.to = j.at("to").get<code_type>();
   e.filter = j.at("filter").get<code_type>();
   e.features = j.at("features").get<code_type>();
   e.date = date_type {j.at("date").get<long int>()};

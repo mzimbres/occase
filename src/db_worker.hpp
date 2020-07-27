@@ -33,7 +33,7 @@ namespace occase
 {
 
 struct core_cfg {
-   // The maximum number of channels that are allowed to be sent to the
+   // The maximum number of posts that are allowed to be sent to the
    // user on subscribe.
    int max_posts_on_sub; 
 
@@ -116,8 +116,6 @@ private:
    ssl::context& ctx_;
    core_cfg const core_cfg_;
 
-   // There are hundreds of thousends of channels typically, so we
-   // store the configuration only once here.
    channel_cfg const channel_cfg_;
 
    ws_timeouts const ws_timeouts_;
@@ -128,17 +126,6 @@ private:
                      , std::weak_ptr<db_session_type>
                      > sessions_;
 
-   // The channels are stored in a vector and the channel hash codes
-   // separately in another vector. The last element in the
-   // channel_codes_ is used as sentinel to perform fast linear
-   // searches.
-   std::vector<code_type> channel_codes_;
-   std::vector<channel<db_session_type>> channels_;
-
-   // Apps that do not register for any product channels (the seconds
-   // item in the menu) will receive posts from any channel. This is
-   // the channel that will store the web socket channels for this
-   // case.
    channel<db_session_type> root_channel_;
 
    // Facade to redis.
@@ -155,9 +142,8 @@ private:
    // Queue of users waiting to be checked for login.
    std::queue<pwd_queue_item<db_session_type>> login_queue_;
 
-   // The last post id that this channel has received from reidis
-   // pubsub menu channel.
-   int last_post_id_ = 0;
+   // The last post id that has beed received from reidis pubsub channel.
+   int last_post_id_ = -1;
 
    // Generates passwords that are sent to the app.
    pwd_gen pwdgen_;
@@ -176,24 +162,6 @@ private:
 
       db_.set_event_handler(handler);
       db_.run();
-   }
-
-   void create_channels()
-   {
-      assert(std::empty(channels_));
-
-      // Reserve the exact amount of memory that will be needed. The
-      // vector with the channels will also hold the sentinel to make
-      // linear searches faster.
-      channels_.resize(std::size(channel_codes_));
-
-      // Inserts an element that will be used as sentinel on linear
-      // searches.
-      channel_codes_.push_back(0);
-
-      log::write( log::level::info
-                , "Number of channels created: {0}"
-                , std::size(channels_));
    }
 
    ev_res on_app_login(json const& j, std::shared_ptr<db_session_type> s)
@@ -238,31 +206,7 @@ private:
 
    ev_res on_app_subscribe(json const& j, std::shared_ptr<db_session_type> s)
    {
-      auto const channels = j.at("channels").get<std::vector<code_type>>();
-      auto const filters = j.at("filters").get<std::vector<code_type>>();
-      auto const ranges = j.at("ranges").get<std::vector<int>>();
-
-      auto const b0 =
-         std::is_sorted(std::cbegin(channels), std::cend(channels));
-
-      auto const b1 =
-         std::is_sorted(std::cbegin(filters), std::cend(filters));
-
-      if (!b0 || !b1) {
-         json resp;
-         resp["cmd"] = "subscribe_ack";
-         resp["result"] = "fail";
-         s->send(resp.dump(), false);
-         return ev_res::subscribe_fail;
-      }
-
-      auto const any_of_features = j.at("any_of_features").get<code_type>();
       auto const app_last_post_id = j.at("last_post_id").get<int>();
-
-      s->set_any_of_filter(any_of_features);
-      s->set_sub_channels(filters);
-      s->set_ranges(ranges);
-
       auto psession = s->get_proxy_session(true);
 
       std::vector<post> items;
@@ -270,90 +214,13 @@ private:
       auto pred = [s](auto const& p)
          { return !s->ignore(p); };
 
-      // If the second channels are empty, the app wants posts from all
-      // channels, otherwise we have to traverse the individual channels.
-      if (std::empty(channels)) {
-         root_channel_.add_member(
-            psession,
-            channel_cfg_.cleanup_rate);
+      root_channel_.add_member(psession, channel_cfg_.cleanup_rate);
 
-         root_channel_.get_posts(
-            app_last_post_id,
-            std::back_inserter(items),
-            core_cfg_.max_posts_on_sub,
-            pred);
-      } else {
-         // We will use the following algorithm
-         // 1. Search the first channel the user subscribed to.
-         // 2. Begin a linear search skipping the channels the user did
-         // not subscribed to.
-         //
-         // NOTICE: Remember to skip the sentinel.
-         auto const cend = std::cend(channel_codes_);
-         auto match =
-            std::lower_bound( std::cbegin(channel_codes_)
-                            , std::prev(cend)
-                            , channels.front());
-
-         auto invalid_count = 0;
-         if (match == std::prev(cend) || *match > channels.front()) {
-            invalid_count = 1;
-         } else {
-            auto f = [&, this](auto const& code)
-            {
-               // If the number of posts is already big enough we
-               // return immediately. Ideally we would stop traversion
-               // the channels, but this is not possible inside the
-               // for_each, would have to write a loop.
-               if (ssize(items) >= core_cfg_.max_posts_on_sub)
-                  return;
-
-               // Sets the sentinel
-               channel_codes_.back() = code;
-
-               // Linear search with sentinel.
-               while (*match != code)
-                  ++match;
-
-               if (match == std::prev(cend)) {
-                  ++invalid_count;
-                  return;
-               }
-
-               auto const i =
-                  std::distance(std::cbegin(channel_codes_), match);
-
-               channels_[i].add_member(psession, channel_cfg_.cleanup_rate);
-
-               auto const n = core_cfg_.max_posts_on_sub - ssize(items);
-               assert(n >= 0);
-
-               channels_[i].get_posts(
-                  app_last_post_id,
-                  std::back_inserter(items),
-                  n,
-                  pred);
-            };
-
-            // There is a limit on how many channels the app is allowed
-            // to subscribe to.
-            auto const d = std::min(ssize(channels), channel_cfg_.max_sub);
-
-            std::for_each( std::cbegin(channels)
-                         , std::cbegin(channels) + d
-                         , f);
-         }
-
-         assert(ssize(items) <= core_cfg_.max_posts_on_sub);
-
-         std::sort(std::begin(items), std::end(items));
-
-         if (invalid_count != 0) {
-            log::write( log::level::debug
-                      , "db_worker::on_app_subscribe: Invalid channels {0}."
-                      , invalid_count);
-         }
-      }
+      root_channel_.get_posts(
+	 app_last_post_id,
+	 std::back_inserter(items),
+	 core_cfg_.max_posts_on_sub,
+	 pred);
 
       json resp;
       resp["cmd"] = "subscribe_ack";
@@ -444,8 +311,7 @@ private:
       }
 
       log::write( log::level::debug
-                , "New post to channel {0}, from user {1}"
-                , items.front().to
+                , "New post from user {0}"
                 , items.front().from);
 
       // Before we request a new pub id, we have to check that the post
@@ -453,23 +319,7 @@ private:
       // items from being incremented on an invalid message. May be
       // overkill since we do not expect the app to contain so severe
       // bugs but we never thrust the client.
-      auto const cend = std::cend(channel_codes_);
-      auto const match =
-         std::lower_bound( std::cbegin(channel_codes_)
-                         , std::prev(cend)
-                         , items.front().to);
-
-      if (match == std::prev(cend) || std::size(items) != 1) {
-         // This is a non-existing channel. Perhaps the json command was
-         // sent with the wrong information signaling a logic error in
-         // the app. Sending a fail ack back to the app is useful to
-         // debug it. See redis::request::unsolicited_publish.
-         json resp;
-         resp["cmd"] = "publish_ack";
-         resp["result"] = "fail";
-         s->send(resp.dump(), false);
-         return ev_res::publish_fail;
-      }
+      // TODO: How to check post validity.
 
       // I do not check if the deadline is valid as it should always be
       // according to the algorithm used.
@@ -594,44 +444,6 @@ private:
       assert(false);
    }
 
-   void on_db_menu(std::vector<std::string> const& data) noexcept
-   {
-      try {
-         if (std::size(data) != 1) {
-            log::write( log::level::emerg
-                      , "Menu received from the database is empty. Exiting ...");
-
-            shutdown();
-            return;
-         }
-
-         if (std::empty(data.back())) {
-            log::write( log::level::emerg
-                      , "Menu received from the database is empty. Exiting ...");
-
-            shutdown();
-            return;
-         }
-
-         auto const j = json::parse(data.back());
-
-         // We have to save the menu and retrieve the menu messages from the
-         // database. Only after that we will bind and listen for websocket
-         // connections.
-         channel_codes_ = j.at("channels").get<std::vector<code_type>>();
-         std::sort(std::begin(channel_codes_), std::end(channel_codes_));
-         db_.retrieve_posts(0);
-
-         log::write( log::level::info
-                   , "Success retrieving channels from redis.");
-
-      } catch (...) {
-         log::write( log::level::emerg
-                   , "Unrecoverable error in: on_db_menu");
-         shutdown();
-      }
-   }
-
    void on_db_channel_post(std::string const& msg)
    {
       // This function has two roles, deal with the delete command and
@@ -642,103 +454,60 @@ private:
       // commands that are sent from workers to workers increases.
 
       auto const j = json::parse(msg);
-      auto const to = j.at("to").get<code_type>();
-
-      // Now we perform a binary search of the channel hash code
-      // calculated above in the channel_codes_ to determine in which
-      // channel it shall be published. Notice we exclude the sentinel
-      // from the search.
-      auto const cend = std::cend(channel_codes_);
-      auto const match =
-         std::lower_bound( std::cbegin(channel_codes_)
-                         , std::prev(cend)
-                         , to);
-
-      if (match == std::prev(cend)) {
-         // This happens if the subscription to the posts channel happens
-         // before we receive the menu and generate the channels.  That
-         // is why it is important to update the last message id only
-         // after this check.
-         //
-         // We could in principle insert the post, but I am afraid this
-         // could result in duplicated posts after we receive those from
-         // the database.
-         log::write(log::level::debug, "Channel could not be found: {0}", to);
-         return;
-      }
-
-      if (*match > to) {
-         log::write(log::level::debug, "Channel could not be found: {0}", to);
-         return;
-      }
-
-      // The channel has been found, we can now calculate the offset in
-      // the channels array.
-      auto const i = std::distance(std::cbegin(channel_codes_), match);
 
       if (j.contains("cmd")) {
-         auto const post_id = j.at("id").get<int>();
-         auto const from = j.at("from").get<std::string>();
-         auto const r1 = channels_[i].remove_post(post_id, from);
-         auto const r2 = root_channel_.remove_post(post_id, from);
-         if (!r1 || !r2) 
-            log::write( log::level::notice
-                      , "Failed to remove post {0} from channel {1}. User {2}"
-                      , post_id
-                      , to
-                      , from);
+	 auto const post_id = j.at("id").get<int>();
+	 auto const from = j.at("from").get<std::string>();
+	 auto const r2 = root_channel_.remove_post(post_id, from);
+	 if (!r2) 
+	    log::write( log::level::notice
+		      , "Failed to remove post {0}. User {1}"
+		      , post_id
+		      , from);
 
-         return;
+	 return;
       }
 
-      // Do not call this before we know it is not a delete command.
-      // Parsing will throw and error.
+      // Do not call this before we know it is not a delete command.  Parsing
+      // will throw and error.
       auto const item = j.get<post>();
 
       if (item.id > last_post_id_)
-         last_post_id_ = item.id;
+	 last_post_id_ = item.id;
 
       using namespace std::chrono;
 
       auto const now =
-         duration_cast<seconds>(system_clock::now().time_since_epoch());
+	 duration_cast<seconds>(system_clock::now().time_since_epoch());
 
       auto const post_exp = channel_cfg_.get_post_expiration();
 
       auto expired1 = root_channel_.broadcast(item, now, post_exp);
-      auto expired2 = channels_[i].broadcast(item, now, post_exp);
 
-      expired1.insert( std::end(expired1)
-                     , std::make_move_iterator(std::begin(expired2))
-                     , std::make_move_iterator(std::end(expired2)));
+      std::sort(std::begin(expired1), std::end(expired1));
 
-      std::sort( std::begin(expired1)
-               , std::end(expired1));
-
-      auto new_end =
-         std::unique( std::begin(expired1)
-                    , std::end(expired1));
+      auto new_end = std::unique(std::begin(expired1), std::end(expired1));
 
       expired1.erase(new_end, std::end(expired1));
 
-      // NOTE: When we issue the delete command to the other
-      // databases, we are in fact also send a delete cmd to ourselves
-      // and in this case the deletions will fail (they have already
-      // been removed). This is not bad since it simplifies the code
-      // and there are also tipicaly not so many posts in each
-      // deletion, it presents no performance problems in any case.
+      // NOTE: When we issue the delete command to the other databases, we are
+      // in fact also sending a delete cmd to ourselves and in this case the
+      // deletions will fail (they have already been removed). This is not bad
+      // since it simplifies the code and there are also tipically not so many
+      // posts in each deletion, it presents no performance problems in any
+      // case.
 
       auto f = [this](auto const& p)
-         { delete_post(p.id, p.from, p.to); };
+	 { delete_post(p.id, p.from); };
 
       std::for_each( std::cbegin(expired1)
-                   , std::cend(expired1)
-                   , f);
+		   , std::cend(expired1)
+		   , f);
 
       if (!std::empty(expired1)) {
-         log::write( log::level::info
-                   , "Number of expired posts removed: {0}"
-                   , std::size(expired1));
+	 log::write( log::level::info
+		   , "Number of expired posts removed: {0}"
+		   , std::size(expired1));
       }
    }
 
@@ -766,12 +535,8 @@ private:
 
    void on_db_posts(std::vector<std::string> const& msgs)
    {
-      // Create the channels only if its empty since this function is
-      // also called when the connection to redis is lost and
+      // This function is also called when the connection to redis is lost and
       // restablished. 
-      auto const empty = std::empty(channels_);
-      if (empty)
-         create_channels();
 
       log::write( log::level::info
                 , "Number of messages received from the database: {0}"
@@ -782,10 +547,8 @@ private:
 
       std::for_each(std::begin(msgs), std::end(msgs), loader);
 
-      if (empty) {
-         // We can begin to accept websocket connections. NOTICE: It may
-         // be better to use acceptor::is_open to determine if the run
-         // functions should be called instead of using empty.
+      if (!acceptor_.is_open()) {
+	 // We can begin to accept websocket connections.
          acceptor_.run( *this
                       , ctx_
                       , core_cfg_.db_port
@@ -798,58 +561,58 @@ private:
    void on_db_event( std::vector<std::string> data
                    , redis::response const& req)
    {
-      switch (req.req)
-      {
-         case redis::events::channels:
-            on_db_menu(data);
-            break;
+      try {
+	 switch (req.req)
+	 {
+	    case redis::events::user_messages:
+	       on_db_chat_msg(req.user_id, std::move(data));
+	       break;
 
-         case redis::events::user_messages:
-            on_db_chat_msg(req.user_id, std::move(data));
-            break;
+	    case redis::events::post:
+	       on_db_publish();
+	       break;
 
-         case redis::events::post:
-            on_db_publish();
-            break;
+	    case redis::events::posts:
+	       on_db_posts(data);
+	       break;
 
-         case redis::events::posts:
-            on_db_posts(data);
-            break;
+	    case redis::events::post_id:
+	       assert(std::size(data) == 1);
+	       on_db_post_id(data.back());
+	       break;
 
-         case redis::events::post_id:
-            assert(std::size(data) == 1);
-            on_db_post_id(data.back());
-            break;
+	    case redis::events::user_id:
+	       assert(std::size(data) == 1);
+	       on_db_user_id(data.back());
+	       break;
 
-         case redis::events::user_id:
-            assert(std::size(data) == 1);
-            on_db_user_id(data.back());
-            break;
+	    case redis::events::user_data:
+	       on_db_user_data(data);
+	       break;
 
-         case redis::events::user_data:
-            on_db_user_data(data);
-            break;
+	    case redis::events::register_user:
+	       on_db_register();
+	       break;
 
-         case redis::events::register_user:
-            on_db_register();
-            break;
+	    case redis::events::post_connect:
+	       on_db_post_connect();
+	       break;
 
-         case redis::events::post_connect:
-            on_db_menu_connect();
-            break;
+	    case redis::events::channel_post:
+	       assert(std::size(data) == 1);
+	       on_db_channel_post(data.back());
+	       break;
 
-         case redis::events::channel_post:
-            assert(std::size(data) == 1);
-            on_db_channel_post(data.back());
-            break;
+	    case redis::events::presence:
+	       assert(std::size(data) == 1);
+	       on_db_presence(req.user_id, data.front());
+	       break;
 
-         case redis::events::presence:
-            assert(std::size(data) == 1);
-            on_db_presence(req.user_id, data.front());
-            break;
-
-         default:
-            break;
+	    default:
+	       break;
+	 }
+      } catch (std::exception const& e) {
+         log::write(log::level::crit, "on_db_event: {0}", e.what());
       }
    }
 
@@ -900,22 +663,17 @@ private:
       // We do not need this function at the moment.
    }
 
-   void on_db_menu_connect()
+   void on_db_post_connect()
    {
       // There are two situations we have to distinguish here.
       //
-      // 1. The server has started and still does not have the menu, we
-      //    have to retrieve it.
+      // 1. The server has started.
       //
-      // 2. The connection to the database (redis) has been lost and
-      //    restablished. In this case we have to retrieve all the
-      //    messages that may have arrived while we were offline.
+      // 2. The connection to the database (redis) was lost and restablished.
+      //    In this case we have to retrieve all posts that may have arrived
+      //    while we were offline.
 
-      if (std::empty(channel_codes_)) {
-         db_.retrieve_channels();
-      } else {
-         db_.retrieve_posts(1 + last_post_id_);
-      }
+      db_.retrieve_posts(1 + last_post_id_);
    }
 
    void on_db_user_id(std::string const& id)
@@ -995,97 +753,93 @@ private:
 
    void on_db_user_data(std::vector<std::string> const& fields) noexcept
    {
-      try {
-         assert(!std::empty(login_queue_));
-         assert(std::size(fields) == 4);
+      assert(!std::empty(login_queue_));
+      assert(std::size(fields) == 4);
 
-         if (auto s = login_queue_.front().session.lock()) {
-            auto const digest = make_hex_digest(login_queue_.front().pwd);
-            if (fields[0] != digest) { // Incorrect pwd?
-               json resp;
-               resp["cmd"] = "login_ack";
-               resp["result"] = "fail";
-               s->send(resp.dump(), false);
-               s->shutdown();
+      if (auto s = login_queue_.front().session.lock()) {
+	 auto const digest = make_hex_digest(login_queue_.front().pwd);
+	 if (fields[0] != digest) { // Incorrect pwd?
+	    json resp;
+	    resp["cmd"] = "login_ack";
+	    resp["result"] = "fail";
+	    s->send(resp.dump(), false);
+	    s->shutdown();
 
-               log::write( log::level::debug
-                         , "Login failed for {1}:{2}."
-                         , s->get_id()
-                         , login_queue_.front().pwd);
+	    log::write( log::level::debug
+		      , "Login failed for {0}:{1}."
+		      , s->get_id()
+		      , login_queue_.front().pwd);
 
-            } else {
-               auto const ss = sessions_.insert({s->get_id(), s});
-               if (!ss.second) {
-                  // There should never be more than one session with
-                  // the same id. For now, I will simply override the
-                  // old session and disregard any pending messages.
-                  // In Principle, if the session is still online, it
-                  // should not contain any messages anyway.
+	 } else {
+	    auto const ss = sessions_.insert({s->get_id(), s});
+	    if (!ss.second) {
+	       // There should never be more than one session with
+	       // the same id. For now, I will simply override the
+	       // old session and disregard any pending messages.
+	       // In Principle, if the session is still online, it
+	       // should not contain any messages anyway.
 
-                  // The old session has to be shutdown first
-                  if (auto old_ss = ss.first->second.lock()) {
-                     old_ss->shutdown();
-                     // We have to prevent the cleanup operation when its
-                     // destructor is called. That would cause the new
-                     // session to be removed from the map again.
-                     old_ss->set_id("");
-                  } else {
-                     // Awckward, the old session has already expired and
-                     // we did not remove it from the map. It should be
-                     // fixed.
-                  }
+	       // The old session has to be shutdown first
+	       if (auto old_ss = ss.first->second.lock()) {
+		  old_ss->shutdown();
+		  // We have to prevent the cleanup operation when its
+		  // destructor is called. That would cause the new
+		  // session to be removed from the map again.
+		  old_ss->set_id("");
+	       } else {
+		  // Awckward, the old session has already expired and
+		  // we did not remove it from the map. It should be
+		  // fixed.
+	       }
 
-                  ss.first->second = s;
-               }
+	       ss.first->second = s;
+	    }
 
-               db_.on_user_online(s->get_id());
-               db_.retrieve_messages(s->get_id());
+	    db_.on_user_online(s->get_id());
+	    db_.retrieve_messages(s->get_id());
 
-               using namespace std::chrono;
-               auto const now = duration_cast<seconds>(
-                  system_clock::now().time_since_epoch());
+	    using namespace std::chrono;
+	    auto const now = duration_cast<seconds>(
+	       system_clock::now().time_since_epoch());
 
-               auto const allowed = std::stoi(fields.at(1));
-               auto remaining = std::stoi(fields.at(2));
-               auto const deadline = seconds {std::stol(fields.at(3))};
-               if (now > deadline) {
-                  // Notice that a race can originate here if the adm api has
-                  // updated the number of allowed or remaining posts right
-                  // after these values have been retrieved from redis. This is
-                  // extremely unlikely as there are only a couple of micro
-                  // seconds for that to happen.
-                  // 
-                  // Once the user is logged in we should never again update
-                  // his post counters as that can overwrite values set over
-                  // the adm api. Reading it before setting is too complicated.
-                  db_.update_post_deadline(
-                     s->get_id(),
-                     allowed,
-                     now + core_cfg_.get_post_interval());
+	    auto const allowed = std::stoi(fields.at(1));
+	    auto remaining = std::stoi(fields.at(2));
+	    auto const deadline = seconds {std::stol(fields.at(3))};
+	    if (now > deadline) {
+	       // Notice that a race can originate here if the adm api has
+	       // updated the number of allowed or remaining posts right
+	       // after these values have been retrieved from redis. This is
+	       // extremely unlikely as there are only a couple of micro
+	       // seconds for that to happen.
+	       // 
+	       // Once the user is logged in we should never again update
+	       // his post counters as that can overwrite values set over
+	       // the adm api. Reading it before setting is too complicated.
+	       db_.update_post_deadline(
+		  s->get_id(),
+		  allowed,
+		  now + core_cfg_.get_post_interval());
 
-                  remaining = allowed;
-               }
+	       remaining = allowed;
+	    }
 
-               s->set_remaining_posts(remaining);
+	    s->set_remaining_posts(remaining);
 
-               json resp;
-               resp["cmd"] = "login_ack";
-               resp["result"] = "ok";
-               resp["remaining_posts"] = remaining;
-               s->send(resp.dump(), false);
+	    json resp;
+	    resp["cmd"] = "login_ack";
+	    resp["result"] = "ok";
+	    resp["remaining_posts"] = remaining;
+	    s->send(resp.dump(), false);
 
-               if (!std::empty(login_queue_.front().token))
-                  db_.publish_token(
-                     s->get_id(),
-                     login_queue_.front().token);
-            }
-         } else {
-            // The user is not online anymore. The requested id is lost.
-            // Very unlikely to happen since the communication with redis is
-            // very fast.
-         }
-      } catch (std::exception const& e) {
-         log::write(log::level::crit, "on_db_user_data: {0}", e.what());
+	    if (!std::empty(login_queue_.front().token))
+	       db_.publish_token(
+		  s->get_id(),
+		  login_queue_.front().token);
+	 }
+      } else {
+	 // The user is not online anymore. The requested id is lost.
+	 // Very unlikely to happen since the communication with redis is
+	 // very fast.
       }
 
       login_queue_.pop();
@@ -1268,18 +1022,12 @@ public:
       { return ioc_; }
 
    void run()
-   {
-      ioc_.run();
-   }
+      { ioc_.run(); }
 
    auto const& get_cfg() const noexcept
-   {
-      return core_cfg_;
-   }
+      { return core_cfg_; }
 
-   void delete_post( int post_id
-                   , std::string const& from
-                   , code_type to)
+   void delete_post(int post_id, std::string const& from)
    {
       // See comment is on_app_del_post.
 
@@ -1287,7 +1035,6 @@ public:
       j["cmd"] = "delete";
       j["from"] = from;
       j["id"] = post_id;
-      j["to"] = to;
       db_.remove_post(post_id, j.dump());
    }
 };

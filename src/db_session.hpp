@@ -56,7 +56,6 @@ struct ws_timeouts {
 template <class Derived>
 class db_session {
 private:
-   static auto constexpr sub_channels_size_ = 64;
    static auto constexpr ranges_size_ = 2 * 3;
 
    struct msg_entry {
@@ -74,11 +73,7 @@ private:
    std::string user_id_;
    code_type any_of_filter_ = 0;
 
-   boost::container::static_vector<
-      code_type, sub_channels_size_> sub_channels_;
-
-   boost::container::static_vector<
-      code_type, ranges_size_> ranges_;
+   boost::container::static_vector<code_type, ranges_size_> ranges_;
 
    // The number of posts the user can publish until the deadline.
    int remaining_posts_ = 0;
@@ -307,19 +302,6 @@ public:
 
    auto ignore(post const& p) const noexcept
    {
-      if (any_of_filter_ != 0)
-         if ((any_of_filter_ & p.features) == 0)
-            return true;
-
-      if (!std::empty(sub_channels_)) {
-         auto const match =
-            std::binary_search( std::begin(sub_channels_)
-                              , std::end(sub_channels_)
-                              , p.filter);
-         if (!match)
-            return true;
-      }
-
       if (!std::empty(ranges_)) {
          auto const min =
             std::min(ssize(ranges_) / 2,
@@ -369,22 +351,6 @@ public:
 
    void set_id(std::string id)
       { user_id_ = std::move(id); };
-
-   // Sets the any_of filter, used to filter posts sent with send_post
-   // above. If the filter is non-null the post features will be
-   // required to contain at least one bit set that is also set in the
-   // argument passed here.
-   void set_any_of_filter(code_type o)
-      { any_of_filter_ = o; }
-
-   void set_sub_channels(std::vector<code_type> const& codes)
-   {
-      auto const min = std::min(ssize(codes), sub_channels_size_);
-      sub_channels_.clear();
-      std::copy( std::cbegin(codes)
-               , std::cbegin(codes) + min
-               , std::back_inserter(sub_channels_));
-   }
 
    void set_ranges(std::vector<int> const& ranges)
    {

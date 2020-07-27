@@ -56,7 +56,6 @@ public:
    struct options_type {
       login user;
       int n_publishers;
-      std::vector<code_type> filters;
    };
 
 private:
@@ -85,7 +84,6 @@ class leave_after_sub_ack {
 public:
    struct options_type {
       login user;
-      std::vector<code_type> filters;
    };
 
 private:
@@ -187,7 +185,6 @@ public:
 
 struct pub_helper {
    int id;
-   code_type filter;
 };
 
 class publisher {
@@ -195,7 +192,6 @@ public:
    struct options_type {
       login user;
       int n_repliers;
-      std::vector<code_type> filters;
    };
 
 private:
@@ -232,7 +228,6 @@ class publisher2 {
 public:
    struct options_type {
       login user;
-      std::vector<code_type> filters;
    };
 
 private:
@@ -242,7 +237,7 @@ private:
    int msg_counter;
    std::vector<int> post_ids;
 
-   int pub(code_type filter, std::shared_ptr<client_type> s) const;
+   int pub(std::shared_ptr<client_type> s) const;
 
 public:
    publisher2(options_type op_)

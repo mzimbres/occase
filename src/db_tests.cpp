@@ -28,7 +28,6 @@ using namespace occase::cli;
 namespace po = boost::program_options;
 
 struct options {
-   std::vector<code_type> filters;
    std::string host {"127.0.0.1"};
    std::string port {"8080"};
    int n_publishers = 10;
@@ -154,7 +153,7 @@ void start_leave_after_sub_ack(options const& op)
 
    auto const s = std::make_shared<session_launcher<client_type>
                    >( ioc
-                    , config_type {{}, op.filters}
+                    , config_type {{}}
                     , op.make_session_cf()
                     , op.make_cfg(logins)
                     );
@@ -183,7 +182,7 @@ void test_online(options const& op)
       auto const s = std::make_shared<session_launcher<publisher>
                       >( ioc
                        , config_type 
-                         {{}, op.n_repliers, op.filters}
+                         {{}, op.n_repliers}
                        , op.make_session_cf()
                        , op.make_pub_cfg(logins1)
                        );
@@ -204,7 +203,7 @@ void test_online(options const& op)
       auto const s = std::make_shared<session_launcher<client_type>
                       >( ioc
                        , config_type
-                         {{}, op.n_publishers, op.filters}
+                         {{}, op.n_publishers}
                        , op.make_session_cf()
                        , op.make_cfg(logins2)
                        );
@@ -223,7 +222,7 @@ void test_online(options const& op)
    using client_type = leave_after_n_posts;
    using config_type = client_type::options_type;
 
-   auto const n = ssize(op.filters) * op.n_publishers;
+   auto const n = op.n_publishers;
 
    //std::cout << "Test online: waiting: " << n << std::endl;
    //std::cout << "Test online size1: " << std::size(logins3) << std::endl;
@@ -256,7 +255,7 @@ void test_offline(options const& op)
       std::make_shared<session_type1>( ioc
                                      , op.make_session_cf()
                                      , config_type1
-                                       { l1.front(), op.filters});
+                                       { l1.front()});
    s1->run();
    ioc.run();
    auto post_ids = s1->get_mgr().get_post_ids();
@@ -273,9 +272,7 @@ void test_offline(options const& op)
    std::make_shared<session_type2>( ioc
                                   , op.make_session_cf()
                                   , config_type2
-                                    { l2.front()
-                                    , 1
-                                    , op.filters}
+                                    {l2.front(), 1}
                                   )->run();
    ioc.restart();
    ioc.run();
@@ -408,15 +405,10 @@ void test_early_close(options const& op)
 int main(int argc, char* argv[])
 {
    try {
-      std::string filters_file;
       options op;
       po::options_description desc("Options");
       desc.add_options()
          ("help,h", "Produces the help message.")
-
-         ( "filters-file"
-         , po::value<std::string>(&filters_file)
-         , "File with the filters in json format.")
 
          ( "port,p"
          , po::value<std::string>(&op.port)->default_value("8080")
@@ -468,8 +460,6 @@ int main(int argc, char* argv[])
          std::cout << desc << "\n";
          return 0;
       }
-
-      op.filters = make_channels(filters_file);
 
       set_fd_limits(100000);
 

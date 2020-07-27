@@ -13,27 +13,22 @@ for (( i = 0 ; i < 2 ; ++i )); do
               --publishers 2\
               --listeners 100\
               --post-listeners 5\
-              --filters tests/filters.txt\
               --launch-interval 10
 done
 
 for (( i = 0 ; i < 2 ; ++i )); do
    echo "Starting test 3-$i"
    ./db_tests --test 3\
-              --filters tests/filters.txt\
               --launch-interval 10
 done
 
 echo "Starting test 2"
 ./db_tests --test 2\
-           --filters tests/filters.txt\
            --handshake-timeout 3
 
 echo "Starting test 4"
-./db_tests --test 4 \
-           --filters tests/filters.txt
+./db_tests --test 4
 
 echo "Starting test 5"
-./db_tests --test 5 \
-           --filters tests/filters.txt
+./db_tests --test 5
 

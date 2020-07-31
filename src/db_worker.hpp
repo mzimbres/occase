@@ -999,13 +999,13 @@ public:
 
    template <class UnaryPredicate>
    std::vector<post>
-   get_posts(int id, UnaryPredicate pred) const noexcept
+   get_posts(int date, UnaryPredicate pred) const noexcept
    {
       try {
          std::vector<post> posts;
 
          root_channel_.get_posts(
-            id,
+            date,
             std::back_inserter(posts),
             core_cfg_.max_posts_on_sub,
             pred);

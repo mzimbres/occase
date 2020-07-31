@@ -58,11 +58,18 @@ using code_type = std::uint64_t;
 using date_type = std::chrono::seconds;
 
 struct post {
+   date_type date {0};
    int id;
    std::string from;
-   std::string body;
-   date_type date {0};
+   std::string nick;
+   std::string avatar;
+   std::string description;
+   std::vector<int> location;
+   std::vector<int> product;
+   std::vector<int> ex_details;
+   std::vector<code_type> in_details;
    std::vector<int> range_values;
+   std::vector<std::string> images;
 };
 
 inline

@@ -7,21 +7,35 @@ namespace occase
 
 void to_json(json& j, post const& e)
 {
-   j = json{ {"id", e.id}
+   j = json{ {"date", e.date.count()}
+           , {"id", e.id}
            , {"from", e.from}
-           , {"body", e.body}
-           , {"date", e.date.count()}
+           , {"nick", e.nick}
+           , {"avatar", e.avatar}
+           , {"description", e.description}
+           , {"location", e.location}
+           , {"product", e.product}
+           , {"ex_details", e.ex_details}
+           , {"in_details", e.in_details}
            , {"range_values", e.range_values}
+           , {"images", e.images}
            };
 }
 
 void from_json(json const& j, post& e)
 {
+  e.date = date_type {j.at("date").get<long int>()};
   e.id = j.at("id").get<int>();
   e.from = j.at("from").get<std::string>();
-  e.body = j.at("body").get<std::string>();
-  e.date = date_type {j.at("date").get<long int>()};
+  e.nick = j.at("nick").get<std::string>();
+  e.avatar = j.at("avatar").get<std::string>();
+  e.description = j.at("description").get<std::string>();
+  e.location = j.at("location").get<std::vector<int>>();
+  e.product = j.at("product").get<std::vector<int>>();
+  e.ex_details = j.at("ex_details").get<std::vector<int>>();
+  e.in_details = j.at("in_details").get<std::vector<code_type>>();
   e.range_values = j.at("range_values").get<std::vector<int>>();
+  e.images = j.at("images").get<std::vector<std::string>>();
 }
 
 std::string make_rel_path(std::string const& filename)

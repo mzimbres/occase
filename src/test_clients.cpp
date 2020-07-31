@@ -43,18 +43,21 @@ std::string make_login_cmd(occase::cli::login const& user)
 
 std::string make_post_cmd()
 {
-   json sub;
-   sub["msg"] = "Not an interesting message.";
-   sub["nick"] = "Wheeler";
-   sub["avatar"] = "9ac8316ca55e6d888d43092fd73a78d6";
-   sub["ex_details"] = std::vector<code_type>{};
-   sub["in_details"] = std::vector<code_type>{};
+   occase::post item
+   { std::chrono::seconds {0} // date
+   , -1  // id
+   , {} // from
+   , "Wheeler" // nick
+   , "9ac8316ca55e6d888d43092fd73a78d6" // avatar
+   , "Some description." // description
+   , {} // location
+   , {} // product
+   , {} // ex
+   , {} // in
+   , {} // range_values
+   , {} // images
+   };
 
-   occase::post item { -1
-                 , {}
-                 , sub.dump()
-                 , std::chrono::seconds {0}
-                 , {}};
    json j;
    j["cmd"] = "publish";
    j["items"] = std::vector<occase::post>{item};
@@ -597,18 +600,20 @@ int publisher2::on_closed(boost::system::error_code ec)
 
 int publisher2::pub(std::shared_ptr<client_type> s) const
 {
-   json sub;
-   sub["msg"] = "Not an interesting message.";
-   sub["nick"] = "Wheeler";
-   sub["avatar"] = "";
-   sub["ex_details"] = std::vector<std::uint64_t>{};
-   sub["in_details"] = std::vector<std::uint64_t>{};
-
-   occase::post item { -1
-                     , op.user.id
-                     , sub.dump()
-                     , std::chrono::seconds {0}
-                     , {}};
+   occase::post item
+   { std::chrono::seconds {0} // date
+   , -1  // id
+   , op.user.id // from
+   , "Wheeler" // nick
+   , "" // avatar
+   , "Some description." // description
+   , {} // location
+   , {} // product
+   , {} // ex
+   , {} // in
+   , {} // range_values
+   , {} // images
+   };
 
    json j_msg;
    j_msg["cmd"] = "publish";

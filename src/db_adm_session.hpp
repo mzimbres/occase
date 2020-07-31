@@ -98,15 +98,13 @@ make_img_row( std::string const& db_host
             , std::string const& pwd) noexcept
 {
    try {
-      auto const j = json::parse(p.body);
-      auto const images = j.at("images").get<std::vector<std::string>>();
       std::string row;
       row += "<tr>";
       row += make_del_post_link( db_host
                                , p.from
                                , std::to_string(p.id)
                                , pwd);
-      for (auto const& s : images) {
+      for (auto const& s : p.images) {
          row += "<td>";
          row += make_img(s);
          row += "</td>";

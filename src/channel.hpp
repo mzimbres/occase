@@ -77,11 +77,10 @@ template <class Session>
 class channel {
 public:
    using inserter_type = std::back_insert_iterator<std::vector<post>>;
-   using psession_type = proxy_session<Session>;
 
 private:
    int insertions_on_inactivity_ = 0;
-   std::vector<std::weak_ptr<psession_type>> members_;
+   std::vector<std::weak_ptr<Session>> members_;
    std::vector<post> items_;
 
    template <class F>
@@ -91,12 +90,7 @@ private:
       decltype(end) begin = 0;
       while (begin != end) {
          if (auto s = members_[begin].lock()) {
-            // The user is online. Send him a message and continue.
-            if (auto ss = s->session.lock()) {
-               f(ss);
-            } else {
-               assert(false);
-            }
+	    f(s);
             ++begin;
             continue;
          }
@@ -185,7 +179,7 @@ public:
       return expired;
    }
 
-   void add_member(std::weak_ptr<psession_type> s, int cleanup_rate)
+   void add_member(std::weak_ptr<Session> s, int cleanup_rate)
    {
       members_.push_back(s);
 

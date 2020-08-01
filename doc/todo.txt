@@ -1,25 +1,8 @@
 * LOADING Redis is loading the dataset in memory
 
-This error should be handled in the client and not passed to the occase-db?
+  This error should be handled in the client and not passed to the occase-db?
 
 * Clear lintian warnings
-
-* Mesages frm letsencrypt.
-
-   IMPORTANT NOTES:
-   - Congratulations! Your certificate and chain have been saved at:
-   /etc/letsencrypt/live/occase.de/fullchain.pem Your key file has been saved at:
-   /etc/letsencrypt/live/occase.de/privkey.pem Your cert will expire on 2020-01-27. To obtain a new or
-   tweaked version of this certificate in the future, simply run
-   certbot again. To non-interactively renew *all* of your
-   certificates, run "certbot renew"
-   - Your account credentials have been saved in
-   your Certbot configuration directory at
-   /etc/letsencrypt. You should make a secure backup of this folder now. This
-   configuration directory will also contain certificates and
-   private keys obtained by Certbot so making regular backups of this
-   folder is ideal.
-   - If you like Certbot, please consider supporting our work by:
 
 * Error caught on occase-notify
 
@@ -27,9 +10,8 @@ This error should be handled in the client and not passed to the occase-db?
    occase::notifier::on_publish(const string&): Assertion `n == 0' failed.
    Aborted
 
-* Test when running three redis instances.
-
 * Generate passwords without touching redis using device generated
   random numbers.
 
 * Use the notify field in the login command.
+

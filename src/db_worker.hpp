@@ -206,18 +206,15 @@ private:
 
    ev_res on_app_subscribe(json const& j, std::shared_ptr<db_session_type> s)
    {
-      auto const app_last_post_id = j.at("last_post_id").get<int>();
-      auto psession = s->get_proxy_session(true);
-
       std::vector<post> items;
 
       auto pred = [s](auto const& p)
          { return !s->ignore(p); };
 
-      root_channel_.add_member(psession, channel_cfg_.cleanup_rate);
+      root_channel_.add_member(s, channel_cfg_.cleanup_rate);
 
       root_channel_.get_posts(
-	 app_last_post_id,
+	 -1,
 	 std::back_inserter(items),
 	 core_cfg_.max_posts_on_sub,
 	 pred);
@@ -446,68 +443,78 @@ private:
 
    void on_db_channel_post(std::string const& msg)
    {
-      // This function has two roles, deal with the delete command and
-      // new posts.
-      //
-      // NOTE: Later we may have to improve how we decide if a message is
-      // a post or a command, like delete, specially if the number of
-      // commands that are sent from workers to workers increases.
+      try {
+	 // This function has two roles, deal with the delete command and
+	 // new posts.
+	 //
+	 // NOTE: Later we may have to improve how we decide if a message is
+	 // a post or a command, like delete, specially if the number of
+	 // commands that are sent from workers to workers increases.
 
-      auto const j = json::parse(msg);
+	 auto const j = json::parse(msg);
 
-      if (j.contains("cmd")) {
-	 auto const post_id = j.at("id").get<int>();
-	 auto const from = j.at("from").get<std::string>();
-	 auto const r2 = root_channel_.remove_post(post_id, from);
-	 if (!r2) 
-	    log::write( log::level::notice
-		      , "Failed to remove post {0}. User {1}"
-		      , post_id
-		      , from);
+	 if (j.contains("cmd")) {
+	    auto const post_id = j.at("id").get<int>();
+	    auto const from = j.at("from").get<std::string>();
+	    auto const r2 = root_channel_.remove_post(post_id, from);
+	    if (!r2) 
+	       log::write( log::level::notice
+			 , "Failed to remove post {0}. User {1}"
+			 , post_id
+			 , from);
 
-	 return;
-      }
+	    return;
+	 }
 
-      // Do not call this before we know it is not a delete command.  Parsing
-      // will throw and error.
-      auto const item = j.get<post>();
+	 // Do not call this before we know it is not a delete command.  Parsing
+	 // will throw and error.
+	 auto const item = j.get<post>();
 
-      if (item.id > last_post_id_)
-	 last_post_id_ = item.id;
+	 if (item.id > last_post_id_)
+	    last_post_id_ = item.id;
 
-      using namespace std::chrono;
+	 using namespace std::chrono;
 
-      auto const now =
-	 duration_cast<seconds>(system_clock::now().time_since_epoch());
+	 auto const now =
+	    duration_cast<seconds>(system_clock::now().time_since_epoch());
 
-      auto const post_exp = channel_cfg_.get_post_expiration();
+	 auto const post_exp = channel_cfg_.get_post_expiration();
 
-      auto expired1 = root_channel_.broadcast(item, now, post_exp);
+	 auto expired1 = root_channel_.broadcast(item, now, post_exp);
 
-      std::sort(std::begin(expired1), std::end(expired1));
+	 std::sort(std::begin(expired1), std::end(expired1));
 
-      auto new_end = std::unique(std::begin(expired1), std::end(expired1));
+	 auto new_end = std::unique(std::begin(expired1), std::end(expired1));
 
-      expired1.erase(new_end, std::end(expired1));
+	 expired1.erase(new_end, std::end(expired1));
 
-      // NOTE: When we issue the delete command to the other databases, we are
-      // in fact also sending a delete cmd to ourselves and in this case the
-      // deletions will fail (they have already been removed). This is not bad
-      // since it simplifies the code and there are also tipically not so many
-      // posts in each deletion, it presents no performance problems in any
-      // case.
+	 // NOTE: When we issue the delete command to the other databases, we are
+	 // in fact also sending a delete cmd to ourselves and in this case the
+	 // deletions will fail (they have already been removed). This is not bad
+	 // since it simplifies the code and there are also tipically not so many
+	 // posts in each deletion, it presents no performance problems in any
+	 // case.
 
-      auto f = [this](auto const& p)
-	 { delete_post(p.id, p.from); };
+	 auto f = [this](auto const& p)
+	    { delete_post(p.id, p.from); };
 
-      std::for_each( std::cbegin(expired1)
-		   , std::cend(expired1)
-		   , f);
+	 std::for_each( std::cbegin(expired1)
+		      , std::cend(expired1)
+		      , f);
 
-      if (!std::empty(expired1)) {
-	 log::write( log::level::info
-		   , "Number of expired posts removed: {0}"
-		   , std::size(expired1));
+	 if (!std::empty(expired1)) {
+	    log::write( log::level::info
+		      , "Number of expired posts removed: {0}"
+		      , std::size(expired1));
+	 }
+      } catch (std::exception const& e) {
+	 log::write( log::level::err
+		   , "on_db_channel_post (1): {0}"
+		   , e.what());
+
+	 log::write( log::level::err
+		   , "on_db_channel_post (2): {0}"
+		   , msg);
       }
    }
 

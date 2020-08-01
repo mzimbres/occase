@@ -19,12 +19,10 @@ public:
    using stream_type = websocket::stream<beast::tcp_stream>;
    using worker_type = db_worker<db_adm_plain_session>;
    using arg_type = worker_type&;
-   using psession_type = proxy_session<db_plain_session>;
 
 private:
    stream_type stream_;
    worker_type& w;
-   std::shared_ptr<psession_type> psession;
 
 public:
    explicit
@@ -36,16 +34,6 @@ public:
    stream_type& ws() { return stream_; }
    worker_type& db() { return w; }
    worker_type const& db() const { return w; }
-
-   std::weak_ptr<psession_type> get_proxy_session(bool make_new_session)
-   {
-      if (!psession || make_new_session) {
-         psession = std::make_shared<psession_type>();
-         psession->session = shared_from_this();
-      }
-
-      return psession;
-   }
 };
 
 }

@@ -1025,6 +1025,11 @@ public:
       return {};
    }
 
+   auto get_matching_posts(post const& p) const noexcept
+   {
+      return root_channel_.size();
+   }
+
    auto& get_ioc() const noexcept
       { return ioc_; }
 

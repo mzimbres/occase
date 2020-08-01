@@ -238,6 +238,9 @@ public:
       items_.erase(point);
       return true;
    }
+
+   auto size() const noexcept
+      { return std::size(items_); }
 };
 
 }

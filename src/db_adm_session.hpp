@@ -190,14 +190,21 @@ std::ostream& operator<<(std::ostream& os, worker_stats const& stats)
    return os;
 }
 
+auto to_string(worker_stats const& stats)
+{
+   std::stringstream ss;
+   ss << stats;
+   return ss.str();
+}
+
 template <class Derived>
 class db_adm_session {
 protected:
    beast::flat_buffer buffer_{8192};
 
 private:
-   http::request<http::dynamic_body> req_;
-   http::response<http::dynamic_body> resp_;
+   http::request<http::string_body> req_;
+   http::response<http::string_body> resp_;
 
    Derived& derived() { return static_cast<Derived&>(*this); }
 
@@ -289,8 +296,8 @@ private:
          auto const posts =
             db.get_posts(post_id, [](auto const&){return true;});
 
-         boost::beast::ostream(resp_.body())
-         << html::make_adm_page( db.get_cfg().db_host
+         resp_.body() =
+            html::make_adm_page( db.get_cfg().db_host
                                , posts
                                , db.get_cfg().adm_pwd
                                , post_id);
@@ -333,7 +340,7 @@ private:
          db.delete_post(std::stoi(foo[2]), foo[1]);
 
          resp_.set(http::field::content_type, "text/html");
-         boost::beast::ostream(resp_.body()) << "Ok";
+         resp_.body() = "Ok";
 
       } catch (std::exception const& e) {
          log::write( log::level::debug
@@ -342,11 +349,35 @@ private:
       }
    }
 
+   void get_matches_handler(std::string const& target) noexcept
+   {
+      try {
+	 post p;
+	 if (!std::empty(req_.body())) {
+	    auto const j = json::parse(req_.body());
+	    p = j.get<post>();
+	 }
+
+	 auto const n = derived().db().get_matching_posts(p);
+
+         resp_.set(http::field::content_type, "text/html");
+         resp_.body() = std::to_string(n) + "\r\n";
+
+      } catch (std::exception const& e) {
+         log::write( log::level::err
+                   , "get_matches_handler (1): {0}"
+                   , e.what());
+         log::write( log::level::err
+                   , "get_matches_handler (2): {0}"
+                   , req_.body());
+      }
+   }
+
    void get_default_handler()
    {
       resp_.result(http::status::not_found);
       resp_.set(http::field::content_type, "text/plain");
-      beast::ostream(resp_.body()) << "File not found\r\n";
+      resp_.body() = "File not found\r\n";
    }
 
    void get_handler()
@@ -366,7 +397,9 @@ private:
             get_posts_handler(target);
          } else if (target.compare(0, 6, "delete") == 0) {
             get_delete_handler(target);
-         } else {
+         } else if (target.compare(0, 7, "matches") == 0) {
+            get_matches_handler(target);
+	 } else {
             get_default_handler();
          }
       } catch (...) {
@@ -380,19 +413,14 @@ private:
    {
       resp_.result(http::status::bad_request);
       resp_.set(http::field::content_type, "text/plain");
-      beast::ostream(resp_.body())
-          << "Invalid request-method '"
-          << req_.method_string().to_string()
-          << "'";
+      resp_.body() = "Invalid request-method: '" + req_.method_string().to_string() +  "'";
       do_write();
    }
 
    void stats_handler()
    {
       resp_.set(http::field::content_type, "text/csv");
-      boost::beast::ostream(resp_.body())
-      << derived().db().get_stats()
-      << "\n";
+      resp_.body() = to_string(derived().db().get_stats());
    }
 
    void do_write()

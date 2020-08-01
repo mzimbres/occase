@@ -253,6 +253,7 @@ private:
 
       switch (req_.method()) {
          case http::verb::get:  get_handler();  break;
+         case http::verb::post:  post_handler();  break;
          default: default_handler(); break;
       }
    }
@@ -275,7 +276,7 @@ private:
             log::write( log::level::debug
                       , "Error: get_posts_handler target has wrong size: {0}"
                       , std::size(foo));
-            get_default_handler();
+            set_not_fount_header();
             return;
          }
 
@@ -285,7 +286,7 @@ private:
             log::write( log::level::debug
                       , "Error: get_posts_handler target has wrong password: {0}"
                       , foo.back());
-            get_default_handler();
+            set_not_fount_header();
             return;
          }
 
@@ -323,7 +324,7 @@ private:
             log::write( log::level::debug
                       , "Error: get_delete_handler target has wrong size: {0}"
                       , std::size(foo));
-            get_default_handler();
+            set_not_fount_header();
             return;
          }
 
@@ -333,7 +334,7 @@ private:
             log::write( log::level::debug
                       , "Error: get_delete_handler target has wrong password: {0}"
                       , foo.back());
-            get_default_handler();
+            set_not_fount_header();
             return;
          }
 
@@ -349,7 +350,7 @@ private:
       }
    }
 
-   void get_matches_handler(std::string const& target) noexcept
+   void post_matches_handler(std::string const& target) noexcept
    {
       try {
 	 post p;
@@ -365,15 +366,15 @@ private:
 
       } catch (std::exception const& e) {
          log::write( log::level::err
-                   , "get_matches_handler (1): {0}"
+                   , "post_matches_handler (1): {0}"
                    , e.what());
          log::write( log::level::err
-                   , "get_matches_handler (2): {0}"
+                   , "post_matches_handler (2): {0}"
                    , req_.body());
       }
    }
 
-   void get_default_handler()
+   void set_not_fount_header()
    {
       resp_.result(http::status::not_found);
       resp_.set(http::field::content_type, "text/plain");
@@ -397,13 +398,34 @@ private:
             get_posts_handler(target);
          } else if (target.compare(0, 6, "delete") == 0) {
             get_delete_handler(target);
-         } else if (target.compare(0, 7, "matches") == 0) {
-            get_matches_handler(target);
-	 } else {
-            get_default_handler();
+         } else {
+            set_not_fount_header();
          }
       } catch (...) {
-         get_default_handler();
+         set_not_fount_header();
+      }
+
+      do_write();
+   }
+
+   void post_handler()
+   {
+      try {
+         resp_.result(http::status::ok);
+         resp_.set(http::field::server, "occase-db");
+
+         auto const t = prepare_target(req_.target(), '/');
+         std::string const target {t.data(), std::size(t)};
+
+         log::write(log::level::debug, "post_handler: {0}.", target);
+
+         if (target.compare(0, 7, "matches") == 0) {
+            post_matches_handler(target);
+	 } else {
+            set_not_fount_header();
+         }
+      } catch (...) {
+         set_not_fount_header();
       }
 
       do_write();

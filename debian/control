@@ -34,7 +34,7 @@ Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Replaces: occase-notify (<< 1.0.0-1)
 Description: Push notification server used by the occase app.
- A single threaded server that notifes users that send push notifcations to
+ A single threaded server that sends push notifications to
  users that are not online.
  .
  This package contains only the notify server.

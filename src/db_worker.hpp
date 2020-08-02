@@ -61,6 +61,9 @@ struct core_cfg {
    // The maximum duration time for the adm http session in seconds.
    int http_session_timeout {30};
 
+   // Value of the header field Access-Control-Allow-Origin
+   std::string http_allow_origin {"*"};
+
    // SSL shutdown timeout in seconds.
    int ssl_shutdown_timeout {30};
 

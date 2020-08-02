@@ -450,6 +450,8 @@ private:
       auto self = derived().shared_from_this();
 
       resp_.set(http::field::content_length, resp_.body().size());
+      resp_.set(http::field::access_control_allow_origin,
+	        derived().db().get_cfg().http_allow_origin);
 
       auto handler = [self](auto ec, std::size_t n)
          { self->on_write(ec, n); };

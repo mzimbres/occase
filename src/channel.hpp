@@ -163,7 +163,7 @@ public:
    {
       json j;
       j["cmd"] = "post";
-      j["items"] = std::vector<post>{p};
+      j["posts"] = std::vector<post>{p};
 
       auto const msg = std::make_shared<std::string>(j.dump());
 

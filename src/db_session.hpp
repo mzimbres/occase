@@ -32,8 +32,6 @@ enum class ev_res
 , chat_msg_fail
 , delete_ok
 , delete_fail
-, filenames_ok
-, filenames_fail
 , presence_ok
 , presence_fail
 , unknown

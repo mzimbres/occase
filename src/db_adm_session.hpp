@@ -350,7 +350,7 @@ private:
       }
    }
 
-   void post_search_handler(std::string const& target, bool only_count = false) noexcept
+   void post_search_handler(bool only_count = false) noexcept
    {
       try {
 	 post p;
@@ -376,6 +376,24 @@ private:
                    , e.what());
          log::write( log::level::err
                    , "post_search_handler (2): {0}"
+                   , req_.body());
+      }
+   }
+
+   void post_upload_credit_handler() noexcept
+   {
+      try {
+         resp_.set(http::field::content_type, "text/html");
+	 json j;
+	 j["credit"] = derived().db().get_upload_credit();
+	 resp_.body() = j.dump() + "\r\n";
+
+      } catch (std::exception const& e) {
+         log::write( log::level::err
+                   , "post_upload_credit_handler (1): {0}"
+                   , e.what());
+         log::write( log::level::err
+                   , "post_upload_credit_handler (2): {0}"
                    , req_.body());
       }
    }
@@ -426,9 +444,11 @@ private:
          log::write(log::level::debug, "post_handler: {0}.", target);
 
          if (target.compare(0, 5, "count") == 0) {
-            post_search_handler(target, true);
+            post_search_handler(true);
 	 } else if (target.compare(0, 6, "search") == 0) {
-            post_search_handler(target);
+            post_search_handler();
+	 } else if (target.compare(0, 13, "upload-credit") == 0) {
+            post_upload_credit_handler();
 	 } else {
             set_not_fount_header();
          }

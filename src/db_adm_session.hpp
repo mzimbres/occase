@@ -252,8 +252,8 @@ private:
       resp_.keep_alive(false);
 
       switch (req_.method()) {
-         case http::verb::get:  get_handler();  break;
-         case http::verb::post:  post_handler();  break;
+         case http::verb::get: get_handler();  break;
+         case http::verb::post: post_handler();  break;
          default: default_handler(); break;
       }
    }
@@ -350,7 +350,7 @@ private:
       }
    }
 
-   void post_matches_handler(std::string const& target) noexcept
+   void post_search_handler(std::string const& target, bool only_count = false) noexcept
    {
       try {
 	 post p;
@@ -359,17 +359,23 @@ private:
 	    p = j.get<post>();
 	 }
 
-	 auto const n = derived().db().get_matching_posts(p);
-
          resp_.set(http::field::content_type, "text/html");
-         resp_.body() = std::to_string(n) + "\r\n";
+
+	 if (only_count) {
+	    auto const n = derived().db().count_posts(p);
+	    resp_.body() = std::to_string(n) + "\r\n";
+	 } else {
+	    json j;
+	    j["posts"] = derived().db().search_posts(p);
+	    resp_.body() = j.dump() + "\r\n";
+	 }
 
       } catch (std::exception const& e) {
          log::write( log::level::err
-                   , "post_matches_handler (1): {0}"
+                   , "post_search_handler (1): {0}"
                    , e.what());
          log::write( log::level::err
-                   , "post_matches_handler (2): {0}"
+                   , "post_search_handler (2): {0}"
                    , req_.body());
       }
    }
@@ -419,8 +425,10 @@ private:
 
          log::write(log::level::debug, "post_handler: {0}.", target);
 
-         if (target.compare(0, 7, "matches") == 0) {
-            post_matches_handler(target);
+         if (target.compare(0, 5, "count") == 0) {
+            post_search_handler(target, true);
+	 } else if (target.compare(0, 6, "search") == 0) {
+            post_search_handler(target);
 	 } else {
             set_not_fount_header();
          }

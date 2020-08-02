@@ -209,30 +209,12 @@ private:
 
    ev_res on_app_subscribe(json const& j, std::shared_ptr<db_session_type> s)
    {
-      std::vector<post> items;
-
-      auto pred = [s](auto const& p)
-         { return !s->ignore(p); };
-
       root_channel_.add_member(s, channel_cfg_.cleanup_rate);
-
-      root_channel_.get_posts(
-	 -1,
-	 std::back_inserter(items),
-	 core_cfg_.max_posts_on_sub,
-	 pred);
 
       json resp;
       resp["cmd"] = "subscribe_ack";
       resp["result"] = "ok";
       s->send(resp.dump(), false);
-
-      if (!std::empty(items)) {
-         json j_pub;
-         j_pub["cmd"] = "post";
-         j_pub["items"] = items;
-         s->send(j_pub.dump(), false);
-      }
 
       return ev_res::subscribe_ok;
    }
@@ -1028,9 +1010,26 @@ public:
       return {};
    }
 
-   auto get_matching_posts(post const& p) const noexcept
+   auto count_posts(post const& p) const noexcept
    {
       return root_channel_.size();
+   }
+
+   auto search_posts(post const& p) const
+   {
+      // Later we will use p to find the posts that satisfy the search.
+      std::vector<post> items;
+
+      auto pred = [](auto const& p)
+         { return true; };
+
+      root_channel_.get_posts(
+	 -1,
+	 std::back_inserter(items),
+	 core_cfg_.max_posts_on_sub,
+	 pred);
+
+      return items;
    }
 
    auto& get_ioc() const noexcept

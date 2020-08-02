@@ -3,3 +3,5 @@ Documentation is available in the doc/ directory.
 
 For an introduction refer to the doc/intro.txt file.
 
+curl --header "Content-Type: application/json" --request POST --data '' http://localhost:8080/search --verbose
+

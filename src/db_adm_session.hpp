@@ -398,6 +398,29 @@ private:
       }
    }
 
+   void post_delete_handler() noexcept
+   {
+      try {
+         resp_.set(http::field::content_type, "text/html");
+
+	 if (std::empty(req_.body()))
+	    return;
+
+	 auto const j = json::parse(req_.body());
+
+	 auto const from = j.at("from").get<std::string>();
+	 auto const post_id = j.at("post_id").get<int>();
+
+	 derived().db().delete_post(post_id, from);
+	 resp_.body() = "Ok\r\n";
+
+      } catch (std::exception const& e) {
+         log::write( log::level::err
+                   , "post_delete_handler: {0}"
+                   , e.what());
+      }
+   }
+
    void set_not_fount_header()
    {
       resp_.result(http::status::not_found);
@@ -409,7 +432,7 @@ private:
    {
       try {
          resp_.result(http::status::ok);
-         resp_.set(http::field::server, "occase-db");
+         resp_.set(http::field::server, derived().db().get_cfg().server_name);
 
          auto const t = prepare_target(req_.target(), '/');
          std::string const target {t.data(), std::size(t)};
@@ -436,7 +459,7 @@ private:
    {
       try {
          resp_.result(http::status::ok);
-         resp_.set(http::field::server, "occase-db");
+         resp_.set(http::field::server, derived().db().get_cfg().server_name);
 
          auto const t = prepare_target(req_.target(), '/');
          std::string const target {t.data(), std::size(t)};
@@ -449,6 +472,8 @@ private:
             post_search_handler();
 	 } else if (target.compare(0, 13, "upload-credit") == 0) {
             post_upload_credit_handler();
+	 } else if (target.compare(0, 6, "delete") == 0) {
+            post_delete_handler();
 	 } else {
             set_not_fount_header();
          }

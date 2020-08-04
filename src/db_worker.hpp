@@ -325,26 +325,6 @@ private:
       return ev_res::publish_ok;
    }
 
-   ev_res on_app_del_post(json j, std::shared_ptr<db_session_type> s)
-   {
-      // A post should be deleted from the database as well as from each
-      // worker, so that users do not receive posts from products that
-      // are already sold.  To delete from the workers it is enough to
-      // broadcast a delete command. Each channel should check if the
-      // delete command belongs indeed to the user that wants to delete
-      // it.
-      auto const post_id = j.at("id").get<int>();
-      j["from"] = s->get_id();
-      db_.remove_post(post_id, j.dump());
-
-      json resp;
-      resp["cmd"] = "delete_ack";
-      resp["result"] = "ok";
-      s->send(resp.dump(), true);
-
-      return ev_res::delete_ok;
-   }
-
    // Handlers for events we receive from the database.
    void on_db_chat_msg( std::string const& user_id
                       , std::vector<std::string> msgs)
@@ -901,8 +881,6 @@ public:
                return on_app_subscribe(j, s);
             if (cmd == "publish")
                return on_app_publish(std::move(j), s);
-            if (cmd == "delete")
-               return on_app_del_post(std::move(j), s);
          } else {
             if (cmd == "login")
                return on_app_login(j, s);
@@ -991,7 +969,14 @@ public:
 
    void delete_post(int post_id, std::string const& from)
    {
-      // See comment is on_app_del_post.
+      // A post should be deleted from the database as well as from each
+      // worker, so that users do not receive posts from products that are
+      // already sold.  To delete from the workers it is enough to broadcast a
+      // delete command. Each channel should check if the delete command
+      // belongs indeed to the user that wants to delete it.
+
+      // TODO: Check if the post indeed exist before sending the command to all
+      // nodes.
 
       json j;
       j["cmd"] = "delete";

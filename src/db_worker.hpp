@@ -411,7 +411,7 @@ private:
 	 // case.
 
 	 auto f = [this](auto const& p)
-	    { delete_post(p.id, p.from); };
+	    { delete_post(p.id, p.from, p.delete_key); };
 
 	 std::for_each( std::cbegin(expired1)
 		      , std::cend(expired1)
@@ -967,7 +967,7 @@ public:
    auto const& get_cfg() const noexcept
       { return core_cfg_; }
 
-   void delete_post(int post_id, std::string const& from)
+   void delete_post(int post_id, std::string const& from, std::string del_key)
    {
       // A post should be deleted from the database as well as from each
       // worker, so that users do not receive posts from products that are
@@ -975,13 +975,15 @@ public:
       // delete command. Each channel should check if the delete command
       // belongs indeed to the user that wants to delete it.
 
-      // TODO: Check if the post indeed exist before sending the command to all
-      // nodes.
+      // TODO: Check if the post indeed exists before sending the command to all
+      // nodes. This is important to prevent ddos.
 
       json j;
       j["cmd"] = "delete";
       j["from"] = from;
       j["id"] = post_id;
+      j["delete_key"] = del_key;
+
       db_.remove_post(post_id, j.dump());
    }
 

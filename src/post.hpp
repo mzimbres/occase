@@ -61,6 +61,7 @@ struct post {
    date_type date {0};
    int id;
    std::string from;
+   std::string delete_key;
    std::string nick;
    std::string avatar;
    std::string description;

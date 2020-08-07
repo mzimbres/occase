@@ -40,126 +40,6 @@ beast::string_view prepare_target(beast::string_view t, char s)
    return t;
 }
 
-namespace html
-{
-
-auto make_img(std::string const& url)
-{
-   std::string img;
-   img += "<img src=\"";
-   img += url;
-   img += "\">";
-   return img;
-}
-
-// The delete target has the form
-//
-//    /delete/from/post_id/password
-//
-auto
-make_del_post_link( std::string const& db_host
-                  , std::string const& from
-                  , std::string const& post_id
-                  , std::string const& pwd)
-{
-   auto const target = "/delete/"
-                     + from    + "/"
-                     + post_id + "/"
-                     + pwd;
-   std::string del;
-   del += "<td>";
-   del += "<a href=\"";
-   del += db_host;
-   del += target;
-   del += "\">Delete</a>";
-   del += "</td>";
-   return del;
-}
-
-auto
-make_next_link( std::string const& db_host
-              , int post_id
-              , std::string const& pwd)
-{
-   auto const target = "/posts/"
-                     + std::to_string(post_id) + "/"
-                     + pwd;
-   std::string s;
-   s += "<a href=\"";
-   s += db_host;
-   s += target;
-   s += "\">Next</a>";
-   return s;
-}
-
-auto
-make_img_row( std::string const& db_host
-            , post const& p
-            , std::string const& pwd) noexcept
-{
-   try {
-      std::string row;
-      row += "<tr>";
-      row += make_del_post_link( db_host
-                               , p.from
-                               , std::to_string(p.id)
-                               , pwd);
-      for (auto const& s : p.images) {
-         row += "<td>";
-         row += make_img(s);
-         row += "</td>";
-      }
-      row += "</tr>";
-      return row;
-   } catch (...) {
-   }
-
-   return std::string{};
-}
-
-auto make_adm_page( std::string const& db_host
-                  , std::vector<post> const& posts
-                  , std::string const& pwd
-                  , int post_id)
-{
-   // This is kind of weird, the database itself does not need to know
-   // anything about the body of the post. But to monitor what users
-   // post we have to parse the images here.
-
-   auto acc = [&](auto init, auto const& p)
-   {
-      init += make_img_row(db_host, p, pwd);
-      return init;
-   };
-
-   auto const rows =
-      std::accumulate( std::begin(posts)
-                     , std::end(posts)
-                     , std::string{}
-                     , acc);
-
-   std::string table;
-   table += "<table style=\"width:100%\">";
-   table += rows;
-   table += "</table>";
-
-   std::string page;
-   page += "<!DOCTYPE html>";
-   page += "<html>";
-   page += "<body>";
-   page += "<h1>Occase administration pannel</h1>\n";
-   page += "<p>Posts</p>";
-   page += table;
-   page += "\n";
-   page += make_next_link(db_host, post_id + 25, pwd);
-   page += "</body>";
-   page += "</html>";
-
-   return page;
-}
-
-}
-
 template <class AdmSession>
 class db_worker;
 
@@ -258,98 +138,6 @@ private:
       }
    }
 
-   // Expects a target in the form
-   //
-   //    /posts/post_id/password
-   //
-   // or
-   //
-   //    /posts/post_id/password/
-   //
-   void get_posts_handler(std::string const& target) noexcept
-   {
-      try {
-         std::vector<std::string> foo;
-         boost::split(foo, target, boost::is_any_of("/"));
-
-         if (std::size(foo) != 3) {
-            log::write( log::level::debug
-                      , "Error: get_posts_handler target has wrong size: {0}"
-                      , std::size(foo));
-            set_not_fount_header();
-            return;
-         }
-
-         auto const& db = derived().db();
-
-         if (foo.back() != db.get_cfg().adm_pwd) {
-            log::write( log::level::debug
-                      , "Error: get_posts_handler target has wrong password: {0}"
-                      , foo.back());
-            set_not_fount_header();
-            return;
-         }
-
-         resp_.set(http::field::content_type, "text/html");
-
-         auto const post_id = std::stoi(foo[1]);
-
-         auto const posts =
-            db.get_posts(post_id, [](auto const&){return true;});
-
-         resp_.body() =
-            html::make_adm_page( db.get_cfg().db_host
-                               , posts
-                               , db.get_cfg().adm_pwd
-                               , post_id);
-
-      } catch (std::exception const& e) {
-         log::write( log::level::debug
-                   , "get_posts_handler: {0}"
-                   , e.what());
-      }
-   }
-
-   // Expects a target in the from
-   //
-   // /delete/from/post_id/password
-   //
-   void get_delete_handler(std::string const& target) noexcept
-   {
-      try {
-         std::vector<std::string> foo;
-         boost::split(foo, target, boost::is_any_of("/"));
-
-         if (std::size(foo) != 5) {
-            log::write( log::level::debug
-                      , "Error: get_delete_handler target has wrong size: {0}"
-                      , std::size(foo));
-            set_not_fount_header();
-            return;
-         }
-
-         auto& db = derived().db();
-
-         if (foo.back() != db.get_cfg().adm_pwd) {
-            log::write( log::level::debug
-                      , "Error: get_delete_handler target has wrong password: {0}"
-                      , foo.back());
-            set_not_fount_header();
-            return;
-         }
-
-         db.delete_post(std::stoi(foo[2]), foo[1]);
-
-         resp_.set(http::field::content_type, "text/html");
-         resp_.body() = "Ok";
-
-      } catch (std::exception const& e) {
-         log::write( log::level::debug
-                   , "get_delete_handler: {0}"
-                   , e.what());
-      }
-   }
-
    void post_search_handler(bool only_count = false) noexcept
    {
       try {
@@ -359,7 +147,7 @@ private:
 	    p = j.get<post>();
 	 }
 
-         resp_.set(http::field::content_type, "text/html");
+         resp_.set(http::field::content_type, "application/json");
 
 	 if (only_count) {
 	    auto const n = derived().db().count_posts(p);
@@ -383,7 +171,7 @@ private:
    void post_upload_credit_handler() noexcept
    {
       try {
-         resp_.set(http::field::content_type, "text/html");
+         resp_.set(http::field::content_type, "application/json");
 	 json j;
 	 j["credit"] = derived().db().get_upload_credit();
 	 resp_.body() = j.dump() + "\r\n";
@@ -401,7 +189,7 @@ private:
    void post_delete_handler() noexcept
    {
       try {
-         resp_.set(http::field::content_type, "text/html");
+         resp_.set(http::field::content_type, "application/json");
 
 	 if (std::empty(req_.body()))
 	    return;
@@ -410,8 +198,9 @@ private:
 
 	 auto const from = j.at("from").get<std::string>();
 	 auto const post_id = j.at("post_id").get<int>();
+	 auto const del_key = j.at("delete_key").get<std::string>();
 
-	 derived().db().delete_post(post_id, from);
+	 derived().db().delete_post(post_id, from, del_key);
 	 resp_.body() = "Ok\r\n";
 
       } catch (std::exception const& e) {
@@ -441,10 +230,6 @@ private:
 
          if (target == "stats") {
             stats_handler();
-         } else if (target.compare(0, 5, "posts") == 0) {
-            get_posts_handler(target);
-         } else if (target.compare(0, 6, "delete") == 0) {
-            get_delete_handler(target);
          } else {
             set_not_fount_header();
          }

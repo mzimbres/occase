@@ -189,13 +189,11 @@ private:
    void post_delete_handler() noexcept
    {
       try {
-         resp_.set(http::field::content_type, "application/json");
-
 	 if (std::empty(req_.body()))
 	    return;
 
+         resp_.set(http::field::content_type, "application/json");
 	 auto const j = json::parse(req_.body());
-
 	 auto const from = j.at("from").get<std::string>();
 	 auto const post_id = j.at("post_id").get<int>();
 	 auto const del_key = j.at("delete_key").get<std::string>();
@@ -206,6 +204,34 @@ private:
       } catch (std::exception const& e) {
          log::write( log::level::err
                    , "post_delete_handler: {0}"
+                   , e.what());
+      }
+   }
+
+   void post_publish_handler() noexcept
+   {
+      try {
+	 if (std::empty(req_.body()))
+	    return;
+
+	 auto const j = json::parse(req_.body());
+	 auto const p = j.get<post>();
+
+	 log::write( log::level::debug
+		   , "New post from user {0}"
+		   , p.from);
+
+         json j_resp;
+         j_resp["id"] = "alalala";
+         j_resp["delete_key"] = "ksksksk";
+         j_resp["result"] = "ok";
+
+         resp_.set(http::field::content_type, "application/json");
+	 resp_.body() = j_resp.dump() + "\r\n";
+
+      } catch (std::exception const& e) {
+         log::write( log::level::err
+                   , "post_publish_handler: {0}"
                    , e.what());
       }
    }
@@ -246,19 +272,22 @@ private:
          resp_.result(http::status::ok);
          resp_.set(http::field::server, derived().db().get_cfg().server_name);
 
-         auto const t = prepare_target(req_.target(), '/');
+         //auto const t = prepare_target(req_.target(), '/');
+         auto const t = req_.target();
+
          std::string const target {t.data(), std::size(t)};
+         log::write(log::level::debug, "post_handler.", target);
 
-         log::write(log::level::debug, "post_handler: {0}.", target);
-
-         if (target.compare(0, 5, "count") == 0) {
+         if (t.compare(0, 12, "/posts/count") == 0) {
             post_search_handler(true);
-	 } else if (target.compare(0, 6, "search") == 0) {
+	 } else if (t.compare(0, 13, "/posts/search") == 0) {
             post_search_handler();
-	 } else if (target.compare(0, 13, "upload-credit") == 0) {
+	 } else if (t.compare(0, 20, "/posts/upload-credit") == 0) {
             post_upload_credit_handler();
-	 } else if (target.compare(0, 6, "delete") == 0) {
+	 } else if (t.compare(0, 13, "/posts/delete") == 0) {
             post_delete_handler();
+	 } else if (t.compare(0, 14, "/posts/publish") == 0) {
+            post_publish_handler();
 	 } else {
             set_not_fount_header();
          }

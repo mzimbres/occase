@@ -43,9 +43,9 @@ std::string make_login_cmd(occase::cli::login const& user)
 
 std::string make_post_cmd()
 {
-   occase::post item
+   occase::post p
    { std::chrono::seconds {0} // date
-   , -1  // id
+   , {}  // id
    , {} // from
    , "Wheeler" // nick
    , "9ac8316ca55e6d888d43092fd73a78d6" // avatar
@@ -60,7 +60,7 @@ std::string make_post_cmd()
 
    json j;
    j["cmd"] = "publish";
-   j["items"] = std::vector<occase::post>{item};
+   j["post"] = p;
    return j.dump();
 }
 
@@ -75,7 +75,6 @@ std::string make_sub_payload()
 {
    json j_sub;
    j_sub["cmd"] = "subscribe";
-   j_sub["last_post_id"] = 0;
 
    return j_sub.dump();
 }
@@ -104,12 +103,12 @@ int replier::on_read(std::string msg, std::shared_ptr<client_type> s)
    }
 
    if (cmd == "post") {
-      auto items = j.at("items").get<std::vector<post>>();
+      auto posts = j.at("posts").get<std::vector<post>>();
 
       auto const f = [this, s](auto const& e)
          { send_chat_msg(e.from, e.id, s); };
 
-      std::for_each(std::begin(items), std::end(items), f);
+      std::for_each(std::begin(posts), std::end(posts), f);
 
       return 1;
    }
@@ -165,7 +164,7 @@ int replier::on_closed(boost::system::error_code ec)
 };
 
 void
-replier::send_chat_msg( std::string to, long long post_id
+replier::send_chat_msg( std::string to, std::string const& post_id
                       , std::shared_ptr<client_type> s)
 {
    //std::cout << "Sub: User " << op.user << " sending to " << to
@@ -309,7 +308,7 @@ int simulator::on_read( std::string msg
    }
 
    if (cmd == "post") {
-      auto items = j.at("items").get<std::vector<post>>();
+      auto posts = j.at("posts").get<std::vector<post>>();
 
       if (op.counter == 0)
          return 1;
@@ -317,7 +316,7 @@ int simulator::on_read( std::string msg
       auto const f = [this, s](auto const& e)
          { send_chat_msg(e.from, e.id, s); };
 
-      std::for_each(std::begin(items), std::end(items), f);
+      std::for_each(std::begin(posts), std::end(posts), f);
 
       return 1;
    }
@@ -329,7 +328,7 @@ int simulator::on_read( std::string msg
 
       if (type == "chat") {
          // Used only by the app. Not in the tests.
-         auto const post_id = j.at("post_id").get<long long>();
+         auto const post_id = j.at("post_id").get<std::string>();
          auto const from = j.at("from").get<std::string>();
          auto const id = j.at("id").get<int>();
 
@@ -346,7 +345,7 @@ int simulator::on_read( std::string msg
          }
 
          std::cout << "Ack received. Sending new msg ..." << std::endl;
-         auto const post_id = j.at("post_id").get<long long>();
+         auto const post_id = j.at("post_id").get<std::string>();
          auto const from = j.at("from").get<std::string>();
          send_chat_msg(from, post_id, s);
          return 1;
@@ -380,7 +379,7 @@ int simulator::on_closed(boost::system::error_code ec)
 
 void simulator::
 send_chat_msg( std::string to
-             , long long post_id
+             , std::string const& post_id
              , std::shared_ptr<client_type> s)
 {
    auto const n = std::stoi(op.user.id);
@@ -400,8 +399,8 @@ send_chat_msg( std::string to
 }
 
 void simulator::
-ack_chat( std::string to
-        , long long post_id
+ack_chat( std::string const& to
+        , std::string const& post_id
         , int id
         , std::shared_ptr<client_type> s
         , std::string const& type)
@@ -427,7 +426,7 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
    auto const cmd = j.at("cmd").get<std::string>();
    if (cmd == "login_ack") {
       check_result(j, "ok", "publisher::login_ack");
-      pub_stack.push({-1}); 
+      pub_stack.push({}); 
       s->send_msg(make_sub_payload());
       return 1;
    }
@@ -439,35 +438,35 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
 
    if (cmd == "publish_ack") {
       check_result(j, "ok", "publisher::publish_ack");
-      pub_stack.top().id = j.at("id").get<int>();
+      pub_stack.top() = j.at("id").get<std::string>();
       //std::cout << op.user << " publish_ack " << post_id << std::endl;
       return handle_msg(s);
    }
 
    if (cmd == "post") {
       // We are only interested in our own publishes at the moment.
-      auto items = j.at("items").get<std::vector<post>>();
+      auto posts = j.at("posts").get<std::vector<post>>();
 
       auto cond = [this](auto const& e)
          { return e.from != op.user.id; };
 
-      items.erase( std::remove_if( std::begin(items), std::end(items)
+      posts.erase( std::remove_if( std::begin(posts), std::end(posts)
                                  , cond)
-                 , std::end(items));
+                 , std::end(posts));
 
       // Ignores messages that are not our own.
-      if (std::empty(items))
+      if (std::empty(posts))
          return 1;
 
-      if (std::size(items) != 1) {
-         std::cout << std::size(items) << " " << msg << std::endl;
+      if (std::size(posts) != 1) {
+         std::cout << std::size(posts) << " " << msg << std::endl;
          throw std::runtime_error("publisher::publish1");
       }
 
-      // Since we send only one publish at time items should contain
+      // Since we send only one publish at time posts should contain
       // only one item now.
 
-      if (pub_stack.top().id != items.front().id)
+      if (pub_stack.top() != posts.front().id)
          throw std::runtime_error("publisher::publish2");
 
       //std::cout << op.user << " publish echo " << post_id << std::endl;
@@ -487,9 +486,9 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
          if (to != op.user.id)
             throw std::runtime_error("publisher::on_read5");
 
-         auto const post_id2 = j.at("post_id").get<int>();
-         if (pub_stack.top().id != post_id2) {
-            std::cout << op.user << " " << pub_stack.top().id << " != " << post_id2
+         auto const post_id2 = j.at("post_id").get<std::string>();
+         if (pub_stack.top() != post_id2) {
+            std::cout << op.user << " " << pub_stack.top() << " != " << post_id2
                       << " " << msg << std::endl;
             throw std::runtime_error("publisher::on_read6");
          }
@@ -501,7 +500,14 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
       }
    }
 
-   if (cmd == "delete_ack") {
+   std::cout << "Error: publisher ===> " << cmd << std::endl;
+   throw std::runtime_error("publisher::on_read4");
+   return -1;
+}
+
+int publisher::handle_msg(std::shared_ptr<client_type> s)
+{
+   if (server_echo && !std::empty(pub_stack.top()) && user_msg_counter == 0) {
       pub_stack.pop();
       if (std::empty(pub_stack)) {
          std::cout << "User " << op.user << " ok. (Publisher)."
@@ -514,21 +520,6 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
       //std::cout << "=====> " << op.user << " " << post_id
       //          << " " << user_msg_counter <<  std::endl;
       return send_post(s);
-   }
-
-   std::cout << "Error: publisher ===> " << cmd << std::endl;
-   throw std::runtime_error("publisher::on_read4");
-   return -1;
-}
-
-int publisher::handle_msg(std::shared_ptr<client_type> s)
-{
-   if (server_echo && pub_stack.top().id != -1 && user_msg_counter == 0) {
-      // We are done with this post and can delete it from the server.
-      json j_sub;
-      j_sub["cmd"] = "delete";
-      j_sub["id"] = pub_stack.top().id;
-      s->send_msg(j_sub.dump());
    }
 
    return 1;
@@ -570,7 +561,7 @@ int publisher2::on_read(std::string msg, std::shared_ptr<client_type> s)
    if (cmd == "publish_ack") {
       check_result(j, "ok", "publisher2::publish_ack");
 
-      auto const post_id = j.at("id").get<int>();
+      auto const post_id = j.at("id").get<std::string>();
       post_ids.push_back(post_id);
       if (--msg_counter == 0) {
          std::cout << "User " << op.user << " ok. (Publisher2)."
@@ -602,7 +593,7 @@ int publisher2::pub(std::shared_ptr<client_type> s) const
 {
    occase::post item
    { std::chrono::seconds {0} // date
-   , -1  // id
+   , {}  // id
    , op.user.id // from
    , "Wheeler" // nick
    , "" // avatar
@@ -617,7 +608,7 @@ int publisher2::pub(std::shared_ptr<client_type> s) const
 
    json j_msg;
    j_msg["cmd"] = "publish";
-   j_msg["items"] = std::vector<post>{item};
+   j_msg["post"] = item;
    s->send_msg(j_msg.dump());
    return 1;
 }
@@ -626,6 +617,7 @@ int publisher2::pub(std::shared_ptr<client_type> s) const
 
 int msg_pull::on_read(std::string msg, std::shared_ptr<client_type> s)
 {
+   std::cout << msg << std::endl;
    auto const j = json::parse(msg);
 
    auto const cmd = j.at("cmd").get<std::string>();
@@ -641,7 +633,7 @@ int msg_pull::on_read(std::string msg, std::shared_ptr<client_type> s)
       }
 
       if (type == "chat") {
-         auto const post_id = j.at("post_id").get<int>();
+         auto const post_id = j.at("post_id").get<std::string>();
          post_ids.push_back(post_id);
          //std::cout << "Expecting: " << op.expected_user_msgs
          //          << std::endl;

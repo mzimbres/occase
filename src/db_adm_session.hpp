@@ -195,7 +195,7 @@ private:
          resp_.set(http::field::content_type, "application/json");
 	 auto const j = json::parse(req_.body());
 	 auto const from = j.at("from").get<std::string>();
-	 auto const post_id = j.at("post_id").get<int>();
+	 auto const post_id = j.at("post_id").get<std::string>();
 	 auto const del_key = j.at("delete_key").get<std::string>();
 
 	 derived().db().delete_post(post_id, from, del_key);

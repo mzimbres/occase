@@ -66,7 +66,7 @@ private:
    int to_receive_posts;
    std::string nick;
 
-   void send_chat_msg( std::string user, long long id
+   void send_chat_msg( std::string user, std::string const& id
                      , std::shared_ptr<client_type> s);
 
 public:
@@ -144,12 +144,12 @@ private:
 
    std::string nick;
 
-   void send_chat_msg( std::string user, long long id
+   void send_chat_msg( std::string user, std::string const& id
                      , std::shared_ptr<client_type> s);
 
    void
-   ack_chat( std::string user
-           , long long post_id
+   ack_chat( std::string const& to
+           , std::string const& post_id
            , int id
            , std::shared_ptr<client_type> s
            , std::string const& type);
@@ -183,10 +183,6 @@ public:
  * frame.
  */
 
-struct pub_helper {
-   int id;
-};
-
 class publisher {
 public:
    struct options_type {
@@ -202,13 +198,9 @@ private:
    bool server_echo = false;
    int user_msg_counter;
 
-   std::stack<pub_helper> pub_stack;
-
+   std::stack<std::string> pub_stack;
    int send_post(std::shared_ptr<client_type> s) const;
-
    int handle_msg(std::shared_ptr<client_type> s);
-
-   int send_delete(std::shared_ptr<client_type> s);
 
 public:
    publisher(options_type op_)
@@ -235,7 +227,7 @@ private:
 
    options_type op;
    int msg_counter;
-   std::vector<int> post_ids;
+   std::vector<std::string> post_ids;
 
    int pub(std::shared_ptr<client_type> s) const;
 
@@ -265,7 +257,7 @@ private:
    using client_type = session_shell<msg_pull>;
 
    options_type op;
-   std::vector<int> post_ids;
+   std::vector<std::string> post_ids;
 
 public:
    msg_pull(options_type op_)

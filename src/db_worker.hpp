@@ -134,10 +134,6 @@ private:
    // Facade to redis.
    redis db_;
 
-   // Queue of user posts waiting for an id that has been requested
-   // from redis.
-   std::queue<post_queue_item<db_session_type>> post_queue_;
-
    // Queue with sessions waiting for a user id that are retrieved
    // from redis.
    std::queue<pwd_queue_item<db_session_type>> reg_queue_;
@@ -146,7 +142,7 @@ private:
    std::queue<pwd_queue_item<db_session_type>> login_queue_;
 
    // The last post id that has beed received from reidis pubsub channel.
-   int last_post_id_ = -1;
+   date_type last_post_date_received_ {0};
 
    // Generates passwords that are sent to the app.
    pwd_gen pwdgen_;
@@ -246,7 +242,7 @@ private:
 
       // No need to store the ack in the database as the user will resend
       // the message if the connection breaks and has to be restablished. 
-      auto const post_id = j.at("post_id").get<int>();
+      auto const post_id = j.at("post_id").get<std::string>();
       auto const message_id = j.at("id").get<int>();
       json ack;
       ack["cmd"] = "message";
@@ -282,26 +278,9 @@ private:
 
    ev_res on_app_publish(json j, std::shared_ptr<db_session_type> s)
    {
-      auto items = j.at("posts").get<std::vector<post>>();
+      auto p = j.at("post").get<post>();
 
-      if (std::empty(items)) {
-         json resp;
-         resp["cmd"] = "publish_ack";
-         resp["result"] = "fail";
-         s->send(resp.dump(), false);
-         return ev_res::publish_fail;
-      }
-
-      log::write( log::level::debug
-                , "New post from user {0}"
-                , items.front().from);
-
-      // Before we request a new pub id, we have to check that the post
-      // is valid and will not be refused later. This prevents the pub
-      // items from being incremented on an invalid message. May be
-      // overkill since we do not expect the app to contain so severe
-      // bugs but we never thrust the client.
-      // TODO: How to check post validity.
+      log::write(log::level::debug, "New post from user {0}", p.from);
 
       // I do not check if the deadline is valid as it should always be
       // according to the algorithm used.
@@ -315,13 +294,32 @@ private:
 
       using namespace std::chrono;
 
-      // It is important not to thrust the *from* field in the json
-      // command.
-      items.front().from = s->get_id();
-      items.front().date =
-         duration_cast<seconds>(system_clock::now().time_since_epoch());
-      post_queue_.push({s, items.front()});
-      db_.request_post_id();
+      // It is important not to thrust the *from* field in the json command.
+      p.from = s->get_id();
+      p.date = duration_cast<seconds>(system_clock::now().time_since_epoch());
+      p.id = pwdgen_(core_cfg_.pwd_size);
+      p.delete_key = pwdgen_(core_cfg_.pwd_size);
+
+      json const j_item = p;
+      db_.post(j_item.dump(), p.date.count());
+
+      // It is important that the publisher receives this message before
+      // any user sends him a user message about the post. He needs a
+      // post_id to know to which post the user refers to.
+      json ack;
+      ack["cmd"] = "publish_ack";
+      ack["result"] = "ok";
+      ack["id"] = p.id;
+      ack["delete_key"] = p.delete_key;
+      ack["date"] = p.date.count();
+
+      auto ack_str = ack.dump();
+
+      s->send(std::move(ack_str), true);
+      db_.update_remaining(
+	 s->get_id(),
+	 s->decrease_remaining_posts());
+
       return ev_res::publish_ok;
    }
 
@@ -369,7 +367,7 @@ private:
 	 auto const j = json::parse(msg);
 
 	 if (j.contains("cmd")) {
-	    auto const post_id = j.at("id").get<int>();
+	    auto const post_id = j.at("id").get<std::string>();
 	    auto const from = j.at("from").get<std::string>();
 	    auto const r2 = root_channel_.remove_post(post_id, from);
 	    if (!r2) 
@@ -385,23 +383,14 @@ private:
 	 // will throw and error.
 	 auto const item = j.get<post>();
 
-	 if (item.id > last_post_id_)
-	    last_post_id_ = item.id;
+	 if (item.date > last_post_date_received_)
+	    last_post_date_received_ = item.date;
 
 	 using namespace std::chrono;
 
-	 auto const now =
-	    duration_cast<seconds>(system_clock::now().time_since_epoch());
-
+	 auto const now = duration_cast<seconds>(system_clock::now().time_since_epoch());
 	 auto const post_exp = channel_cfg_.get_post_expiration();
-
-	 auto expired1 = root_channel_.broadcast(item, now, post_exp);
-
-	 std::sort(std::begin(expired1), std::end(expired1));
-
-	 auto new_end = std::unique(std::begin(expired1), std::end(expired1));
-
-	 expired1.erase(new_end, std::end(expired1));
+	 auto expired = root_channel_.broadcast(item, now, post_exp);
 
 	 // NOTE: When we issue the delete command to the other databases, we are
 	 // in fact also sending a delete cmd to ourselves and in this case the
@@ -413,14 +402,14 @@ private:
 	 auto f = [this](auto const& p)
 	    { delete_post(p.id, p.from, p.delete_key); };
 
-	 std::for_each( std::cbegin(expired1)
-		      , std::cend(expired1)
+	 std::for_each( std::cbegin(expired)
+		      , std::cend(expired)
 		      , f);
 
-	 if (!std::empty(expired1)) {
+	 if (!std::empty(expired)) {
 	    log::write( log::level::info
 		      , "Number of expired posts removed: {0}"
-		      , std::size(expired1));
+		      , std::size(expired));
 	 }
       } catch (std::exception const& e) {
 	 log::write( log::level::err
@@ -491,16 +480,10 @@ private:
 	       break;
 
 	    case redis::events::post:
-	       on_db_publish();
 	       break;
 
 	    case redis::events::posts:
 	       on_db_posts(data);
-	       break;
-
-	    case redis::events::post_id:
-	       assert(std::size(data) == 1);
-	       on_db_post_id(data.back());
 	       break;
 
 	    case redis::events::user_id:
@@ -538,53 +521,6 @@ private:
       }
    }
 
-   void on_db_post_id(std::string const& post_id_str)
-   {
-      auto const post_id = std::stoi(post_id_str);
-      post_queue_.front().item.id = post_id;
-      json const j_item = post_queue_.front().item;
-      db_.post(j_item.dump(), post_id);
-
-      // It is important that the publisher receives this message before
-      // any user sends him a user message about the post. He needs a
-      // post_id to know to which post the user refers to.
-      json ack;
-      ack["cmd"] = "publish_ack";
-      ack["result"] = "ok";
-      ack["id"] = post_queue_.front().item.id;
-      ack["date"] = post_queue_.front().item.date.count();
-      auto ack_str = ack.dump();
-
-      if (auto s = post_queue_.front().session.lock()) {
-         s->send(std::move(ack_str), true);
-
-         db_.update_remaining(
-            s->get_id(),
-            s->decrease_remaining_posts());
-
-      } else {
-         // If we get here the user is not online anymore. This should be a
-         // very rare situation since requesting an id takes milliseconds.
-         // We can simply store his ack in the database for later retrieval
-         // when the user connects again. It shall be difficult to test
-         // this. It may be a hint that the ssystem is overloaded.
-
-         log::write(log::level::notice, "Sending publish_ack to the database.");
-
-         auto param = {ack_str};
-         db_.store_chat_msg( std::move(post_queue_.front().item.from)
-                           , std::make_move_iterator(std::begin(param))
-                           , std::make_move_iterator(std::end(param)));
-      }
-
-      post_queue_.pop();
-   }
-
-   void on_db_publish()
-   {
-      // We do not need this function at the moment.
-   }
-
    void on_db_post_connect()
    {
       // There are two situations we have to distinguish here.
@@ -595,7 +531,9 @@ private:
       //    In this case we have to retrieve all posts that may have arrived
       //    while we were offline.
 
-      db_.retrieve_posts(1 + last_post_id_);
+      auto last = last_post_date_received_;
+      ++last;
+      db_.retrieve_posts(last.count());
    }
 
    void on_db_user_id(std::string const& id)
@@ -906,7 +844,6 @@ public:
       worker_stats wstats {};
 
       wstats.number_of_sessions = ws_stats_.number_of_sessions;
-      wstats.worker_post_queue_size = ssize(post_queue_);
       wstats.worker_reg_queue_size = ssize(reg_queue_);
       wstats.worker_login_queue_size = ssize(login_queue_);
       wstats.db_post_queue_size = db_.get_post_queue_size();
@@ -917,7 +854,7 @@ public:
 
    template <class UnaryPredicate>
    std::vector<post>
-   get_posts(int date, UnaryPredicate pred) const noexcept
+   get_posts(date_type date, UnaryPredicate pred) const noexcept
    {
       try {
          std::vector<post> posts;
@@ -950,7 +887,7 @@ public:
          { return true; };
 
       root_channel_.get_posts(
-	 -1,
+	 date_type {0},
 	 std::back_inserter(items),
 	 core_cfg_.max_posts_on_sub,
 	 pred);
@@ -967,7 +904,9 @@ public:
    auto const& get_cfg() const noexcept
       { return core_cfg_; }
 
-   void delete_post(int post_id, std::string const& from, std::string del_key)
+   void delete_post(std::string const& post_id,
+	            std::string const& from,
+		    std::string del_key)
    {
       // A post should be deleted from the database as well as from each
       // worker, so that users do not receive posts from products that are

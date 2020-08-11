@@ -22,13 +22,9 @@ for (( i = 0 ; i < 2 ; ++i )); do
               --launch-interval 10
 done
 
-echo "Starting test 2"
-./db_tests --test 2\
-           --handshake-timeout 3
-
 echo "Starting test 4"
 ./db_tests --test 4
 
-echo "Starting test 5"
-./db_tests --test 5
+#echo "Starting test 5"
+#./db_tests --test 5
 

@@ -275,10 +275,10 @@ void redis::on_user_offline(std::string const& id)
    ss_msgs_sub_.send(unsubscribe(cfg_.presence_channel_prefix + id));
 }
 
-void redis::post(std::string const& msg, int id)
+void redis::post(std::string const& msg, int date)
 {
    auto cmd = multi()
-            + zadd(cfg_.posts_key, id, msg)
+            + zadd(cfg_.posts_key, date, msg)
             + publish(cfg_.menu_channel_key, msg)
             + exec();
 
@@ -289,24 +289,19 @@ void redis::post(std::string const& msg, int id)
    post_pub_queue_.push(events::post);
 }
 
-void redis::remove_post(int id, std::string const& msg)
+void redis::remove_post(std::string const& id, std::string const& msg)
 {
+   // For safety I will not remove from redis.
    auto cmd = multi()
-            + zremrangebyscore(cfg_.posts_key, id)
+            //+ zremrangebyscore(cfg_.posts_key, id)
             + publish(cfg_.menu_channel_key, msg)
             + exec();
 
    ss_post_pub_.send(std::move(cmd));
    post_pub_queue_.push(events::ignore);
-   post_pub_queue_.push(events::ignore);
+   //post_pub_queue_.push(events::ignore);
    post_pub_queue_.push(events::ignore);
    post_pub_queue_.push(events::remove_post);
-}
-
-void redis::request_post_id()
-{
-   ss_post_pub_.send(incr(cfg_.post_id_key));
-   post_pub_queue_.push(events::post_id);
 }
 
 void redis::request_user_id()

@@ -25,7 +25,7 @@ void to_json(json& j, post const& e)
 void from_json(json const& j, post& e)
 {
   e.date = date_type {j.at("date").get<long int>()};
-  e.id = j.at("id").get<int>();
+  e.id = j.at("id").get<std::string>();
   e.from = j.at("from").get<std::string>();
   e.nick = j.at("nick").get<std::string>();
   e.avatar = j.at("avatar").get<std::string>();

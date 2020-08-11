@@ -240,65 +240,6 @@ void test_online(options const& op)
    std::cout << "Test ok: Online messages." << std::endl;
 }
 
-void test_offline(options const& op)
-{
-   boost::asio::io_context ioc;
-
-   using client_type1 = publisher2;
-   using config_type1 = client_type1::options_type;
-   using session_type1 = session_shell<client_type1>;
-
-   auto const l1 =
-      test_reg(op.make_session_cf(), op.make_launcher_empty_cfg(1));
-
-   auto s1 = 
-      std::make_shared<session_type1>( ioc
-                                     , op.make_session_cf()
-                                     , config_type1
-                                       { l1.front()});
-   s1->run();
-   ioc.run();
-   auto post_ids = s1->get_mgr().get_post_ids();
-   std::sort(std::begin(post_ids), std::end(post_ids));
-   auto const n_post_ids = ssize(post_ids);
-
-   using client_type2 = replier;
-   using config_type2 = client_type2::options_type;
-   using session_type2 = session_shell<replier>;
-
-   auto const l2 = test_reg( op.make_session_cf()
-                           , op.make_launcher_empty_cfg(1));
-
-   std::make_shared<session_type2>( ioc
-                                  , op.make_session_cf()
-                                  , config_type2
-                                    {l2.front(), 1}
-                                  )->run();
-   ioc.restart();
-   ioc.run();
-
-   using client_type3 = msg_pull;
-   using config_type3 = client_type3::options_type;
-   using session_type3 = session_shell<client_type3>;
-
-   auto s3 = 
-      std::make_shared<session_type3>( ioc
-                                     , op.make_session_cf()
-                                     , config_type3
-                                       {l1.front(), n_post_ids});
-   s3->run();
-   ioc.restart();
-   ioc.run();
-
-   auto post_ids2 = s3->get_mgr().get_post_ids();
-   std::sort(std::begin(post_ids2), std::end(post_ids2));
-
-   if (post_ids2 == post_ids)
-      std::cout << "Test ok: Offline messages." << std::endl;
-   else
-      std::cout << "Test fail: Offline messages." << std::endl;
-}
-
 void login_timeout(options const& op)
 {
    boost::asio::io_context ioc {1};
@@ -466,7 +407,6 @@ int main(int argc, char* argv[])
       switch (op.test)
       {
          case 1: test_online(op); break;
-         case 2: test_offline(op); break;
          case 3: login_timeout(op); break;
          case 4: test_login_error(op); break;
          case 5: test_early_close(op); break;

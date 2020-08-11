@@ -22,17 +22,6 @@ namespace occase
  *    1. Add sessions very often.
  *    2. Traverse the sessions on every publication in the channel.
  *
- *    To avoid having to remove sessions from the channel we
- *    introduced the proxy pointers, see db_session for more
- *    details. They make it possible to expire all weak_pointers
- *    corresponding to a session at once, leaving us with an expired
- *    std::weak_ptr that will be removed the next time we traverse the
- *    sessions in the channel (which happens on every publication).
- *
- *    It is also possible to support remove later by keeping a sorted
- *    list of user_id's that we can search as we traverse the vector
- *    while publishing the messages. No need for that at the moment.
- *
  * Cleanup
  *
  *    Every once in a while we have to clean up expired elements from
@@ -44,8 +33,6 @@ namespace occase
  *
  * THOUGHTS
  *  
- *    Report channel statistics.
- *
  *    Since we use a std::vector as the underlying container, the
  *    average memory used will be only half of the memory allocated.
  *    This happens because vectors allocate doubling the current
@@ -68,9 +55,7 @@ struct channel_cfg {
    int post_expiration;
 
    auto get_post_expiration() const
-   {
-      return std::chrono::seconds {post_expiration};
-   }
+      { return std::chrono::seconds {post_expiration}; }
 };
 
 template <class Session>
@@ -141,18 +126,18 @@ private:
 
    void add_post(post item)
    {
-      // We have to ensure this vector stays ordered according to
-      // publish ids. Most of the time there will be no problem, but
-      // it still may happen that messages are routed to us out of
-      // order. Insertion sort is necessary.
       items_.push_back(std::move(item));
 
       auto prev = std::prev(std::end(items_));
 
-      // Sorted insertion.
-      std::rotate( std::upper_bound(std::begin(items_), prev, *prev)
-                 , prev
-                 , std::end(items_));
+      // Sorted insertion according to the post date.
+      auto point =
+	 std::upper_bound(std::begin(items_),
+	                  prev,
+			  *prev,
+			  comp_post_date_less {});
+
+      std::rotate(point, prev, std::end(items_));
    }
 
 public:
@@ -189,23 +174,23 @@ public:
       }
    }
 
-   // Copies all items that are newer than id and that satistfies the
+   // Copies all items that are newer than date and that satistfies the
    // predicate to inserter.
    template <class UnaryPredicate>
    void
-   get_posts( int id
+   get_posts( date_type date
             , inserter_type inserter
             , long int max
             , UnaryPredicate pred) const
    {
-      auto comp = [](auto const& a, auto const& b)
-         { return a < b.id; };
+      auto f = [&](auto const& a, auto const& b)
+         { return a < b.date; };
 
       auto const point =
          std::upper_bound( std::cbegin(items_)
                          , std::cend(items_)
-                         , id
-                         , comp);
+                         , date
+                         , f);
 
       // The number of posts that the app did not yet received from
       // this channel.
@@ -215,27 +200,26 @@ public:
    }
 
    // Removes a post if it exists in the channel.
-   bool remove_post(int id, std::string const& from)
+   bool remove_post(std::string const& id, std::string const& from)
    {
-      auto comp = [](auto const& a, auto const& b)
-      { return a.id < b; };
+      //auto f = [&](auto const& p)
+      //   { return p.id == id; };
 
-      auto const point =
-         std::lower_bound( std::begin(items_)
-                         , std::end(items_)
-                         , id
-                         , comp);
+      //auto match =
+      //   std::find(std::begin(items_),
+      //             std::end(items_),
+      //  	   f);
 
-      if (point == std::end(items_))
-         return false;
+      //if (match == std::end(items_))
+      //   return false;
 
-      if (point->id != id)
-         return false;
+      //if (match->id != id)
+      //   return false;
 
-      if (point->from != from)
-         return false;
+      //if (match->from != from)
+      //   return false;
 
-      items_.erase(point);
+      //items_.erase(match);
       return true;
    }
 

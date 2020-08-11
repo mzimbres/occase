@@ -59,7 +59,7 @@ using date_type = std::chrono::seconds;
 
 struct post {
    date_type date {0};
-   int id;
+   std::string id;
    std::string from;
    std::string delete_key;
    std::string nick;
@@ -73,17 +73,15 @@ struct post {
    std::vector<std::string> images;
 };
 
-inline
-auto operator<(post const& a, post const& b) noexcept
-   { return a.id < b.id; }
+struct comp_post_date_less {
+   auto operator()(post const& a, post const& b) const noexcept
+      { return a.date < b.date; }
+};
 
-inline
-auto operator==(post const& a, post const& b) noexcept
-   { return a.id == b.id; }
-
-inline
-auto operator!=(post const& a, post const& b) noexcept
-   { return !operator==(a, b); }
+struct comp_post_id_equal {
+   auto operator()(post const& a, post const& b) noexcept
+      { return a.id == b.id; }
+};
 
 void to_json(json& j, post const& e);
 void from_json(json const& j, post& e);

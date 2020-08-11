@@ -18,7 +18,6 @@ public:
    { user_messages
    , post
    , posts
-   , post_id
    , user_id
    , user_data
    , register_user
@@ -84,10 +83,6 @@ public:
       //
       // It is used to read the user from the notification sent by redis.
       std::string user_notify_prefix;
-
-      // The key used to store the menu message id. Each post gets an id
-      // by increasing the last id by one.
-      std::string post_id_key;
 
       // Chat messsage counter. It is used only to count the number of
       // messages sent so far.
@@ -246,21 +241,15 @@ public:
    //
    //    redis::events::post
    //
-   void post(std::string const& msg, int id);
+   void post(std::string const& msg, int date);
 
    // Removes the post under id from the sorted set and broadcasts the
    // cmd to the other workers. Completes with
    //
    //    redis::events::remove_post
    //
-   void remove_post(int id, std::string const& cmd);
-
-   // Requests a new post id from redis by increasing the last one.
-   // Completes with
-   //
-   //    redis::events::post_id
-   //
-   void request_post_id();
+   void remove_post(std::string const& id,
+	            std::string const& cmd);
 
    // Retrieves menu messages whose ids are greater than or equal
    // to begin. Completes with the event

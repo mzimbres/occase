@@ -79,7 +79,7 @@ public:
          return;
       }
 
-      mgr_cfg.user = cfg.logins.at(next_login);
+      mgr_cfg.cred = cfg.logins.at(next_login);
 
       auto session =
          std::make_shared<client_type>(ioc, session_cf, mgr_cfg);

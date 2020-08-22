@@ -25,7 +25,8 @@ public:
    static constexpr char sep = '-';
 
    pwd_gen();
-   std::string operator()(int size);
+   std::string make(int size);
+   std::string make_key();
 };
 
 }

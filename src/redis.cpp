@@ -19,7 +19,6 @@ redis::redis(config const& cfg, net::io_context& ioc)
 , ss_post_pub_ {ioc, cfg.ss_post, "db-post-pub"}
 , ss_msgs_sub_ {ioc, cfg.ss_msgs, "db-msgs-sub"}
 , ss_msgs_pub_ {ioc, cfg.ss_msgs, "db-msgs-pub"}
-, ss_user_pub_ {ioc, cfg.ss_user, "db-user-pub"}
 , ev_handler_([](auto const& data, auto const& req) {})
 {
    if (!cfg.is_valid())
@@ -30,13 +29,11 @@ redis::redis(config const& cfg, net::io_context& ioc)
    auto on_conn_b = [this]() { on_post_pub_conn(); };
    auto on_conn_c = [this]() { on_msgs_sub_conn(); };
    auto on_conn_d = [this]() { on_msgs_pub_conn(); };
-   auto on_conn_e = [this]() { on_user_pub_conn(); };
 
    ss_post_sub_.set_on_conn_handler(on_conn_a);
    ss_post_pub_.set_on_conn_handler(on_conn_b);
    ss_msgs_sub_.set_on_conn_handler(on_conn_c);
    ss_msgs_pub_.set_on_conn_handler(on_conn_d);
-   ss_user_pub_.set_on_conn_handler(on_conn_e);
 
    auto on_ev_a = [this](auto const& ec, auto data)
       { on_post_sub(ec, std::move(data)); };
@@ -46,14 +43,11 @@ redis::redis(config const& cfg, net::io_context& ioc)
       { on_msgs_sub(ec, std::move(data)); };
    auto on_ev_d = [this](auto const& ec, auto data)
       { on_msgs_pub(ec, std::move(data)); };
-   auto on_ev_e = [this](auto const& ec, auto data)
-      { on_user_pub(ec, std::move(data)); };
 
    ss_post_sub_.set_msg_handler(on_ev_a);
    ss_post_pub_.set_msg_handler(on_ev_b);
    ss_msgs_sub_.set_msg_handler(on_ev_c);
    ss_msgs_pub_.set_msg_handler(on_ev_d);
-   ss_user_pub_.set_msg_handler(on_ev_e);
 }
 
 void redis::on_post_sub_conn()
@@ -71,10 +65,6 @@ void redis::on_msgs_sub_conn()
 }
 
 void redis::on_msgs_pub_conn()
-{
-}
-
-void redis::on_user_pub_conn()
 {
 }
 
@@ -109,7 +99,6 @@ void redis::run()
    ss_post_pub_.run();
    ss_msgs_sub_.run();
    ss_msgs_pub_.run();
-   ss_user_pub_.run();
 }
 
 void
@@ -180,26 +169,6 @@ redis::on_msgs_pub( boost::system::error_code const& ec
    }
 
    msgs_pub_queue_.pop();
-}
-
-void redis::
-on_user_pub( boost::system::error_code const& ec
-           , std::vector<std::string> data)
-{
-   if (ec) {
-      log::write( log::level::debug
-                , "redis::on_user_pub: {0}."
-                , ec.message());
-      return;
-   }
-
-   assert(!std::empty(user_pub_queue_));
-
-   if (user_pub_queue_.front() == events::ignore)
-      return user_pub_queue_.pop();
-
-   ev_handler_(std::move(data), {user_pub_queue_.front(), {}});
-   user_pub_queue_.pop();
 }
 
 void
@@ -304,73 +273,6 @@ void redis::remove_post(std::string const& id, std::string const& msg)
    post_pub_queue_.push(events::remove_post);
 }
 
-void redis::request_user_id()
-{
-   ss_user_pub_.send(incr(cfg_.user_id_key));
-   user_pub_queue_.push(events::user_id);
-}
-
-void
-redis::register_user( std::string const& user
-                    , std::string const& pwd
-                    , int n_allowed_posts
-                    , std::chrono::seconds deadline)
-{
-   auto const key =  cfg_.user_data_prefix_key + user;
-
-   auto par =
-   { cfg_.ufields.password,  pwd
-   , cfg_.ufields.allowed, std::to_string(n_allowed_posts)
-   , cfg_.ufields.remaining, std::to_string(n_allowed_posts)
-   , cfg_.ufields.deadline, std::to_string(deadline.count())
-   };
-
-   ss_user_pub_.send(hset(key, par));
-   user_pub_queue_.push(events::register_user);
-}
-
-void redis::retrieve_user_data(std::string const& user)
-{
-   auto const key =  cfg_.user_data_prefix_key + user;
-
-   auto l =
-   { cfg_.ufields.password
-   , cfg_.ufields.allowed
-   , cfg_.ufields.remaining
-   , cfg_.ufields.deadline};
-
-   ss_user_pub_.send(hmget(key, l));
-   user_pub_queue_.push(events::user_data);
-}
-
-void
-redis::update_post_deadline( std::string const& user
-                           , int n_allowed_posts
-                           , std::chrono::seconds deadline)
-{
-   auto const key =  cfg_.user_data_prefix_key + user;
-
-   auto l =
-   { cfg_.ufields.allowed, std::to_string(n_allowed_posts)
-   , cfg_.ufields.remaining, std::to_string(n_allowed_posts)
-   , cfg_.ufields.deadline, std::to_string(deadline.count())};
-
-   ss_post_pub_.send(hset(key, l));
-   post_pub_queue_.push(events::update_post_deadline);
-}
-
-void
-redis::update_remaining( std::string const& user_id
-                       , int remaining)
-{
-   auto const key = cfg_.user_data_prefix_key + user_id;
-
-   auto l = {cfg_.ufields.remaining, std::to_string(remaining)};
-
-   ss_user_pub_.send(hset(key, l));
-   user_pub_queue_.push(events::ignore);
-}
-
 void redis::retrieve_posts(int begin)
 {
    log::write( log::level::debug
@@ -387,7 +289,6 @@ void redis::disconnect()
    ss_post_pub_.disable_reconnect();
    ss_msgs_sub_.disable_reconnect();
    ss_msgs_pub_.disable_reconnect();
-   ss_user_pub_.disable_reconnect();
 
    ss_post_sub_.send(quit());
    ss_post_pub_.send(quit());
@@ -396,9 +297,6 @@ void redis::disconnect()
    ss_msgs_sub_.send(quit());
    ss_msgs_pub_.send(quit());
    msgs_pub_queue_.push({events::ignore, {}});
-
-   ss_user_pub_.send(quit());
-   user_pub_queue_.push(events::ignore);
 }
 
 void redis::

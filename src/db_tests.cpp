@@ -181,8 +181,7 @@ void test_online(options const& op)
 
       auto const s = std::make_shared<session_launcher<publisher>
                       >( ioc
-                       , config_type 
-                         {{}, op.n_repliers}
+                       , config_type {{}, op.n_repliers}
                        , op.make_session_cf()
                        , op.make_pub_cfg(logins1)
                        );
@@ -266,38 +265,21 @@ void test_login_error(options const& op)
    using config_type = client_type::options_type;
    using session_type = session_shell<client_type>;
 
-   {
-      // First test: Here we request a user_id from the server and
-      // sets a wrong password to see whether the server refuses to
-      // login the user.
-      auto l1 = test_reg( op.make_session_cf()
-                        , op.make_launcher_empty_cfg(op.n_publishers));
+   // First test: Here we request a user_id from the server and set
+   // a wrong key to see whether the server refuses to login the
+   // user. Wrong key means wrong size.
+   auto l1 = test_reg( op.make_session_cf()
+		     , op.make_launcher_empty_cfg(op.n_publishers));
 
-      l1.front().pwd = "Kabuf";
+   l1.front().key = "Kabuf";
 
-      boost::asio::io_context ioc;
-      auto s1 = 
-         std::make_shared<session_type>( ioc, op.make_session_cf()
-                                       , config_type {l1.front()});
-      s1->run();
-      ioc.run();
-      std::cout << "Test ok: Correct user id, wrong pwd." << std::endl;
-   }
-
-   {
-      // Second test: Here we request a user_id from the server and
-      // sets a wrong password to see whether the server refuses to
-      // login the user.
-      login invalid {"Kabuf", "Magralha"};
-
-      boost::asio::io_context ioc;
-      auto s1 = 
-         std::make_shared<session_type>( ioc, op.make_session_cf()
-                                       , config_type {invalid});
-      s1->run();
-      ioc.run();
-      std::cout << "Test ok: Invalid user id." << std::endl;
-   }
+   boost::asio::io_context ioc;
+   auto s1 = 
+      std::make_shared<session_type>( ioc, op.make_session_cf()
+				    , config_type {l1.front()});
+   s1->run();
+   ioc.run();
+   std::cout << "Test ok: Correct user id, wrong key." << std::endl;
 }
 
 void test_early_close(options const& op)

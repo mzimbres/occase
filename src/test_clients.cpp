@@ -32,12 +32,12 @@ std::vector<std::string> const nicks
 , "Schwinger"
 };
 
-std::string make_login_cmd(occase::cli::login const& user)
+std::string make_login_cmd(occase::cli::login const& cred)
 {
    json j;
    j["cmd"] = "login";
-   j["user"] = user.id;
-   j["password"] = user.pwd;
+   j["user"] = cred.user;
+   j["key"] = cred.key;
    return j.dump();
 }
 
@@ -89,7 +89,7 @@ int replier::on_read(std::string msg, std::shared_ptr<client_type> s)
 
       to_receive_posts = op.n_publishers;
 
-      std::cout << "Sub: User " << op.user
+      std::cout << "Sub: User " << op.cred
                 << " expects: " << to_receive_posts
                 << std::endl;
 
@@ -119,7 +119,7 @@ int replier::on_read(std::string msg, std::shared_ptr<client_type> s)
          //std::cout << "Codition not met: " << (to_receive_posts - 1)
          //          << std::endl;
          if (--to_receive_posts == 0) {
-            std::cout << "User " << op.user << " done. (Replier)."
+            std::cout << "User " << op.cred << " done. (Replier)."
                       << std::endl;
             return -1; // Done.
          }
@@ -152,7 +152,7 @@ int replier::on_read(std::string msg, std::shared_ptr<client_type> s)
 
 int replier::on_handshake(std::shared_ptr<client_type> s)
 {
-   auto const str = make_login_cmd(op.user);
+   auto const str = make_login_cmd(op.cred);
    s->send_msg(str);
    return 1;
 }
@@ -167,19 +167,18 @@ void
 replier::send_chat_msg( std::string to, std::string const& post_id
                       , std::shared_ptr<client_type> s)
 {
-   //std::cout << "Sub: User " << op.user << " sending to " << to
+   //std::cout << "Sub: User " << op.cred << " sending to " << to
    //          << ", post_id: " << post_id << std::endl;
 
-   auto const n = std::stoi(op.user.id);
    json j;
    j["cmd"] = "message";
    j["is_redirected"] = 0;
    j["type"] = "chat";
    j["refers_to"] = -1;
    j["to"] = to;
-   j["msg"] = "Tenho interesse nesse carro, podemos conversar?";
+   j["message"] = "Tenho interesse nesse carro, podemos conversar?";
    j["post_id"] = post_id;
-   j["nick"] = nicks.at(n % std::size(nicks));
+   j["nick"] = nicks.at(std::size(nicks) - 1);
    j["id"] = 23;
 
    s->send_msg(j.dump());
@@ -202,7 +201,7 @@ leave_after_sub_ack::on_read( std::string msg
 
    if (cmd == "subscribe_ack") {
       check_result(j, "ok", "leave_after_sub_ack::subscribe_ack");
-      std::cout << "User " << op.user << ": ok" << std::endl;
+      std::cout << "User " << op.cred << ": ok" << std::endl;
       return -1;
    }
 
@@ -216,7 +215,7 @@ leave_after_sub_ack::on_read( std::string msg
 
 int leave_after_sub_ack::on_handshake(std::shared_ptr<client_type> s)
 {
-   auto const str = make_login_cmd(op.user);
+   auto const str = make_login_cmd(op.cred);
    s->send_msg(str);
    return 1;
 }
@@ -267,7 +266,7 @@ leave_after_n_posts::on_read( std::string msg
 int leave_after_n_posts::check_counter()
 {
    if (--op.n_posts == 0) {
-      std::cout << "User " << op.user << " ok. (leave_after_n_posts)."
+      std::cout << "User " << op.cred << " ok. (leave_after_n_posts)."
                 << std::endl;
       return -1;
    }
@@ -277,7 +276,7 @@ int leave_after_n_posts::check_counter()
 
 int leave_after_n_posts::on_handshake(std::shared_ptr<client_type> s)
 {
-   auto const str = make_login_cmd(op.user);
+   auto const str = make_login_cmd(op.cred);
    s->send_msg(str);
    return 1;
 }
@@ -366,7 +365,7 @@ int simulator::on_read( std::string msg
 
 int simulator::on_handshake(std::shared_ptr<client_type> s)
 {
-   auto const str = make_login_cmd(op.user);
+   auto const str = make_login_cmd(op.cred);
    s->send_msg(str);
    return 1;
 }
@@ -382,17 +381,15 @@ send_chat_msg( std::string to
              , std::string const& post_id
              , std::shared_ptr<client_type> s)
 {
-   auto const n = std::stoi(op.user.id);
-
    json j;
    j["cmd"] = "message";
    j["is_redirected"] = 0;
    j["type"] = "chat";
    j["refers_to"] = -1;
    j["to"] = to;
-   j["msg"] = "Message " + std::to_string(counter);
+   j["message"] = "Message " + std::to_string(counter);
    j["post_id"] = post_id;
-   j["nick"] = nicks.at(n % std::size(nicks));
+   j["nick"] = nicks.back();
    j["id"] = 22;
 
    s->send_msg(j.dump());
@@ -439,7 +436,7 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
    if (cmd == "publish_ack") {
       check_result(j, "ok", "publisher::publish_ack");
       pub_stack.top() = j.at("id").get<std::string>();
-      //std::cout << op.user << " publish_ack " << post_id << std::endl;
+      //std::cout << op.cred << " publish_ack " << post_id << std::endl;
       return handle_msg(s);
    }
 
@@ -448,7 +445,7 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
       auto posts = j.at("posts").get<std::vector<post>>();
 
       auto cond = [this](auto const& e)
-         { return e.from != op.user.id; };
+         { return e.from != op.cred.user_id; };
 
       posts.erase( std::remove_if( std::begin(posts), std::end(posts)
                                  , cond)
@@ -469,7 +466,7 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
       if (pub_stack.top() != posts.front().id)
          throw std::runtime_error("publisher::publish2");
 
-      //std::cout << op.user << " publish echo " << post_id << std::endl;
+      //std::cout << op.cred << " publish echo " << post_id << std::endl;
       server_echo = true;
       return handle_msg(s);
    }
@@ -481,19 +478,19 @@ int publisher::on_read(std::string msg, std::shared_ptr<client_type> s)
 
       if (type == "chat") {
          // This test is to make sure the server is not sending us a
-         // message meant to some other user.
+         // message meant to some other cred.
          auto const to = j.at("to").get<std::string>();
-         if (to != op.user.id)
+         if (to != op.cred.user_id)
             throw std::runtime_error("publisher::on_read5");
 
          auto const post_id2 = j.at("post_id").get<std::string>();
          if (pub_stack.top() != post_id2) {
-            std::cout << op.user << " " << pub_stack.top() << " != " << post_id2
+            std::cout << op.cred << " " << pub_stack.top() << " != " << post_id2
                       << " " << msg << std::endl;
             throw std::runtime_error("publisher::on_read6");
          }
 
-         //std::cout << op.user << " message " << post_id << " "
+         //std::cout << op.cred << " message " << post_id << " "
          //          << user_msg_counter << std::endl;
          --user_msg_counter;
          return handle_msg(s);
@@ -510,14 +507,14 @@ int publisher::handle_msg(std::shared_ptr<client_type> s)
    if (server_echo && !std::empty(pub_stack.top()) && user_msg_counter == 0) {
       pub_stack.pop();
       if (std::empty(pub_stack)) {
-         std::cout << "User " << op.user << " ok. (Publisher)."
+         std::cout << "User " << op.cred << " ok. (Publisher)."
                    << std::endl;
          return -1;
       }
 
       server_echo = false;
       user_msg_counter = op.n_repliers;
-      //std::cout << "=====> " << op.user << " " << post_id
+      //std::cout << "=====> " << op.cred << " " << post_id
       //          << " " << user_msg_counter <<  std::endl;
       return send_post(s);
    }
@@ -527,7 +524,7 @@ int publisher::handle_msg(std::shared_ptr<client_type> s)
 
 int publisher::on_handshake(std::shared_ptr<client_type> s)
 {
-   auto const str = make_login_cmd(op.user);
+   auto const str = make_login_cmd(op.cred);
    s->send_msg(str);
    return 1;
 }
@@ -564,7 +561,7 @@ int publisher2::on_read(std::string msg, std::shared_ptr<client_type> s)
       auto const post_id = j.at("id").get<std::string>();
       post_ids.push_back(post_id);
       if (--msg_counter == 0) {
-         std::cout << "User " << op.user << " ok. (Publisher2)."
+         std::cout << "User " << op.cred << " ok. (Publisher2)."
                    << std::endl;
          return -1;
       }
@@ -578,7 +575,7 @@ int publisher2::on_read(std::string msg, std::shared_ptr<client_type> s)
 
 int publisher2::on_handshake(std::shared_ptr<client_type> s)
 {
-   auto const str = make_login_cmd(op.user);
+   auto const str = make_login_cmd(op.cred);
    s->send_msg(str);
    return 1;
 }
@@ -594,7 +591,7 @@ int publisher2::pub(std::shared_ptr<client_type> s) const
    occase::post item
    { std::chrono::seconds {0} // date
    , {}  // id
-   , op.user.id // from
+   , op.cred.user_id // from
    , "Wheeler" // nick
    , "" // avatar
    , "Some description." // description
@@ -638,7 +635,7 @@ int msg_pull::on_read(std::string msg, std::shared_ptr<client_type> s)
          //std::cout << "Expecting: " << op.expected_user_msgs
          //          << std::endl;
          if (--op.expected_user_msgs == 0) {
-            std::cout << "User " << op.user << " ok. (msg_pull)."
+            std::cout << "User " << op.cred << " ok. (msg_pull)."
                       << std::endl;
             return -1;
          }
@@ -650,7 +647,7 @@ int msg_pull::on_read(std::string msg, std::shared_ptr<client_type> s)
       check_result(j, "ok", "msg_pull::publish_ack");
 
       //auto const post_id = j.at("id").get<int>();
-      //std::cout << op.user << " publish_ack " << post_id << std::endl;
+      //std::cout << op.cred << " publish_ack " << post_id << std::endl;
       return -1;
    }
 
@@ -660,7 +657,7 @@ int msg_pull::on_read(std::string msg, std::shared_ptr<client_type> s)
 
 int msg_pull::on_handshake(std::shared_ptr<client_type> s)
 {
-   auto const str = make_login_cmd(op.user);
+   auto const str = make_login_cmd(op.cred);
    s->send_msg(str);
    return 1;
 }
@@ -675,9 +672,10 @@ int register1::on_read(std::string msg, std::shared_ptr<client_type> s)
    if (cmd == "register_ack") {
       check_result(j, "ok", "register1::login_ack");
 
-      op.user.id = j.at("id").get<std::string>();
-      op.user.pwd = j.at("password").get<std::string>();
-      std::cout << "User " << op.user << " ok. (register1)."
+      op.cred.user = j.at("user").get<std::string>();
+      op.cred.key = j.at("key").get<std::string>();
+      op.cred.user_id = j.at("user_id").get<std::string>();
+      std::cout << "User " << op.cred << " ok. (register1)."
                 << std::endl;
       return -1;
    }
@@ -707,7 +705,7 @@ int login_err::on_read(std::string msg, std::shared_ptr<client_type> s)
       return 1;
    }
 
-   std::cout << "User " << op.user << " ok. (login_err)."
+   std::cout << "User " << op.cred << " ok. (login_err)."
              << std::endl;
    throw std::runtime_error("login_err::on_read");
    return -1;
@@ -715,7 +713,7 @@ int login_err::on_read(std::string msg, std::shared_ptr<client_type> s)
 
 int login_err::on_handshake(std::shared_ptr<client_type> s)
 {
-   auto str = make_login_cmd(op.user);
+   auto str = make_login_cmd(op.cred);
    s->send_msg(str);
    return 1;
 }
@@ -741,7 +739,7 @@ int early_close::on_read(std::string msg, std::shared_ptr<client_type> s)
 
 int early_close::on_handshake(std::shared_ptr<client_type> s)
 {
-   auto const str = make_login_cmd(op.user);
+   auto const str = make_login_cmd(op.cred);
    s->send_msg(str);
    return 1;
 }

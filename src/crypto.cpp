@@ -54,7 +54,7 @@ pwd_gen::pwd_gen()
 , dist {0, sizeof pwdchars - 2}
 {}
 
-std::string pwd_gen::operator()(int pwd_size)
+std::string pwd_gen::make(int pwd_size)
 {
    std::string pwd;
    for (auto i = 0; i < pwd_size; ++i) {
@@ -62,6 +62,11 @@ std::string pwd_gen::operator()(int pwd_size)
    }
 
    return pwd;
+}
+
+std::string pwd_gen::make_key()
+{
+   return make(crypto_generichash_KEYBYTES);
 }
 
 std::string make_hex_digest(std::string const& input)
@@ -76,9 +81,11 @@ std::string make_hex_digest(std::string const& input)
 }
 
 std::string
-make_hex_digest( std::string const& input
-               , std::string const& key)
+make_hex_digest(std::string const& input, std::string const& key)
 {
+   if (std::empty(input))
+      return {};
+
    if (std::size(key) != crypto_generichash_KEYBYTES)
       return {};
 

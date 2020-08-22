@@ -15,3 +15,21 @@
 
 * Use the notify field in the login command.
 
+* Warning: The following can happen:
+
+  1. User logs in and is not inserted on the sessions hash table but
+     the node subscribes to its messages.
+  2. A message is sent to the user and the node retrieves it.
+  3. Node does not find the user, or finds but session is expired and
+     stores it again on redis.
+  4. Node is already subscribed to messages to that server and
+     retrieves again generating a loop.
+
+  To solve this the node must unsubscribe to that user chat messages
+  when it receives it from redis and does not find it on its map.
+
+* Add a new config option to disable sending messages to online users
+  directly without storing in redis. This is needed to make sure
+
+  1. Redis keyspace notification is working properly.
+  2. Occase-db works properly with multiple nodes.

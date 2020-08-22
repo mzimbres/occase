@@ -64,9 +64,6 @@ private:
 
    boost::container::static_vector<code_type, ranges_size_> ranges_;
 
-   // The number of posts the user can publish until the deadline.
-   int remaining_posts_ = 0;
-
    Derived& derived() { return static_cast<Derived&>(*this); }
 
    void do_read()
@@ -95,9 +92,10 @@ private:
 
       if (ec) {
          finish();
-         log::write( log::level::debug
-                   , "db_session::on_read: {0}. User {1}"
-                   , ec.message(), user_id_);
+         log::write(log::level::debug,
+	            "db_session::on_read: {0}. User {1}",
+		    ec.message(),
+		    user_id_);
          return;
       }
 
@@ -225,7 +223,7 @@ private:
                           , std::back_inserter(msgs)
                           , transformer);
 
-            derived().db().on_session_dtor(std::move(user_id_), std::move(msgs));
+            derived().db().on_session_dtor(user_id_, std::move(msgs));
          }
       } catch (...) {
       }
@@ -338,32 +336,9 @@ public:
       derived().ws().async_close(reason, handler);
    }
 
-   void set_id(std::string id)
-      { user_id_ = std::move(id); };
-
-   void set_ranges(std::vector<int> const& ranges)
-   {
-      auto const min = std::min(ssize(ranges), ranges_size_);
-      ranges_.clear();
-      std::copy( std::cbegin(ranges)
-               , std::cbegin(ranges) + min
-               , std::back_inserter(ranges_));
-   }
-
-   auto const& get_id() const noexcept
-      { return user_id_;}
-
-   auto is_logged_in() const noexcept
-      { return !std::empty(user_id_);};
-
-   void set_remaining_posts(int n) noexcept
-      { remaining_posts_ = n; }
-
-   auto get_remaining_posts() const noexcept
-      { return remaining_posts_; }
-
-   auto decrease_remaining_posts() noexcept
-      { return --remaining_posts_; }
+   void set_user_id(std::string user_id) { user_id_ = std::move(user_id); };
+   auto const& get_id() const noexcept { return user_id_;}
+   auto is_logged_in() const noexcept { return !std::empty(user_id_);};
 };
 
 }

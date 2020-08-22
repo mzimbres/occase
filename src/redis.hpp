@@ -18,15 +18,11 @@ public:
    { user_messages
    , post
    , posts
-   , user_id
-   , user_data
-   , register_user
    , post_connect
    , channel_post
    , remove_post
    , user_msgs_priv
    , presence
-   , update_post_deadline
    , ignore
    };
 
@@ -88,13 +84,6 @@ public:
       // messages sent so far.
       std::string chat_msgs_counter_key;
 
-      // User registration id counter key. When an app connects to the
-      // server for the first time it will get an id.
-      std::string user_id_key;
-
-      // The prefix to every id holding user data (password for example).
-      std::string user_data_prefix_key;
-
       // The channel where user FCM tokens should be published.
       std::string token_channel {"tokens"};
 
@@ -141,10 +130,6 @@ private:
    aedis::session ss_msgs_pub_;
    std::queue<response> msgs_pub_queue_;
 
-   // Redis sessions used to deal with user credentials.
-   aedis::session ss_user_pub_;
-   std::queue<events> user_pub_queue_;
-
    msg_handler_type ev_handler_;
 
    void on_post_sub( boost::system::error_code const& ec
@@ -159,14 +144,10 @@ private:
    void on_msgs_pub( boost::system::error_code const& ec
                    , std::vector<std::string> data);
 
-   void on_user_pub( boost::system::error_code const& ec
-                   , std::vector<std::string> data);
-
    void on_post_sub_conn();
    void on_post_pub_conn();
    void on_msgs_sub_conn();
    void on_msgs_pub_conn();
-   void on_user_pub_conn();
 
 public:
    redis(config const& cfg, net::io_context& ioc);
@@ -248,8 +229,7 @@ public:
    //
    //    redis::events::remove_post
    //
-   void remove_post(std::string const& id,
-	            std::string const& cmd);
+   void remove_post(std::string const& id, std::string const& cmd);
 
    // Retrieves menu messages whose ids are greater than or equal
    // to begin. Completes with the event
@@ -263,49 +243,6 @@ public:
    //    redis::events::user_messages
    //
    void retrieve_messages(std::string const& user_id);
-   //
-   // Requests a new user id from redis by increasing the last one.
-   // Completes with
-   //
-   //    redis::events::user_id
-   //
-   void request_user_id();
-
-   // Register a user in the database. Completes with
-   //
-   //    redis::events::register_user
-   //
-   // n_allowed_posts is the number of posts the user is allowed to publish
-   // until the deadline.
-   void
-   register_user( std::string const& user
-                , std::string const& pwd
-                , int n_allowed_posts
-                , std::chrono::seconds deadline);
-
-   // Retrieves the user password (and possibly other data in the
-   // future) from the database. Completes with 
-   //
-   //   redis::events::user_data
-   //
-   void retrieve_user_data(std::string const& user_id);
-
-   // Updates the user last post timestamp. Completes with
-   //
-   //   redis::events::update_post_deadline
-   //
-   void
-   update_post_deadline( std::string const& user_id
-                       , int n_allowed_posts
-                       , std::chrono::seconds deadline);
-
-   // Updates the number of remaining posts. Completes with
-   //
-   //   redis::events::ignore
-   //
-   void
-   update_remaining( std::string const& user_id
-                   , int remaining);
 
    // Publishes a user FCM token in the channel where occase-notify is
    // listening. Completes with

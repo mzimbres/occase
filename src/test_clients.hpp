@@ -14,15 +14,13 @@
 #include "client_session.hpp"
 #include "session_launcher.hpp"
 
-// Contains the implementation of many test clients.
-
 namespace occase::cli
 {
 
 template <class Mgr>
 class session_shell;
 
-// Stablishes the websocket connection but does not proceed with a
+// Stablishes the websocket connection but doesn't proceed with a
 // login or register command. The server should drop the connection.
 class no_login {
 private:
@@ -30,7 +28,7 @@ private:
 
 public:
    struct options_type {
-      login user;
+      login cred;
    };
 
    no_login(options_type) noexcept { }
@@ -54,7 +52,7 @@ public:
 class replier {
 public:
    struct options_type {
-      login user;
+      login cred;
       int n_publishers;
    };
 
@@ -76,14 +74,14 @@ public:
    int on_read(std::string msg, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec);
    int on_handshake(std::shared_ptr<client_type> s);
-   auto const& get_login() const noexcept {return op.user;}
+   auto const& get_login() const noexcept {return op.cred;}
 };
 
 // Will close the session right after the subscribe ack.
 class leave_after_sub_ack {
 public:
    struct options_type {
-      login user;
+      login cred;
    };
 
 private:
@@ -98,14 +96,14 @@ public:
    int on_read(std::string msg, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec);
    int on_handshake(std::shared_ptr<client_type> s);
-   auto const& get_login() const noexcept {return op.user;}
+   auto const& get_login() const noexcept {return op.cred;}
 };
 
 // Waits for the specified number of posts and leaves.
 class leave_after_n_posts {
 public:
    struct options_type {
-      login user;
+      login cred;
       int n_posts;
    };
 
@@ -126,13 +124,13 @@ public:
    int on_read(std::string msg, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec);
    int on_handshake(std::shared_ptr<client_type> s);
-   auto const& get_login() const noexcept {return op.user;}
+   auto const& get_login() const noexcept {return op.cred;}
 };
 
 class simulator {
 public:
    struct options_type {
-      login user;
+      login cred;
       int const counter = 0;
    };
 
@@ -161,7 +159,7 @@ public:
    int on_read(std::string msg, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec);
    int on_handshake(std::shared_ptr<client_type> s);
-   auto const& get_login() const noexcept {return op.user;}
+   auto const& get_login() const noexcept {return op.cred;}
 };
 
 /* This class is meant to perform the following test
@@ -186,7 +184,7 @@ public:
 class publisher {
 public:
    struct options_type {
-      login user;
+      login cred;
       int n_repliers;
    };
 
@@ -211,7 +209,7 @@ public:
    int on_read(std::string msg, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec);
    int on_handshake(std::shared_ptr<client_type> s);
-   auto const& get_login() const noexcept {return op.user;}
+   auto const& get_login() const noexcept {return op.cred;}
 };
 
 // This class will be used to publish some messages to the server and
@@ -219,7 +217,7 @@ public:
 class publisher2 {
 public:
    struct options_type {
-      login user;
+      login cred;
    };
 
 private:
@@ -239,7 +237,7 @@ public:
    int on_read(std::string msg, std::shared_ptr<client_type> s);
    int on_closed(boost::system::error_code ec);
    int on_handshake(std::shared_ptr<client_type> s);
-   auto const& get_login() const noexcept {return op.user;}
+   auto const& get_login() const noexcept {return op.cred;}
    auto get_post_ids() const {return post_ids;}
 };
 
@@ -249,7 +247,7 @@ public:
 class msg_pull {
 public:
    struct options_type {
-      login user;
+      login cred;
       int expected_user_msgs;
    };
 
@@ -268,7 +266,7 @@ public:
    int on_closed(boost::system::error_code ec)
       { throw std::runtime_error("msg_pull::on_closed"); return -1; }
    int on_handshake(std::shared_ptr<client_type> s);
-   auto const& get_login() const noexcept {return op.user;}
+   auto const& get_login() const noexcept {return op.cred;}
    auto get_post_ids() const {return post_ids;}
 };
 
@@ -276,7 +274,7 @@ public:
 class register1 {
 public:
    struct options_type {
-      login user;
+      login cred;
    };
 
 private:
@@ -294,7 +292,7 @@ public:
    int on_closed(boost::system::error_code ec)
       { throw std::runtime_error("register1::on_closed"); return -1; }
    int on_handshake(std::shared_ptr<client_type> s);
-   auto const& get_login() const noexcept {return op.user;}
+   auto const& get_login() const noexcept {return op.cred;}
 };
 
 // This class is used to test if the server rejects logins with wrong
@@ -317,7 +315,7 @@ public:
    int on_closed(boost::system::error_code ec)
       { return -1; }
    int on_handshake(std::shared_ptr<client_type> s);
-   auto const& get_login() const noexcept {return op.user;}
+   auto const& get_login() const noexcept {return op.cred;}
 };
 
 // Closes the tcp connection right after writing it on the socket. The
@@ -326,7 +324,7 @@ public:
 class early_close {
 public:
    struct options_type {
-      login user;
+      login cred;
    };
 
 private:
@@ -345,7 +343,7 @@ public:
    int on_closed(boost::system::error_code ec)
       { throw std::runtime_error("early_close::on_closed"); return -1; }
    int on_handshake(std::shared_ptr<client_type> s);
-   auto const& get_login() const noexcept {return op.user;}
+   auto const& get_login() const noexcept {return op.cred;}
 };
 
 std::vector<login>

@@ -94,11 +94,9 @@ auto get_cfg(int argc, char* argv[])
    ("redis-host-user", po::value<std::string>(&cfg.worker.db.ss_user.name)->default_value("mymaster"))
    ("redis-sentinels", po::value<std::vector<std::string>>(&sentinels))
    ("redis-max-pipeline-size", po::value<int>(&max_pipeline_size)->default_value(2048))
-   ("redis-key-user-id", po::value<std::string>(&cfg.worker.db.user_id_key)->default_value("user_id"))
    ("redis-key-chat-msgs-counter", po::value<std::string>(&cfg.worker.db.chat_msgs_counter_key)->default_value("chat_msgs_counter"))
    ("redis-key-chat-msg-prefix", po::value<std::string>(&cfg.worker.db.chat_msg_prefix)->default_value("msg"))
    ("redis-key-posts", po::value<std::string>(&cfg.worker.db.posts_key)->default_value("posts"))
-   ("redis-key-user-data-prefix", po::value<std::string>(&cfg.worker.db.user_data_prefix_key)->default_value("id"))
    ("redis-user-msg-exp_time", po::value<int>(&cfg.worker.db.chat_msg_exp_time)->default_value(7 * 24 * 60 * 60))
    ("redis-offline-chat-msgs", po::value<int>(&cfg.worker.db.max_offline_chat_msgs)->default_value(100))
    ("redis-key-menu-channel", po::value<std::string>(&cfg.worker.db.menu_channel_key)->default_value("menu_channel"))
@@ -149,20 +147,12 @@ auto get_cfg(int argc, char* argv[])
    cfg.worker.db.ss_post.sentinels = sentinels;
    cfg.worker.db.ss_post.max_pipeline_size = max_pipeline_size;
    cfg.worker.db.ss_post.role = "master";
-   cfg.worker.db.ss_post.log_filter =
-      log::to_level<aedis::log::level>(logfilter_str);
+   cfg.worker.db.ss_post.log_filter = log::to_level<aedis::log::level>(logfilter_str);
 
    cfg.worker.db.ss_msgs.sentinels = sentinels;
    cfg.worker.db.ss_msgs.max_pipeline_size = max_pipeline_size;
    cfg.worker.db.ss_msgs.role = "master";
-   cfg.worker.db.ss_msgs.log_filter =
-      log::to_level<aedis::log::level>(logfilter_str);
-
-   cfg.worker.db.ss_user.sentinels = sentinels;
-   cfg.worker.db.ss_user.max_pipeline_size = max_pipeline_size;
-   cfg.worker.db.ss_user.role = "master";
-   cfg.worker.db.ss_user.log_filter =
-      log::to_level<aedis::log::level>(logfilter_str);
+   cfg.worker.db.ss_msgs.log_filter = log::to_level<aedis::log::level>(logfilter_str);
 
    cfg.worker.timeouts = cfg.get_timeouts();
    cfg.logfilter = log::to_level<occase::log::level>(logfilter_str);

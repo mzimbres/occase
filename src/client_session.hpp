@@ -24,14 +24,15 @@ namespace occase::cli
 {
 
 struct login {
-   std::string id;
-   std::string pwd;
+   std::string user;
+   std::string key;
+   std::string user_id;
 };
 
 inline
 std::ostream& operator<<(std::ostream& os, login o)
 {
-   os << o.id << ":" << o.pwd;
+   os << o.user << " " << o.key << " " << o.user_id;
    return os;
 }
 
@@ -61,7 +62,7 @@ class session_shell :
    public std::enable_shared_from_this<session_shell<Mgr>> {
 private:
    net::ip::tcp::resolver resolver;
-   net::steady_timer timer;
+   net::steady_timer timer_;
    beast::websocket::stream<net::ip::tcp::socket> ws;
    beast::multi_buffer buffer;
    std::string text;
@@ -123,7 +124,7 @@ session_shell<Mgr>::session_shell( net::io_context& ioc
                                    , session_shell_cfg op_
                                    , mgr_op_type const& m)
 : resolver(ioc)
-, timer(ioc)
+, timer_(ioc)
 , ws(ioc)
 , op(std::move(op_))
 , mgr(m)
@@ -141,7 +142,7 @@ void session_shell<Mgr>::on_read( boost::system::error_code ec
          //std::cout << "Session closed by the server." << std::endl;
          if (mgr.on_closed(ec) == -1) {
             //std::cout << "Cancelling timer." << std::endl;
-            timer.cancel();
+            timer_.cancel();
             return;
          }
 
@@ -153,13 +154,13 @@ void session_shell<Mgr>::on_read( boost::system::error_code ec
 
       if (ec == net::error::operation_aborted) {
          // A shutdown operation can cause this.
-         timer.cancel();
+         timer_.cancel();
          return;
       }
 
       if (ec == net::error::not_connected) {
          // A shutdown operation can cause this.
-         timer.cancel();
+         timer_.cancel();
          return;
       }
 
@@ -177,7 +178,7 @@ void session_shell<Mgr>::on_read( boost::system::error_code ec
    // will however be called every time this function is called.
    // TODO: Instead of canceling implement as activity with
    // expires_after.
-   timer.cancel();
+   timer_.cancel();
    auto const r = mgr.on_read(str, this->shared_from_this());
    if (r == -1) {
       do_close();
@@ -270,17 +271,18 @@ void session_shell<Mgr>::on_handshake(boost::system::error_code ec)
 
    mgr.on_handshake(this->shared_from_this());
 
-   // This timer is used by the login test to see if the server times
-   // out the connection when we do not send any command after the
+   // This timer is used by the login test to test if the server times
+   // out the connection if we do not send any command after the
    // handshake. It will be canceled on the on_read when it completes
    // with beast::websocket::error::closed, since the server is
    // expected to gracefully close the connection.  The timer is also
    // being used to test the acknowledge of the first message sent to
    // the server.
-   timer.expires_after(op.auth_timeout);
+   timer_.expires_after(op.auth_timeout);
 
    auto handler = [p = this->shared_from_this()](auto ec)
    {
+      std::cout << ec.message() << std::endl;
       if (ec) {
          if (ec == net::error::operation_aborted) {
             // The timer has been successfully canceled.
@@ -292,7 +294,7 @@ void session_shell<Mgr>::on_handshake(boost::system::error_code ec)
       throw std::runtime_error("session_shell<Mgr>::on_handshake: fail.");
    };
 
-   timer.async_wait(handler);
+   timer_.async_wait(handler);
 }
 
 template <class Mgr>

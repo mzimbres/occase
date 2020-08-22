@@ -1,6 +1,5 @@
 #pragma once
 
-#include <queue>
 #include <array>
 #include <thread>
 #include <vector>
@@ -95,21 +94,6 @@ struct ws_stats {
    int number_of_sessions {0};
 };
 
-// We have to store publish items in this queue while we wait for
-// the pub id that were requested from redis.
-template <class WebSocketSession>
-struct post_queue_item {
-   std::weak_ptr<WebSocketSession> session;
-   post item;
-};
-
-template <class WebSocketSession>
-struct pwd_queue_item {
-   std::weak_ptr<WebSocketSession> session;
-   std::string pwd;
-   std::string token;
-};
-
 template <class AdmSession>
 class db_worker {
 private:
@@ -134,13 +118,6 @@ private:
    // Facade to redis.
    redis db_;
 
-   // Queue with sessions waiting for a user id that are retrieved
-   // from redis.
-   std::queue<pwd_queue_item<db_session_type>> reg_queue_;
-
-   // Queue of users waiting to be checked for login.
-   std::queue<pwd_queue_item<db_session_type>> login_queue_;
-
    // The last post id that has beed received from reidis pubsub channel.
    date_type last_post_date_received_ {0};
 
@@ -163,47 +140,98 @@ private:
       db_.run();
    }
 
-   ev_res on_app_login(json const& j, std::shared_ptr<db_session_type> s)
+   auto on_app_login(json const& j, std::shared_ptr<db_session_type> s)
    {
       auto const user = j.at("user").get<std::string>();
-      s->set_id(user);
+      auto const key = j.at("key").get<std::string>();
+      auto const user_id = make_hex_digest(user, key);
 
-      auto const pwd = j.at("password").get<std::string>();
+      if (std::empty(user_id)) {
+	 json resp;
+	 resp["cmd"] = "login_ack";
+	 resp["result"] = "fail";
+	 s->send(resp.dump(), false);
+	 return ev_res::login_fail;
+      }
 
-      std::string token;
+      s->set_user_id(user_id);
+
+      auto const ss = sessions_.insert({user_id, s});
+      if (!ss.second) {
+	 // There should never be more than one session with
+	 // the same id. For now, I will simply override the
+	 // old session and disregard any pending messages.
+	 // In Principle, if the session is still online, it
+	 // should not contain any messages anyway.
+
+	 // The old session has to be shutdown first
+	 if (auto old_ss = ss.first->second.lock()) {
+	    old_ss->shutdown();
+	    // We have to prevent the cleanup operation when its
+	    // destructor is called. That would cause the new
+	    // session to be removed from the map again.
+	    old_ss->set_user_id("");
+	 } else {
+	    // Awckward, the old session has already expired and
+	    // we did not remove it from the map. It should be
+	    // fixed.
+	 }
+
+	 ss.first->second = s;
+      }
+
       auto const match = j.find("token");
       if (match != std::cend(j))
-         token = *match;
+	 if (!std::empty(*match))
+	    db_.publish_token(user_id, *match);
 
-      // We do not have to serialize the calls to retrieve_user_data
-      // since this will be done by the db_ object.
-      login_queue_.push({s, pwd, token});
-      db_.retrieve_user_data(s->get_id());
+      db_.on_user_online(user_id);
+      db_.retrieve_messages(user_id);
+
+      json resp;
+      resp["cmd"] = "login_ack";
+      resp["result"] = "ok";
+      resp["remaining_posts"] = 0;
+
+      s->send(resp.dump(), false);
 
       return ev_res::login_ok;
    }
 
-   ev_res on_app_register(json const& j, std::shared_ptr<db_session_type> s)
+   auto on_app_register(json const& j, std::shared_ptr<db_session_type> s)
    {
-      // If the app sent us the token we have to make it available to
-      // occase-notify. For that we have to store it with the password and
-      // publish in the tokens channel toguether when we send the
-      // register_ack.
+      auto const user = pwdgen_.make(core_cfg_.pwd_size);
+      auto const key = pwdgen_.make_key();
+      auto const user_id = make_hex_digest(user, key);
 
-      std::string token;
+      s->set_user_id(user_id);
+
+      auto const new_user = sessions_.insert({user_id, s});
+      if (!new_user.second) {
+	 // Awkward, we managed to generate user credentials that
+	 // already exist and by chance are already online on this
+	 // node.
+	 // TODO: Try new credentials.
+      }
+
       auto const match = j.find("token");
       if (match != std::cend(j))
-         token = *match;
+	 if (!std::empty(*match))
+	    db_.publish_token(user_id, *match);
 
-      auto const empty = std::empty(reg_queue_);
-      reg_queue_.push({s, {}, token});
-      if (empty)
-         db_.request_user_id();
+      json resp;
+      resp["cmd"] = "register_ack";
+      resp["result"] = "ok";
+      resp["user"] = user;
+      resp["key"] = key;
+      resp["user_id"] = user_id;
+
+      s->send(resp.dump(), false);
 
       return ev_res::register_ok;
    }
 
-   ev_res on_app_subscribe(json const& j, std::shared_ptr<db_session_type> s)
+   auto on_app_subscribe(json const& j, std::shared_ptr<db_session_type> s)
    {
       root_channel_.add_member(s, channel_cfg_.cleanup_rate);
 
@@ -215,9 +243,8 @@ private:
       return ev_res::subscribe_ok;
    }
 
-   ev_res
-   on_app_chat_msg( json j
-                  , std::shared_ptr<db_session_type> s)
+   auto
+   on_app_chat_msg(json j, std::shared_ptr<db_session_type> s)
    {
       j["from"] = s->get_id();
 
@@ -256,9 +283,7 @@ private:
       return ev_res::chat_msg_ok;
    }
 
-   ev_res
-   on_app_presence( json j
-                  , std::shared_ptr<db_session_type> s)
+   auto on_app_presence(json j, std::shared_ptr<db_session_type> s)
    {
       // See also comments in on_app_chat_msg.
 
@@ -276,29 +301,22 @@ private:
       return ev_res::presence_ok;
    }
 
-   ev_res on_app_publish(json j, std::shared_ptr<db_session_type> s)
+   auto on_app_publish(json j, std::shared_ptr<db_session_type> s)
    {
       auto p = j.at("post").get<post>();
 
       log::write(log::level::debug, "New post from user {0}", p.from);
 
-      // I do not check if the deadline is valid as it should always be
-      // according to the algorithm used.
-      if (s->get_remaining_posts() < 1) {
-         json resp;
-         resp["cmd"] = "publish_ack";
-         resp["result"] = "fail";
-         s->send(resp.dump(), false);
-         return ev_res::publish_fail;
-      }
+      // TODO: Implement a publication limit by consulting the number
+      // of posts the user already has on the channel object.
 
       using namespace std::chrono;
 
       // It is important not to thrust the *from* field in the json command.
       p.from = s->get_id();
       p.date = duration_cast<seconds>(system_clock::now().time_since_epoch());
-      p.id = pwdgen_(core_cfg_.pwd_size);
-      p.delete_key = pwdgen_(core_cfg_.pwd_size);
+      p.id = pwdgen_.make(core_cfg_.pwd_size);
+      p.delete_key = pwdgen_.make(core_cfg_.pwd_size);
 
       json const j_item = p;
       db_.post(j_item.dump(), p.date.count());
@@ -316,10 +334,6 @@ private:
       auto ack_str = ack.dump();
 
       s->send(std::move(ack_str), true);
-      db_.update_remaining(
-	 s->get_id(),
-	 s->decrease_remaining_posts());
-
       return ev_res::publish_ok;
    }
 
@@ -429,7 +443,8 @@ private:
          // If the user went offline, we should not be receiving this
          // message. However there may be a timespan where this can
          // happen wo I will simply log.
-         log::write(log::level::warning, "Receiving presence after unsubscribe.");
+         log::write(log::level::warning,
+	            "Receiving presence after unsubscribe.");
          return;
       }
 
@@ -446,8 +461,8 @@ private:
 
    void on_db_posts(std::vector<std::string> const& msgs)
    {
-      // This function is also called when the connection to redis is lost and
-      // restablished. 
+      // This function is also called when the connection to redis is
+      // lost and restablished. 
 
       log::write( log::level::info
                 , "Number of messages received from the database: {0}"
@@ -469,8 +484,7 @@ private:
 
    // Keep the switch cases in the same sequence declared in the enum to
    // improve performance.
-   void on_db_event( std::vector<std::string> data
-                   , redis::response const& req)
+   void on_db_event( std::vector<std::string> data , redis::response const& req)
    {
       try {
 	 switch (req.req)
@@ -484,19 +498,6 @@ private:
 
 	    case redis::events::posts:
 	       on_db_posts(data);
-	       break;
-
-	    case redis::events::user_id:
-	       assert(std::size(data) == 1);
-	       on_db_user_id(data.back());
-	       break;
-
-	    case redis::events::user_data:
-	       on_db_user_data(data);
-	       break;
-
-	    case redis::events::register_user:
-	       on_db_register();
 	       break;
 
 	    case redis::events::post_connect:
@@ -534,175 +535,6 @@ private:
       auto last = last_post_date_received_;
       ++last;
       db_.retrieve_posts(last.count());
-   }
-
-   void on_db_user_id(std::string const& id)
-   {
-      using namespace std::chrono;
-      assert(!std::empty(reg_queue_));
-
-      while (!std::empty(reg_queue_)) {
-         if (auto s = reg_queue_.front().session.lock()) {
-            reg_queue_.front().pwd = pwdgen_(core_cfg_.pwd_size);
-
-            // A hashed version of the password is stored in the
-            // database.
-            auto const digest = make_hex_digest(reg_queue_.front().pwd);
-
-            auto const now =
-               duration_cast<seconds>(system_clock::now()
-                  .time_since_epoch());
-
-            auto const deadline = now + core_cfg_.get_post_interval();
-
-            db_.register_user( id
-                             , digest
-                             , core_cfg_.allowed_posts
-                             , deadline);
-
-            s->set_id(id);
-            s->set_remaining_posts(core_cfg_.allowed_posts);
-
-            log::write( log::level::info
-                      , "New user: {0}. Remaining posts {1}."
-                      , id
-                      , core_cfg_.allowed_posts);
-
-            return;
-         }
-
-         // The user is not online anymore. We try with the next element
-         // in the queue, if all of them are also not online anymore the
-         // requested id is lost. Very unlikely to happen since the
-         // communication with redis is very fast.
-         reg_queue_.pop();
-      }
-   }
-
-   void on_db_register()
-   {
-      assert(!std::empty(reg_queue_));
-      if (auto session = reg_queue_.front().session.lock()) {
-         auto const& id = session->get_id();
-         db_.on_user_online(id);
-         auto const new_user = sessions_.insert({id, session});
-
-         // It would be a bug if this id were already in the map since we
-         // have just registered it.
-         assert(new_user.second);
-
-         json resp;
-         resp["cmd"] = "register_ack";
-         resp["result"] = "ok";
-         resp["id"] = id;
-         resp["password"] = reg_queue_.front().pwd;
-         session->send(resp.dump(), false);
-
-         if (!std::empty(reg_queue_.front().token))
-            db_.publish_token(
-               session->get_id(),
-               reg_queue_.front().token);
-      } else {
-         // The user is not online anymore. The requested id is lost.
-      }
-
-      reg_queue_.pop();
-      if (!std::empty(reg_queue_))
-         db_.request_user_id();
-   }
-
-   void on_db_user_data(std::vector<std::string> const& fields) noexcept
-   {
-      assert(!std::empty(login_queue_));
-      assert(std::size(fields) == 4);
-
-      if (auto s = login_queue_.front().session.lock()) {
-	 auto const digest = make_hex_digest(login_queue_.front().pwd);
-	 if (fields[0] != digest) { // Incorrect pwd?
-	    json resp;
-	    resp["cmd"] = "login_ack";
-	    resp["result"] = "fail";
-	    s->send(resp.dump(), false);
-	    s->shutdown();
-
-	    log::write( log::level::debug
-		      , "Login failed for {0}:{1}."
-		      , s->get_id()
-		      , login_queue_.front().pwd);
-
-	 } else {
-	    auto const ss = sessions_.insert({s->get_id(), s});
-	    if (!ss.second) {
-	       // There should never be more than one session with
-	       // the same id. For now, I will simply override the
-	       // old session and disregard any pending messages.
-	       // In Principle, if the session is still online, it
-	       // should not contain any messages anyway.
-
-	       // The old session has to be shutdown first
-	       if (auto old_ss = ss.first->second.lock()) {
-		  old_ss->shutdown();
-		  // We have to prevent the cleanup operation when its
-		  // destructor is called. That would cause the new
-		  // session to be removed from the map again.
-		  old_ss->set_id("");
-	       } else {
-		  // Awckward, the old session has already expired and
-		  // we did not remove it from the map. It should be
-		  // fixed.
-	       }
-
-	       ss.first->second = s;
-	    }
-
-	    db_.on_user_online(s->get_id());
-	    db_.retrieve_messages(s->get_id());
-
-	    using namespace std::chrono;
-	    auto const now = duration_cast<seconds>(
-	       system_clock::now().time_since_epoch());
-
-	    auto const allowed = std::stoi(fields.at(1));
-	    auto remaining = std::stoi(fields.at(2));
-	    auto const deadline = seconds {std::stol(fields.at(3))};
-	    if (now > deadline) {
-	       // Notice that a race can originate here if the adm api has
-	       // updated the number of allowed or remaining posts right
-	       // after these values have been retrieved from redis. This is
-	       // extremely unlikely as there are only a couple of micro
-	       // seconds for that to happen.
-	       // 
-	       // Once the user is logged in we should never again update
-	       // his post counters as that can overwrite values set over
-	       // the adm api. Reading it before setting is too complicated.
-	       db_.update_post_deadline(
-		  s->get_id(),
-		  allowed,
-		  now + core_cfg_.get_post_interval());
-
-	       remaining = allowed;
-	    }
-
-	    s->set_remaining_posts(remaining);
-
-	    json resp;
-	    resp["cmd"] = "login_ack";
-	    resp["result"] = "ok";
-	    resp["remaining_posts"] = remaining;
-	    s->send(resp.dump(), false);
-
-	    if (!std::empty(login_queue_.front().token))
-	       db_.publish_token(
-		  s->get_id(),
-		  login_queue_.front().token);
-	 }
-      } else {
-	 // The user is not online anymore. The requested id is lost.
-	 // Very unlikely to happen since the communication with redis is
-	 // very fast.
-      }
-
-      login_queue_.pop();
    }
 
    void on_signal(boost::system::error_code const& ec, int n)
@@ -803,8 +635,7 @@ public:
       }
    }
 
-   ev_res on_app( std::shared_ptr<db_session_type> s
-                , std::string msg) noexcept
+   auto on_app(std::shared_ptr<db_session_type> s , std::string msg) noexcept
    {
       try {
          auto j = json::parse(msg);
@@ -844,8 +675,6 @@ public:
       worker_stats wstats {};
 
       wstats.number_of_sessions = ws_stats_.number_of_sessions;
-      wstats.worker_reg_queue_size = ssize(reg_queue_);
-      wstats.worker_login_queue_size = ssize(login_queue_);
       wstats.db_post_queue_size = db_.get_post_queue_size();
       wstats.db_chat_queue_size = db_.get_chat_queue_size();
 
@@ -928,18 +757,9 @@ public:
 
    auto get_upload_credit()
    {
-      // NOTE: Earlier I was sending fail if
-      //
-      //    if (s->get_remaining_posts() < 1)
-      //       ...
-      //
-      // This is incorrected however as it prevents people from
-      // sending paid posts for example if they have used all its free
-      // posts.
-
       auto f = [this]()
       {
-         auto const filename = pwdgen_(sz::mms_filename_size);
+         auto const filename = pwdgen_.make(sz::mms_filename_size);
 
          auto const path = make_rel_path(filename)
                          + "/"

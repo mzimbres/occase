@@ -161,7 +161,7 @@ private:
 	 // There should never be more than one session with
 	 // the same id. For now, I will simply override the
 	 // old session and disregard any pending messages.
-	 // In Principle, if the session is still online, it
+	 // In principle, if the session is still online, it
 	 // should not contain any messages anyway.
 
 	 // The old session has to be shutdown first
@@ -243,8 +243,7 @@ private:
       return ev_res::subscribe_ok;
    }
 
-   auto
-   on_app_chat_msg(json j, std::shared_ptr<db_session_type> s)
+   auto on_app_chat_msg(json j, std::shared_ptr<db_session_type> s)
    {
       j["from"] = s->get_id();
 
@@ -335,6 +334,20 @@ private:
 
       s->send(std::move(ack_str), true);
       return ev_res::publish_ok;
+   }
+
+   auto on_app_post_view(json const& j, std::shared_ptr<db_session_type> s)
+   {
+      // TODO: publish on the redis channel to the other nodes.
+
+      auto const post_ids = j.at("post_ids").get<std::vector<std::string>>();
+      auto const type = j.at("type").get<std::string>();
+
+      log::write(log::level::debug,
+	         "db_worker::on_app_post_view: {0}.",
+		 type);
+
+      return ev_res::post_view_ok;
    }
 
    // Handlers for events we receive from the database.
@@ -642,6 +655,8 @@ public:
          auto const cmd = j.at("cmd").get<std::string>();
 
          if (s->is_logged_in()) {
+            if (cmd == "post_view")
+               return on_app_post_view(j, s);
             if (cmd == "presence")
                return on_app_presence(std::move(j), s);
             if (cmd == "message")
@@ -670,7 +685,7 @@ public:
    auto const& get_ws_stats() const noexcept
       { return ws_stats_; }
 
-   worker_stats get_stats() const noexcept
+   auto get_stats() const noexcept
    {
       worker_stats wstats {};
 
@@ -682,8 +697,7 @@ public:
    }
 
    template <class UnaryPredicate>
-   std::vector<post>
-   get_posts(date_type date, UnaryPredicate pred) const noexcept
+   auto get_posts(date_type date, UnaryPredicate pred) const noexcept
    {
       try {
          std::vector<post> posts;
@@ -703,9 +717,7 @@ public:
    }
 
    auto count_posts(post const& p) const noexcept
-   {
-      return root_channel_.size();
-   }
+      { return root_channel_.size(); }
 
    auto search_posts(post const& p) const
    {

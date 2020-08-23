@@ -46,6 +46,9 @@ std::string make_post_cmd()
    occase::post p
    { std::chrono::seconds {0} // date
    , {}  // id
+   , {}  // on_search
+   , {}  // views
+   , {}  // detailed_views
    , {} // from
    , "Wheeler" // nick
    , "9ac8316ca55e6d888d43092fd73a78d6" // avatar
@@ -591,6 +594,9 @@ int publisher2::pub(std::shared_ptr<client_type> s) const
    occase::post item
    { std::chrono::seconds {0} // date
    , {}  // id
+   , {}  // on_search
+   , {}  // views
+   , {}  // detailed_views
    , op.cred.user_id // from
    , "Wheeler" // nick
    , "" // avatar

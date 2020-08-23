@@ -34,6 +34,8 @@ enum class ev_res
 , delete_fail
 , presence_ok
 , presence_fail
+, post_view_ok
+, post_view_fail
 , unknown
 };
 

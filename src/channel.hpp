@@ -202,24 +202,21 @@ public:
    // Removes a post if it exists in the channel.
    bool remove_post(std::string const& id, std::string const& from)
    {
-      //auto f = [&](auto const& p)
-      //   { return p.id == id; };
+      auto f = [&](auto const& p)
+         { return p.id == id; };
 
-      //auto match =
-      //   std::find(std::begin(items_),
-      //             std::end(items_),
-      //  	   f);
+      auto match = std::find_if(std::begin(items_), std::end(items_), f);
 
-      //if (match == std::end(items_))
-      //   return false;
+      if (match == std::end(items_))
+         return false;
 
-      //if (match->id != id)
-      //   return false;
+      if (match->id != id)
+         return false;
 
-      //if (match->from != from)
-      //   return false;
+      if (match->from != from)
+         return false;
 
-      //items_.erase(match);
+      items_.erase(match);
       return true;
    }
 

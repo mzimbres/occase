@@ -59,6 +59,9 @@ using date_type = std::chrono::seconds;
 
 struct post {
    date_type date {0};
+   int on_search;
+   int views;
+   int clicks;
    std::string id;
    std::string from;
    std::string delete_key;

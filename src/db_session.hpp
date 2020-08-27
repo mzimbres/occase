@@ -30,12 +30,8 @@ enum class ev_res
 , publish_fail
 , chat_msg_ok
 , chat_msg_fail
-, delete_ok
-, delete_fail
 , presence_ok
 , presence_fail
-, post_view_ok
-, post_view_fail
 , unknown
 };
 
@@ -186,7 +182,6 @@ private:
          case ev_res::login_fail:
          case ev_res::subscribe_fail:
          case ev_res::chat_msg_fail:
-         case ev_res::delete_fail:
          case ev_res::unknown:
          {
             shutdown();

@@ -134,6 +134,7 @@ private:
       switch (req_.method()) {
          case http::verb::get: get_handler();  break;
          case http::verb::post: post_handler();  break;
+         case http::verb::put: put_handler();  break;
          default: default_handler(); break;
       }
    }
@@ -276,7 +277,7 @@ private:
          auto const t = req_.target();
 
          std::string const target {t.data(), std::size(t)};
-         log::write(log::level::debug, "post_handler.", target);
+         log::write(log::level::debug, "post_handler.");
 
          if (t.compare(0, 12, "/posts/count") == 0) {
             post_search_handler(true);
@@ -296,6 +297,74 @@ private:
       }
 
       do_write();
+   }
+
+   void put_handler()
+   {
+      try {
+         resp_.result(http::status::ok);
+         resp_.set(http::field::server, derived().db().get_cfg().server_name);
+
+         auto const t = req_.target();
+         std::string const target {t.data(), std::size(t)};
+         log::write(log::level::debug, "put_handler.");
+	 char const visualization[] = "/posts/visualization";
+	 char const click[] = "/post/click";
+
+         if (t.compare(0, sizeof visualization, visualization) == 0) {
+            put_visualization_handler();
+	 } else if (t.compare(0, sizeof click, click) == 0) {
+            put_click_handler();
+	 } else {
+            set_not_fount_header();
+         }
+
+      } catch (...) {
+         set_not_fount_header();
+      }
+
+      do_write();
+   }
+
+   void put_visualization_handler() noexcept
+   {
+      try {
+	 if (std::empty(req_.body()))
+	    return;
+
+         resp_.set(http::field::content_type, "application/json");
+
+	 auto const j = json::parse(req_.body());
+	 auto const post_ids = j.at("post_ids").get<std::vector<std::string>>();
+	 derived().db().on_visualizations(post_ids);
+
+	 resp_.body() = "Ok\r\n";
+
+      } catch (std::exception const& e) {
+         log::write( log::level::err
+                   , "put_visualization_handler: {0}"
+                   , e.what());
+      }
+   }
+
+   void put_click_handler() noexcept
+   {
+      try {
+	 if (std::empty(req_.body()))
+	    return;
+
+         resp_.set(http::field::content_type, "application/json");
+
+	 auto const j = json::parse(req_.body());
+	 auto const post_id = j.at("post_id").get<std::string>();
+	 derived().db().on_click(post_id);
+	 resp_.body() = "Ok\r\n";
+
+      } catch (std::exception const& e) {
+         log::write( log::level::err
+                   , "put_posts_visualizations: {0}"
+                   , e.what());
+      }
    }
 
    void default_handler()

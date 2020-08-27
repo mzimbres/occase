@@ -336,25 +336,6 @@ private:
       return ev_res::publish_ok;
    }
 
-   auto on_app_statistics(json const& j, std::shared_ptr<db_session_type> s)
-   {
-      // TODO: publish on the redis channel to the other nodes.
-
-      auto const type = j.at("type").get<std::string>();
-
-      if (type == "visualization") {
-	 auto const post_ids = j.at("post_ids").get<std::vector<std::string>>();
-      } else if (type == "click") {
-	 auto const post_id = j.at("post_id").get<std::string>();
-      }
-
-      log::write(log::level::debug,
-	         "db_worker::on_app_statistics: {0}.",
-		 type);
-
-      return ev_res::post_view_ok;
-   }
-
    // Handlers for events we receive from the database.
    void on_db_chat_msg( std::string const& user_id
                       , std::vector<std::string> msgs)
@@ -662,8 +643,6 @@ public:
          auto const cmd = j.at("cmd").get<std::string>();
 
          if (s->is_logged_in()) {
-            if (cmd == "statistics")
-               return on_app_statistics(j, s);
             if (cmd == "presence")
                return on_app_presence(std::move(j), s);
             if (cmd == "message")
@@ -799,6 +778,22 @@ public:
 
       return credit;
    }
+
+   void on_visualizations(std::vector<std::string> const& post_ids)
+   {
+      // TODO: Publish on the redis channel to the other nodes.
+      log::write(log::level::debug,
+	         "db_worker::on_visualizations: new visualizations.");
+   }
+
+   void on_click(std::string const& post_id)
+   {
+      // TODO: Publish on the redis channel to the other nodes.
+      log::write(log::level::debug,
+	         "db_worker::on_click: new click on post {0}.",
+		 post_id);
+   }
+
 };
 
 }

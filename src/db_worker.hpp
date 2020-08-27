@@ -336,15 +336,20 @@ private:
       return ev_res::publish_ok;
    }
 
-   auto on_app_post_view(json const& j, std::shared_ptr<db_session_type> s)
+   auto on_app_statistics(json const& j, std::shared_ptr<db_session_type> s)
    {
       // TODO: publish on the redis channel to the other nodes.
 
-      auto const post_ids = j.at("post_ids").get<std::vector<std::string>>();
       auto const type = j.at("type").get<std::string>();
 
+      if (type == "visualization") {
+	 auto const post_ids = j.at("post_ids").get<std::vector<std::string>>();
+      } else if (type == "click") {
+	 auto const post_id = j.at("post_id").get<std::string>();
+      }
+
       log::write(log::level::debug,
-	         "db_worker::on_app_post_view: {0}.",
+	         "db_worker::on_app_statistics: {0}.",
 		 type);
 
       return ev_res::post_view_ok;
@@ -417,7 +422,9 @@ private:
 
 	 auto const now = duration_cast<seconds>(system_clock::now().time_since_epoch());
 	 auto const post_exp = channel_cfg_.get_post_expiration();
-	 auto expired = root_channel_.broadcast(item, now, post_exp);
+	 root_channel_.add_post(item);
+	 auto const expired = root_channel_.remove_expired_posts(now, post_exp);
+	 root_channel_.broadcast(item);
 
 	 // NOTE: When we issue the delete command to the other databases, we are
 	 // in fact also sending a delete cmd to ourselves and in this case the
@@ -655,8 +662,8 @@ public:
          auto const cmd = j.at("cmd").get<std::string>();
 
          if (s->is_logged_in()) {
-            if (cmd == "post_view")
-               return on_app_post_view(j, s);
+            if (cmd == "statistics")
+               return on_app_statistics(j, s);
             if (cmd == "presence")
                return on_app_presence(std::move(j), s);
             if (cmd == "message")

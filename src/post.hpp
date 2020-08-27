@@ -81,6 +81,11 @@ struct comp_post_date_less {
       { return a.date < b.date; }
 };
 
+struct comp_post_id_less {
+   auto operator()(post const& a, post const& b) const noexcept
+      { return a.id < b.id; }
+};
+
 struct comp_post_id_equal {
    auto operator()(post const& a, post const& b) noexcept
       { return a.id == b.id; }

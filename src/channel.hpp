@@ -14,37 +14,6 @@
 namespace occase
 {
 
-/* Operations
- *
- *    The number of members in a channel is expected be on the
- *    thousands, let us say 50k. The operations performed are
- *
- *    1. Add sessions very often.
- *    2. Traverse the sessions on every publication in the channel.
- *
- * Cleanup
- *
- *    Every once in a while we have to clean up expired elements from
- *    the vector. This is due to the fact that there may be users
- *    joining this channel but nobody publishing on it. In this
- *    situation, the weak pointers will never *get out of scope* and
- *    release the memory they refer to. The vector with the session
- *    will also grow larger and larger in this situation.
- *
- * THOUGHTS
- *  
- *    Since we use a std::vector as the underlying container, the
- *    average memory used will be only half of the memory allocated.
- *    This happens because vectors allocate doubling the current
- *    size.  This is nice to avoid reallocations very often, but
- *    given that we may have thousands of vectors. There will be too
- *    much memory wasted. To deal with that we have to release
- *    excess memory once a stable number of users has been reached,
- *    letting only a small margin for growth. A std::deque could be
- *    also an option but memory would be more fragmented, which is
- *    not good for traversal.
- */
-
 struct channel_cfg {
    // The frequency the channel will be cleaned up if no publish
    // activity is observed.
@@ -93,35 +62,42 @@ private:
       return n - begin + 1;
    }
 
+public:
    // Returns the expired posts.
    auto
    remove_expired_posts( std::chrono::seconds now
                        , std::chrono::seconds exp)
    {
-      auto f = [this, exp, now](auto const& p)
-         { return (p.date + exp) < now; };
+      // TODO: Implement this with remove_if. We have to traverse all
+      // posts as they are not sorted according to date. Consider
+      // using boost.MultiIndex. Or some container that allows one to
+      // have indices sorted according to many possible criteria.
 
-      auto point =
-         std::partition_point( std::begin(items_)
-                             , std::end(items_)
-                             , f);
+      //auto f = [this, exp, now](auto const& p)
+      //   { return (p.date + exp) < now; };
 
-      auto point2 =
-         std::rotate( std::begin(items_)
-                    , point
-                    , std::end(items_));
+      //auto point =
+      //   std::partition_point( std::begin(items_)
+      //                       , std::end(items_)
+      //                       , f);
 
-      auto const n = std::distance(point2, std::end(items_));
+      //auto point2 =
+      //   std::rotate( std::begin(items_)
+      //              , point
+      //              , std::end(items_));
 
-      std::vector<post> expired;
+      //auto const n = std::distance(point2, std::end(items_));
 
-      std::copy( point2
-               , std::end(items_)
-               , std::back_inserter(expired));
+      //std::vector<post> expired;
 
-      items_.erase(point2, std::end(items_));
+      //std::copy( point2
+      //         , std::end(items_)
+      //         , std::back_inserter(expired));
 
-      return expired;
+      //items_.erase(point2, std::end(items_));
+
+      //return expired;
+      return std::vector<post>{};
    }
 
    void add_post(post item)
@@ -130,38 +106,28 @@ private:
 
       auto prev = std::prev(std::end(items_));
 
-      // Sorted insertion according to the post date.
+      // Sorted insertion according to the post id.
       auto point =
 	 std::upper_bound(std::begin(items_),
 	                  prev,
 			  *prev,
-			  comp_post_date_less {});
+			  comp_post_id_less {});
 
       std::rotate(point, prev, std::end(items_));
    }
 
-public:
-   auto
-   broadcast( post p
-            , std::chrono::seconds now
-            , std::chrono::seconds exp)
+   void broadcast(post p)
    {
       json j;
       j["cmd"] = "post";
       j["posts"] = std::vector<post>{p};
 
       auto const msg = std::make_shared<std::string>(j.dump());
-
-      add_post(p);
-
-      auto const expired = remove_expired_posts(now, exp);
-
-      auto f = [msg, &p](auto session)
-         { session->send_post(msg, p); };
+      auto f = [msg, &p](auto s)
+         { s->send_post(msg, p); };
 
       cleanup_traversal(f);
       insertions_on_inactivity_ = 0;
-      return expired;
    }
 
    void add_member(std::weak_ptr<Session> s, int cleanup_rate)

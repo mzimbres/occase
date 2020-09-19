@@ -55,7 +55,8 @@ void ntf_session::run(
    req_.set(http::field::content_type, "application/json");
    req_.set(http::field::authorization, cfg.fcm_server_token);
    req_.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
-   req_.set(http::field::content_length, std::size(body));
+   req_.set(http::field::content_length,
+            beast::to_static_string(std::size(body)));
 
    req_.body() = std::move(body);
 

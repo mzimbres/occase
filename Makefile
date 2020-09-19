@@ -18,7 +18,7 @@ conf_final_dir = $(DESTDIR)$(confdir)
 service_final_dir = $(DESTDIR)$(systemddir)
 
 ext_libs =
-ext_libs += /opt/boost_1_71_0/lib/libboost_program_options.a
+ext_libs += /opt/boost_1_74_0/lib/libboost_program_options.a
 
 LDFLAGS += -lpthread
 LDFLAGS += -lfmt
@@ -27,10 +27,12 @@ LDFLAGS += -lssl
 LDFLAGS += -lcrypto
 
 CPPFLAGS += -std=c++17
-CPPFLAGS += -I. -I$./src -I/opt/boost_1_71_0/include -I/opt/aedis-1.0.0
+CPPFLAGS += -I. -I$./src -I/opt/boost_1_74_0/include -I/opt/aedis-1.0.0
 CPPFLAGS += $(pkg-config --cflags libsodium)
 CPPFLAGS += $(CXXFLAGS)
-CPPFLAGS += -g #-O2
+CPPFLAGS += -g
+CPPFLAGS += -D BOOST_ASIO_NO_DEPRECATED 
+CPPFLAGS += -D BOOST_ASIO_NO_TS_EXECUTORS 
 
 VPATH = ./src
 

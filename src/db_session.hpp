@@ -57,7 +57,7 @@ private:
    int pong_counter_ = 0;
    std::deque<msg_entry> msg_queue_;
    bool closing_ = false;
-   std::string user_id_;
+   std::string pub_hash_;
    code_type any_of_filter_ = 0;
 
    boost::container::static_vector<code_type, ranges_size_> ranges_;
@@ -93,7 +93,7 @@ private:
          log::write(log::level::debug,
 	            "db_session::on_read: {0}. User {1}",
 		    ec.message(),
-		    user_id_);
+		    pub_hash_);
          return;
       }
 
@@ -220,7 +220,7 @@ private:
                           , std::back_inserter(msgs)
                           , transformer);
 
-            derived().db().on_session_dtor(user_id_, std::move(msgs));
+            derived().db().on_session_dtor(pub_hash_, std::move(msgs));
          }
       } catch (...) {
       }
@@ -321,7 +321,7 @@ public:
       if (closing_)
          return;
 
-      log::write(log::level::debug, "db_session::shutdown: {0}.", user_id_);
+      log::write(log::level::debug, "db_session::shutdown: {0}.", pub_hash_);
 
       closing_ = true;
 
@@ -333,9 +333,9 @@ public:
       derived().ws().async_close(reason, handler);
    }
 
-   void set_user_id(std::string user_id) { user_id_ = std::move(user_id); };
-   auto const& get_id() const noexcept { return user_id_;}
-   auto is_logged_in() const noexcept { return !std::empty(user_id_);};
+   void set_pub_hash(std::string hash) { pub_hash_ = std::move(hash); };
+   auto const& get_pub_hash() const noexcept { return pub_hash_;}
+   auto is_logged_in() const noexcept { return !std::empty(pub_hash_);};
 };
 
 }

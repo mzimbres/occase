@@ -23,6 +23,7 @@ public:
    , remove_post
    , user_msgs_priv
    , presence
+   , broadcast_on_post
    , ignore
    };
 
@@ -230,6 +231,12 @@ public:
    //    redis::events::remove_post
    //
    void remove_post(std::string const& id, std::string const& cmd);
+
+   // Sends a string to the post channel
+   //
+   //    redis::events::broadcast_on_post
+   //
+   void broadcast_on_post(std::string const& str);
 
    // Retrieves menu messages whose ids are greater than or equal
    // to begin. Completes with the event

@@ -134,7 +134,6 @@ private:
       switch (req_.method()) {
          case http::verb::get: get_handler();  break;
          case http::verb::post: post_handler();  break;
-         case http::verb::put: put_handler();  break;
          default: default_handler(); break;
       }
    }
@@ -160,6 +159,7 @@ private:
 	 }
 
       } catch (std::exception const& e) {
+         set_not_fount_header();
          log::write( log::level::err
                    , "post_search_handler (1): {0}"
                    , e.what());
@@ -178,6 +178,7 @@ private:
 	 resp_.body() = j.dump() + "\r\n";
 
       } catch (std::exception const& e) {
+         set_not_fount_header();
          log::write( log::level::err
                    , "post_upload_credit_handler (1): {0}"
                    , e.what());
@@ -190,19 +191,18 @@ private:
    void post_delete_handler() noexcept
    {
       try {
-	 if (std::empty(req_.body()))
-	    return;
-
-         resp_.set(http::field::content_type, "application/json");
 	 auto const j = json::parse(req_.body());
-	 auto const from = j.at("from").get<std::string>();
+	 auto const from = j.at("user").get<std::string>();
+	 auto const key = j.at("key").get<std::string>();
 	 auto const post_id = j.at("post_id").get<std::string>();
-	 auto const del_key = j.at("delete_key").get<std::string>();
 
-	 derived().db().delete_post(post_id, from, del_key);
+	 derived().db().delete_post(from, key, post_id);
+
+         resp_.set(http::field::content_type, "text/plain");
 	 resp_.body() = "Ok\r\n";
 
       } catch (std::exception const& e) {
+         set_not_fount_header();
          log::write( log::level::err
                    , "post_delete_handler: {0}"
                    , e.what());
@@ -212,25 +212,11 @@ private:
    void post_publish_handler() noexcept
    {
       try {
-	 if (std::empty(req_.body()))
-	    return;
-
-	 auto const j = json::parse(req_.body());
-	 auto const p = j.get<post>();
-
-	 log::write( log::level::debug
-		   , "New post from user {0}"
-		   , p.from);
-
-         json j_resp;
-         j_resp["id"] = "alalala";
-         j_resp["delete_key"] = "ksksksk";
-         j_resp["result"] = "ok";
-
+         auto const body = derived().db().on_publish(json::parse(req_.body()));
          resp_.set(http::field::content_type, "application/json");
-	 resp_.body() = j_resp.dump() + "\r\n";
-
+	 resp_.body() = body + "\r\n";
       } catch (std::exception const& e) {
+         set_not_fount_header();
          log::write( log::level::err
                    , "post_publish_handler: {0}"
                    , e.what());
@@ -270,24 +256,41 @@ private:
    void post_handler()
    {
       try {
+	 if (std::empty(req_.body())) {
+            set_not_fount_header();
+            do_write();
+	    return;
+         }
+
          resp_.result(http::status::ok);
          resp_.set(http::field::server, derived().db().get_cfg().server_name);
 
-         //auto const t = prepare_target(req_.target(), '/');
          auto const t = req_.target();
 
          std::string const target {t.data(), std::size(t)};
          log::write(log::level::debug, "post_handler.");
 
-         if (t.compare(0, 12, "/posts/count") == 0) {
+         char const count[]  = "/posts/count";
+         char const search[] = "/posts/search";
+         char const upload[] = "/posts/upload-credit";
+         char const del[]    = "/posts/delete";
+         char const pub[]    = "/posts/publish";
+	 char const visua[] =  "/posts/visualizations";
+	 char const click[] =  "/posts/click";
+
+         if (t.compare(0, sizeof count, count) == 0) {
             post_search_handler(true);
-	 } else if (t.compare(0, 13, "/posts/search") == 0) {
+	 } else if (t.compare(0, sizeof visua, visua) == 0) {
+            post_visualization_handler();
+	 } else if (t.compare(0, sizeof click, click) == 0) {
+            post_click_handler();
+	 } else if (t.compare(0, sizeof search, search) == 0) {
             post_search_handler();
-	 } else if (t.compare(0, 20, "/posts/upload-credit") == 0) {
+	 } else if (t.compare(0, sizeof upload, upload) == 0) {
             post_upload_credit_handler();
-	 } else if (t.compare(0, 13, "/posts/delete") == 0) {
+	 } else if (t.compare(0, sizeof del, del) == 0) {
             post_delete_handler();
-	 } else if (t.compare(0, 14, "/posts/publish") == 0) {
+	 } else if (t.compare(0, sizeof pub, pub) == 0) {
             post_publish_handler();
 	 } else {
             set_not_fount_header();
@@ -299,70 +302,30 @@ private:
       do_write();
    }
 
-   void put_handler()
+   void post_visualization_handler() noexcept
    {
       try {
-         resp_.result(http::status::ok);
-         resp_.set(http::field::server, derived().db().get_cfg().server_name);
-
-         auto const t = req_.target();
-         std::string const target {t.data(), std::size(t)};
-         log::write(log::level::debug, "put_handler.");
-	 char const visualization[] = "/posts/visualization";
-	 char const click[] = "/post/click";
-
-         if (t.compare(0, sizeof visualization, visualization) == 0) {
-            put_visualization_handler();
-	 } else if (t.compare(0, sizeof click, click) == 0) {
-            put_click_handler();
-	 } else {
-            set_not_fount_header();
-         }
-
-      } catch (...) {
-         set_not_fount_header();
-      }
-
-      do_write();
-   }
-
-   void put_visualization_handler() noexcept
-   {
-      try {
-	 if (std::empty(req_.body()))
-	    return;
-
-         resp_.set(http::field::content_type, "application/json");
-
-	 auto const j = json::parse(req_.body());
-	 auto const post_ids = j.at("post_ids").get<std::vector<std::string>>();
-	 derived().db().on_visualizations(post_ids);
-
+	 derived().db().on_visualizations(req_.body());
+         resp_.set(http::field::content_type, "text/plain");
 	 resp_.body() = "Ok\r\n";
-
       } catch (std::exception const& e) {
+         set_not_fount_header();
          log::write( log::level::err
-                   , "put_visualization_handler: {0}"
+                   , "post_visualization_handler: {0}"
                    , e.what());
       }
    }
 
-   void put_click_handler() noexcept
+   void post_click_handler() noexcept
    {
       try {
-	 if (std::empty(req_.body()))
-	    return;
-
-         resp_.set(http::field::content_type, "application/json");
-
-	 auto const j = json::parse(req_.body());
-	 auto const post_id = j.at("post_id").get<std::string>();
-	 derived().db().on_click(post_id);
+	 derived().db().on_click(req_.body());
+         resp_.set(http::field::content_type, "text/plain");
 	 resp_.body() = "Ok\r\n";
-
       } catch (std::exception const& e) {
+         set_not_fount_header();
          log::write( log::level::err
-                   , "put_posts_visualizations: {0}"
+                   , "post_click_handler: {0}"
                    , e.what());
       }
    }
@@ -385,7 +348,8 @@ private:
    {
       auto self = derived().shared_from_this();
 
-      resp_.set(http::field::content_length, resp_.body().size());
+      resp_.set(http::field::content_length,
+                beast::to_static_string(std::size(resp_.body())));
       resp_.set(http::field::access_control_allow_origin,
 	        derived().db().get_cfg().http_allow_origin);
 

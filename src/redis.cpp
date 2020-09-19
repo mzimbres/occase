@@ -273,6 +273,12 @@ void redis::remove_post(std::string const& id, std::string const& msg)
    post_pub_queue_.push(events::remove_post);
 }
 
+void redis::broadcast_on_post(std::string const& msg)
+{
+   ss_post_pub_.send(publish(cfg_.menu_channel_key, msg));
+   post_pub_queue_.push(events::broadcast_on_post);
+}
+
 void redis::retrieve_posts(int begin)
 {
    log::write( log::level::debug

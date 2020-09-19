@@ -144,9 +144,9 @@ private:
    {
       auto const user = j.at("user").get<std::string>();
       auto const key = j.at("key").get<std::string>();
-      auto const user_id = make_hex_digest(user, key);
+      auto const user_hash = make_hex_digest(user, key);
 
-      if (std::empty(user_id)) {
+      if (std::empty(user_hash)) {
 	 json resp;
 	 resp["cmd"] = "login_ack";
 	 resp["result"] = "fail";
@@ -154,9 +154,9 @@ private:
 	 return ev_res::login_fail;
       }
 
-      s->set_user_id(user_id);
+      s->set_pub_hash(user_hash);
 
-      auto const ss = sessions_.insert({user_id, s});
+      auto const ss = sessions_.insert({user_hash, s});
       if (!ss.second) {
 	 // There should never be more than one session with
 	 // the same id. For now, I will simply override the
@@ -170,7 +170,7 @@ private:
 	    // We have to prevent the cleanup operation when its
 	    // destructor is called. That would cause the new
 	    // session to be removed from the map again.
-	    old_ss->set_user_id("");
+	    old_ss->set_pub_hash("");
 	 } else {
 	    // Awckward, the old session has already expired and
 	    // we did not remove it from the map. It should be
@@ -183,10 +183,10 @@ private:
       auto const match = j.find("token");
       if (match != std::cend(j))
 	 if (!std::empty(*match))
-	    db_.publish_token(user_id, *match);
+	    db_.publish_token(user_hash, *match);
 
-      db_.on_user_online(user_id);
-      db_.retrieve_messages(user_id);
+      db_.on_user_online(user_hash);
+      db_.retrieve_messages(user_hash);
 
       json resp;
       resp["cmd"] = "login_ack";
@@ -202,11 +202,11 @@ private:
    {
       auto const user = pwdgen_.make(core_cfg_.pwd_size);
       auto const key = pwdgen_.make_key();
-      auto const user_id = make_hex_digest(user, key);
+      auto const user_hash = make_hex_digest(user, key);
 
-      s->set_user_id(user_id);
+      s->set_pub_hash(user_hash);
 
-      auto const new_user = sessions_.insert({user_id, s});
+      auto const new_user = sessions_.insert({user_hash, s});
       if (!new_user.second) {
 	 // Awkward, we managed to generate user credentials that
 	 // already exist and by chance are already online on this
@@ -217,14 +217,14 @@ private:
       auto const match = j.find("token");
       if (match != std::cend(j))
 	 if (!std::empty(*match))
-	    db_.publish_token(user_id, *match);
+	    db_.publish_token(user_hash, *match);
 
       json resp;
       resp["cmd"] = "register_ack";
       resp["result"] = "ok";
       resp["user"] = user;
       resp["key"] = key;
-      resp["user_id"] = user_id;
+      resp["user_id"] = user_hash;
 
       s->send(resp.dump(), false);
 
@@ -245,7 +245,7 @@ private:
 
    auto on_app_chat_msg(json j, std::shared_ptr<db_session_type> s)
    {
-      j["from"] = s->get_id();
+      j["from"] = s->get_pub_hash();
 
       // If the user is online in this node we can send him a message
       // directly.  This is important to reduce the amount of data in
@@ -286,7 +286,7 @@ private:
    {
       // See also comments in on_app_chat_msg.
 
-      j["from"] = s->get_id();
+      j["from"] = s->get_pub_hash();
 
       auto const to = j.at("to").get<std::string>();
       auto const match = sessions_.find(to);
@@ -302,50 +302,20 @@ private:
 
    auto on_app_publish(json j, std::shared_ptr<db_session_type> s)
    {
-      auto p = j.at("post").get<post>();
-
-      log::write(log::level::debug, "New post from user {0}", p.from);
-
-      // TODO: Implement a publication limit by consulting the number
-      // of posts the user already has on the channel object.
-
-      using namespace std::chrono;
-
-      // It is important not to thrust the *from* field in the json command.
-      p.from = s->get_id();
-      p.date = duration_cast<seconds>(system_clock::now().time_since_epoch());
-      p.id = pwdgen_.make(core_cfg_.pwd_size);
-      p.delete_key = pwdgen_.make(core_cfg_.pwd_size);
-
-      json const j_item = p;
-      db_.post(j_item.dump(), p.date.count());
-
-      // It is important that the publisher receives this message before
-      // any user sends him a user message about the post. He needs a
-      // post_id to know to which post the user refers to.
-      json ack;
-      ack["cmd"] = "publish_ack";
-      ack["result"] = "ok";
-      ack["id"] = p.id;
-      ack["delete_key"] = p.delete_key;
-      ack["date"] = p.date.count();
-
-      auto ack_str = ack.dump();
-
-      s->send(std::move(ack_str), true);
+      s->send(on_publish(j), true);
       return ev_res::publish_ok;
    }
 
    // Handlers for events we receive from the database.
-   void on_db_chat_msg( std::string const& user_id
+   void on_db_chat_msg( std::string const& user_hash
                       , std::vector<std::string> msgs)
    {
-      auto const match = sessions_.find(user_id);
+      auto const match = sessions_.find(user_hash);
       if (match == std::end(sessions_)) {
          // The user went offline. We have to enqueue the message again.
          // This is difficult to test since the retrieval of messages
          // from the database is pretty fast.
-         db_.store_chat_msg( user_id
+         db_.store_chat_msg( user_hash
                            , std::make_move_iterator(std::begin(msgs))
                            , std::make_move_iterator(std::end(msgs)));
          return;
@@ -369,6 +339,7 @@ private:
 
    void on_db_channel_post(std::string const& msg)
    {
+      using namespace std::chrono;
       try {
 	 // This function has two roles, deal with the delete command and
 	 // new posts.
@@ -378,12 +349,27 @@ private:
 	 // commands that are sent from workers to workers increases.
 
 	 auto const j = json::parse(msg);
+         auto const cmd = j.at("cmd").get<std::string>();
 
-	 if (j.contains("cmd")) {
-	    auto const post_id = j.at("id").get<std::string>();
+	 if (cmd == "visualizations") {
+            auto const j = json::parse(msg);
+            auto post_ids = j.at("post_ids").get<std::vector<std::string>>();
+            std::sort(std::begin(post_ids), std::end(post_ids));
+            root_channel_.on_visualizations(post_ids);
+	    return;
+	 }
+
+	 if (cmd == "click") {
+            auto const j = json::parse(msg);
+            auto const post_id = j.at("post_id").get<std::string>();
+            root_channel_.on_click(post_id);
+	    return;
+	 }
+
+	 if (cmd == "delete") {
+	    auto const post_id = j.at("post_id").get<std::string>();
 	    auto const from = j.at("from").get<std::string>();
-	    auto const r2 = root_channel_.remove_post(post_id, from);
-	    if (!r2) 
+	    if (!root_channel_.remove_post(post_id, from)) 
 	       log::write( log::level::notice
 			 , "Failed to remove post {0}. User {1}"
 			 , post_id
@@ -392,39 +378,40 @@ private:
 	    return;
 	 }
 
-	 // Do not call this before we know it is not a delete command.  Parsing
-	 // will throw and error.
-	 auto const item = j.get<post>();
+	 if (cmd == "publish_internal") {
+            // Do not call this before we know it is not a delete command.
+            // Parsing will throw and error.
+            auto const item = j.at("post").get<post>();
 
-	 if (item.date > last_post_date_received_)
-	    last_post_date_received_ = item.date;
+            if (item.date > last_post_date_received_)
+               last_post_date_received_ = item.date;
 
-	 using namespace std::chrono;
+            auto const now =
+               duration_cast<seconds>(system_clock::now().time_since_epoch());
+            auto const post_exp = channel_cfg_.get_post_expiration();
+            root_channel_.add_post(item);
+            auto const expired = root_channel_.remove_expired_posts(now, post_exp);
+            root_channel_.broadcast(item);
 
-	 auto const now = duration_cast<seconds>(system_clock::now().time_since_epoch());
-	 auto const post_exp = channel_cfg_.get_post_expiration();
-	 root_channel_.add_post(item);
-	 auto const expired = root_channel_.remove_expired_posts(now, post_exp);
-	 root_channel_.broadcast(item);
+            // NOTE: When we issue the delete command to the other databases,
+            // we are in fact also sending a delete cmd to ourselves and in
+            // this case the deletions will fail (they have already been
+            // removed). This is not bad since it simplifies the code and there
+            // are also tipically not so many posts in each deletion, it
+            // presents no performance problems in any case.
 
-	 // NOTE: When we issue the delete command to the other databases, we are
-	 // in fact also sending a delete cmd to ourselves and in this case the
-	 // deletions will fail (they have already been removed). This is not bad
-	 // since it simplifies the code and there are also tipically not so many
-	 // posts in each deletion, it presents no performance problems in any
-	 // case.
+            auto f = [this](auto const& p)
+               { /*Perhaps won't implement this.*/ };
 
-	 auto f = [this](auto const& p)
-	    { delete_post(p.id, p.from, p.delete_key); };
+            std::for_each( std::cbegin(expired)
+                         , std::cend(expired)
+                         , f);
 
-	 std::for_each( std::cbegin(expired)
-		      , std::cend(expired)
-		      , f);
-
-	 if (!std::empty(expired)) {
-	    log::write( log::level::info
-		      , "Number of expired posts removed: {0}"
-		      , std::size(expired));
+            if (!std::empty(expired)) {
+               log::write( log::level::info
+                         , "Number of expired posts removed: {0}"
+                         , std::size(expired));
+            }
 	 }
       } catch (std::exception const& e) {
 	 log::write( log::level::err
@@ -437,9 +424,9 @@ private:
       }
    }
 
-   void on_db_presence(std::string const& user_id, std::string msg)
+   void on_db_presence(std::string const& user_hash, std::string msg)
    {
-      auto const match = sessions_.find(user_id);
+      auto const match = sessions_.find(user_hash);
       if (match == std::end(sessions_)) {
          // If the user went offline, we should not be receiving this
          // message. However there may be a timespan where this can
@@ -492,9 +479,6 @@ private:
 	 {
 	    case redis::events::user_messages:
 	       on_db_chat_msg(req.user_id, std::move(data));
-	       break;
-
-	    case redis::events::post:
 	       break;
 
 	    case redis::events::posts:
@@ -614,23 +598,23 @@ public:
       init();
    }
 
-   void on_session_dtor( std::string const& user_id
+   void on_session_dtor( std::string const& user_hash
                        , std::vector<std::string> msgs)
    {
-      auto const match = sessions_.find(user_id);
+      auto const match = sessions_.find(user_hash);
       if (match == std::end(sessions_))
          return;
 
       sessions_.erase(match);
 
-      db_.on_user_offline(user_id);
+      db_.on_user_offline(user_hash);
 
       if (!std::empty(msgs)) {
          log::write( log::level::debug
                    , "Sending user messages back to the database: {0}"
-                   , user_id);
+                   , user_hash);
 
-         db_.store_chat_msg( std::move(user_id)
+         db_.store_chat_msg( std::move(user_hash)
                            , std::make_move_iterator(std::begin(msgs))
                            , std::make_move_iterator(std::end(msgs)));
       }
@@ -731,24 +715,22 @@ public:
    auto const& get_cfg() const noexcept
       { return core_cfg_; }
 
-   void delete_post(std::string const& post_id,
-	            std::string const& from,
-		    std::string del_key)
+   void delete_post(
+      std::string const& user,
+      std::string const& key,
+      std::string const& post_id)
    {
-      // A post should be deleted from the database as well as from each
-      // worker, so that users do not receive posts from products that are
-      // already sold.  To delete from the workers it is enough to broadcast a
-      // delete command. Each channel should check if the delete command
-      // belongs indeed to the user that wants to delete it.
+      // A post should be deleted from redis as well as from each worker, so
+      // that users do not receive posts from products that are already sold.
+      // To delete from the workers it is enough to broadcast a delete command.
 
       // TODO: Check if the post indeed exists before sending the command to all
       // nodes. This is important to prevent ddos.
 
       json j;
       j["cmd"] = "delete";
-      j["from"] = from;
-      j["id"] = post_id;
-      j["delete_key"] = del_key;
+      j["from"] = make_hex_digest(user, key);
+      j["post_id"] = post_id;
 
       db_.remove_post(post_id, j.dump());
    }
@@ -779,21 +761,57 @@ public:
       return credit;
    }
 
-   void on_visualizations(std::vector<std::string> const& post_ids)
-   {
-      // TODO: Publish on the redis channel to the other nodes.
-      log::write(log::level::debug,
-	         "db_worker::on_visualizations: new visualizations.");
-   }
+   void on_visualizations(std::string const& msg)
+      { db_.broadcast_on_post(msg); }
 
-   void on_click(std::string const& post_id)
-   {
-      // TODO: Publish on the redis channel to the other nodes.
-      log::write(log::level::debug,
-	         "db_worker::on_click: new click on post {0}.",
-		 post_id);
-   }
+   void on_click(std::string const& msg)
+      { db_.broadcast_on_post(msg); }
 
+   auto on_publish(json j)
+   {
+      using namespace std::chrono;
+
+      auto const user = j.at("user").get<std::string>();
+      auto const key = j.at("key").get<std::string>();
+      auto const user_hash = make_hex_digest(user, key);
+
+      if (std::empty(user_hash)) {
+	 json ack;
+	 ack["cmd"] = "publish_ack";
+	 ack["result"] = "fail";
+	 ack["reason"] = "User hash is empty.";
+	 return ack.dump();
+      }
+
+      auto p = j.at("post").get<post>();
+
+      // TODO: Implement a publication limit by consulting the number
+      // of posts the user already has on the channel object.
+
+      // It is important not to thrust the *from* field in the json command.
+      p.from = user_hash;
+      p.date = duration_cast<seconds>(system_clock::now().time_since_epoch());
+      p.id = pwdgen_.make(core_cfg_.pwd_size);
+
+      log::write(log::level::debug, "New post from user {0}", p.from);
+
+      json pub;
+      pub["cmd"] = "publish_internal";
+      pub["post"] = p;
+      db_.post(pub.dump(), p.date.count());
+
+      // It is important that the publisher receives this message before any
+      // user sends him a user message about the post. He needs a post_id to
+      // know to which post the user refers to.
+      json ack;
+      ack["cmd"] = "publish_ack";
+      ack["result"] = "ok";
+      ack["id"] = p.id;
+      ack["date"] = p.date.count();
+      ack["admin_id"] = "admin-id"; // TODO: Read from config file.
+
+      return ack.dump();
+   }
 };
 
 }

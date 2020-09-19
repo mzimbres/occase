@@ -107,18 +107,9 @@ void notifier::on_message(json j)
    // The token is available, we can launch the timer that if not canceled
    // by a del notification the fcm notification is sent.
 
-   boost::system::error_code ec;
    auto const n =
-      match->second.timer.expires_from_now(
-            cfg_.get_wait_interval(),
-            ec);
-
-   if (ec) {
-      log::write( log::level::info
-                , "on_message: {0}."
-                , ec.message());
-      return;
-   }
+      match->second.timer.expires_after(
+         cfg_.get_wait_interval());
 
    if (n > 0) {
       log::write( log::level::debug
@@ -260,11 +251,9 @@ void notifier::on_publish(std::string const& token)
             ofs << make_tokens_file(tokens_);
          };
 
-         boost::system::error_code ec;
          auto const n =
-            tokens_file_timer_.expires_from_now(
-               cfg_.get_tokens_write_interval(),
-               ec);
+            tokens_file_timer_.expires_after(
+               cfg_.get_tokens_write_interval());
 
          assert(n == 0);
 

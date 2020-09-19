@@ -116,6 +116,32 @@ public:
       std::rotate(point, prev, std::end(items_));
    }
 
+   void on_visualizations(std::vector<std::string> const& post_ids)
+   {
+      auto rbegin = std::rbegin(items_);
+      for (auto const id : post_ids) {
+         auto f = [id](auto const& p)
+            { return p.id == id; };
+
+         rbegin = std::find_if(rbegin, std::rend(items_), f);
+         if (rbegin == std::rend(items_))
+            break;
+
+         ++rbegin->visualizations;
+         ++rbegin;
+      }
+   }
+
+   void on_click(std::string const& post_id)
+   {
+      auto f = [post_id](auto const& p)
+         { return p.id == post_id; };
+
+      auto rbegin = std::find_if(std::rbegin(items_), std::rend(items_), f);
+      if (rbegin != std::rend(items_))
+         ++rbegin->clicks;
+   }
+
    void broadcast(post p)
    {
       json j;

@@ -8,7 +8,6 @@
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
-using namespace aedis;
 
 namespace
 {
@@ -226,15 +225,7 @@ void notifier::on_publish(std::string const& token)
       }
 
       auto const match =
-         tokens_.insert(value_type {
-            user,
-            user_entry
-            { value
-            , token
-            , net::steady_timer {ioc_}
-            }
-         }
-      );
+        tokens_.insert(value_type {user, user_entry{value, token, net::steady_timer {ioc_}}});
 
       if (!match.second)
          match.first->second.token = value;
@@ -336,8 +327,8 @@ void notifier::on_db_conn()
    // TODO: Filter the reponses to the commands below in
    // notifier::on_db_event. Add a queue for that.
 
-   ss_.send(psubscribe({del_str}));
-   ss_.send(subscribe(cfg_.redis_token_channel));
+   ss_.send(aedis::psubscribe({del_str}));
+   ss_.send(aedis::subscribe(cfg_.redis_token_channel));
 }
 
 void notifier::init()

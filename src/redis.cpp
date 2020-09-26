@@ -8,7 +8,6 @@
 #include "logger.hpp"
 
 using json = nlohmann::json;
-using namespace aedis;
 
 namespace occase
 {
@@ -52,7 +51,7 @@ redis::redis(config const& cfg, net::io_context& ioc)
 
 void redis::on_post_sub_conn()
 {
-   ss_post_sub_.send(subscribe(cfg_.menu_channel_key));
+   ss_post_sub_.send(aedis::subscribe(cfg_.menu_channel_key));
 }
 
 void redis::on_post_pub_conn()
@@ -220,10 +219,10 @@ redis::on_msgs_sub( boost::system::error_code const& ec
 void redis::retrieve_messages(std::string const& user_id)
 {
    auto const key = cfg_.chat_msg_prefix + user_id;
-   auto cmd = multi()
-            + lrange(key)
-            + del(key)
-            + exec();
+   auto cmd = aedis::multi()
+            + aedis::lrange(key)
+            + aedis::del(key)
+            + aedis::exec();
 
    ss_msgs_pub_.send(std::move(cmd));
    msgs_pub_queue_.push({events::ignore, {}});
@@ -234,22 +233,22 @@ void redis::retrieve_messages(std::string const& user_id)
 
 void redis::on_user_online(std::string const& id)
 {
-   ss_msgs_sub_.send(subscribe(cfg_.user_notify_prefix + id));
-   ss_msgs_sub_.send(subscribe(cfg_.presence_channel_prefix + id));
+   ss_msgs_sub_.send(aedis::subscribe(cfg_.user_notify_prefix + id));
+   ss_msgs_sub_.send(aedis::subscribe(cfg_.presence_channel_prefix + id));
 }
 
 void redis::on_user_offline(std::string const& id)
 {
-   ss_msgs_sub_.send(unsubscribe(cfg_.user_notify_prefix + id));
-   ss_msgs_sub_.send(unsubscribe(cfg_.presence_channel_prefix + id));
+   ss_msgs_sub_.send(aedis::unsubscribe(cfg_.user_notify_prefix + id));
+   ss_msgs_sub_.send(aedis::unsubscribe(cfg_.presence_channel_prefix + id));
 }
 
 void redis::post(std::string const& msg, int date)
 {
-   auto cmd = multi()
-            + zadd(cfg_.posts_key, date, msg)
-            + publish(cfg_.menu_channel_key, msg)
-            + exec();
+   auto cmd = aedis::multi()
+            + aedis::zadd(cfg_.posts_key, date, msg)
+            + aedis::publish(cfg_.menu_channel_key, msg)
+            + aedis::exec();
 
    ss_post_pub_.send(std::move(cmd));
    post_pub_queue_.push(events::ignore);
@@ -261,10 +260,10 @@ void redis::post(std::string const& msg, int date)
 void redis::remove_post(std::string const& id, std::string const& msg)
 {
    // For safety I will not remove from redis.
-   auto cmd = multi()
+   auto cmd = aedis::multi()
             //+ zremrangebyscore(cfg_.posts_key, id)
-            + publish(cfg_.menu_channel_key, msg)
-            + exec();
+            + aedis::publish(cfg_.menu_channel_key, msg)
+            + aedis::exec();
 
    ss_post_pub_.send(std::move(cmd));
    post_pub_queue_.push(events::ignore);
@@ -275,7 +274,7 @@ void redis::remove_post(std::string const& id, std::string const& msg)
 
 void redis::broadcast_on_post(std::string const& msg)
 {
-   ss_post_pub_.send(publish(cfg_.menu_channel_key, msg));
+   ss_post_pub_.send(aedis::publish(cfg_.menu_channel_key, msg));
    post_pub_queue_.push(events::broadcast_on_post);
 }
 
@@ -285,7 +284,7 @@ void redis::retrieve_posts(int begin)
              , "redis::retrieve_posts({0})."
              , begin);
 
-   ss_post_pub_.send(zrangebyscore(cfg_.posts_key, begin, -1));
+   ss_post_pub_.send(aedis::zrangebyscore(cfg_.posts_key, begin, -1));
    post_pub_queue_.push(events::posts);
 }
 
@@ -296,12 +295,12 @@ void redis::disconnect()
    ss_msgs_sub_.disable_reconnect();
    ss_msgs_pub_.disable_reconnect();
 
-   ss_post_sub_.send(quit());
-   ss_post_pub_.send(quit());
+   ss_post_sub_.send(aedis::quit());
+   ss_post_pub_.send(aedis::quit());
    post_pub_queue_.push(events::ignore);
 
-   ss_msgs_sub_.send(quit());
-   ss_msgs_pub_.send(quit());
+   ss_msgs_sub_.send(aedis::quit());
+   ss_msgs_pub_.send(aedis::quit());
    msgs_pub_queue_.push({events::ignore, {}});
 }
 
@@ -313,7 +312,7 @@ send_presence( std::string const& id
    // following form.
 
    auto const channel = cfg_.presence_channel_prefix + id;
-   ss_msgs_pub_.send(publish(channel, msg));
+   ss_msgs_pub_.send(aedis::publish(channel, msg));
    msgs_pub_queue_.push({events::ignore, {}});
 }
 
@@ -326,7 +325,7 @@ publish_token( std::string const& id
    jtoken["id"] = cfg_.chat_msg_prefix + id;
    jtoken["token"] = token;
 
-   ss_msgs_pub_.send(publish(cfg_.token_channel, jtoken.dump()));
+   ss_msgs_pub_.send(aedis::publish(cfg_.token_channel, jtoken.dump()));
    msgs_pub_queue_.push({events::ignore, {}});
 }
 

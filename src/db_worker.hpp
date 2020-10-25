@@ -23,10 +23,12 @@
 #include "logger.hpp"
 #include "crypto.hpp"
 #include "channel.hpp"
-#include "db_session.hpp"
 #include "acceptor_mgr.hpp"
-#include "db_ssl_session.hpp"
-#include "db_plain_session.hpp"
+#include "http_plain_session.hpp"
+#include "http_ssl_session.hpp"
+#include "ws_session_impl.hpp"
+#include "ws_ssl_session.hpp"
+#include "ws_plain_session.hpp"
 
 namespace occase
 {
@@ -94,10 +96,26 @@ struct ws_stats {
    int number_of_sessions {0};
 };
 
-template <class AdmSession>
+template <class Stream>
+struct make_session_type;
+
+template <>
+struct make_session_type<beast::tcp_stream> {
+  using websocket = ws_plain_session;
+  using http = http_plain_session;
+};
+
+template <class T>
+struct make_session_type<beast::ssl_stream<T>> {
+  using websocket = ws_ssl_session;
+  using http = http_ssl_session;
+};
+
+template <class Stream>
 class db_worker {
 private:
-   using db_session_type = typename AdmSession::db_session_type;
+   using ws_session_type = typename make_session_type<Stream>::websocket;
+   using http_session_type = typename make_session_type<Stream>::http;
 
    net::io_context ioc_ {BOOST_ASIO_CONCURRENCY_HINT_UNSAFE};
    ssl::context& ctx_;
@@ -110,10 +128,10 @@ private:
 
    // Maps a user id in to a websocket session.
    std::unordered_map< std::string
-                     , std::weak_ptr<db_session_type>
+                     , std::weak_ptr<ws_session_type>
                      > sessions_;
 
-   channel<db_session_type> root_channel_;
+   channel<ws_session_type> root_channel_;
 
    // Facade to redis.
    redis db_;
@@ -126,7 +144,7 @@ private:
 
    // Accepts both http connections used by the administrative api or
    // websocket connection used by the database.
-   acceptor_mgr<AdmSession> acceptor_;
+   acceptor_mgr<http_session_type> acceptor_;
 
    // Signal handler.
    net::signal_set signal_set_;
@@ -140,7 +158,7 @@ private:
       db_.run();
    }
 
-   auto on_app_login(json const& j, std::shared_ptr<db_session_type> s)
+   auto on_app_login(json const& j, std::shared_ptr<ws_session_type> s)
    {
       auto const user = j.at("user").get<std::string>();
       auto const key = j.at("key").get<std::string>();
@@ -198,7 +216,7 @@ private:
       return ev_res::login_ok;
    }
 
-   auto on_app_register(json const& j, std::shared_ptr<db_session_type> s)
+   auto on_app_register(json const& j, std::shared_ptr<ws_session_type> s)
    {
       auto const user = pwdgen_.make(core_cfg_.pwd_size);
       auto const key = pwdgen_.make_key();
@@ -231,7 +249,7 @@ private:
       return ev_res::register_ok;
    }
 
-   auto on_app_subscribe(json const& j, std::shared_ptr<db_session_type> s)
+   auto on_app_subscribe(json const& j, std::shared_ptr<ws_session_type> s)
    {
       root_channel_.add_member(s, channel_cfg_.cleanup_rate);
 
@@ -243,7 +261,7 @@ private:
       return ev_res::subscribe_ok;
    }
 
-   auto on_app_chat_msg(json j, std::shared_ptr<db_session_type> s)
+   auto on_app_chat_msg(json j, std::shared_ptr<ws_session_type> s)
    {
       j["from"] = s->get_pub_hash();
 
@@ -282,7 +300,7 @@ private:
       return ev_res::chat_msg_ok;
    }
 
-   auto on_app_presence(json j, std::shared_ptr<db_session_type> s)
+   auto on_app_presence(json j, std::shared_ptr<ws_session_type> s)
    {
       // See also comments in on_app_chat_msg.
 
@@ -300,7 +318,7 @@ private:
       return ev_res::presence_ok;
    }
 
-   auto on_app_publish(json j, std::shared_ptr<db_session_type> s)
+   auto on_app_publish(json j, std::shared_ptr<ws_session_type> s)
    {
       s->send(on_publish(j), true);
       return ev_res::publish_ok;
@@ -620,7 +638,7 @@ public:
       }
    }
 
-   auto on_app(std::shared_ptr<db_session_type> s , std::string msg) noexcept
+   auto on_app(std::shared_ptr<ws_session_type> s , std::string msg) noexcept
    {
       try {
          auto j = json::parse(msg);

@@ -40,7 +40,7 @@ beast::string_view prepare_target(beast::string_view t, char s)
    return t;
 }
 
-template <class AdmSession>
+template <class Stream>
 class db_worker;
 
 struct worker_stats {
@@ -78,7 +78,7 @@ auto to_string(worker_stats const& stats)
 }
 
 template <class Derived>
-class db_adm_session {
+class http_session_impl {
 protected:
    beast::flat_buffer buffer_{8192};
 
@@ -98,15 +98,15 @@ private:
       }
 
       if (ec) {
-         log::write(log::level::debug, "db_adm_session: {0}", ec.message());
+         log::write(log::level::debug, "http_session_impl: {0}", ec.message());
          return;
       }
 
       if (websocket::is_upgrade(req_)) {
-         log::write(log::level::debug, "db_adm_session: Websocket upgrade");
+         log::write(log::level::debug, "http_session_impl: Websocket upgrade");
          beast::get_lowest_layer(derived().stream()).expires_never();
 
-         std::make_shared< typename Derived::db_session_type
+         std::make_shared< typename Derived::ws_session_type
                          >( std::move(derived().release_stream())
                           , derived().db()
                           )->run(std::move(req_));
@@ -366,7 +366,7 @@ private:
 
       if (ec) {
          log::write( log::level::debug
-                   , "Error on db_adm_session: {0}"
+                   , "Error on http_session_impl: {0}"
                    , ec.message());
       }
       auto const n = derived().db().get_cfg().ssl_shutdown_timeout;

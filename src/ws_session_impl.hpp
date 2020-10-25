@@ -41,7 +41,7 @@ struct ws_timeouts {
 };
 
 template <class Derived>
-class db_session {
+class ws_session_impl {
 private:
    static auto constexpr ranges_size_ = 2 * 3;
 
@@ -91,7 +91,7 @@ private:
       if (ec) {
          finish();
          log::write(log::level::debug,
-	            "db_session::on_read: {0}. User {1}",
+	            "ws_session_impl::on_read: {0}. User {1}",
 		    ec.message(),
 		    pub_hash_);
          return;
@@ -135,7 +135,7 @@ private:
          //   ed = ec.message();
 
          //log( log::level::debug
-         //   , "db_session::on_accept1: {0}. Remote endpoint: {1}."
+         //   , "ws_session_impl::on_accept1: {0}. Remote endpoint: {1}."
          //   , err
          //   , ed);
 
@@ -321,7 +321,7 @@ public:
       if (closing_)
          return;
 
-      log::write(log::level::debug, "db_session::shutdown: {0}.", pub_hash_);
+      log::write(log::level::debug, "ws_session_impl::shutdown: {0}.", pub_hash_);
 
       closing_ = true;
 

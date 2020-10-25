@@ -2,7 +2,7 @@
 
 #include "net.hpp"
 #include "logger.hpp"
-#include "db_session.hpp"
+#include "ws_session_impl.hpp"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -10,13 +10,18 @@
 namespace occase
 {
 
+template <class Stream>
+class db_worker;
+
 template <class Session>
 class acceptor_mgr {
+public:
+   using stream_type = typename Session::stream_type;
+
 private:
-   using arg_type = typename Session::arg_type;
    net::ip::tcp::acceptor acceptor_;
 
-   void do_accept(arg_type w, ssl::context& ctx)
+   void do_accept(db_worker<stream_type>& w, ssl::context& ctx)
    {
       auto handler = [this, &w, &ctx](auto const& ec, auto socket)
          { on_accept(w, ctx, ec, std::move(socket)); };
@@ -24,7 +29,7 @@ private:
       acceptor_.async_accept(handler);
    }
 
-   void on_accept( arg_type w
+   void on_accept( db_worker<stream_type>& w
                  , ssl::context& ctx
                  , boost::system::error_code ec
                  , net::ip::tcp::socket peer)
@@ -55,7 +60,7 @@ public:
    auto is_open() const noexcept
       { return acceptor_.is_open(); }
 
-   void run( arg_type w
+   void run( db_worker<stream_type>& w
            , ssl::context& ctx
            , unsigned short port
            , int max_listen_connections)

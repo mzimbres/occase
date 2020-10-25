@@ -18,8 +18,6 @@
 #include "system.hpp"
 #include "release.hpp"
 #include "db_worker.hpp"
-#include "db_adm_ssl_session.hpp"
-#include "db_adm_plain_session.hpp"
 
 using namespace occase;
 
@@ -186,12 +184,12 @@ int main(int argc, char* argv[])
             return 1;
          }
 
-         db_worker<db_adm_ssl_session> db {cfg.worker, ctx};
+         db_worker<beast::ssl_stream<beast::tcp_stream>> db {cfg.worker, ctx};
          db.run();
          return 0;
       }
 
-      db_worker<db_adm_plain_session> db {cfg.worker, ctx};
+      db_worker<beast::tcp_stream> db {cfg.worker, ctx};
       db.run();
 
    } catch (std::exception const& e) {

@@ -9,7 +9,7 @@
 
 #include "post.hpp"
 #include "utils.hpp"
-#include "db_plain_session.hpp"
+#include "ws_session_impl.hpp"
 
 namespace occase
 {

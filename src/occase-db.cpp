@@ -145,12 +145,12 @@ auto get_cfg(int argc, char* argv[])
    cfg.worker.db.ss_post.sentinels = sentinels;
    cfg.worker.db.ss_post.max_pipeline_size = max_pipeline_size;
    cfg.worker.db.ss_post.role = "master";
-   cfg.worker.db.ss_post.log_filter = log::to_level<aedis::log::level>(logfilter_str);
+   cfg.worker.db.ss_post.log_filter = log::to_level<occase::log::level>(logfilter_str);
 
    cfg.worker.db.ss_msgs.sentinels = sentinels;
    cfg.worker.db.ss_msgs.max_pipeline_size = max_pipeline_size;
    cfg.worker.db.ss_msgs.role = "master";
-   cfg.worker.db.ss_msgs.log_filter = log::to_level<aedis::log::level>(logfilter_str);
+   cfg.worker.db.ss_msgs.log_filter = log::to_level<occase::log::level>(logfilter_str);
 
    cfg.worker.timeouts = cfg.get_timeouts();
    cfg.logfilter = log::to_level<occase::log::level>(logfilter_str);

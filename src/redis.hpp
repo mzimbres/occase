@@ -6,6 +6,7 @@
 
 #include "net.hpp"
 #include "utils.hpp"
+#include "redis_session.hpp"
 
 namespace occase
 {
@@ -44,13 +45,13 @@ public:
    // the second, not so much.
    struct config {
       // Redis session config for everything related to posts.
-      aedis::session::config ss_post;
+      redis_session::config ss_post;
 
       // Redis session config for user credentials and data.
-      aedis::session::config ss_user;
+      redis_session::config ss_user;
 
       // Redis session config for user messages.
-      aedis::session::config ss_msgs;
+      redis_session::config ss_msgs;
 
       // The name of the channel where *publish* commands are be sent.
       std::string menu_channel_key;
@@ -122,13 +123,13 @@ private:
    config const cfg_;
 
    // Redis sessions to deal with posts.
-   aedis::session ss_post_sub_;
-   aedis::session ss_post_pub_;
+   redis_session ss_post_sub_;
+   redis_session ss_post_pub_;
    std::queue<events> post_pub_queue_;
 
    // Redis sessions used to deal with user messages and presence.
-   aedis::session ss_msgs_sub_;
-   aedis::session ss_msgs_pub_;
+   redis_session ss_msgs_sub_;
+   redis_session ss_msgs_pub_;
    std::queue<response> msgs_pub_queue_;
 
    msg_handler_type ev_handler_;

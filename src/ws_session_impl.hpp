@@ -288,8 +288,8 @@ public:
    {
       if (!std::empty(ranges_)) {
          auto const min =
-            std::min(ssize(ranges_) / 2,
-                     ssize(p.range_values));
+            std::min(std::ssize(ranges_) / 2,
+                     std::ssize(p.range_values));
 
          for (auto i = 0; i < min; ++i) {
             auto const a = ranges_[2 * i + 0];

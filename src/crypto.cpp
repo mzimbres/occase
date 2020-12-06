@@ -36,7 +36,7 @@ std::string hash_to_string(hash_type const& hash)
 {
   std::string output;
   output.reserve(2 * std::size(hash));
-  for (auto i = 0; i < occase::ssize(hash); ++i) {
+  for (auto i = 0; i < std::ssize(hash); ++i) {
     output.push_back(high_to_char(hash[i]));
     output.push_back(low_to_char(hash[i]));
   }

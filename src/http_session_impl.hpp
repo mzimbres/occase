@@ -223,6 +223,20 @@ private:
       }
    }
 
+   void get_user_id_handler() noexcept
+   {
+      try {
+         auto const body = derived().db().on_get_user_id();
+         resp_.set(http::field::content_type, "application/json");
+	 resp_.body() = body + "\r\n";
+      } catch (std::exception const& e) {
+         set_not_fount_header();
+         log::write( log::level::err
+                   , "get_user_id_handler: {0}"
+                   , e.what());
+      }
+   }
+
    void set_not_fount_header()
    {
       resp_.result(http::status::not_found);
@@ -256,12 +270,6 @@ private:
    void post_handler()
    {
       try {
-	 if (std::empty(req_.body())) {
-            set_not_fount_header();
-            do_write();
-	    return;
-         }
-
          resp_.result(http::status::ok);
          resp_.set(http::field::server, derived().db().get_cfg().server_name);
 
@@ -277,6 +285,7 @@ private:
          char const pub[]    = "/posts/publish";
 	 char const visua[] =  "/posts/visualizations";
 	 char const click[] =  "/posts/click";
+	 char const get_user_id[] = "/get-user-id";
 
          if (t.compare(0, sizeof count, count) == 0) {
             post_search_handler(true);
@@ -292,6 +301,8 @@ private:
             post_delete_handler();
 	 } else if (t.compare(0, sizeof pub, pub) == 0) {
             post_publish_handler();
+	 } else if (t.compare(0, sizeof get_user_id, get_user_id) == 0) {
+            get_user_id_handler();
 	 } else {
             set_not_fount_header();
          }

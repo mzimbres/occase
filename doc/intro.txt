@@ -31,8 +31,8 @@ If we disregard images a typical deployment looks like this
 
 
 The apps and the db's are connected via a websocket connection that is
-never closed by the server. When app1 wants to send a chat message to app5
-and both are online we have to following sequence of operations
+never closed by the server. When app1 wants to send a chat message to
+app5 and both are online we have to following sequence of operations
 
   1. App5 logs in an occase-db instance, that may or may not be same
      instance as the peer app.

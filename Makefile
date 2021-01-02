@@ -17,8 +17,10 @@ doc_final_dir = $(DESTDIR)$(docdir)
 conf_final_dir = $(DESTDIR)$(confdir)
 service_final_dir = $(DESTDIR)$(systemddir)
 
+boost_dir = /opt/boost_1_75_0
+
 ext_libs =
-ext_libs += /opt/boost_1_74_0/lib/libboost_program_options.a
+ext_libs += $(boost_dir)/lib/libboost_program_options.a
 
 LDFLAGS += -lpthread
 LDFLAGS += -lfmt
@@ -27,12 +29,12 @@ LDFLAGS += -lssl
 LDFLAGS += -lcrypto
 
 CPPFLAGS += -std=c++20
-CPPFLAGS += -I. -I$./src -I/opt/boost_1_74_0/include -I/opt/aedis-1.0.0
+CPPFLAGS += -I. -I$./src -I$(boost_dir)/include -I/opt/aedis-1.0.0
 CPPFLAGS += $(pkg-config --cflags libsodium)
-CPPFLAGS += $(CXXFLAGS)
 CPPFLAGS += -g
 CPPFLAGS += -D BOOST_ASIO_NO_DEPRECATED 
 CPPFLAGS += -D BOOST_ASIO_NO_TS_EXECUTORS 
+CPPFLAGS += -fcoroutines
 
 VPATH = ./src
 
@@ -41,6 +43,7 @@ exes += occase-db
 exes += occase-notify
 exes += occase-sim
 exes += db_tests
+exes += occase-db-tests
 exes += notify-test
 
 common_objs += system.o
@@ -83,6 +86,9 @@ occase-sim: % : %.o $(client_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
 db_tests: % : %.o $(client_objs) $(common_objs)
+	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
+
+occase-db-tests: % : %.o $(client_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
 occase-db: % : %.o $(db_objs) $(common_objs)

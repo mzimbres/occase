@@ -1,18 +1,16 @@
 Redis
 =========================================================================
 
-Information about how to configure the redis servers We use three
+Information about how to configure the redis servers We use two
 redis instances
 
   1. Post: Store the posts.
-  2. User: Stores user credentials and post limits.
-  3. Msgs: Chat messages persistency.
+  2. Msgs: Chat messages persistency.
 
   The config file for each instance can be found in the config
   directory.
 
   config/redis-post.conf
-  config/redis-user.conf
   config/redis-msgs.conf
 
   These files are included in the distribution redis files. The
@@ -38,26 +36,11 @@ redis instances
 - I am using port 1200 for the sentinel to be able to make the port
   range bigger for the occase-db.
 
-- Configure the redis sentinels
-
-   sentinel monitor post 127.0.0.1 1100 1
-   sentinel monitor user 127.0.0.1 1101 1
-   sentinel monitor msgs 127.0.0.1 1102 1
-
 - Edit the redis systemd server and sentinel service files to not
   include pid file and forking.
 
 occase-db
 =========================================================================
-
-On startup occase-db will retrieve the menu from the server, if not
-available the process will exit with error. To load the menu on redis
-
-   $ redis-cli -p 1100 flushall 
-   OK
-   $ cat channels.txt | redis-cli -p 1100 -x set channels
-   OK
-   $ sudo systemctl restart occase-db.service
 
 Once the server is running it is possible to monitor internal queue
 sizes and the current number of active sessions with the monitor tool
@@ -88,8 +71,8 @@ $ cat /proc/sys/fs/file-nr
 
 Change /etc/security/limits.conf. Add for example.
 
-*                soft    nofile          2000000
-*                hard    nofile          2000000
+*  soft    nofile   2000000
+*  hard    nofile   2000000
 
 To see the maximum in the current session
 

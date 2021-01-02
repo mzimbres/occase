@@ -216,6 +216,7 @@ private:
       return ev_res::login_ok;
    }
 
+   // Deprecated.
    auto on_app_register(json const& j, std::shared_ptr<ws_session_type> s)
    {
       auto const user = pwdgen_.make(core_cfg_.pwd_size);
@@ -829,6 +830,21 @@ public:
       ack["admin_id"] = "admin-id"; // TODO: Read from config file.
 
       return ack.dump();
+   }
+
+   auto on_get_user_id()
+   {
+      auto const user = pwdgen_.make(core_cfg_.pwd_size);
+      auto const key = pwdgen_.make_key();
+      auto const user_hash = make_hex_digest(user, key);
+
+      json resp;
+      resp["result"] = "ok";
+      resp["user"] = user;
+      resp["key"] = key;
+      resp["user_id"] = user_hash;
+
+      return resp.dump();
    }
 };
 

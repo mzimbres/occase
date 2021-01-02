@@ -139,3 +139,27 @@ Message (unsolicited)
    , "to":"2"
    }
 
+HTTP API
+------------------------------------------------------------------------
+
+publish
+
+   { "user" : "marcelo"
+   , "key" : "jTGcIm0rBMSP1BJRJNju3085zwgnVs9w"
+   , "post" = occase::post }
+
+publish_ack
+
+   { "admin_id" : "admin-id"
+   , "cmd"  : "publish_ack"
+   , "date" : 1609580945
+   , "id" : "trady39g"
+   , "result" : "ok" }
+
+get-user-id
+
+   { "key" : "9iz0yizdip57ha6ejprsbkqf3yf3f3k9"
+   , "result" : "ok"
+   , "user" : "w8f7k03t"
+   , "user_id" : "bdb2a5b1ef71cf254da5af89cb7dddb9" }
+

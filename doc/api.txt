@@ -106,33 +106,32 @@ Post (unsolicited)
       }]
    }
 
-Message (unsolicited)
 -----------------------------------------------------------------------------
+message (chat)
 
-Request
+   { "cmd" : "message"
+   , "from" : "2f671356d5fb737f2879a5fe5168a5fb"
+   , "id" : 23
+   , "is_redirected" : 0
+   , "message" : "Tenho interesse"
+   , "nick" : ""
+   , "post_id" : "2rcu6pkc"
+   , "refers_to" : -1
+   , "to" : "9a7ee867756f16edfa0ea88bccfc6dbf"
+   , "type" : "chat"}
 
-   { "cmd":"message"
-   , "from":"13"
-   , "id":2
-   , "post_id":5
-   }
+message (server_ack)
 
-Response
+   { "ack_id": 23
+   , "cmd" : "message"
+   , "from" : "2f671356d5fb737f2879a5fe5168a5fb"
+   , "to" : "48671356d5fb737f2879a5fe5168a5fb"
+   , "post_id" : "2rcu6pkc"
+   , "result" : "ok"
+   , "type" : "server_ack" }
 
-   { "cmd":"message"
-   , "from": "13"
-   , "post_id": 5
-   , "ack_id":-1
-   , "type":"server_ack"
-   , "result": "ok"
-   }
-
-Description
-   
-   The whole message payload is sent.
-
-Message (unsolicited)
 ------------------------------------------------------------------------
+Message (unsolicited)
 
    { "cmd": "presence"
    , "from": "13"

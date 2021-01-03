@@ -25,16 +25,6 @@ void to_json(json& j, post const& e)
            };
 }
 
-template <class T>
-T get_optional_field(json const& j, std::string const& v)
-{
-   auto const match = j.find(v);
-   if (match == std::cend(j))
-      return T{};
-
-   return *match;
-}
-
 void from_json(json const& j, post& e)
 {
   e.date = date_type {j.at("date").get<long int>()};

@@ -292,6 +292,7 @@ private:
       json ack;
       ack["cmd"] = "message";
       ack["from"] = to;
+      ack["to"] = s->get_pub_hash();
       ack["post_id"] = post_id;
       ack["ack_id"] = message_id;
       ack["type"] = "server_ack";

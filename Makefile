@@ -41,8 +41,6 @@ VPATH = ./src
 exes =
 exes += occase-db
 exes += occase-notify
-exes += occase-sim
-exes += db_tests
 exes += occase-db-tests
 exes += notify-test
 
@@ -56,7 +54,6 @@ db_objs += net.o
 db_objs += post.o
 
 client_objs =
-client_objs += test_clients.o
 client_objs += post.o
 
 notify_objs =
@@ -82,12 +79,6 @@ Makefile.dep:
 
 -include Makefile.dep
 
-occase-sim: % : %.o $(client_objs) $(common_objs)
-	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
-
-db_tests: % : %.o $(client_objs) $(common_objs)
-	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
-
 occase-db-tests: % : %.o $(client_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
 
@@ -103,7 +94,6 @@ notify-test: % : %.o $(common_objs) ntf_session.o
 install: all
 	install -D occase-db --target-directory $(bin_final_dir)
 	install -D occase-notify --target-directory $(bin_final_dir)
-	install -D occase-sim --target-directory $(bin_final_dir)
 	install -D scripts/occase-db-monitor $(bin_final_dir)
 	install -D scripts/occase-tree-gen $(bin_final_dir)
 	install -D config/occase-db.conf $(conf_final_dir)/occase-db.conf
@@ -114,7 +104,6 @@ install: all
 uninstall:
 	rm -f $(bin_final_dir)/occase-db
 	rm -f $(bin_final_dir)/occase-notify
-	rm -f $(bin_final_dir)/occase-sim
 	rm -f scripts/$(bin_final_dir)/occase-db-monitor
 	rm -f scripts/$(bin_final_dir)/occase-tree-gen
 	rm -f $(conf_final_dir)/occase-db.conf

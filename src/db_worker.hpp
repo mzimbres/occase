@@ -216,40 +216,6 @@ private:
       return ev_res::login_ok;
    }
 
-   // Deprecated.
-   auto on_app_register(json const& j, std::shared_ptr<ws_session_type> s)
-   {
-      auto const user = pwdgen_.make(core_cfg_.pwd_size);
-      auto const key = pwdgen_.make_key();
-      auto const user_hash = make_hex_digest(user, key);
-
-      s->set_pub_hash(user_hash);
-
-      auto const new_user = sessions_.insert({user_hash, s});
-      if (!new_user.second) {
-	 // Awkward, we managed to generate user credentials that
-	 // already exist and by chance are already online on this
-	 // node.
-	 // TODO: Try new credentials.
-      }
-
-      auto const match = j.find("token");
-      if (match != std::cend(j))
-	 if (!std::empty(*match))
-	    db_.publish_token(user_hash, *match);
-
-      json resp;
-      resp["cmd"] = "register_ack";
-      resp["result"] = "ok";
-      resp["user"] = user;
-      resp["key"] = key;
-      resp["user_id"] = user_hash;
-
-      s->send(resp.dump(), false);
-
-      return ev_res::register_ok;
-   }
-
    auto on_app_chat_msg(json j, std::shared_ptr<ws_session_type> s)
    {
       j["from"] = s->get_pub_hash();
@@ -643,8 +609,6 @@ public:
          } else {
             if (cmd == "login")
                return on_app_login(j, s);
-            if (cmd == "register")
-               return on_app_register(j, s);
          }
       } catch (std::exception const& e) {
          log::write(log::level::debug, "db_worker::on_app: {0}.", e.what());

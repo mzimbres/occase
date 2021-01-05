@@ -12,6 +12,8 @@ srcdir = .
 confdir = /etc/$(pkg_name)
 systemddir = /lib/systemd/system
 
+#CXX = clang++
+
 bin_final_dir = $(DESTDIR)$(bindir)
 doc_final_dir = $(DESTDIR)$(docdir)
 conf_final_dir = $(DESTDIR)$(confdir)
@@ -29,6 +31,7 @@ LDFLAGS += -lssl
 LDFLAGS += -lcrypto
 
 CPPFLAGS += -std=c++20
+#CPPFLAGS += -Wall -Werror
 CPPFLAGS += -I. -I$./src -I$(boost_dir)/include -I/opt/aedis-1.0.0
 CPPFLAGS += $(pkg-config --cflags libsodium)
 CPPFLAGS += -g
@@ -52,6 +55,7 @@ db_objs =
 db_objs += redis.o
 db_objs += net.o
 db_objs += post.o
+db_objs += channel.o
 
 client_objs =
 client_objs += post.o

@@ -89,7 +89,7 @@ struct db_worker_cfg {
    redis::config db;
    ws_timeouts timeouts;
    core_cfg core;
-   channel_cfg channel;
+   channel::config ch;
 };
 
 struct ws_stats {
@@ -121,7 +121,7 @@ private:
    ssl::context& ctx_;
    core_cfg const core_cfg_;
 
-   channel_cfg const channel_cfg_;
+   channel::config const channel_cfg_;
 
    ws_timeouts const ws_timeouts_;
    ws_stats ws_stats_;
@@ -131,7 +131,7 @@ private:
                      , std::weak_ptr<ws_session_type>
                      > sessions_;
 
-   channel<ws_session_type> root_channel_;
+   channel root_channel_;
 
    // Facade to redis.
    redis db_;
@@ -248,18 +248,6 @@ private:
       s->send(resp.dump(), false);
 
       return ev_res::register_ok;
-   }
-
-   auto on_app_subscribe(json const& j, std::shared_ptr<ws_session_type> s)
-   {
-      root_channel_.add_member(s, channel_cfg_.cleanup_rate);
-
-      json resp;
-      resp["cmd"] = "subscribe_ack";
-      resp["result"] = "ok";
-      s->send(resp.dump(), false);
-
-      return ev_res::subscribe_ok;
    }
 
    auto on_app_chat_msg(json j, std::shared_ptr<ws_session_type> s)
@@ -411,7 +399,6 @@ private:
             auto const post_exp = channel_cfg_.get_post_expiration();
             root_channel_.add_post(item);
             auto const expired = root_channel_.remove_expired_posts(now, post_exp);
-            root_channel_.broadcast(item);
 
             // NOTE: When we issue the delete command to the other databases,
             // we are in fact also sending a delete cmd to ourselves and in
@@ -604,7 +591,7 @@ public:
    db_worker(db_worker_cfg cfg, ssl::context& c)
    : ctx_ {c}
    , core_cfg_ {cfg.core}
-   , channel_cfg_ {cfg.channel}
+   , channel_cfg_ {cfg.ch}
    , ws_timeouts_ {cfg.timeouts}
    , db_ {cfg.db, ioc_}
    , acceptor_ {ioc_}
@@ -651,8 +638,6 @@ public:
                return on_app_presence(std::move(j), s);
             if (cmd == "message")
                return on_app_chat_msg(std::move(j), s);
-            if (cmd == "subscribe")
-               return on_app_subscribe(j, s);
             if (cmd == "publish")
                return on_app_publish(std::move(j), s);
          } else {
@@ -703,7 +688,7 @@ public:
          log::write(log::level::info, "get_posts: {}", e.what());
       }
 
-      return {};
+      return std::vector<post>{};
    }
 
    auto count_posts(post const& p) const noexcept
@@ -740,12 +725,13 @@ public:
       std::string const& key,
       std::string const& post_id)
    {
-      // A post should be deleted from redis as well as from each worker, so
-      // that users do not receive posts from products that are already sold.
-      // To delete from the workers it is enough to broadcast a delete command.
+      // A post should be removed from redis as well as from each
+      // worker, so that users do not receive posts from products that
+      // are already sold. To delete from the workers it is enough to
+      // broadcast a delete command.
 
-      // TODO: Check if the post indeed exists before sending the command to all
-      // nodes. This is important to prevent ddos.
+      // TODO: Check if the post indeed exists before sending the
+      // command to all nodes. This is important to prevent ddos.
 
       json j;
       j["cmd"] = "delete";

@@ -2,7 +2,7 @@ To build this project you will need
 
    1. nlohmann json.
    2. libfmt.
-   3. boost > 1.71.
+   3. boost >= 1.75.
    4. libsodium.
    5. openssl.
 

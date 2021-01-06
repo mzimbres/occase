@@ -327,8 +327,8 @@ void notifier::on_db_conn()
    // TODO: Filter the reponses to the commands below in
    // notifier::on_db_event. Add a queue for that.
 
-   ss_.send(aedis::psubscribe({del_str}));
-   ss_.send(aedis::subscribe(cfg_.redis_token_channel));
+   ss_.send(old::aedis::psubscribe({del_str}));
+   ss_.send(old::aedis::subscribe(cfg_.redis_token_channel));
 }
 
 void notifier::init()

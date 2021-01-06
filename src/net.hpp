@@ -21,17 +21,10 @@ namespace beast = boost::beast;
 namespace http = beast::http;
 namespace websocket = beast::websocket;
 namespace ssl = boost::asio::ssl;
-
 using tcp = net::ip::tcp;
 
 namespace occase
 {
-
-inline
-void fail(boost::system::error_code const& ec, char const* what)
-{
-   std::cerr << what << ": " << ec.message() << "\n";
-}
 
 bool load_ssl( ssl::context& ctx
              , std::string const& ssl_cert_file

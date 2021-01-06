@@ -3,10 +3,9 @@
 #include <unordered_map>
 
 #include <nlohmann/json.hpp>
-#include <aedis/aedis.hpp>
+#include "old_aedis.hpp"
 
 #include "net.hpp"
-#include "utils.hpp"
 #include "logger.hpp"
 #include "ntf_session.hpp"
 
@@ -39,7 +38,7 @@ public:
       std::string ssl_dh_file;
       std::string redis_token_channel;
       std::string tokens_file;
-      aedis::session::config ss;
+      old::aedis::session::config ss;
       ntf_session::args ss_args;
       int max_msg_size = 1000;
       int tokens_write_interval = 60;
@@ -65,7 +64,7 @@ private:
    net::io_context ioc_ {BOOST_ASIO_CONCURRENCY_HINT_UNSAFE};
    config cfg_;
    ssl::context ctx_ {ssl::context::tlsv12};
-   aedis::session ss_;
+   old::aedis::session ss_;
    tcp::resolver::results_type fcm_results_;
 
    // Maps the key holding the user messages in redis in an fcm token.

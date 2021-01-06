@@ -7,8 +7,6 @@
 #include <iostream>
 #include <sstream>
 
-#include "utils.hpp"
-
 namespace
 {
 

@@ -14,7 +14,6 @@
 #include "net.hpp"
 #include "post.hpp"
 #include "logger.hpp"
-#include "utils.hpp"
 
 namespace occase
 {

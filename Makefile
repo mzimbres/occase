@@ -32,7 +32,7 @@ LDFLAGS += -lcrypto
 
 CPPFLAGS += -std=c++20
 #CPPFLAGS += -Wall -Werror
-CPPFLAGS += -I. -I$./src -I$(boost_dir)/include -I/opt/aedis-1.0.0
+CPPFLAGS += -I. -I$./src -I$(boost_dir)/include -I/opt/aedis-1.0.0/include
 CPPFLAGS += $(pkg-config --cflags libsodium)
 CPPFLAGS += -g
 CPPFLAGS += -D BOOST_ASIO_NO_DEPRECATED 
@@ -52,7 +52,6 @@ common_objs += logger.o
 common_objs += crypto.o
 
 db_objs =
-db_objs += redis.o
 db_objs += net.o
 db_objs += post.o
 db_objs += channel.o

@@ -69,6 +69,7 @@ private:
    ssl::context& ctx_;
    config::core const cfg_;
    ws_stats ws_stats_;
+   net::ip::tcp::resolver::results_type res_;
 
    // Maps a user id in to a websocket session.
    std::unordered_map< std::string
@@ -101,9 +102,8 @@ private:
    void init()
    {
       net::ip::tcp::resolver resolver{ioc_};
-      auto const results =
-	 resolver.resolve(cfg_.redis.host, cfg_.redis.port);
-      redis_conn_->start(*this, results);
+      res_ = resolver.resolve(cfg_.redis.host, cfg_.redis.port);
+      redis_conn_->start(*this, res_);
    }
 
    // App functions.
@@ -517,14 +517,19 @@ public:
       //    that may have arrived while we were offline.
 
       log::write( log::level::info
-                , "on_hello: Ready to retrieve posts from redis.");
+                , "on_hello: Connection with Redis stablished.");
 
       auto last = last_post_date_received_;
       ++last;
 
       auto f = [&, this](aedis::request<events>& req)
       {
-	 req.zrangebyscore(cfg_.redis.posts_key, last.count(), -1);
+	 req.zrangebyscore(
+	    cfg_.redis.posts_key,
+	    last.count(),
+	    -1,
+	    events::retrieve_posts);
+
 	 req.subscribe(cfg_.redis.posts_channel_key);
       };
 
@@ -540,6 +545,7 @@ public:
       //    message __keyspace@0__:chat:6 expire 
       //    message __keyspace@0__:chat:6 del 
       //    message post_channel {...} 
+      //    subscribe posts_channel 1
       //
       // We are only interested in rpush, presence and post_channel
       // messages.
@@ -549,7 +555,11 @@ public:
 
       assert(std::size(v) == 3);
 
-      if (v.back() == "rpush" && v.front() == "message") {
+      log::write( log::level::debug
+                , "on_push: {0} {1}"
+                , v.at(0), v.at(1));
+
+      if (v.front() == "message" && v.back() == "rpush") {
 	 auto const pos = std::size(cfg_.redis.user_notify_prefix);
 	 auto const user_id = v[1].substr(pos);
 	 assert(!std::empty(user_id));
@@ -567,8 +577,6 @@ public:
 	 redis_conn_->send(f);
 	 return;
       }
-
-      assert(v.front() == "message");
 
       auto const size = std::size(cfg_.redis.presence_channel_prefix);
       auto const r = v[1].compare(0, size, cfg_.redis.presence_channel_prefix);
@@ -597,7 +605,7 @@ public:
       assert(ev == events::retrieve_posts);
 
       log::write( log::level::info
-                , "Number of messages received from redis: {0}"
+                , "on_zrangebyscore: {0} messages received."
                 , std::size(msgs));
 
       auto loader = [this](auto const& msg)

@@ -15,8 +15,7 @@
 #include "post.hpp"
 #include "logger.hpp"
 
-namespace occase
-{
+namespace occase {
 
 enum class ev_res
 { register_ok
@@ -32,11 +31,6 @@ enum class ev_res
 , presence_ok
 , presence_fail
 , unknown
-};
-
-struct ws_timeouts {
-   std::chrono::seconds handshake;
-   std::chrono::seconds idle;
 };
 
 template <class Derived>

@@ -7,8 +7,7 @@
 
 #include "post.hpp"
 
-namespace occase
-{
+namespace occase {
 
 class channel {
 private:
@@ -16,13 +15,6 @@ private:
 
 public:
    using inserter_type = std::back_insert_iterator<std::vector<post>>;
-   struct config {
-      // Time after which the post is considered expired. Input in
-      // seconds.
-      int post_expiration;
-      auto get_post_expiration() const noexcept
-	 { return std::chrono::seconds {post_expiration}; }
-   };
 
    // Removes and returns expired posts.
    std::vector<post>

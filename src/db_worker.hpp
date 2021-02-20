@@ -19,6 +19,7 @@
 
 #include "net.hpp"
 #include "post.hpp"
+#include "config.hpp"
 #include "logger.hpp"
 #include "crypto.hpp"
 #include "channel.hpp"
@@ -29,123 +30,7 @@
 #include "ws_ssl_session.hpp"
 #include "ws_plain_session.hpp"
 
-namespace occase
-{
-
-struct config_redis {
-   // Redis host.
-   std::string host;
-
-   // Redis port.
-   std::string port;
-
-   // The name of the channel where *publish* commands are be sent.
-   std::string posts_channel_key;
-
-   // The key used to store posts in redis.
-   std::string posts_key;
-
-   // The prefix of chat message keys. The complete key will be a
-   // composition of this prefix and the user id separate by a ":"
-   // e.g. msg:102 where 102 is the user id, acquired on registration.
-   std::string chat_msg_prefix;
-
-   // This prefix will be used to form the channel where presence
-   // messages sent to the user will be published e.g. prefix:102.
-   // We use channel for presence since it does not have to be
-   // persisted.
-   std::string presence_channel_prefix = "pc:";
-
-   // Redis keyspace notification prefix. When a key is touched
-   // redis sends a notification. This is how a worker gets
-   // notified that it has to retrieve messages from the database
-   // for this user.
-   std::string const notify_prefix {"__keyspace@"};
-
-   // Keyspace notification prefix including the message prefix e.g.
-   //
-   //    __keyspace@0__:msg
-   //
-   // It is used to read the user from the notification sent by redis.
-   std::string user_notify_prefix;
-
-   // Chat messsage counter. It is used only to count the number of
-   // messages sent so far.
-   std::string chat_msgs_counter_key;
-
-   // The channel where user FCM tokens should be published.
-   std::string token_channel {"tokens"};
-
-   // Expiration time for user message keys. Keys will be deleted on
-   // expiration and all chat messages that have not been retrieved
-   // are gone.
-   int chat_msg_exp_time {3600};
-
-   // The maximum number of chat messages a user is allowed to
-   // accumulate on the server (when he is offline).
-   int max_offline_chat_msgs {100};
-};
-
-struct config_core {
-   // The maximum number of posts that are allowed to be sent to the
-   // user on subscribe.
-   int max_posts_on_search; 
-
-   // The size of the password sent to the app when it registers.
-   int pwd_size; 
-
-   // The port on which the database listens.
-   unsigned short db_port;
-
-   // TCP backlog size.
-   int max_listen_connections;
-
-   // The key used to generate authenticated filenames that will be
-   // user in the image server.
-   std::string mms_key;
-
-   // The host name of this db. This is used by the adm interface when the html
-   // pages are generated.
-   std::string db_host;
-
-   // The host where images are served and posted. It must have the
-   // form http://occase.de/
-   std::string mms_host;
-
-   // The maximum duration time for the adm http session in seconds.
-   int http_session_timeout {30};
-
-   // Value of the header field Access-Control-Allow-Origin
-   std::string http_allow_origin {"*"};
-
-   // SSL shutdown timeout in seconds.
-   int ssl_shutdown_timeout {30};
-
-   // Server name.
-   std::string server_name {"occase-db"};
-
-   // The password required to access the adm html pages.
-   std::string adm_pwd;
-
-   // The number of posts users are allowed to post until the deadline below is
-   // reached. This value is also configurable via adm api.
-   int allowed_posts = 0;
-
-   // The deadline for the number of posts defined above.
-   long int post_interval {100000};
-
-   // Redis config.
-   config_redis rds;
-   channel::config chann;
-
-   auto get_post_interval() const noexcept
-      { return std::chrono::seconds {post_interval}; }
-};
-
-struct config_worker {
-   ws_timeouts timeouts;
-   config_core core;
-};
+namespace occase {
 
 struct ws_stats {
    int number_of_sessions {0};
@@ -182,9 +67,7 @@ private:
 
    net::io_context ioc_ {BOOST_ASIO_CONCURRENCY_HINT_UNSAFE};
    ssl::context& ctx_;
-   config_core const core_cfg_;
-
-   ws_timeouts const ws_timeouts_;
+   config::core const cfg_;
    ws_stats ws_stats_;
 
    // Maps a user id in to a websocket session.
@@ -192,7 +75,7 @@ private:
                      , std::weak_ptr<ws_session_type>
                      > sessions_;
 
-   channel root_channel_;
+   channel posts_;
    std::shared_ptr<redis_conn_type> redis_conn_;
 
    // When a user logs in or we receive a notification from the
@@ -217,9 +100,9 @@ private:
 
    void init()
    {
-      // TODO: Use correct config.
       net::ip::tcp::resolver resolver{ioc_};
-      auto const results = resolver.resolve("127.0.0.1", "6379");
+      auto const results =
+	 resolver.resolve(cfg_.redis.host, cfg_.redis.port);
       redis_conn_->start(*this, results);
    }
 
@@ -271,13 +154,13 @@ private:
 	    // occase-notify is listening
 	    json jtoken;
 	    jtoken["cmd"] = "token";
-	    jtoken["id"] = core_cfg_.rds.chat_msg_prefix + user_hash;
+	    jtoken["id"] = cfg_.redis.chat_msg_prefix + user_hash;
 	    jtoken["token"] = *match;
 
 	    auto const msg = jtoken.dump();
 
 	    auto f = [&, this](aedis::request<events>& req)
-	       { req.publish(core_cfg_.rds.token_channel, msg); };
+	       { req.publish(cfg_.redis.token_channel, msg); };
 
 	    redis_conn_->send(f);
 	 }
@@ -290,10 +173,10 @@ private:
 	 // with the retrieval of the message, which may be more than
 	 // one by the time we get to it. Additionaly, this function
 	 // also subscribes the worker to presence messages.
-	 req.subscribe(core_cfg_.rds.user_notify_prefix + user_hash);
-	 req.subscribe(core_cfg_.rds.presence_channel_prefix + user_hash);
+	 req.subscribe(cfg_.redis.user_notify_prefix + user_hash);
+	 req.subscribe(cfg_.redis.presence_channel_prefix + user_hash);
 
-	 auto const key = core_cfg_.rds.chat_msg_prefix + user_hash;
+	 auto const key = cfg_.redis.chat_msg_prefix + user_hash;
 	 req.lrange(key, 0, -1, events::user_msgs_priv);
 	 req.del(key);
 
@@ -324,15 +207,15 @@ private:
       if (begin == end)
 	 return;
 
-      auto const key = core_cfg_.rds.chat_msg_prefix + to;
+      auto const key = cfg_.redis.chat_msg_prefix + to;
       auto f = [&, this](aedis::request<events>& req)
       {
-	 req.incr(core_cfg_.rds.chat_msgs_counter_key);
+	 req.incr(cfg_.redis.chat_msgs_counter_key);
 	 req.rpush(key, begin, end);
-	 req.expire(key, core_cfg_.rds.chat_msg_exp_time);
+	 req.expire(key, cfg_.redis.chat_msg_exp_time);
 
 	 // Notification only of the last message.
-	 req.publish(core_cfg_.rds.token_channel, *std::prev(end));
+	 req.publish(cfg_.redis.token_channel, *std::prev(end));
       };
 
       redis_conn_->send(f);
@@ -386,7 +269,7 @@ private:
       auto const match = sessions_.find(to);
       if (match == std::end(sessions_)) {
 	 auto const msg = j.dump();
-	 auto const channel = core_cfg_.rds.presence_channel_prefix + to;
+	 auto const channel = cfg_.redis.presence_channel_prefix + to;
 
 	 auto f = [&](aedis::request<events>& req)
 	    { req.publish(channel, msg); };
@@ -438,14 +321,8 @@ private:
    void on_db_channel_post(std::string const& msg)
    {
       using namespace std::chrono;
-      try {
-	 // This function has two roles, deal with the delete command and
-	 // new posts.
-	 //
-	 // NOTE: Later we may have to improve how we decide if a message is
-	 // a post or a command, like delete, specially if the number of
-	 // commands that are sent from workers to workers increases.
 
+      try {
 	 auto const j = json::parse(msg);
          auto const cmd = j.at("cmd").get<std::string>();
 
@@ -453,21 +330,21 @@ private:
             auto const j = json::parse(msg);
             auto post_ids = j.at("post_ids").get<std::vector<std::string>>();
             std::sort(std::begin(post_ids), std::end(post_ids));
-            root_channel_.on_visualizations(post_ids);
+            posts_.on_visualizations(post_ids);
 	    return;
 	 }
 
 	 if (cmd == "click") {
             auto const j = json::parse(msg);
             auto const post_id = j.at("post_id").get<std::string>();
-            root_channel_.on_click(post_id);
+            posts_.on_click(post_id);
 	    return;
 	 }
 
 	 if (cmd == "delete") {
 	    auto const post_id = j.at("post_id").get<std::string>();
 	    auto const from = j.at("from").get<std::string>();
-	    if (!root_channel_.remove_post(post_id, from)) 
+	    if (!posts_.remove_post(post_id, from)) 
 	       log::write( log::level::notice
 			 , "Failed to remove post {0}. User {1}"
 			 , post_id
@@ -477,8 +354,6 @@ private:
 	 }
 
 	 if (cmd == "publish_internal") {
-            // Do not call this before we know it is not a delete command.
-            // Parsing will throw and error.
             auto const item = j.at("post").get<post>();
 
             if (item.date > last_post_date_received_)
@@ -486,16 +361,17 @@ private:
 
             auto const now =
                duration_cast<seconds>(system_clock::now().time_since_epoch());
-            auto const post_exp = core_cfg_.chann.get_post_expiration();
-            root_channel_.add_post(item);
-            auto const expired = root_channel_.remove_expired_posts(now, post_exp);
+            auto const post_exp = cfg_.timeouts.post_expiration;
+            posts_.add_post(item);
+            auto const expired = posts_.remove_expired_posts(now, post_exp);
 
-            // NOTE: When we issue the delete command to the other databases,
-            // we are in fact also sending a delete cmd to ourselves and in
-            // this case the deletions will fail (they have already been
-            // removed). This is not bad since it simplifies the code and there
-            // are also tipically not so many posts in each deletion, it
-            // presents no performance problems in any case.
+	    // NOTE: When we issue the delete command to the other
+	    // databases, we are in fact also sending a delete cmd to
+	    // ourselves and in this case the deletions will fail
+	    // (they have already been removed). This is not bad since
+	    // it simplifies the code and there are also tipically not
+	    // so many posts in each deletion, it
+	    // presents no performance problems in any case.
 
             auto f = [this](auto const& p)
                { /*Perhaps won't implement this.*/ };
@@ -606,10 +482,9 @@ private:
    }
 
 public:
-   db_worker(config_worker cfg, ssl::context& c)
+   db_worker(config::core cfg, ssl::context& c)
    : ctx_ {c}
-   , core_cfg_ {cfg.core}
-   , ws_timeouts_ {cfg.timeouts}
+   , cfg_ {cfg}
    , redis_conn_ {std::make_shared<aedis::connection<events>>(ioc_)}
    , acceptor_ {ioc_}
    , signal_set_ {ioc_, SIGINT, SIGTERM}
@@ -619,7 +494,7 @@ public:
 
       signal_set_.async_wait(f);
 
-      init();
+      net::post(ioc_, [this]{ init(); });
    }
 
    // Redis callbacks.
@@ -641,13 +516,16 @@ public:
       //    restablished.  In this case we have to retrieve all posts
       //    that may have arrived while we were offline.
 
+      log::write( log::level::info
+                , "on_hello: Ready to retrieve posts from redis.");
+
       auto last = last_post_date_received_;
       ++last;
 
       auto f = [&, this](aedis::request<events>& req)
       {
-	 req.zrangebyscore(core_cfg_.rds.posts_key, last.count(), -1);
-	 req.subscribe(core_cfg_.rds.posts_channel_key);
+	 req.zrangebyscore(cfg_.redis.posts_key, last.count(), -1);
+	 req.subscribe(cfg_.redis.posts_channel_key);
       };
 
       redis_conn_->send(f);
@@ -672,12 +550,12 @@ public:
       assert(std::size(v) == 3);
 
       if (v.back() == "rpush" && v.front() == "message") {
-	 auto const pos = std::size(core_cfg_.rds.user_notify_prefix);
+	 auto const pos = std::size(cfg_.redis.user_notify_prefix);
 	 auto const user_id = v[1].substr(pos);
 	 assert(!std::empty(user_id));
 	 auto f = [&](aedis::request<events>& req)
 	 {
-	    auto const key = core_cfg_.rds.chat_msg_prefix + user_id;
+	    auto const key = cfg_.redis.chat_msg_prefix + user_id;
 	    req.lrange(key, 0, -1, events::user_msgs_priv);
 	    req.del(key);
 
@@ -692,15 +570,15 @@ public:
 
       assert(v.front() == "message");
 
-      auto const size = std::size(core_cfg_.rds.presence_channel_prefix);
-      auto const r = v[1].compare(0, size, core_cfg_.rds.presence_channel_prefix);
+      auto const size = std::size(cfg_.redis.presence_channel_prefix);
+      auto const r = v[1].compare(0, size, cfg_.redis.presence_channel_prefix);
       if (v.front() == "message" && r == 0) {
 	 auto const user_id = v[1].substr(size);
 	 on_db_presence(user_id, std::move(v.back()));
 	 return;
       }
 
-      if (v.front() == "message" && v[1] == core_cfg_.rds.posts_channel_key) {
+      if (v.front() == "message" && v[1] == cfg_.redis.posts_channel_key) {
 	 on_db_channel_post(v.back());
 	 return;
       }
@@ -716,12 +594,10 @@ public:
 
    void on_zrangebyscore(events ev, aedis::resp::array_type& msgs) noexcept override
    {
-      // This function is also called when the connection to redis is
-      // lost and restablished. 
       assert(ev == events::retrieve_posts);
 
       log::write( log::level::info
-                , "Number of messages received from the database: {0}"
+                , "Number of messages received from redis: {0}"
                 , std::size(msgs));
 
       auto loader = [this](auto const& msg)
@@ -730,11 +606,11 @@ public:
       std::for_each(std::begin(msgs), std::end(msgs), loader);
 
       if (!acceptor_.is_open()) {
-	 // We can begin to accept websocket connections.
+	 // We can start to accept websocket connections.
          acceptor_.run( *this
                       , ctx_
-                      , core_cfg_.db_port
-                      , core_cfg_.max_listen_connections);
+                      , cfg_.db_port
+                      , cfg_.max_listen_connections);
       }
    }
 
@@ -751,8 +627,8 @@ public:
       // passes no event to the worker.
       auto f = [&](aedis::request<events>& req)
       {
-         req.unsubscribe(core_cfg_.rds.user_notify_prefix + user_hash);
-         req.unsubscribe(core_cfg_.rds.presence_channel_prefix + user_hash);
+         req.unsubscribe(cfg_.redis.user_notify_prefix + user_hash);
+         req.unsubscribe(cfg_.redis.presence_channel_prefix + user_hash);
       };
 
       redis_conn_->send(f);
@@ -791,7 +667,7 @@ public:
    }
 
    auto const& get_timeouts() const noexcept
-      { return ws_timeouts_;}
+      { return cfg_.timeouts;}
    auto& get_ws_stats() noexcept
       { return ws_stats_;}
    auto const& get_ws_stats() const noexcept
@@ -814,10 +690,10 @@ public:
       try {
          std::vector<post> posts;
 
-         root_channel_.get_posts(
+         posts_.get_posts(
             date,
             std::back_inserter(posts),
-            core_cfg_.max_posts_on_search,
+            cfg_.max_posts_on_search,
             pred);
 
          return posts;
@@ -829,7 +705,7 @@ public:
    }
 
    auto count_posts(post const& p) const noexcept
-      { return root_channel_.size(); }
+      { return posts_.size(); }
 
    auto search_posts(post const& p) const
    {
@@ -839,10 +715,10 @@ public:
       auto pred = [](auto const& p)
          { return true; };
 
-      root_channel_.get_posts(
+      posts_.get_posts(
 	 date_type {0},
 	 std::back_inserter(items),
-	 core_cfg_.max_posts_on_search,
+	 cfg_.max_posts_on_search,
 	 pred);
 
       return items;
@@ -855,7 +731,7 @@ public:
       { ioc_.run(); }
 
    auto const& get_cfg() const noexcept
-      { return core_cfg_; }
+      { return cfg_; }
 
    void delete_post(
       std::string const& user,
@@ -881,7 +757,7 @@ public:
       auto const msg = j.dump();
 
       auto f = [&](aedis::request<events>& req)
-	 { req.publish(core_cfg_.rds.posts_channel_key, msg, events::remove_post);};
+	 { req.publish(cfg_.redis.posts_channel_key, msg, events::remove_post);};
 
       redis_conn_->send(f);
    }
@@ -896,9 +772,9 @@ public:
                          + "/"
                          + filename;
 
-         auto const digest = make_hex_digest(path, core_cfg_.mms_key);
+         auto const digest = make_hex_digest(path, cfg_.mms_key);
 
-         return core_cfg_.mms_host
+         return cfg_.mms_host
               + path
               + pwd_gen::sep
               + digest;
@@ -915,7 +791,7 @@ public:
    void on_visualizations(std::string const& msg)
    {
       auto f = [&](aedis::request<events>& req)
-	 { req.publish(core_cfg_.rds.posts_channel_key, msg); };
+	 { req.publish(cfg_.redis.posts_channel_key, msg); };
 
       redis_conn_->send(f);
    }
@@ -923,7 +799,7 @@ public:
    void on_click(std::string const& msg)
    {
       auto f = [&](aedis::request<events>& req)
-	 { req.publish(core_cfg_.rds.posts_channel_key, msg); };
+	 { req.publish(cfg_.redis.posts_channel_key, msg); };
 
       redis_conn_->send(f);
    }
@@ -952,7 +828,7 @@ public:
       // It is important not to thrust the *from* field in the json command.
       p.from = user_hash;
       p.date = duration_cast<seconds>(system_clock::now().time_since_epoch());
-      p.id = pwdgen_.make(core_cfg_.pwd_size);
+      p.id = pwdgen_.make(cfg_.pwd_size);
 
       log::write(log::level::debug, "New post from user {0}", p.from);
 
@@ -963,8 +839,8 @@ public:
 
       auto f = [&, this](aedis::request<events>& req)
       {
-	 req.zadd(core_cfg_.rds.posts_key, p.date.count(), msg);
-	 req.publish(core_cfg_.rds.posts_channel_key, msg);
+	 req.zadd(cfg_.redis.posts_key, p.date.count(), msg);
+	 req.publish(cfg_.redis.posts_channel_key, msg);
       };
 
       redis_conn_->send(f);
@@ -984,7 +860,7 @@ public:
 
    auto on_get_user_id()
    {
-      auto const user = pwdgen_.make(core_cfg_.pwd_size);
+      auto const user = pwdgen_.make(cfg_.pwd_size);
       auto const key = pwdgen_.make_key();
       auto const user_hash = make_hex_digest(user, key);
 

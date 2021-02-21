@@ -101,7 +101,19 @@ posts_search(
    std::cout << "Success: search/count." << std::endl;
 }
 
-auto make_publish_body(std::string const from)
+struct user_cred {
+   std::string user;
+   std::string key;
+   std::string user_id;
+};
+
+std::ostream& operator<<(std::ostream& os, user_cred const& c)
+{
+   os << "User: " << c.user << ", user id: " << c.user_id;
+   return os;
+}
+
+auto make_publish_body(user_cred const& cred)
 {
    occase::post p;
    //publish1='{"post":{"date":0, "id":"jsjsjs", "on_search":10, "visualizations":10, "click":20, "from":"marcelo", "nick":"","avatar":"","description":"","location":[1,2,3,4],"product":[1,2,3,4], "ex_details":[1,2,3], "in_details":[1,2,3], "range_values": [1,2,3], "images":[]}}'
@@ -110,7 +122,7 @@ auto make_publish_body(std::string const from)
    p.visualizations = 0;
    p.clicks = 0;
    p.id = "";
-   p.from = from;
+   p.from = cred.user_id;
    p.nick = "";
    p.avatar = "";
    p.description = "";
@@ -122,22 +134,10 @@ auto make_publish_body(std::string const from)
    p.images = {""};
 
    json j;
-   j["user"] = "marcelo";
-   j["key"] = "jTGcIm0rBMSP1BJRJNju3085zwgnVs9w";
+   j["user"] = cred.user;
+   j["key"] = cred.key;
    j["post"] = p;
    return j.dump();
-}
-
-struct user_cred {
-   std::string user;
-   std::string key;
-   std::string user_id;
-};
-
-std::ostream& operator<<(std::ostream& os, user_cred const& c)
-{
-   os << "User: " << c.user << ", user id: " << c.user_id;
-   return os;
 }
 
 void from_json(json const& j, user_cred& e)
@@ -380,10 +380,12 @@ cred_pub(
 	    make_request<user_cred>(results, "/get-user-id", host),
 	    net::use_awaitable);
 
+      auto const body = make_publish_body(cred);
+
       auto const pack =
 	 co_await net::co_spawn(
 	    ex,
-	    make_request<pub_ack>(results, "/posts/publish", host, make_publish_body(cred.user_id)),
+	    make_request<pub_ack>(results, "/posts/publish", host, body),
 	    net::use_awaitable);
 
       co_return cred_pub_helper {cred, pack};
@@ -524,9 +526,7 @@ offline(
 	    cred_pub(results, host),
 	    net::use_awaitable);
 
-      std::clog << "Received u1: " << u1.cred << std::endl;
-      std::clog << "Received u1: " << u1.pack << std::endl;
-
+      std::clog << "Post publisher: " << u1.cred << std::endl;
       
       {  // Creates a second user and sends a chat message to user 1.
 	 // Credentials for user 2.
@@ -536,7 +536,7 @@ offline(
 	       make_request<user_cred>(results, "/get-user-id", host),
 	       net::use_awaitable);
 
-	 std::clog << "Received cred2: " << cred2 << std::endl;
+	 std::clog << "Peer: " << cred2 << std::endl;
 
 	 beast::multi_buffer read_buf;
          websocket::stream<tcp_socket> ws {ex};
@@ -549,10 +549,11 @@ offline(
 	 co_await ws.async_read(read_buf);
 	 read_buf.consume(std::size(read_buf));
 	 co_await ws.async_close(beast::websocket::close_code::normal);
-	 std::clog << "Finish cred2" << std::endl;
+	 std::clog << "Peer finsihed." << std::endl;
       }
 
       {  // Logs in user 1 and expects the message from user 2.
+	 std::clog << "Loggin to retrieve message: " << u1.cred << std::endl;
 	 beast::multi_buffer read_buf;
          websocket::stream<tcp_socket> ws {ex};
          co_await async_connect(beast::get_lowest_layer(ws), results);

@@ -182,7 +182,7 @@ private:
 
 	 // We need the key when lrange completes to forward the
 	 // message to the user.
-	 user_ids_chat_queue.push(key);
+	 user_ids_chat_queue.push(user_hash);
       };
 
       redis_conn_->send(f);
@@ -206,6 +206,10 @@ private:
    {
       if (begin == end)
 	 return;
+
+      log::write( log::level::debug
+		, "store_chat_msg: sending message to {0}"
+		, to);
 
       auto const key = cfg_.redis.chat_msg_prefix + to;
       auto f = [&, this](aedis::request<events>& req)
@@ -296,9 +300,9 @@ private:
    {
       auto const match = sessions_.find(user_hash);
       if (match == std::end(sessions_)) {
-         // The user went offline. We have to enqueue the message again.
-         // This is difficult to test since the retrieval of messages
-         // from the database is pretty fast.
+	 // The user went offline. We have to enqueue the message
+	 // again.  This is difficult to test since the retrieval of
+	 // messages from the database is pretty fast.
 	 store_chat_msg(std::cbegin(msgs), std::cend(msgs), user_hash);
          return;
       }
@@ -314,8 +318,8 @@ private:
       }
       
       // The user went offline but the session was not removed from
-      // the map. This is perhaps not a bug but undesirable as we
-      // do not have garbage collector for expired sessions.
+      // the map. This is perhaps not a bug but undesirable as we do
+      // not have garbage collector for expired sessions.
       assert(false);
    }
 
@@ -476,7 +480,7 @@ private:
 
       std::for_each(std::begin(sessions_), std::end(sessions_), f);
 
-      auto g = [&](aedis::request<events>& req)
+      auto g = [](aedis::request<events>& req)
 	 { req.quit(); };
 
       redis_conn_->send(g);
@@ -505,6 +509,11 @@ public:
 
    void on_zadd(events ev, aedis::resp::number_type n) noexcept override
    {
+   }
+
+   void on_quit(events ev, aedis::resp::simple_string_type& s) noexcept override
+   {
+      log::write(log::level::debug, "on_quit: {0}", s);
    }
 
    void on_hello(events ev, aedis::resp::map_type& v) noexcept override
@@ -556,14 +565,15 @@ public:
 
       assert(std::size(v) == 3);
 
-      log::write( log::level::debug
-                , "on_push: {0} {1}"
-                , v.at(0), v.at(1));
-
       if (v.front() == "message" && v.back() == "rpush") {
 	 auto const pos = std::size(cfg_.redis.user_notify_prefix);
 	 auto const user_id = v[1].substr(pos);
 	 assert(!std::empty(user_id));
+
+	 log::write( log::level::debug
+		   , "on_push: new chat message to user {0} available."
+		   , user_id);
+
 	 auto f = [&](aedis::request<events>& req)
 	 {
 	    auto const key = cfg_.redis.chat_msg_prefix + user_id;
@@ -578,6 +588,10 @@ public:
 	 redis_conn_->send(f);
 	 return;
       }
+
+      log::write( log::level::debug
+                , "on_push: {0} {1}"
+                , v.at(0), v.at(1));
 
       auto const size = std::size(cfg_.redis.presence_channel_prefix);
       auto const r = v[1].compare(0, size, cfg_.redis.presence_channel_prefix);
@@ -597,6 +611,11 @@ public:
    {
       assert(ev == events::user_msgs_priv);
       assert(!std::empty(user_ids_chat_queue));
+
+      log::write( log::level::debug
+                , "on_lrange: received messages from {0}"
+                , user_ids_chat_queue.front());
+
       on_db_chat_msg(user_ids_chat_queue.front(), msgs);
       user_ids_chat_queue.pop();
    }
@@ -819,13 +838,13 @@ public:
 
       auto const user = j.at("user").get<std::string>();
       auto const key = j.at("key").get<std::string>();
-      auto const user_hash = make_hex_digest(user, key);
+      auto const user_id = make_hex_digest(user, key);
 
-      if (std::empty(user_hash)) {
+      if (std::empty(user_id)) {
 	 json ack;
 	 ack["cmd"] = "publish_ack";
 	 ack["result"] = "fail";
-	 ack["reason"] = "User hash is empty.";
+	 ack["reason"] = "Invalid user id.";
 	 return ack.dump();
       }
 
@@ -835,13 +854,14 @@ public:
       // of posts the user already has on the channel object.
 
       // It is important not to thrust the *from* field in the json command.
-      p.from = user_hash;
+      p.from = user_id;
       p.date = duration_cast<seconds>(system_clock::now().time_since_epoch());
       p.id = pwdgen_.make(cfg_.pwd_size);
 
       log::write(
 	 log::level::debug,
-	 "on_publish_impl: New post from user {0}", p.from);
+	 "on_publish_impl: new post from user {0}",
+	 p.from);
 
       json pub;
       pub["cmd"] = "publish_internal";
@@ -873,13 +893,13 @@ public:
    {
       auto const user = pwdgen_.make(cfg_.pwd_size);
       auto const key = pwdgen_.make_key();
-      auto const user_hash = make_hex_digest(user, key);
+      auto const user_id = make_hex_digest(user, key);
 
       json resp;
       resp["result"] = "ok";
       resp["user"] = user;
       resp["key"] = key;
-      resp["user_id"] = user_hash;
+      resp["user_id"] = user_id;
 
       return resp.dump();
    }

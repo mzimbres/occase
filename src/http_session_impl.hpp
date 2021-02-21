@@ -276,7 +276,6 @@ private:
          auto const t = req_.target();
 
          std::string const target {t.data(), std::size(t)};
-         log::write(log::level::debug, "post_handler.");
 
          char const count[]  = "/posts/count";
          char const search[] = "/posts/search";

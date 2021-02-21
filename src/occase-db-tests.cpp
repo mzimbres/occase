@@ -1,4 +1,5 @@
 #include <iostream>
+#include <thread>
 
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/parsers.hpp>
@@ -64,7 +65,7 @@ make_req(
    req.set(http::field::user_agent, "occase-db-test");
    req.set(http::field::content_type, "application/json");
    req.set(http::field::content_length,
-	   beast::to_static_string(std::size(body)));
+           beast::to_static_string(std::size(body)));
    req.body() = body;
    return req;
 }
@@ -301,10 +302,10 @@ launch_replier(
       auto ex = co_await this_coro::executor;
 
       auto const cred =
-	 co_await net::co_spawn(
-	    ex,
-	    make_request<user_cred>(results, "/get-user-id", host),
-	    net::use_awaitable);
+         co_await net::co_spawn(
+            ex,
+            make_request<user_cred>(results, "/get-user-id", host),
+            net::use_awaitable);
 
       std::cout << "Success: get-user-id. " << cred << std::endl;
 
@@ -314,45 +315,45 @@ launch_replier(
 
       beast::multi_buffer read_buf;
       {  // login
-	 co_await ws.async_write(net::buffer(make_login(cred)));
-	 co_await ws.async_read(read_buf);
-	 auto const foo = beast::buffers_to_string(read_buf.data());
-	 read_buf.consume(std::size(read_buf));
-	 //std::cout << "Login: " << foo << std::endl;
+         co_await ws.async_write(net::buffer(make_login(cred)));
+         co_await ws.async_read(read_buf);
+         auto const foo = beast::buffers_to_string(read_buf.data());
+         read_buf.consume(std::size(read_buf));
+         //std::cout << "Login: " << foo << std::endl;
       }
 
       {  // Send and receive messages.
-	 auto const msg = make_message(user_id, post_id);
-	 for (auto i = 0; i < n_chat_msgs; ++i) {
-	    {  // Server ack
-	       co_await ws.async_write(net::buffer(msg));
-	       co_await ws.async_read(read_buf);
-	       auto const msg_str = beast::buffers_to_string(read_buf.data());
-	       read_buf.consume(std::size(read_buf));
+         auto const msg = make_message(user_id, post_id);
+         for (auto i = 0; i < n_chat_msgs; ++i) {
+            {  // Server ack
+               co_await ws.async_write(net::buffer(msg));
+               co_await ws.async_read(read_buf);
+               auto const msg_str = beast::buffers_to_string(read_buf.data());
+               read_buf.consume(std::size(read_buf));
 
-	       auto const j_msg = json::parse(msg_str);
-	       auto msg = j_msg.get<message>();
-	       log_message(cred, msg);
+               auto const j_msg = json::parse(msg_str);
+               auto msg = j_msg.get<message>();
+               log_message(cred, msg);
 
-	       check_equal(cred.user_id, msg.to);
-	       check_equal(msg.type, {"server_ack"});
-	    }
+               check_equal(cred.user_id, msg.to);
+               check_equal(msg.type, {"server_ack"});
+            }
 
-	    {  // App msg
-	       co_await ws.async_read(read_buf);
-	       auto const msg_str = beast::buffers_to_string(read_buf.data());
-	       read_buf.consume(std::size(read_buf));
+            {  // App msg
+               co_await ws.async_read(read_buf);
+               auto const msg_str = beast::buffers_to_string(read_buf.data());
+               read_buf.consume(std::size(read_buf));
 
-	       auto const j_msg = json::parse(msg_str);
-	       auto msg = j_msg.get<message>();
-	       log_message(cred, msg);
+               auto const j_msg = json::parse(msg_str);
+               auto msg = j_msg.get<message>();
+               log_message(cred, msg);
 
-	       check_equal(cred.user_id, msg.to);
-	       check_equal(msg.type, {"chat"});
-	    }
-	 }
-	 std::cout << "Replier Leaving" << std::endl;
-	 co_await ws.async_close(beast::websocket::close_code::normal);
+               check_equal(cred.user_id, msg.to);
+               check_equal(msg.type, {"chat"});
+            }
+         }
+         std::cout << "Replier Leaving" << std::endl;
+         co_await ws.async_close(beast::websocket::close_code::normal);
       }
    } catch (std::exception const& e) {
       std::cout << "Error: " << e.what() << std::endl;
@@ -375,18 +376,18 @@ cred_pub(
    try {
       auto ex = co_await this_coro::executor;
       auto const cred =
-	 co_await net::co_spawn(
-	    ex,
-	    make_request<user_cred>(results, "/get-user-id", host),
-	    net::use_awaitable);
+         co_await net::co_spawn(
+            ex,
+            make_request<user_cred>(results, "/get-user-id", host),
+            net::use_awaitable);
 
       auto const body = make_publish_body(cred);
 
       auto const pack =
-	 co_await net::co_spawn(
-	    ex,
-	    make_request<pub_ack>(results, "/posts/publish", host, body),
-	    net::use_awaitable);
+         co_await net::co_spawn(
+            ex,
+            make_request<pub_ack>(results, "/posts/publish", host, body),
+            net::use_awaitable);
 
       co_return cred_pub_helper {cred, pack};
 
@@ -416,71 +417,71 @@ publisher(
       auto const results = resolver.resolve(host, port);
 
       auto const foo =
-	 co_await net::co_spawn(
-	    ex,
-	    cred_pub(results, host),
-	    net::use_awaitable);
+         co_await net::co_spawn(
+            ex,
+            cred_pub(results, host),
+            net::use_awaitable);
 
       net::co_spawn(
-	 ex,
-	 launch_replier(results, host, port, foo.pack.id, foo.cred.user_id, n_chat_msgs),
-	 net::detached);
+         ex,
+         launch_replier(results, host, port, foo.pack.id, foo.cred.user_id, n_chat_msgs),
+         net::detached);
 
       {
          websocket::stream<tcp_socket> ws {ex};
          co_await async_connect(beast::get_lowest_layer(ws), results);
          co_await ws.async_handshake(host + ":" + port, "/");
 
-	 beast::multi_buffer read_buf;
-	 {  // login
-	    json j_msg;
-	    j_msg["cmd"] = "login";
-	    j_msg["user"] = foo.cred.user;
-	    j_msg["key"] = foo.cred.key;
+         beast::multi_buffer read_buf;
+         {  // login
+            json j_msg;
+            j_msg["cmd"] = "login";
+            j_msg["user"] = foo.cred.user;
+            j_msg["key"] = foo.cred.key;
 
-	    co_await ws.async_write(net::buffer(j_msg.dump()));
-	    co_await ws.async_read(read_buf);
-	    auto const foo = beast::buffers_to_string(read_buf.data());
-	    read_buf.consume(std::size(read_buf));
-	    std::cout << "Login: " << foo << std::endl;
-	 }
+            co_await ws.async_write(net::buffer(j_msg.dump()));
+            co_await ws.async_read(read_buf);
+            auto const foo = beast::buffers_to_string(read_buf.data());
+            read_buf.consume(std::size(read_buf));
+            std::cout << "Login: " << foo << std::endl;
+         }
 
-	 {  
-	    for (auto i = 0; i < n_chat_msgs; ++i) {
-	       {  // Receive and send
-		  co_await ws.async_read(read_buf);
-		  auto const msg_str = beast::buffers_to_string(read_buf.data());
-		  read_buf.consume(std::size(read_buf));
+         {  
+            for (auto i = 0; i < n_chat_msgs; ++i) {
+               {  // Receive and send
+                  co_await ws.async_read(read_buf);
+                  auto const msg_str = beast::buffers_to_string(read_buf.data());
+                  read_buf.consume(std::size(read_buf));
 
-		  auto const j_msg = json::parse(msg_str);
-		  auto msg = j_msg.get<message>();
-		  log_message(foo.cred, msg);
+                  auto const j_msg = json::parse(msg_str);
+                  auto msg = j_msg.get<message>();
+                  log_message(foo.cred, msg);
 
-		  check_equal(foo.cred.user_id, msg.to);
-		  check_equal(foo.pack.id, msg.post_id);
-		  check_equal(msg.type, {"chat"});
+                  check_equal(foo.cred.user_id, msg.to);
+                  check_equal(foo.pack.id, msg.post_id);
+                  check_equal(msg.type, {"chat"});
 
-		  auto const reply = make_message(msg.from, msg.post_id);
-		  co_await ws.async_write(net::buffer(reply));
-	       }
+                  auto const reply = make_message(msg.from, msg.post_id);
+                  co_await ws.async_write(net::buffer(reply));
+               }
 
-	       {  // Server ack.
-		  co_await ws.async_read(read_buf);
-		  auto const ack_str = beast::buffers_to_string(read_buf.data());
-		  read_buf.consume(std::size(read_buf));
-		  auto const j_msg = json::parse(ack_str);
-		  auto msg = j_msg.get<message>();
-		  log_message(foo.cred, msg);
+               {  // Server ack.
+                  co_await ws.async_read(read_buf);
+                  auto const ack_str = beast::buffers_to_string(read_buf.data());
+                  read_buf.consume(std::size(read_buf));
+                  auto const j_msg = json::parse(ack_str);
+                  auto msg = j_msg.get<message>();
+                  log_message(foo.cred, msg);
 
-		  check_equal(foo.cred.user_id, msg.to);
-		  check_equal(foo.pack.id, msg.post_id);
-		  check_equal(msg.type, {"server_ack"});
-	       }
-	    }
+                  check_equal(foo.cred.user_id, msg.to);
+                  check_equal(foo.pack.id, msg.post_id);
+                  check_equal(msg.type, {"server_ack"});
+               }
+            }
 
-	    std::cout << "Publisher Leaving" << std::endl;
-	 }
-	 co_await ws.async_close(beast::websocket::close_code::normal);
+            std::cout << "Publisher Leaving" << std::endl;
+         }
+         co_await ws.async_close(beast::websocket::close_code::normal);
       }
    } catch (std::exception const& e) {
       std::cout << "Error: " << e.what() << std::endl;
@@ -521,51 +522,53 @@ offline(
 
       // The credentials and the post of user 1.
       auto const u1 =
-	 co_await net::co_spawn(
-	    ex,
-	    cred_pub(results, host),
-	    net::use_awaitable);
+         co_await net::co_spawn(
+            ex,
+            cred_pub(results, host),
+            net::use_awaitable);
 
       std::clog << "Post publisher: " << u1.cred << std::endl;
       
       {  // Creates a second user and sends a chat message to user 1.
-	 // Credentials for user 2.
-	 auto const cred2 =
-	    co_await net::co_spawn(
-	       ex,
-	       make_request<user_cred>(results, "/get-user-id", host),
-	       net::use_awaitable);
+         // Credentials for user 2.
+         auto const cred2 =
+            co_await net::co_spawn(
+               ex,
+               make_request<user_cred>(results, "/get-user-id", host),
+               net::use_awaitable);
 
-	 std::clog << "Peer: " << cred2 << std::endl;
+         std::clog << "Peer: " << cred2 << std::endl;
 
-	 beast::multi_buffer read_buf;
+         beast::multi_buffer read_buf;
          websocket::stream<tcp_socket> ws {ex};
          co_await async_connect(beast::get_lowest_layer(ws), results);
          co_await ws.async_handshake(host + ":" + port, "/");
-	 co_await ws.async_write(net::buffer(make_login(cred2)));
-	 co_await ws.async_read(read_buf);
-	 read_buf.consume(std::size(read_buf));
-	 co_await ws.async_write(net::buffer(make_message(u1.cred.user_id, u1.pack.id, "offline test")));
-	 co_await ws.async_read(read_buf);
-	 read_buf.consume(std::size(read_buf));
-	 co_await ws.async_close(beast::websocket::close_code::normal);
-	 std::clog << "Peer finsihed." << std::endl;
+         co_await ws.async_write(net::buffer(make_login(cred2)));
+         co_await ws.async_read(read_buf);
+         read_buf.consume(std::size(read_buf));
+         co_await ws.async_write(net::buffer(make_message(u1.cred.user_id, u1.pack.id, "offline test")));
+         co_await ws.async_read(read_buf);
+         read_buf.consume(std::size(read_buf));
+         co_await ws.async_close(beast::websocket::close_code::normal);
+         std::clog << "Peer finsihed." << std::endl;
       }
 
+      //std::this_thread::sleep_for(std::chrono::seconds {2});
+
       {  // Logs in user 1 and expects the message from user 2.
-	 std::clog << "Loggin to retrieve message: " << u1.cred << std::endl;
-	 beast::multi_buffer read_buf;
+         std::clog << "Loggin to retrieve message: " << u1.cred << std::endl;
+         beast::multi_buffer read_buf;
          websocket::stream<tcp_socket> ws {ex};
          co_await async_connect(beast::get_lowest_layer(ws), results);
          co_await ws.async_handshake(host + ":" + port, "/");
-	 co_await ws.async_write(net::buffer(make_login(u1.cred)));
-	 co_await ws.async_read(read_buf); // Consumes the login ack.
-	 read_buf.consume(std::size(read_buf));
-	 co_await ws.async_read(read_buf); // This should be the message.
-	 auto const foo = beast::buffers_to_string(read_buf.data());
-	 read_buf.consume(std::size(read_buf));
-	 std::cout << "Message received: " << foo << std::endl;
-	 co_await ws.async_close(beast::websocket::close_code::normal);
+         co_await ws.async_write(net::buffer(make_login(u1.cred)));
+         co_await ws.async_read(read_buf); // Consumes the login ack.
+         read_buf.consume(std::size(read_buf));
+         co_await ws.async_read(read_buf); // This should be the message.
+         auto const foo = beast::buffers_to_string(read_buf.data());
+         read_buf.consume(std::size(read_buf));
+         std::cout << "Message received: " << foo << std::endl;
+         co_await ws.async_close(beast::websocket::close_code::normal);
       }
    } catch (std::exception const& e) {
       std::cout << "Error: " << e.what() << std::endl;

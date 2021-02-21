@@ -111,78 +111,81 @@ private:
    {
       auto const user = j.at("user").get<std::string>();
       auto const key = j.at("key").get<std::string>();
-      auto const user_hash = make_hex_digest(user, key);
+      auto const user_id = make_hex_digest(user, key);
 
-      if (std::empty(user_hash)) {
-	 json resp;
-	 resp["cmd"] = "login_ack";
-	 resp["result"] = "fail";
-	 s->send(resp.dump(), false);
-	 return ev_res::login_fail;
+      log::write( log::level::debug
+                , "on_app_login: {0} {1} is logged in."
+                , user, user_id);
+
+      if (std::empty(user_id)) {
+         json resp;
+         resp["cmd"] = "login_ack";
+         resp["result"] = "fail";
+         s->send(resp.dump(), false);
+         return ev_res::login_fail;
       }
 
-      s->set_pub_hash(user_hash);
+      s->set_pub_hash(user_id);
 
-      auto const ss = sessions_.insert({user_hash, s});
+      auto const ss = sessions_.insert({user_id, s});
       if (!ss.second) {
-	 // There should never be more than one session with
-	 // the same id. For now, I will simply override the
-	 // old session and disregard any pending messages.
-	 // In principle, if the session is still online, it
-	 // should not contain any messages anyway.
+         // There should never be more than one session with
+         // the same id. For now, I will simply override the
+         // old session and disregard any pending messages.
+         // In principle, if the session is still online, it
+         // should not contain any messages anyway.
 
-	 // The old session has to be shutdown first
-	 if (auto old_ss = ss.first->second.lock()) {
-	    old_ss->shutdown();
-	    // We have to prevent the cleanup operation when its
-	    // destructor is called. That would cause the new
-	    // session to be removed from the map again.
-	    old_ss->set_pub_hash("");
-	 } else {
-	    // Awckward, the old session has already expired and
-	    // we did not remove it from the map. It should be
-	    // fixed.
-	 }
+         // The old session has to be shutdown first
+         if (auto old_ss = ss.first->second.lock()) {
+            old_ss->shutdown();
+            // We have to prevent the cleanup operation when its
+            // destructor is called. That would cause the new
+            // session to be removed from the map again.
+            old_ss->set_pub_hash("");
+         } else {
+            // Awckward, the old session has already expired and
+            // we did not remove it from the map. It should be
+            // fixed.
+         }
 
-	 ss.first->second = s;
+         ss.first->second = s;
       }
 
       auto const match = j.find("token");
       if (match != std::cend(j)) {
-	 if (!std::empty(*match)) {
-	    // Publishes a user FCM token in the channel where
-	    // occase-notify is listening
-	    json jtoken;
-	    jtoken["cmd"] = "token";
-	    jtoken["id"] = cfg_.redis.chat_msg_prefix + user_hash;
-	    jtoken["token"] = *match;
+         if (!std::empty(*match)) {
+            // Publishes a user FCM token in the channel where
+            // occase-notify is listening
+            json jtoken;
+            jtoken["cmd"] = "token";
+            jtoken["id"] = cfg_.redis.chat_msg_prefix + user_id;
+            jtoken["token"] = *match;
 
-	    auto const msg = jtoken.dump();
+            auto const msg = jtoken.dump();
 
-	    auto f = [&, this](aedis::request<events>& req)
-	       { req.publish(cfg_.redis.token_channel, msg); };
+            auto f = [&, this](aedis::request<events>& req)
+               { req.publish(cfg_.redis.token_channel, msg); };
 
-	    redis_conn_->send(f);
-	 }
+            redis_conn_->send(f);
+         }
       }
 
       auto f = [&](aedis::request<events>& req)
       {
-	 // Instructs redis to notify the worker on new messages to
-	 // the user. Once a notification arrives the server proceeds
-	 // with the retrieval of the message, which may be more than
-	 // one by the time we get to it. Additionaly, this function
-	 // also subscribes the worker to presence messages.
-	 req.subscribe(cfg_.redis.user_notify_prefix + user_hash);
-	 req.subscribe(cfg_.redis.presence_channel_prefix + user_hash);
+         // Instructs redis to notify the worker on new messages to
+         // the user. Once a notification arrives the server proceeds
+         // with the retrieval of the message, which may be more than
+         // one by the time we get to it. Additionaly, this function
+         // also subscribes the worker to presence messages.
+         req.subscribe(cfg_.redis.user_notify_prefix + user_id);
+         req.subscribe(cfg_.redis.presence_channel_prefix + user_id);
 
-	 auto const key = cfg_.redis.chat_msg_prefix + user_hash;
-	 req.lrange(key, 0, -1, events::user_msgs_priv);
-	 req.del(key);
+         auto const key = cfg_.redis.chat_msg_prefix + user_id;
+         req.lrange(key, 0, -1, events::user_msgs_priv);
+         user_ids_chat_queue.push(user_id);
 
-	 // We need the key when lrange completes to forward the
-	 // message to the user.
-	 user_ids_chat_queue.push(user_hash);
+         req.del(key);
+         //std::cout << "Sent: " << user_id << std::endl;
       };
 
       redis_conn_->send(f);
@@ -205,21 +208,21 @@ private:
       std::string const& to)
    {
       if (begin == end)
-	 return;
+         return;
 
       log::write( log::level::debug
-		, "store_chat_msg: sending message to {0}"
-		, to);
+                , "store_chat_msg: sending message to {0}"
+                , to);
 
       auto const key = cfg_.redis.chat_msg_prefix + to;
       auto f = [&, this](aedis::request<events>& req)
       {
-	 req.incr(cfg_.redis.chat_msgs_counter_key);
-	 req.rpush(key, begin, end);
-	 req.expire(key, cfg_.redis.chat_msg_exp_time);
+         req.incr(cfg_.redis.chat_msgs_counter_key);
+         req.rpush(key, begin, end);
+         req.expire(key, cfg_.redis.chat_msg_exp_time);
 
-	 // Notification only of the last message.
-	 req.publish(cfg_.redis.token_channel, *std::prev(end));
+         // Notification only of the last message.
+         req.publish(cfg_.redis.token_channel, *std::prev(end));
       };
 
       redis_conn_->send(f);
@@ -237,9 +240,9 @@ private:
       if (match == std::end(sessions_)) {
          // The peer is either offline or not in this node. We have to
          // store the message in the database (redis).
-	 auto const msg = j.dump();
-	 std::initializer_list<std::string_view> list = {msg};
-	 store_chat_msg(std::cbegin(list), std::cend(list), to);
+         auto const msg = j.dump();
+         std::initializer_list<std::string_view> list = {msg};
+         store_chat_msg(std::cbegin(list), std::cend(list), to);
       } else {
          // The peer is online and in this node, we can send him the
          // message directly.
@@ -273,13 +276,13 @@ private:
       auto const to = j.at("to").get<std::string>();
       auto const match = sessions_.find(to);
       if (match == std::end(sessions_)) {
-	 auto const msg = j.dump();
-	 auto const channel = cfg_.redis.presence_channel_prefix + to;
+         auto const msg = j.dump();
+         auto const channel = cfg_.redis.presence_channel_prefix + to;
 
-	 auto f = [&](aedis::request<events>& req)
-	    { req.publish(channel, msg); };
+         auto f = [&](aedis::request<events>& req)
+            { req.publish(channel, msg); };
 
-	 redis_conn_->send(f);
+         redis_conn_->send(f);
       } else {
          if (auto ss = match->second.lock())
             ss->send(j.dump(), false);
@@ -295,15 +298,15 @@ private:
    }
 
    // Handlers for events we receive from the database.
-   void on_db_chat_msg( std::string const& user_hash
+   void on_db_chat_msg( std::string const& user_id
                       , std::vector<std::string> const& msgs)
    {
-      auto const match = sessions_.find(user_hash);
+      auto const match = sessions_.find(user_id);
       if (match == std::end(sessions_)) {
-	 // The user went offline. We have to enqueue the message
-	 // again.  This is difficult to test since the retrieval of
-	 // messages from the database is pretty fast.
-	 store_chat_msg(std::cbegin(msgs), std::cend(msgs), user_hash);
+         // The user went offline. We have to enqueue the message
+         // again.  This is difficult to test since the retrieval of
+         // messages from the database is pretty fast.
+         store_chat_msg(std::cbegin(msgs), std::cend(msgs), user_id);
          return;
       }
 
@@ -328,37 +331,37 @@ private:
       using namespace std::chrono;
 
       try {
-	 auto const j = json::parse(msg);
+         auto const j = json::parse(msg);
          auto const cmd = j.at("cmd").get<std::string>();
 
-	 if (cmd == "visualizations") {
+         if (cmd == "visualizations") {
             auto const j = json::parse(msg);
             auto post_ids = j.at("post_ids").get<std::vector<std::string>>();
             std::sort(std::begin(post_ids), std::end(post_ids));
             posts_.on_visualizations(post_ids);
-	    return;
-	 }
+            return;
+         }
 
-	 if (cmd == "click") {
+         if (cmd == "click") {
             auto const j = json::parse(msg);
             auto const post_id = j.at("post_id").get<std::string>();
             posts_.on_click(post_id);
-	    return;
-	 }
+            return;
+         }
 
-	 if (cmd == "delete") {
-	    auto const post_id = j.at("post_id").get<std::string>();
-	    auto const from = j.at("from").get<std::string>();
-	    if (!posts_.remove_post(post_id, from)) 
-	       log::write( log::level::notice
-			 , "Failed to remove post {0}. User {1}"
-			 , post_id
-			 , from);
+         if (cmd == "delete") {
+            auto const post_id = j.at("post_id").get<std::string>();
+            auto const from = j.at("from").get<std::string>();
+            if (!posts_.remove_post(post_id, from)) 
+               log::write( log::level::notice
+                         , "Failed to remove post {0}. User {1}"
+                         , post_id
+                         , from);
 
-	    return;
-	 }
+            return;
+         }
 
-	 if (cmd == "publish_internal") {
+         if (cmd == "publish_internal") {
             auto const item = j.at("post").get<post>();
 
             if (item.date > last_post_date_received_)
@@ -370,13 +373,13 @@ private:
             posts_.add_post(item);
             auto const expired = posts_.remove_expired_posts(now, post_exp);
 
-	    // NOTE: When we issue the delete command to the other
-	    // databases, we are in fact also sending a delete cmd to
-	    // ourselves and in this case the deletions will fail
-	    // (they have already been removed). This is not bad since
-	    // it simplifies the code and there are also tipically not
-	    // so many posts in each deletion, it
-	    // presents no performance problems in any case.
+            // NOTE: When we issue the delete command to the other
+            // databases, we are in fact also sending a delete cmd to
+            // ourselves and in this case the deletions will fail
+            // (they have already been removed). This is not bad since
+            // it simplifies the code and there are also tipically not
+            // so many posts in each deletion, it
+            // presents no performance problems in any case.
 
             auto f = [this](auto const& p)
                { /*Perhaps won't implement this.*/ };
@@ -390,27 +393,27 @@ private:
                          , "Number of expired posts removed: {0}"
                          , std::size(expired));
             }
-	 }
+         }
       } catch (std::exception const& e) {
-	 log::write( log::level::err
-		   , "on_db_channel_post (1): {0}"
-		   , e.what());
+         log::write( log::level::err
+                   , "on_db_channel_post (1): {0}"
+                   , e.what());
 
-	 log::write( log::level::err
-		   , "on_db_channel_post (2): {0}"
-		   , msg);
+         log::write( log::level::err
+                   , "on_db_channel_post (2): {0}"
+                   , msg);
       }
    }
 
-   void on_db_presence(std::string const& user_hash, std::string msg)
+   void on_db_presence(std::string const& user_id, std::string msg)
    {
-      auto const match = sessions_.find(user_hash);
+      auto const match = sessions_.find(user_id);
       if (match == std::end(sessions_)) {
          // If the user went offline, we should not be receiving this
          // message. However there may be a timespan where this can
          // happen wo I will simply log.
          log::write(log::level::warning,
-	            "Receiving presence after unsubscribe.");
+                    "Receiving presence after unsubscribe.");
          return;
       }
 
@@ -481,7 +484,7 @@ private:
       std::for_each(std::begin(sessions_), std::end(sessions_), f);
 
       auto g = [](aedis::request<events>& req)
-	 { req.quit(); };
+         { req.quit(); };
 
       redis_conn_->send(g);
    }
@@ -534,13 +537,13 @@ public:
 
       auto f = [&, this](aedis::request<events>& req)
       {
-	 req.zrangebyscore(
-	    cfg_.redis.posts_key,
-	    last.count(),
-	    -1,
-	    events::retrieve_posts);
+         req.zrangebyscore(
+            cfg_.redis.posts_key,
+            last.count(),
+            -1,
+            events::retrieve_posts);
 
-	 req.subscribe(cfg_.redis.posts_channel_key);
+         req.subscribe(cfg_.redis.posts_channel_key);
       };
 
       redis_conn_->send(f);
@@ -566,27 +569,27 @@ public:
       assert(std::size(v) == 3);
 
       if (v.front() == "message" && v.back() == "rpush") {
-	 auto const pos = std::size(cfg_.redis.user_notify_prefix);
-	 auto const user_id = v[1].substr(pos);
-	 assert(!std::empty(user_id));
+         auto const pos = std::size(cfg_.redis.user_notify_prefix);
+         auto const user_id = v[1].substr(pos);
+         assert(!std::empty(user_id));
 
-	 log::write( log::level::debug
-		   , "on_push: new chat message to user {0} available."
-		   , user_id);
+         log::write( log::level::debug
+                   , "on_push: new chat message to user {0} available."
+                   , user_id);
 
-	 auto f = [&](aedis::request<events>& req)
-	 {
-	    auto const key = cfg_.redis.chat_msg_prefix + user_id;
-	    req.lrange(key, 0, -1, events::user_msgs_priv);
-	    req.del(key);
+         auto f = [&](aedis::request<events>& req)
+         {
+            auto const key = cfg_.redis.chat_msg_prefix + user_id;
+            req.lrange(key, 0, -1, events::user_msgs_priv);
+            req.del(key);
 
-	    // We need the key when lrange completes to forward the
-	    // message to the user.
-	    user_ids_chat_queue.push(key);
-	 };
+            // We need the key when lrange completes to forward the
+            // message to the user.
+            user_ids_chat_queue.push(key);
+         };
 
-	 redis_conn_->send(f);
-	 return;
+         redis_conn_->send(f);
+         return;
       }
 
       log::write( log::level::debug
@@ -596,14 +599,14 @@ public:
       auto const size = std::size(cfg_.redis.presence_channel_prefix);
       auto const r = v[1].compare(0, size, cfg_.redis.presence_channel_prefix);
       if (v.front() == "message" && r == 0) {
-	 auto const user_id = v[1].substr(size);
-	 on_db_presence(user_id, std::move(v.back()));
-	 return;
+         auto const user_id = v[1].substr(size);
+         on_db_presence(user_id, std::move(v.back()));
+         return;
       }
 
       if (v.front() == "message" && v[1] == cfg_.redis.posts_channel_key) {
-	 on_db_channel_post(v.back());
-	 return;
+         on_db_channel_post(v.back());
+         return;
       }
    }
 
@@ -634,7 +637,7 @@ public:
       std::for_each(std::begin(msgs), std::end(msgs), loader);
 
       if (!acceptor_.is_open()) {
-	 // We can start to accept websocket connections.
+         // We can start to accept websocket connections.
          acceptor_.run( *this
                       , ctx_
                       , cfg_.db_port
@@ -642,10 +645,10 @@ public:
       }
    }
 
-   void on_session_dtor( std::string const& user_hash
+   void on_session_dtor( std::string const& user_id
                        , std::vector<std::string> const& msgs)
    {
-      auto const match = sessions_.find(user_hash);
+      auto const match = sessions_.find(user_id);
       if (match == std::end(sessions_))
          return;
 
@@ -655,8 +658,8 @@ public:
       // passes no event to the worker.
       auto f = [&](aedis::request<events>& req)
       {
-         req.unsubscribe(cfg_.redis.user_notify_prefix + user_hash);
-         req.unsubscribe(cfg_.redis.presence_channel_prefix + user_hash);
+         req.unsubscribe(cfg_.redis.user_notify_prefix + user_id);
+         req.unsubscribe(cfg_.redis.presence_channel_prefix + user_id);
       };
 
       redis_conn_->send(f);
@@ -664,9 +667,9 @@ public:
       if (!std::empty(msgs)) {
          log::write( log::level::debug
                    , "Sending user messages back to the database: {0}"
-                   , user_hash);
+                   , user_id);
 
-	 store_chat_msg(std::cbegin(msgs), std::cend(msgs), user_hash);
+         store_chat_msg(std::cbegin(msgs), std::cend(msgs), user_id);
       }
    }
 
@@ -744,10 +747,10 @@ public:
          { return true; };
 
       posts_.get_posts(
-	 date_type {0},
-	 std::back_inserter(items),
-	 cfg_.max_posts_on_search,
-	 pred);
+         date_type {0},
+         std::back_inserter(items),
+         cfg_.max_posts_on_search,
+         pred);
 
       return items;
    }
@@ -785,7 +788,7 @@ public:
       auto const msg = j.dump();
 
       auto f = [&](aedis::request<events>& req)
-	 { req.publish(cfg_.redis.posts_channel_key, msg, events::remove_post);};
+         { req.publish(cfg_.redis.posts_channel_key, msg, events::remove_post);};
 
       redis_conn_->send(f);
    }
@@ -819,7 +822,7 @@ public:
    void on_visualizations(std::string const& msg)
    {
       auto f = [&](aedis::request<events>& req)
-	 { req.publish(cfg_.redis.posts_channel_key, msg); };
+         { req.publish(cfg_.redis.posts_channel_key, msg); };
 
       redis_conn_->send(f);
    }
@@ -827,7 +830,7 @@ public:
    void on_click(std::string const& msg)
    {
       auto f = [&](aedis::request<events>& req)
-	 { req.publish(cfg_.redis.posts_channel_key, msg); };
+         { req.publish(cfg_.redis.posts_channel_key, msg); };
 
       redis_conn_->send(f);
    }
@@ -841,11 +844,11 @@ public:
       auto const user_id = make_hex_digest(user, key);
 
       if (std::empty(user_id)) {
-	 json ack;
-	 ack["cmd"] = "publish_ack";
-	 ack["result"] = "fail";
-	 ack["reason"] = "Invalid user id.";
-	 return ack.dump();
+         json ack;
+         ack["cmd"] = "publish_ack";
+         ack["result"] = "fail";
+         ack["reason"] = "Invalid user id.";
+         return ack.dump();
       }
 
       auto p = j.at("post").get<post>();
@@ -859,9 +862,9 @@ public:
       p.id = pwdgen_.make(cfg_.pwd_size);
 
       log::write(
-	 log::level::debug,
-	 "on_publish_impl: new post from user {0}",
-	 p.from);
+         log::level::debug,
+         "on_publish_impl: new post from user {0}",
+         p.from);
 
       json pub;
       pub["cmd"] = "publish_internal";
@@ -870,8 +873,8 @@ public:
 
       auto f = [&, this](aedis::request<events>& req)
       {
-	 req.zadd(cfg_.redis.posts_key, p.date.count(), msg);
-	 req.publish(cfg_.redis.posts_channel_key, msg);
+         req.zadd(cfg_.redis.posts_key, p.date.count(), msg);
+         req.publish(cfg_.redis.posts_channel_key, msg);
       };
 
       redis_conn_->send(f);

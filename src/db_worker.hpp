@@ -233,7 +233,8 @@ private:
       if (match == std::end(sessions_)) {
          // The peer is either offline or not in this node. We have to
          // store the message in the database (redis).
-	 std::initializer_list<std::string_view> list = {j.dump()};
+	 auto const msg = j.dump();
+	 std::initializer_list<std::string_view> list = {msg};
 	 store_chat_msg(std::cbegin(list), std::cend(list), to);
       } else {
          // The peer is online and in this node, we can send him the
@@ -285,7 +286,7 @@ private:
 
    auto on_app_publish(json j, std::shared_ptr<ws_session_type> s)
    {
-      s->send(on_publish(j), true);
+      s->send(on_publish_impl(j), true);
       return ev_res::publish_ok;
    }
 
@@ -623,7 +624,7 @@ public:
    }
 
    void on_session_dtor( std::string const& user_hash
-                       , std::vector<std::string> msgs)
+                       , std::vector<std::string> const& msgs)
    {
       auto const match = sessions_.find(user_hash);
       if (match == std::end(sessions_))
@@ -812,7 +813,7 @@ public:
       redis_conn_->send(f);
    }
 
-   auto on_publish(json j)
+   auto on_publish_impl(json j)
    {
       using namespace std::chrono;
 
@@ -838,7 +839,9 @@ public:
       p.date = duration_cast<seconds>(system_clock::now().time_since_epoch());
       p.id = pwdgen_.make(cfg_.pwd_size);
 
-      log::write(log::level::debug, "New post from user {0}", p.from);
+      log::write(
+	 log::level::debug,
+	 "on_publish_impl: New post from user {0}", p.from);
 
       json pub;
       pub["cmd"] = "publish_internal";

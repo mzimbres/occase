@@ -380,8 +380,6 @@ cred_pub(
 	    make_request<user_cred>(results, "/get-user-id", host),
 	    net::use_awaitable);
 
-      std::cout << "Success: get-user-id. " << cred << std::endl;
-
       auto const pack =
 	 co_await net::co_spawn(
 	    ex,
@@ -526,14 +524,19 @@ offline(
 	    cred_pub(results, host),
 	    net::use_awaitable);
 
+      std::clog << "Received u1: " << u1.cred << std::endl;
+      std::clog << "Received u1: " << u1.pack << std::endl;
+
       
-      {  // Creates a second user and send a chat message user 1.
+      {  // Creates a second user and sends a chat message to user 1.
 	 // Credentials for user 2.
 	 auto const cred2 =
 	    co_await net::co_spawn(
 	       ex,
 	       make_request<user_cred>(results, "/get-user-id", host),
 	       net::use_awaitable);
+
+	 std::clog << "Received cred2: " << cred2 << std::endl;
 
 	 beast::multi_buffer read_buf;
          websocket::stream<tcp_socket> ws {ex};
@@ -546,6 +549,7 @@ offline(
 	 co_await ws.async_read(read_buf);
 	 read_buf.consume(std::size(read_buf));
 	 co_await ws.async_close(beast::websocket::close_code::normal);
+	 std::clog << "Finish cred2" << std::endl;
       }
 
       {  // Logs in user 1 and expects the message from user 2.
@@ -612,12 +616,12 @@ int main(int argc, char* argv[])
    std::string port {"8080"};
    boost::asio::io_context ioc {1};
 
-   net::co_spawn(ioc, tcp_timeout(host, port), net::detached);
-   net::co_spawn(ioc, posts_search(host, port, "/posts/search"), net::detached);
-   net::co_spawn(ioc, posts_search(host, port, "/posts/count"), net::detached);
-   net::co_spawn(ioc, no_login(host, port), net::detached);
-   for (auto i = 0; i < n_publishers; ++i)
-      net::co_spawn(ioc, publisher(host, port, n_chat_msgs), net::detached);
+   //net::co_spawn(ioc, tcp_timeout(host, port), net::detached);
+   //net::co_spawn(ioc, posts_search(host, port, "/posts/search"), net::detached);
+   //net::co_spawn(ioc, posts_search(host, port, "/posts/count"), net::detached);
+   //net::co_spawn(ioc, no_login(host, port), net::detached);
+   //for (auto i = 0; i < n_publishers; ++i)
+   //   net::co_spawn(ioc, publisher(host, port, n_chat_msgs), net::detached);
 
    net::co_spawn(ioc, offline(host, port), net::detached);
    ioc.run();

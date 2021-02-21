@@ -212,7 +212,7 @@ private:
    void post_publish_handler() noexcept
    {
       try {
-         auto const body = derived().db().on_publish(json::parse(req_.body()));
+         auto const body = derived().db().on_publish_impl(json::parse(req_.body()));
          resp_.set(http::field::content_type, "application/json");
 	 resp_.body() = body + "\r\n";
       } catch (std::exception const& e) {

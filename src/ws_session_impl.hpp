@@ -213,7 +213,7 @@ private:
                           , std::back_inserter(msgs)
                           , transformer);
 
-            derived().db().on_session_dtor(pub_hash_, std::move(msgs));
+            derived().db().on_session_dtor(pub_hash_, msgs);
          }
       } catch (...) {
       }

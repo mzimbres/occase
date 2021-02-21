@@ -34,6 +34,7 @@ CPPFLAGS += -std=c++20
 #CPPFLAGS += -Wall -Werror
 CPPFLAGS += -I. -I$./src -I$(boost_dir)/include -I/opt/aedis-1.0.0/include
 CPPFLAGS += $(pkg-config --cflags libsodium)
+CPPFLAGS += -fsanitize=address
 CPPFLAGS += -g
 CPPFLAGS += -D BOOST_ASIO_NO_DEPRECATED 
 CPPFLAGS += -D BOOST_ASIO_NO_TS_EXECUTORS 

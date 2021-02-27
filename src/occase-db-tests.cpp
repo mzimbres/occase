@@ -584,6 +584,7 @@ struct options {
    std::string port {"8080"};
    int publishers = 10;
    int repliers = 10;
+   int offline_tests = 10;
    int test = 2;
 };
 
@@ -599,6 +600,7 @@ int main(int argc, char* argv[])
    ("ip,d" , po::value<std::string>(&op.host)->default_value("127.0.0.1"), "Server ip address.")
    ("publishers,u", po::value<int>(&op.publishers)->default_value(2), "Number of publishers.")
    ("repliers,c", po::value<int>(&op.repliers)->default_value(10), "Number of listeners.")
+   ("offline-tests,l", po::value<int>(&op.offline_tests)->default_value(10), "Number of offline tests.")
    ("test,r", po::value<int>(&op.test)->default_value(1), "Which test to run: 1, 2, 3, 4, 5, 6, 7.")
    ;
 
@@ -618,15 +620,31 @@ int main(int argc, char* argv[])
 
    std::string host {"127.0.0.1"};
    std::string port {"8080"};
+   std::string target1 = "/posts/search";
+   std::string target2 = "/posts/count";
    boost::asio::io_context ioc {1};
 
-   //net::co_spawn(ioc, tcp_timeout(host, port), net::detached);
-   //net::co_spawn(ioc, posts_search(host, port, "/posts/search"), net::detached);
-   //net::co_spawn(ioc, posts_search(host, port, "/posts/count"), net::detached);
-   //net::co_spawn(ioc, no_login(host, port), net::detached);
-   //for (auto i = 0; i < n_publishers; ++i)
-   //   net::co_spawn(ioc, publisher(host, port, n_chat_msgs), net::detached);
+   if (op.test == 1)
+      net::co_spawn(ioc, tcp_timeout(host, port), net::detached);
 
-   net::co_spawn(ioc, offline(host, port), net::detached);
+   if (op.test == 2)
+      net::co_spawn(ioc, posts_search(host, port, target1), net::detached);
+
+   if (op.test == 3)
+      net::co_spawn(ioc, posts_search(host, port, target2), net::detached);
+
+   if (op.test == 4)
+      net::co_spawn(ioc, no_login(host, port), net::detached);
+
+   if (op.test == 5) {
+      for (auto i = 0; i < n_publishers; ++i)
+	 net::co_spawn(ioc, publisher(host, port, n_chat_msgs), net::detached);
+   }
+
+   if (op.test == 6) {
+      for (auto i = 0; i < op.offline_tests; ++i)
+	 net::co_spawn(ioc, offline(host, port), net::detached);
+   }
+
    ioc.run();
 }

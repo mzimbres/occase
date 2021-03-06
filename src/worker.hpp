@@ -23,32 +23,13 @@
 #include "logger.hpp"
 #include "crypto.hpp"
 #include "channel.hpp"
+#include "ws_session.hpp"
 #include "acceptor_mgr.hpp"
-#include "http_plain_session.hpp"
-#include "http_ssl_session.hpp"
-#include "ws_session_impl.hpp"
-#include "ws_ssl_session.hpp"
-#include "ws_plain_session.hpp"
 
 namespace occase {
 
 struct ws_stats {
    int number_of_sessions {0};
-};
-
-template <class Stream>
-struct make_session_type;
-
-template <>
-struct make_session_type<beast::tcp_stream> {
-  using websocket = ws_plain_session;
-  using http = http_plain_session;
-};
-
-template <class T>
-struct make_session_type<beast::ssl_stream<T>> {
-  using websocket = ws_ssl_session;
-  using http = http_ssl_session;
 };
 
 enum class events
@@ -59,10 +40,9 @@ enum class events
 };
 
 template <class Stream>
-class db_worker : public aedis::receiver_base<events> {
+class worker : public aedis::receiver_base<events> {
 private:
-   using ws_session_type = typename make_session_type<Stream>::websocket;
-   using http_session_type = typename make_session_type<Stream>::http;
+   using ws_session_type = ws_session<Stream>;
    using redis_conn_type = aedis::connection<events>;
 
    net::io_context ioc_ {BOOST_ASIO_CONCURRENCY_HINT_UNSAFE};
@@ -94,7 +74,7 @@ private:
 
    // Accepts both http connections used by the administrative api or
    // websocket connection used by the database.
-   acceptor_mgr<http_session_type> acceptor_;
+   acceptor_mgr<Stream> acceptor_;
 
    // Signal handler.
    net::signal_set signal_set_;
@@ -460,7 +440,7 @@ private:
       signal_set_.cancel(ec);
       if (ec) {
          log::write( log::level::info
-                   , "db_worker::shutdown: {0}"
+                   , "worker::shutdown: {0}"
                    , ec.message());
       }
    }
@@ -490,7 +470,7 @@ private:
    }
 
 public:
-   db_worker(config::core cfg, ssl::context& c)
+   worker(config::core cfg, ssl::context& c)
    : ctx_ {c}
    , cfg_ {cfg}
    , redis_conn_ {std::make_shared<aedis::connection<events>>(ioc_)}
@@ -691,7 +671,7 @@ public:
                return on_app_login(j, s);
          }
       } catch (std::exception const& e) {
-         log::write(log::level::debug, "db_worker::on_app: {0}.", e.what());
+         log::write(log::level::debug, "worker::on_app: {0}.", e.what());
       }
 
       return ev_res::unknown;

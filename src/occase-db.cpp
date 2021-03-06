@@ -16,7 +16,7 @@
 #include "logger.hpp"
 #include "system.hpp"
 #include "release.hpp"
-#include "db_worker.hpp"
+#include "worker.hpp"
 
 using namespace occase;
 
@@ -166,12 +166,12 @@ int main(int argc, char* argv[])
             return 1;
          }
 
-         db_worker<beast::ssl_stream<beast::tcp_stream>> db {cfg.core, ctx};
+         worker<ssl_stream> db {cfg.core, ctx};
          db.run();
          return 0;
       }
 
-      db_worker<beast::tcp_stream> db {cfg.core, ctx};
+      worker<tcp_stream> db {cfg.core, ctx};
       db.run();
 
    } catch (std::exception const& e) {

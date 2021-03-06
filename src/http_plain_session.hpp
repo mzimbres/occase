@@ -7,26 +7,26 @@ namespace occase
 {
 
 template <class Stream>
-class db_worker;
+class worker;
 
-class ws_plain_session;
+template <class Stream>
+class ws_session;
 
 class http_plain_session
    : public http_session_impl<http_plain_session>
    , public std::enable_shared_from_this<http_plain_session> {
 public:
-   using stream_type = beast::tcp_stream;
-   using worker_type = db_worker<stream_type>;
-   using arg_type = worker_type;
-   using ws_session_type = ws_plain_session;
+   using stream_type = tcp_stream;
+   using worker_type = worker<stream_type>;
+   using ws_session_type = ws_session<stream_type>;
 
 private:
-   beast::tcp_stream stream_;
-   arg_type& w_;
+   stream_type stream_;
+   worker_type& w_;
 
 public:
    explicit
-   http_plain_session(tcp::socket&& stream, arg_type& w, ssl::context& ctx)
+   http_plain_session(tcp::socket&& stream, worker_type& w, ssl::context& ctx)
    : stream_(std::move(stream))
    , w_ {w}
    { }

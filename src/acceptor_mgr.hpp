@@ -2,26 +2,41 @@
 
 #include "net.hpp"
 #include "logger.hpp"
-#include "ws_session_impl.hpp"
 
 #include <sys/types.h>
 #include <sys/socket.h>
+
+#include "http_plain_session.hpp"
+#include "http_ssl_session.hpp"
 
 namespace occase
 {
 
 template <class Stream>
-class db_worker;
+struct make_session_type;
 
-template <class Session>
+template <>
+struct make_session_type<tcp_stream> {
+  using type = http_plain_session;
+};
+
+template <>
+struct make_session_type<ssl_stream> {
+  using type = http_ssl_session;
+};
+
+template <class Stream>
+class worker;
+
+template <class Stream>
 class acceptor_mgr {
 public:
-   using stream_type = typename Session::stream_type;
+   using session_type = typename make_session_type<Stream>::type;
 
 private:
    net::ip::tcp::acceptor acceptor_;
 
-   void do_accept(db_worker<stream_type>& w, ssl::context& ctx)
+   void do_accept(worker<Stream>& w, ssl::context& ctx)
    {
       auto handler = [this, &w, &ctx](auto const& ec, auto socket)
          { on_accept(w, ctx, ec, std::move(socket)); };
@@ -29,7 +44,7 @@ private:
       acceptor_.async_accept(handler);
    }
 
-   void on_accept( db_worker<stream_type>& w
+   void on_accept( worker<Stream>& w
                  , ssl::context& ctx
                  , boost::system::error_code ec
                  , net::ip::tcp::socket peer)
@@ -43,7 +58,7 @@ private:
          log::write(log::level::info, "listener::on_accept: {0}", ec.message());
       } else {
          auto const n = w.get_cfg().http_session_timeout;
-         std::make_shared< Session
+         std::make_shared< session_type
                          >( std::move(peer)
                           , w
                           , ctx)->run(std::chrono::seconds {n});
@@ -60,7 +75,7 @@ public:
    auto is_open() const noexcept
       { return acceptor_.is_open(); }
 
-   void run( db_worker<stream_type>& w
+   void run( worker<Stream>& w
            , ssl::context& ctx
            , unsigned short port
            , int max_listen_connections)

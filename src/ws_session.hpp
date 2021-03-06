@@ -17,6 +17,9 @@
 
 namespace occase {
 
+template <class Session>
+class worker;
+
 enum class ev_res
 { register_ok
 , register_fail
@@ -329,6 +332,30 @@ public:
    void set_pub_hash(std::string hash) { pub_hash_ = std::move(hash); };
    auto const& get_pub_hash() const noexcept { return pub_hash_;}
    auto is_logged_in() const noexcept { return !std::empty(pub_hash_);};
+};
+
+template <class Stream>
+class ws_session
+   : public ws_session_impl<ws_session<Stream>>
+   , public std::enable_shared_from_this<ws_session<Stream>> {
+public:
+   using stream_type = Stream;
+   using worker_type = worker<Stream>;
+
+private:
+   websocket::stream<Stream> stream_;
+   worker_type& w;
+
+public:
+   explicit
+   ws_session(Stream&& stream, worker_type& w_)
+   : stream_(std::move(stream))
+   , w {w_}
+   { }
+
+   auto& ws() { return stream_; }
+   worker_type& db() { return w; }
+   worker_type const& db() const { return w; }
 };
 
 }

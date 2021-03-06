@@ -7,7 +7,7 @@
 
 #include "net.hpp"
 #include "post.hpp"
-#include "db_worker.hpp"
+#include "worker.hpp"
 
 namespace occase
 {
@@ -41,7 +41,7 @@ beast::string_view prepare_target(beast::string_view t, char s)
 }
 
 template <class Stream>
-class db_worker;
+class worker;
 
 struct worker_stats {
    int number_of_sessions = 0;

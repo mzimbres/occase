@@ -26,6 +26,9 @@ using tcp = net::ip::tcp;
 namespace occase
 {
 
+using tcp_stream = beast::tcp_stream;
+using ssl_stream = beast::ssl_stream<tcp_stream>;
+
 bool load_ssl( ssl::context& ctx
              , std::string const& ssl_cert_file
              , std::string const& ssl_priv_key_file

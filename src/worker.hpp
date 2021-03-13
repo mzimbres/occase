@@ -32,18 +32,10 @@ struct ws_stats {
    int number_of_sessions {0};
 };
 
-enum class events
-{ remove_post
-, retrieve_posts
-, user_msgs_priv
-, ignore
-};
-
 template <class Stream>
-class worker : public aedis::receiver_base<events> {
+class worker : public aedis::receiver_base {
 private:
    using ws_session_type = ws_session<Stream>;
-   using redis_conn_type = aedis::connection<events>;
 
    net::io_context ioc_ {BOOST_ASIO_CONCURRENCY_HINT_UNSAFE};
    ssl::context& ctx_;
@@ -57,7 +49,7 @@ private:
                      > sessions_;
 
    channel posts_;
-   std::shared_ptr<redis_conn_type> redis_conn_;
+   std::shared_ptr<aedis::connection> redis_conn_;
 
    // When a user logs in or we receive a notification from the
    // database that there is a message available to the user we issue
@@ -143,14 +135,14 @@ private:
 
             auto const msg = jtoken.dump();
 
-            auto f = [&, this](aedis::request<events>& req)
+            auto f = [&, this](aedis::request& req)
                { req.publish(cfg_.redis.token_channel, msg); };
 
             redis_conn_->send(f);
          }
       }
 
-      auto f = [&](aedis::request<events>& req)
+      auto f = [&](aedis::request& req)
       {
          // Instructs redis to notify the worker on new messages to
          // the user. Once a notification arrives the server proceeds
@@ -161,7 +153,7 @@ private:
          req.subscribe(cfg_.redis.presence_channel_prefix + user_id);
 
          auto const key = cfg_.redis.chat_msg_prefix + user_id;
-         req.lrange(key, 0, -1, events::user_msgs_priv);
+         req.lrange(key, 0, -1);
          user_ids_chat_queue.push(user_id);
 
          req.del(key);
@@ -195,7 +187,7 @@ private:
                 , to);
 
       auto const key = cfg_.redis.chat_msg_prefix + to;
-      auto f = [&, this](aedis::request<events>& req)
+      auto f = [&, this](aedis::request& req)
       {
          req.incr(cfg_.redis.chat_msgs_counter_key);
          req.rpush(key, begin, end);
@@ -259,7 +251,7 @@ private:
          auto const msg = j.dump();
          auto const channel = cfg_.redis.presence_channel_prefix + to;
 
-         auto f = [&](aedis::request<events>& req)
+         auto f = [&](aedis::request& req)
             { req.publish(channel, msg); };
 
          redis_conn_->send(f);
@@ -463,7 +455,7 @@ private:
 
       std::for_each(std::begin(sessions_), std::end(sessions_), f);
 
-      auto g = [](aedis::request<events>& req)
+      auto g = [](aedis::request& req)
          { req.quit(); };
 
       redis_conn_->send(g);
@@ -473,7 +465,7 @@ public:
    worker(config::core cfg, ssl::context& c)
    : ctx_ {c}
    , cfg_ {cfg}
-   , redis_conn_ {std::make_shared<aedis::connection<events>>(ioc_)}
+   , redis_conn_ {std::make_shared<aedis::connection>(ioc_)}
    , acceptor_ {ioc_}
    , signal_set_ {ioc_, SIGINT, SIGTERM}
    {
@@ -486,20 +478,12 @@ public:
    }
 
    // Redis callbacks.
-   void on_publish(events ev, aedis::resp::number_type n) noexcept override
-   {
-   }
-
-   void on_zadd(events ev, aedis::resp::number_type n) noexcept override
-   {
-   }
-
-   void on_quit(events ev, aedis::resp::simple_string_type& s) noexcept override
+   void on_quit(aedis::resp::simple_string_type& s) noexcept override
    {
       log::write(log::level::debug, "on_quit: {0}", s);
    }
 
-   void on_hello(events ev, aedis::resp::map_type& v) noexcept override
+   void on_hello(aedis::resp::map_type& v) noexcept override
    {
       // There are two situations we have to distinguish here.
       //
@@ -515,21 +499,16 @@ public:
       auto last = last_post_date_received_;
       ++last;
 
-      auto f = [&, this](aedis::request<events>& req)
+      auto f = [&, this](aedis::request& req)
       {
-         req.zrangebyscore(
-            cfg_.redis.posts_key,
-            last.count(),
-            -1,
-            events::retrieve_posts);
-
+         req.zrangebyscore(cfg_.redis.posts_key, last.count(), -1);
          req.subscribe(cfg_.redis.posts_channel_key);
       };
 
       redis_conn_->send(f);
    }
 
-   void on_push(events ev, aedis::resp::array_type& v) noexcept override
+   void on_push(aedis::resp::array_type& v) noexcept override
    {
       // Notifications that arrive here have the form.
       //
@@ -557,10 +536,10 @@ public:
                    , "on_push: new chat message to user {0} available."
                    , user_id);
 
-         auto f = [&](aedis::request<events>& req)
+         auto f = [&](aedis::request& req)
          {
             auto const key = cfg_.redis.chat_msg_prefix + user_id;
-            req.lrange(key, 0, -1, events::user_msgs_priv);
+            req.lrange(key, 0, -1);
             req.del(key);
 
             // We need the key when lrange completes to forward the
@@ -590,9 +569,8 @@ public:
       }
    }
 
-   void on_lrange(events ev, aedis::resp::array_type& msgs) noexcept override
+   void on_lrange(aedis::resp::array_type& msgs) noexcept override
    {
-      assert(ev == events::user_msgs_priv);
       assert(!std::empty(user_ids_chat_queue));
 
       log::write( log::level::debug
@@ -603,10 +581,8 @@ public:
       user_ids_chat_queue.pop();
    }
 
-   void on_zrangebyscore(events ev, aedis::resp::array_type& msgs) noexcept override
+   void on_zrangebyscore(aedis::resp::array_type& msgs) noexcept override
    {
-      assert(ev == events::retrieve_posts);
-
       log::write( log::level::info
                 , "on_zrangebyscore: {0} messages received."
                 , std::size(msgs));
@@ -636,7 +612,7 @@ public:
 
       // Usubscribe to the notifications to the key. On completion it
       // passes no event to the worker.
-      auto f = [&](aedis::request<events>& req)
+      auto f = [&](aedis::request& req)
       {
          req.unsubscribe(cfg_.redis.user_notify_prefix + user_id);
          req.unsubscribe(cfg_.redis.presence_channel_prefix + user_id);
@@ -767,8 +743,8 @@ public:
 
       auto const msg = j.dump();
 
-      auto f = [&](aedis::request<events>& req)
-         { req.publish(cfg_.redis.posts_channel_key, msg, events::remove_post);};
+      auto f = [&](aedis::request& req)
+         { req.publish(cfg_.redis.posts_channel_key, msg);};
 
       redis_conn_->send(f);
    }
@@ -801,7 +777,7 @@ public:
 
    void on_visualizations(std::string const& msg)
    {
-      auto f = [&](aedis::request<events>& req)
+      auto f = [&](aedis::request& req)
          { req.publish(cfg_.redis.posts_channel_key, msg); };
 
       redis_conn_->send(f);
@@ -809,7 +785,7 @@ public:
 
    void on_click(std::string const& msg)
    {
-      auto f = [&](aedis::request<events>& req)
+      auto f = [&](aedis::request& req)
          { req.publish(cfg_.redis.posts_channel_key, msg); };
 
       redis_conn_->send(f);
@@ -851,7 +827,7 @@ public:
       pub["post"] = p;
       auto const msg = pub.dump();
 
-      auto f = [&, this](aedis::request<events>& req)
+      auto f = [&, this](aedis::request& req)
       {
          req.zadd(cfg_.redis.posts_key, p.date.count(), msg);
          req.publish(cfg_.redis.posts_channel_key, msg);

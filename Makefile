@@ -20,9 +20,11 @@ conf_final_dir = $(DESTDIR)$(confdir)
 service_final_dir = $(DESTDIR)$(systemddir)
 
 boost_dir = /opt/boost_1_75_0
+aedis_dir = /opt/aedis-1.0.0
 
 ext_libs =
 ext_libs += $(boost_dir)/lib/libboost_program_options.a
+ext_libs += $(aedis_dir)/lib/aedis.a
 
 LDFLAGS += -lpthread
 LDFLAGS += -lfmt
@@ -32,7 +34,7 @@ LDFLAGS += -lcrypto
 
 CPPFLAGS += -std=c++20
 #CPPFLAGS += -Wall -Werror
-CPPFLAGS += -I. -I$./src -I$(boost_dir)/include -I/opt/aedis-1.0.0/include
+CPPFLAGS += -I. -I$./src -I$(boost_dir)/include -I$(aedis_dir)/include
 CPPFLAGS += $(pkg-config --cflags libsodium)
 #CPPFLAGS += -fsanitize=address
 #CPPFLAGS += -g

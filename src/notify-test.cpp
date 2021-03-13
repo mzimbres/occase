@@ -14,7 +14,7 @@ int main(int argc, char** argv)
       ntf_session::args cfg;
 
       std::string fcm_user_token = 
-      {"eWyJqxRvo4M:APA91bE1pGVkhDramaP90PXVXqrRSRDPJ26LfcuzV292ouxNjbRcdGkPjC2D3tR6tpz7wCI9h94E6EdJ8Glqs-5Xqrpipp7EGex-GW2oh-oaMN3bOFZ45B1DkhwLBrrf3s9_JRE3j_ko"};
+      {"dpv7_-a7Z6QodtFhIpJJSh:APA91bGO-waPFcH5_uGL84QcD8JEqbCGT-qF4XughM5H3ciL9ypuN6LKjm0RnRWinNSe_zEFBn2DnlA8awJ5Y97a7ECQoqx0qSayGWGEbh-cpNfl0BsdJVMOvd6FKIF4veKuQnL63nKt"};
 
       log::upto(log::level::debug);
 

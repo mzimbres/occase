@@ -28,6 +28,7 @@ auto make_tokens_file_content(notifier::map_type const& m)
 
 notifier::notifier(config const& cfg)
 : cfg_ {cfg}
+, redis_conn_ {std::make_shared<aedis::connection>(ioc_)}
 {
    // I believe this should be called in net::post();
    init();
@@ -69,7 +70,7 @@ void notifier::on_ntf_message(json j)
 
    if (!cfg_.ntf.is_fcm_valid()) {
       log::write( log::level::debug
-                , "rpush notification for {0}."
+                , "New message to {0}."
                 , to);
       return;
    }
@@ -138,7 +139,7 @@ void notifier::on_timeout(
                 , match->second.token);
 
       auto msg = match->second.msg.at("msg").get<std::string>();
-      if (std::size(msg) > cfg_.max_msg_size)
+      if (std::ssize(msg) > cfg_.max_msg_size)
          msg.resize(cfg_.max_msg_size);
 
       auto ntf_body = make_ntf_body(
@@ -236,8 +237,8 @@ void notifier::on_ntf_publish(std::string const& payload)
 }
 
 auto
-is_notification( std::vector<std::string> const& resp
-               , std::string const& ntf_str)
+is_pmessage( std::vector<std::string> const& resp
+           , std::string const& match)
 {
    // We want to check events in the following form
    //
@@ -247,14 +248,17 @@ is_notification( std::vector<std::string> const& resp
    if (std::size(resp) != 4)
       return false;
 
-   if (resp[1] == ntf_str)
+   if (resp.front() != "pmessage")
+      return false;
+
+   if (resp[1] == match)
       return true;
 
    return false;
 }
 
 auto
-is_token( std::vector<std::string> const& resp
+is_message( std::vector<std::string> const& resp
         , std::string const& channel)
 {
    // The messages from the tokens channel have the following form
@@ -263,6 +267,9 @@ is_token( std::vector<std::string> const& resp
    //
 
    if (std::size(resp) != 3)
+      return false;
+
+   if (resp.front() != "message")
       return false;
 
    if (resp[1] == channel)
@@ -274,9 +281,9 @@ is_token( std::vector<std::string> const& resp
 void notifier::on_push(aedis::resp::array_type& v) noexcept
 {
    try {
-      if (is_notification(v, redis_del_ntf)) {
+      if (is_pmessage(v, redis_del_ntf)) {
          on_ntf_del(v.back());
-      } else if (is_token(v, cfg_.redis_notify_channel)) {
+      } else if (is_message(v, cfg_.redis_notify_channel)) {
          on_ntf_publish(v.back());
       } else {
          log::write( log::level::notice
@@ -296,7 +303,7 @@ void notifier::on_hgetall(aedis::resp::array_type& tokens) noexcept
    auto const n = std::size(tokens) / 2;
 
    for (auto i = 0u; i < n; ++i) {
-      auto const match = tokens_.insert(
+      tokens_.insert(
          value_type
          { tokens[2 * i + 0]
          , user_entry {tokens[2 * i + 1], {}, net::steady_timer {ioc_}}
@@ -313,8 +320,8 @@ void notifier::init()
    ctx_.set_verify_mode(ssl::verify_none);
 
    net::ip::tcp::resolver redis_resv{ioc_};
-   auto const res = redis_resv.resolve(cfg_.redis_host, cfg_.redis_port);
-   redis_conn_->start(*this, res);
+   redis_res_ = redis_resv.resolve(cfg_.redis_host, cfg_.redis_port);
+   redis_conn_->start(*this, redis_res_);
 
    auto f = [this](aedis::request& req)
    {
@@ -324,6 +331,34 @@ void notifier::init()
    };
 
    redis_conn_->send(f);
+}
+
+void
+notifier::on_simple_error(
+   aedis::command cmd,
+   aedis::resp::simple_error_type& s) noexcept
+{
+   log::write( log::level::err
+	     , "on_simple_error: {0}."
+	     //, aedis::to_string(cmd)
+	     , s);
+}
+
+void
+notifier::on_blob_error(
+   aedis::command cmd,
+   aedis::resp::blob_error_type& s) noexcept
+{
+   log::write( log::level::err
+	     , "on_blob_error: {0}."
+	     //, aedis::to_string(cmd)
+	     , s);
+}
+
+void
+notifier::on_null(aedis::command cmd) noexcept
+{
+   log::write(log::level::err, "on_null.");
 }
 
 } // occase

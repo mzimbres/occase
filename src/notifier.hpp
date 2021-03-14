@@ -63,17 +63,32 @@ private:
    tcp::resolver::results_type fcm_results_;
    std::shared_ptr<aedis::connection> redis_conn_;
 
+   // Used by the redis connection.
+   net::ip::tcp::resolver::results_type redis_res_;
+
    // Maps the key holding the user messages in redis into an FCM
    // token.
    map_type tokens_;
 
-   void on_push(aedis::resp::array_type& v) noexcept override;
-   void on_hgetall(aedis::resp::array_type& set) noexcept override;
+   void on_hgetall(aedis::resp::array_type& set) noexcept override final;
+
+   void on_push(aedis::resp::array_type& v) noexcept override final;
+
+   void on_simple_error(
+      aedis::command cmd,
+      aedis::resp::simple_error_type& v) noexcept override final;
+
+   void on_blob_error(
+      aedis::command cmd,
+      aedis::resp::blob_error_type& v) noexcept override final;
+
+   void on_null(aedis::command cmd) noexcept override final;
 
    void init();
    void on_ntf_message(json j);
    void on_ntf_del(std::string const& key);
    void on_ntf_publish(std::string const& token);
+
    void on_timeout(
       boost::system::error_code ec,
       map_type::const_iterator iter) noexcept;

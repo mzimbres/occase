@@ -1,19 +1,4 @@
-* LOADING Redis is loading the dataset in memory
-
-  This error should be handled in the client and not passed to the occase-db?
-
 * Clear lintian warnings
-
-* Error caught on occase-notify
-
-   occase-notify: ./src/notifier.cpp:269: void
-   occase::notifier::on_publish(const string&): Assertion `n == 0' failed.
-   Aborted
-
-* Generate passwords without touching redis using device generated
-  random numbers.
-
-* Use the notify field in the login command.
 
 * Warning: The following can happen:
 

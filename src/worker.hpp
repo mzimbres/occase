@@ -42,6 +42,9 @@ private:
    config::core const cfg_;
    ws_stats ws_stats_;
 
+   // Used by the redis connection.
+   net::ip::tcp::resolver::results_type redis_res_;
+
    // Maps a user id in to a websocket session.
    std::unordered_map< std::string
                      , std::weak_ptr<ws_session_type>
@@ -73,8 +76,8 @@ private:
    void init()
    {
       net::ip::tcp::resolver resolver{ioc_};
-      auto const res = resolver.resolve(cfg_.redis.host, cfg_.redis.port);
-      redis_conn_->start(*this, res);
+      redis_res_ = resolver.resolve(cfg_.redis.host, cfg_.redis.port);
+      redis_conn_->start(*this, redis_res_);
    }
 
    // App functions.

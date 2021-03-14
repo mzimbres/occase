@@ -33,11 +33,11 @@ LDFLAGS += -lssl
 LDFLAGS += -lcrypto
 
 CPPFLAGS += -std=c++20
-#CPPFLAGS += -Wall -Werror
+CPPFLAGS += -Wall #-Werror
 CPPFLAGS += -I. -I$./src -I$(boost_dir)/include -I$(aedis_dir)/include
 CPPFLAGS += $(pkg-config --cflags libsodium)
-#CPPFLAGS += -fsanitize=address
-#CPPFLAGS += -g
+CPPFLAGS += -fsanitize=address
+CPPFLAGS += -g
 CPPFLAGS += -D BOOST_ASIO_NO_DEPRECATED 
 CPPFLAGS += -D BOOST_ASIO_NO_TS_EXECUTORS 
 CPPFLAGS += -fcoroutines

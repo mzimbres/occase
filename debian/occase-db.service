@@ -1,5 +1,5 @@
 [Unit]
-Description=Advanced realtime database.
+Description=Chat server and simple database.
 After=network.target
 
 [Service]

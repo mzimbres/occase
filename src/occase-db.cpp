@@ -88,14 +88,15 @@ auto get_cfg(int argc, char* argv[])
    ("mms-key", po::value<std::string>(&cfg.core.mms_key))
    ("mms-host", po::value<std::string>(&cfg.core.mms_host))
    ("redis-port", po::value<std::string>(&cfg.core.redis.port)->default_value("6379"))
-   ("redis-host", po::value<std::string>(&cfg.core.redis.host))
+   ("redis-host", po::value<std::string>(&cfg.core.redis.host)->default_value("127.0.0.1"))
    ("redis-key-chat-msgs-counter", po::value<std::string>(&cfg.core.redis.chat_msgs_counter_key)->default_value("chat_msgs_counter"))
    ("redis-key-chat-msg-prefix", po::value<std::string>(&cfg.core.redis.chat_msg_prefix)->default_value("msg"))
    ("redis-key-posts", po::value<std::string>(&cfg.core.redis.posts_key)->default_value("posts"))
    ("redis-user-msg-exp_time", po::value<int>(&cfg.core.redis.chat_msg_exp_time)->default_value(7 * 24 * 60 * 60))
    ("redis-offline-chat-msgs", po::value<int>(&cfg.core.redis.max_offline_chat_msgs)->default_value(100))
    ("redis-key-posts-channel", po::value<std::string>(&cfg.core.redis.posts_channel_key)->default_value("posts_channel"))
-   ("redis-token-channel", po::value<std::string>(&cfg.core.redis.token_channel)->default_value("tokens"))
+   ("redis-notify-channel", po::value<std::string>(&cfg.core.redis.notify_channel)->default_value("notify"))
+   ("redis-tokens-key", po::value<std::string>(&cfg.core.redis.tokens_key)->default_value("fcm_tokens"))
    ;
 
    po::positional_options_description pos;

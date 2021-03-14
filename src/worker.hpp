@@ -41,7 +41,6 @@ private:
    ssl::context& ctx_;
    config::core const cfg_;
    ws_stats ws_stats_;
-   net::ip::tcp::resolver::results_type res_;
 
    // Maps a user id in to a websocket session.
    std::unordered_map< std::string
@@ -74,8 +73,8 @@ private:
    void init()
    {
       net::ip::tcp::resolver resolver{ioc_};
-      res_ = resolver.resolve(cfg_.redis.host, cfg_.redis.port);
-      redis_conn_->start(*this, res_);
+      auto const res = resolver.resolve(cfg_.redis.host, cfg_.redis.port);
+      redis_conn_->start(*this, res);
    }
 
    // App functions.
@@ -126,17 +125,30 @@ private:
       auto const match = j.find("token");
       if (match != std::cend(j)) {
          if (!std::empty(*match)) {
-            // Publishes a user FCM token in the channel where
-            // occase-notify is listening
+	    // The app sent us a fcm token. We have to
+	    //
+	    // 1. Publish it in the channel where occase-notify is
+	    //    listening
+	    //
+	    // 2. Add to the redis hash-key where occase-notify can
+	    //    load when it is restarted.
+
+	    std::string const token = *match;
             json jtoken;
             jtoken["cmd"] = "token";
-            jtoken["id"] = cfg_.redis.chat_msg_prefix + user_id;
-            jtoken["token"] = *match;
+            jtoken["user_id"] = user_id;
+            jtoken["token"] = token;
 
             auto const msg = jtoken.dump();
 
             auto f = [&, this](aedis::request& req)
-               { req.publish(cfg_.redis.token_channel, msg); };
+	    {
+	       auto const value = std::make_pair(user_id, token);
+	       auto list = {value};
+
+	       req.publish(cfg_.redis.notify_channel, msg);
+	       req.hset(cfg_.redis.tokens_key, list);
+	    };
 
             redis_conn_->send(f);
          }
@@ -194,7 +206,7 @@ private:
          req.expire(key, cfg_.redis.chat_msg_exp_time);
 
          // Notification only of the last message.
-         req.publish(cfg_.redis.token_channel, *std::prev(end));
+         req.publish(cfg_.redis.notify_channel, *std::prev(end));
       };
 
       redis_conn_->send(f);
@@ -494,7 +506,7 @@ public:
       //    that may have arrived while we were offline.
 
       log::write( log::level::info
-                , "on_hello: Connection with Redis stablished.");
+                , "on_hello: connection with Redis stablished.");
 
       auto last = last_post_date_received_;
       ++last;

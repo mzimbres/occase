@@ -14,7 +14,7 @@ std::string make_ntf_body(
 
 class ntf_session : public std::enable_shared_from_this<ntf_session> {
 public:
-   struct args {
+   struct config {
       std::string fcm_port {"443"};
       std::string fcm_host = {"fcm.googleapis.com"};
       std::string fcm_target = {"/fcm/send"};
@@ -26,7 +26,7 @@ public:
 
       int version = 11;
 
-      auto fcm_valid() const noexcept
+      auto is_fcm_valid() const noexcept
       {
          auto const r =
             std::empty(fcm_port) ||
@@ -64,10 +64,10 @@ private:
    void on_shutdown(beast::error_code ec);
 
 public:
-   explicit
-   ntf_session(net::io_context& ioc, ssl::context& ctx);
+   explicit ntf_session(net::io_context& ioc, ssl::context& ctx);
+
    void run(
-      args const& cfg,
+      config const& cfg,
       tcp::resolver::results_type results,
       std::string body);
 };

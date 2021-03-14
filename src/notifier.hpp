@@ -2,8 +2,8 @@
 
 #include <unordered_map>
 
+#include <aedis/aedis.hpp>
 #include <nlohmann/json.hpp>
-#include "old_aedis.hpp"
 
 #include "net.hpp"
 #include "logger.hpp"
@@ -15,7 +15,7 @@ namespace occase
 {
 
 struct user_entry {
-   // Contains the user fcm token.
+   // User FCM token.
    std::string token;
 
    // The message that has been sent to the user.
@@ -27,35 +27,31 @@ struct user_entry {
       { return !std::empty(token); }
 };
 
-class notifier {
+class notifier : public aedis::receiver_base {
 public:
-   const std::string rpush_str {"__keyevent@0__:rpush"};
-   const std::string del_str {"__keyevent@0__:del"};
+   std::string const redis_rpush_ntf {"__keyevent@0__:rpush"};
+   std::string const redis_del_ntf {"__keyevent@0__:del"};
 
    struct config {
       std::string ssl_cert_file;
       std::string ssl_priv_key_file;
       std::string ssl_dh_file;
-      std::string redis_token_channel;
-      std::string tokens_file;
-      old::aedis::session::config ss;
-      ntf_session::args ss_args;
-      int max_msg_size = 1000;
-      int tokens_write_interval = 60;
 
-      // The interval we are willing to wait for occase-db to retrieve the
-      // message from redis before we consider the user offline.
+      std::string redis_notify_channel;
+      std::string redis_tokens_key;
+      std::string redis_host;
+      std::string redis_port;
+      int redis_max_pipeline_size = 1024;
+
+      ntf_session::config ntf;
+      int max_msg_size = 1000;
+
+      // The interval we are willing to wait for occase-db to retrieve
+      // the message from redis before we consider the user offline.
       int wait_interval = 5;
 
       auto get_wait_interval() const noexcept
-      {
-         return std::chrono::seconds {wait_interval};
-      }
-
-      auto get_tokens_write_interval() const noexcept
-      {
-         return std::chrono::seconds {tokens_write_interval};
-      }
+	 { return std::chrono::seconds {wait_interval}; }
    };
 
    using map_type = std::unordered_map<std::string, user_entry>;
@@ -64,23 +60,20 @@ private:
    net::io_context ioc_ {BOOST_ASIO_CONCURRENCY_HINT_UNSAFE};
    config cfg_;
    ssl::context ctx_ {ssl::context::tlsv12};
-   old::aedis::session ss_;
    tcp::resolver::results_type fcm_results_;
+   std::shared_ptr<aedis::connection> redis_conn_;
 
-   // Maps the key holding the user messages in redis in an fcm token.
+   // Maps the key holding the user messages in redis into an FCM
+   // token.
    map_type tokens_;
 
-   boost::asio::steady_timer tokens_file_timer_;
+   void on_push(aedis::resp::array_type& v) noexcept override;
+   void on_hgetall(aedis::resp::array_type& set) noexcept override;
 
-   void on_db_event(
-      boost::system::error_code ec,
-      std::vector<std::string> resp);
-
-   void on_db_conn();
    void init();
-   void on_message(json j);
-   void on_del(std::string const& key);
-   void on_publish(std::string const& token);
+   void on_ntf_message(json j);
+   void on_ntf_del(std::string const& key);
+   void on_ntf_publish(std::string const& token);
    void on_timeout(
       boost::system::error_code ec,
       map_type::const_iterator iter) noexcept;

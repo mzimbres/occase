@@ -5,7 +5,10 @@
 namespace config {
 
 struct timeouts {
+   // Websocket handshake timeout.
    std::chrono::seconds handshake;
+
+   // Websocket idle timeout.
    std::chrono::seconds idle;
 
    // The deadline for the number of posts.
@@ -57,7 +60,10 @@ struct redis {
    std::string chat_msgs_counter_key;
 
    // The channel where user FCM tokens should be published.
-   std::string token_channel {"tokens"};
+   std::string notify_channel {"notify"};
+
+   // The redis set where FCM tokens shall be stored.
+   std::string tokens_key {"fcm_tokens"};
 
    // Expiration time for user message keys. Keys will be deleted on
    // expiration and all chat messages that have not been retrieved

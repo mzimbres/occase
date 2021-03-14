@@ -6,6 +6,12 @@ After=network.target
 ExecStart=/usr/bin/occase-notify /etc/occase/occase-notify.conf
 ExecStop=/bin/kill -s INT $MAINPID
 Restart=always
+NoNewPrivileges=true
+LimitNOFILE=100000
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelModules=true
+ProtectControlGroups=true
 
 [Install]
 WantedBy=multi-user.target

@@ -11,14 +11,12 @@
 #include <boost/program_options/variables_map.hpp>
 
 #include "logger.hpp"
-#include "release.hpp"
 #include "notifier.hpp"
 
 struct config {
    int help = 0; // 0: continue, 1: help, -1: error.
    occase::log::level logfilter;
    occase::notifier::config ntf;
-
 };
 
 using namespace occase;
@@ -34,7 +32,6 @@ auto get_cfg(int argc, char* argv[])
    po::options_description desc("Options");
    desc.add_options()
    ("help,h", "Produces help message.")
-   ("git-sha1,v", "The git SHA1 the server was built.")
    ("config", po::value<std::string>(&conf_file) , "The file containing the configuration.")
    ("ssl-certificate-file", po::value<std::string>(&cfg.ntf.ssl_cert_file))
    ("ssl-private-key-file", po::value<std::string>(&cfg.ntf.ssl_priv_key_file))
@@ -42,16 +39,15 @@ auto get_cfg(int argc, char* argv[])
    ("log-level", po::value<std::string>(&logfilter_str)->default_value("notice"))
    ("wait-interval", po::value<int>(&cfg.ntf.wait_interval)->default_value(5))
    ("max-message-size", po::value<int>(&cfg.ntf.max_msg_size)->default_value(2000))
-   ("fcm-port", po::value<std::string>(&cfg.ntf.ss_args.fcm_port))
-   ("fcm-host", po::value<std::string>(&cfg.ntf.ss_args.fcm_host))
-   ("fcm-target", po::value<std::string>(&cfg.ntf.ss_args.fcm_target))
-   ("fcm-server-token", po::value<std::string>(&cfg.ntf.ss_args.fcm_server_token))
-   ("tokens-file", po::value<std::string>(&cfg.ntf.tokens_file))
-   ("tokens-write-interval", po::value<int>(&cfg.ntf.tokens_write_interval))
-   ("redis-name", po::value<std::string>(&cfg.ntf.ss.name)->default_value("mymaster"))
-   ("redis-sentinels", po::value<std::vector<std::string>>(&cfg.ntf.ss.sentinels))
-   ("redis-max-pipeline-size", po::value<int>(&cfg.ntf.ss.max_pipeline_size)->default_value(256))
-   ("redis-token-channel", po::value<std::string>(&cfg.ntf.redis_token_channel)->default_value("tokens"))
+   ("fcm-port", po::value<std::string>(&cfg.ntf.ntf.fcm_port))
+   ("fcm-host", po::value<std::string>(&cfg.ntf.ntf.fcm_host))
+   ("fcm-target", po::value<std::string>(&cfg.ntf.ntf.fcm_target))
+   ("fcm-server-token", po::value<std::string>(&cfg.ntf.ntf.fcm_server_token))
+   ("redis-host", po::value<std::string>(&cfg.ntf.redis_host)->default_value("127.0.0.1"))
+   ("redis-port", po::value<std::string>(&cfg.ntf.redis_port)->default_value("6379"))
+   ("redis-max-pipeline-size", po::value<int>(&cfg.ntf.redis_max_pipeline_size)->default_value(1024))
+   ("redis-notify-channel", po::value<std::string>(&cfg.ntf.redis_notify_channel)->default_value("notify"))
+   ("redis-tokens-key", po::value<std::string>(&cfg.ntf.redis_tokens_key)->default_value("fcm_tokens"))
    ;
 
    po::positional_options_description pos;
@@ -71,11 +67,6 @@ auto get_cfg(int argc, char* argv[])
 
    if (vm.count("help")) {
       std::cout << desc << "\n";
-      return config {1};
-   }
-
-   if (vm.count("git-sha1")) {
-      std::cout << GIT_SHA1 << "\n";
       return config {1};
    }
 

@@ -11,7 +11,7 @@ using namespace occase;
 int main(int argc, char** argv)
 {
    try {
-      ntf_session::args cfg;
+      ntf_session::config cfg;
 
       std::string fcm_user_token = 
       {"dpv7_-a7Z6QodtFhIpJJSh:APA91bGO-waPFcH5_uGL84QcD8JEqbCGT-qF4XughM5H3ciL9ypuN6LKjm0RnRWinNSe_zEFBn2DnlA8awJ5Y97a7ECQoqx0qSayGWGEbh-cpNfl0BsdJVMOvd6FKIF4veKuQnL63nKt"};

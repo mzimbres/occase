@@ -33,7 +33,7 @@ ntf_session::ntf_session(net::io_context& ioc, ssl::context& ctx)
 { }
 
 void ntf_session::run(
-   args const& cfg,
+   config const& cfg,
    tcp::resolver::results_type res,
    std::string body)
 {

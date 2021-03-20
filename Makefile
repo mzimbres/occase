@@ -24,7 +24,6 @@ aedis_dir = /opt/aedis-1.0.0
 
 ext_libs =
 ext_libs += $(boost_dir)/lib/libboost_program_options.a
-ext_libs += $(aedis_dir)/lib/aedis.a
 
 LDFLAGS += -lpthread
 LDFLAGS += -lfmt
@@ -40,6 +39,7 @@ CPPFLAGS += -fsanitize=address
 CPPFLAGS += -g
 CPPFLAGS += -D BOOST_ASIO_NO_DEPRECATED 
 CPPFLAGS += -D BOOST_ASIO_NO_TS_EXECUTORS 
+CPPFLAGS += -D BOOST_ASIO_SEPARATE_COMPILATION 
 CPPFLAGS += -fcoroutines
 
 VPATH = ./src
@@ -53,6 +53,8 @@ exes += notify-test
 common_objs += system.o
 common_objs += logger.o
 common_objs += crypto.o
+common_objs += asio.o
+common_objs += aedis.o
 
 db_objs =
 db_objs += net.o
@@ -81,7 +83,7 @@ aux = Makefile
 all: $(exes)
 
 Makefile.dep:
-	-$(CXX) -MM ./src/*.cpp > $@
+	-$(CXX) -MM ./src/*.cpp > $@ $(CPPFLAGS)
 
 -include Makefile.dep
 
@@ -91,7 +93,7 @@ occase-db-tests: % : %.o $(client_objs) $(common_objs)
 occase-db: % : %.o $(db_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_DISABLE_THREADS
 
-occase-notify: % : %.o $(notify_objs)
+occase-notify: % : %.o $(notify_objs) $(common_objs)
 	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_DISABLE_THREADS
 
 notify-test: % : %.o $(common_objs) ntf_session.o

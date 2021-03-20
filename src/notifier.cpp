@@ -28,8 +28,12 @@ auto make_tokens_file_content(notifier::map_type const& m)
 
 notifier::notifier(config const& cfg)
 : cfg_ {cfg}
-, redis_conn_ {std::make_shared<aedis::connection>(ioc_)}
 {
+   redis_conn_ =
+      std::make_shared<aedis::connection>(
+	 ioc_,
+	 aedis::connection::config{cfg_.redis_host, cfg_.redis_port});
+
    // I believe this should be called in net::post();
    init();
 }
@@ -319,9 +323,7 @@ void notifier::init()
 {
    ctx_.set_verify_mode(ssl::verify_none);
 
-   net::ip::tcp::resolver redis_resv{ioc_};
-   redis_res_ = redis_resv.resolve(cfg_.redis_host, cfg_.redis_port);
-   redis_conn_->start(*this, redis_res_);
+   redis_conn_->start(*this);
 
    auto f = [this](aedis::request& req)
    {

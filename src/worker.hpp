@@ -75,9 +75,7 @@ private:
 
    void init()
    {
-      net::ip::tcp::resolver resolver{ioc_};
-      redis_res_ = resolver.resolve(cfg_.redis.host, cfg_.redis.port);
-      redis_conn_->start(*this, redis_res_);
+      redis_conn_->start(*this);
    }
 
    // App functions.
@@ -480,10 +478,14 @@ public:
    worker(config::core cfg, ssl::context& c)
    : ctx_ {c}
    , cfg_ {cfg}
-   , redis_conn_ {std::make_shared<aedis::connection>(ioc_)}
    , acceptor_ {ioc_}
    , signal_set_ {ioc_, SIGINT, SIGTERM}
    {
+      redis_conn_ =
+	 std::make_shared<aedis::connection>(
+	    ioc_,
+	    aedis::connection::config{cfg_.redis.host, cfg_.redis.port});
+
       auto f = [this](auto const& ec, auto n)
          { on_signal(ec, n); };
 

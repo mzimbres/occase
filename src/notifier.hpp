@@ -63,9 +63,6 @@ private:
    tcp::resolver::results_type fcm_results_;
    std::shared_ptr<aedis::connection> redis_conn_;
 
-   // Used by the redis connection.
-   net::ip::tcp::resolver::results_type redis_res_;
-
    // Maps the key holding the user messages in redis into an FCM
    // token.
    map_type tokens_;

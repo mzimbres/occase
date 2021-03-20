@@ -22,21 +22,23 @@ service_final_dir = $(DESTDIR)$(systemddir)
 boost_dir = /opt/boost_1_75_0
 aedis_dir = /opt/aedis-1.0.0
 
-ext_libs =
-ext_libs += $(boost_dir)/lib/libboost_program_options.a
+static_libs =
+static_libs += $(boost_dir)/lib/libboost_program_options.a
 
 LDFLAGS += -lpthread
+LDFLAGS += -l:libssl.a
+LDFLAGS += -l:libcrypto.a
+LDFLAGS += -l:libsodium.a
+LDFLAGS += -ldl
 LDFLAGS += -lfmt
-LDFLAGS += -lsodium
-LDFLAGS += -lssl
-LDFLAGS += -lcrypto
+LDFLAGS += -l:libm.a
 
 CPPFLAGS += -std=c++20
 CPPFLAGS += -Wall #-Werror
 CPPFLAGS += -I. -I$./src -I$(boost_dir)/include -I$(aedis_dir)/include
 CPPFLAGS += $(pkg-config --cflags libsodium)
-CPPFLAGS += -fsanitize=address
-CPPFLAGS += -g
+#CPPFLAGS += -fsanitize=address
+#CPPFLAGS += -g
 CPPFLAGS += -D BOOST_ASIO_NO_DEPRECATED 
 CPPFLAGS += -D BOOST_ASIO_NO_TS_EXECUTORS 
 CPPFLAGS += -D BOOST_ASIO_SEPARATE_COMPILATION 
@@ -88,16 +90,16 @@ Makefile.dep:
 -include Makefile.dep
 
 occase-db-tests: % : %.o $(client_objs) $(common_objs)
-	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs)
+	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(static_libs)
 
 occase-db: % : %.o $(db_objs) $(common_objs)
-	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_DISABLE_THREADS
+	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(static_libs) -DBOOST_ASIO_DISABLE_THREADS
 
 occase-notify: % : %.o $(notify_objs) $(common_objs)
-	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_DISABLE_THREADS
+	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(static_libs) -DBOOST_ASIO_DISABLE_THREADS
 
 notify-test: % : %.o $(common_objs) ntf_session.o
-	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(ext_libs) -DBOOST_ASIO_DISABLE_THREADS
+	$(CXX) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(static_libs) -DBOOST_ASIO_DISABLE_THREADS
 
 install: all
 	install -D occase-db --target-directory $(bin_final_dir)

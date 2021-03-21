@@ -142,7 +142,7 @@ void notifier::on_timeout(
                 , match->first
                 , match->second.token);
 
-      auto msg = match->second.msg.at("msg").get<std::string>();
+      auto msg = match->second.msg.at("body").get<std::string>();
       if (std::ssize(msg) > cfg_.max_msg_size)
          msg.resize(cfg_.max_msg_size);
 
@@ -157,7 +157,7 @@ void notifier::on_timeout(
          std::move(ntf_body));
 
    } catch (std::exception const& e) {
-      log::write(log::level::debug, "Exception caught.");
+      log::write(log::level::debug, "on_timeout: {}.", e.what());
    }
 }
 
@@ -189,7 +189,7 @@ void notifier::on_ntf_publish(std::string const& payload)
    // { "cmd":"message"
    // , "from":"6"
    // , "is_sender_post":true
-   // , "msg":"g"
+   // , "body":"g"
    // , "nick":"uuuuu"
    // , "post_id":4
    // , "refers_to":-1

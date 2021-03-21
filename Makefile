@@ -39,6 +39,7 @@ CPPFLAGS += -I. -I$./src -I$(boost_dir)/include -I$(aedis_dir)/include
 CPPFLAGS += $(pkg-config --cflags libsodium)
 #CPPFLAGS += -fsanitize=address
 #CPPFLAGS += -g
+CPPFLAGS += -O0
 CPPFLAGS += -D BOOST_ASIO_NO_DEPRECATED 
 CPPFLAGS += -D BOOST_ASIO_NO_TS_EXECUTORS 
 CPPFLAGS += -D BOOST_ASIO_SEPARATE_COMPILATION 
@@ -62,6 +63,9 @@ db_objs =
 db_objs += net.o
 db_objs += post.o
 db_objs += channel.o
+db_objs += acceptor_mgr.o
+db_objs += worker.o
+db_objs += http_ssl_session.o
 
 client_objs =
 client_objs += post.o

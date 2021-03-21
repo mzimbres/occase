@@ -1,2 +1,2 @@
 occase-notify usr/bin
-config/occase-notify.conf etc/occase
+etc/occase/occase-notify.conf

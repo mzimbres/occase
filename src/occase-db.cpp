@@ -162,17 +162,14 @@ int main(int argc, char* argv[])
                     , cfg.ssl_cert_file
                     , cfg.ssl_priv_key_file
                     , cfg.ssl_dh_file);
+
          if (!b) {
             log::write(log::level::notice, "Unable to load ssl files.");
             return 1;
          }
-
-         worker<ssl_stream> db {cfg.core, ctx};
-         db.run();
-         return 0;
       }
 
-      worker<tcp_stream> db {cfg.core, ctx};
+      worker db {cfg.core, ctx};
       db.run();
 
    } catch (std::exception const& e) {

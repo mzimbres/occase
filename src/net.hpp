@@ -22,6 +22,7 @@ namespace http = beast::http;
 namespace websocket = beast::websocket;
 namespace ssl = boost::asio::ssl;
 using tcp = net::ip::tcp;
+using request_type = http::request<http::string_body>;
 
 namespace occase
 {

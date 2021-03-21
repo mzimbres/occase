@@ -8,9 +8,38 @@
 #include "net.hpp"
 #include "post.hpp"
 #include "worker.hpp"
+#include "ws_session.hpp"
 
 namespace occase
 {
+
+inline
+void make_ssl_session(ssl_stream stream, worker& w, request_type req)
+{
+   auto* p = new ws_session<ssl_stream>(std::move(stream), w);
+   std::shared_ptr<ws_session_base> sp(p);
+   sp->run(std::move(req));
+}
+
+inline
+void make_ssl_session(tcp_stream, worker&, request_type)
+{
+   // Noop
+}
+
+inline
+void make_plain_session(tcp_stream stream, worker& w, request_type req)
+{
+   auto* p = new ws_session<tcp_stream>(std::move(stream), w);
+   std::shared_ptr<ws_session_base> sp(p);
+   sp->run(std::move(req));
+}
+
+inline
+void make_plain_session(ssl_stream, worker&, request_type)
+{
+   // Noop
+}
 
 // Transfroms a target in the form
 //
@@ -20,6 +49,7 @@ namespace occase
 //
 //   a/b/c
 //
+inline
 beast::string_view prepare_target(beast::string_view t, char s)
 {
    if (std::empty(t))
@@ -40,50 +70,14 @@ beast::string_view prepare_target(beast::string_view t, char s)
    return t;
 }
 
-template <class Stream>
-class worker;
-
-struct worker_stats {
-   int number_of_sessions = 0;
-   int worker_post_queue_size = 0;
-   int worker_reg_queue_size = 0;
-   int worker_login_queue_size = 0;
-   int db_post_queue_size = 0;
-   int db_chat_queue_size = 0;
-};
-
-inline
-std::ostream& operator<<(std::ostream& os, worker_stats const& stats)
-{
-   os << stats.number_of_sessions
-      << ";"
-      << stats.worker_post_queue_size
-      << ";"
-      << stats.worker_reg_queue_size
-      << ";"
-      << stats.worker_login_queue_size
-      << ";"
-      << stats.db_post_queue_size
-      << ";"
-      << stats.db_chat_queue_size;
-
-   return os;
-}
-
-auto to_string(worker_stats const& stats)
-{
-   std::stringstream ss;
-   ss << stats;
-   return ss.str();
-}
-
 template <class Derived>
 class http_session_impl {
 protected:
    beast::flat_buffer buffer_{8192};
+   worker& w_;
 
 private:
-   http::request<http::string_body> req_;
+   request_type req_;
    http::response<http::string_body> resp_;
 
    Derived& derived() { return static_cast<Derived&>(*this); }
@@ -93,7 +87,7 @@ private:
       boost::ignore_unused(bytes_transferred);
 
       if (ec == http::error::end_of_stream) {
-         auto const n = derived().db().get_cfg().ssl_shutdown_timeout;
+         auto const n = w_.get_cfg().ssl_shutdown_timeout;
          return derived().do_eof(std::chrono::seconds {n});
       }
 
@@ -106,10 +100,12 @@ private:
          log::write(log::level::debug, "http_session_impl: Websocket upgrade");
          beast::get_lowest_layer(derived().stream()).expires_never();
 
-         std::make_shared< typename Derived::ws_session_type
-                         >( std::move(derived().release_stream())
-                          , derived().db()
-                          )->run(std::move(req_));
+	 if (derived().is_ssl()) {
+	    make_ssl_session(derived().release_stream(), w_, std::move(req_));
+	 } else {
+	    make_plain_session(derived().release_stream(), w_, std::move(req_));
+	 }
+
          return;
       }
 
@@ -150,11 +146,11 @@ private:
          resp_.set(http::field::content_type, "application/json");
 
 	 if (only_count) {
-	    auto const n = derived().db().count_posts(p);
+	    auto const n = w_.count_posts(p);
 	    resp_.body() = std::to_string(n) + "\r\n";
 	 } else {
 	    json j;
-	    j["posts"] = derived().db().search_posts(p);
+	    j["posts"] = w_.search_posts(p);
 	    resp_.body() = j.dump() + "\r\n";
 	 }
 
@@ -174,7 +170,7 @@ private:
       try {
          resp_.set(http::field::content_type, "application/json");
 	 json j;
-	 j["credit"] = derived().db().get_upload_credit();
+	 j["credit"] = w_.get_upload_credit();
 	 resp_.body() = j.dump() + "\r\n";
 
       } catch (std::exception const& e) {
@@ -196,7 +192,7 @@ private:
 	 auto const key = j.at("key").get<std::string>();
 	 auto const post_id = j.at("post_id").get<std::string>();
 
-	 derived().db().delete_post(from, key, post_id);
+	 w_.delete_post(from, key, post_id);
 
          resp_.set(http::field::content_type, "text/plain");
 	 resp_.body() = "Ok\r\n";
@@ -212,7 +208,7 @@ private:
    void post_publish_handler() noexcept
    {
       try {
-         auto const body = derived().db().on_publish_impl(json::parse(req_.body()));
+         auto const body = w_.on_publish_impl(json::parse(req_.body()));
          resp_.set(http::field::content_type, "application/json");
 	 resp_.body() = body + "\r\n";
       } catch (std::exception const& e) {
@@ -226,7 +222,7 @@ private:
    void get_user_id_handler() noexcept
    {
       try {
-         auto const body = derived().db().on_get_user_id();
+         auto const body = w_.on_get_user_id();
          resp_.set(http::field::content_type, "application/json");
 	 resp_.body() = body + "\r\n";
       } catch (std::exception const& e) {
@@ -248,7 +244,7 @@ private:
    {
       try {
          resp_.result(http::status::ok);
-         resp_.set(http::field::server, derived().db().get_cfg().server_name);
+         resp_.set(http::field::server, w_.get_cfg().server_name);
 
          auto const t = prepare_target(req_.target(), '/');
          std::string const target {t.data(), std::size(t)};
@@ -271,7 +267,7 @@ private:
    {
       try {
          resp_.result(http::status::ok);
-         resp_.set(http::field::server, derived().db().get_cfg().server_name);
+         resp_.set(http::field::server, w_.get_cfg().server_name);
 
          auto const t = req_.target();
 
@@ -315,7 +311,7 @@ private:
    void post_visualization_handler() noexcept
    {
       try {
-	 derived().db().on_visualizations(req_.body());
+	 w_.on_visualizations(req_.body());
          resp_.set(http::field::content_type, "text/plain");
 	 resp_.body() = "Ok\r\n";
       } catch (std::exception const& e) {
@@ -329,7 +325,7 @@ private:
    void post_click_handler() noexcept
    {
       try {
-	 derived().db().on_click(req_.body());
+	 w_.on_click(req_.body());
          resp_.set(http::field::content_type, "text/plain");
 	 resp_.body() = "Ok\r\n";
       } catch (std::exception const& e) {
@@ -351,7 +347,7 @@ private:
    void stats_handler()
    {
       resp_.set(http::field::content_type, "text/csv");
-      resp_.body() = to_string(derived().db().get_stats());
+      resp_.body() = to_string(w_.get_stats());
    }
 
    void do_write()
@@ -361,7 +357,7 @@ private:
       resp_.set(http::field::content_length,
                 beast::to_static_string(std::size(resp_.body())));
       resp_.set(http::field::access_control_allow_origin,
-	        derived().db().get_cfg().http_allow_origin);
+	        w_.get_cfg().http_allow_origin);
 
       auto handler = [self](auto ec, std::size_t n)
          { self->on_write(ec, n); };
@@ -379,16 +375,20 @@ private:
                    , "Error on http_session_impl: {0}"
                    , ec.message());
       }
-      auto const n = derived().db().get_cfg().ssl_shutdown_timeout;
+      auto const n = w_.get_cfg().ssl_shutdown_timeout;
       return derived().do_eof(std::chrono::seconds {n});
    }
 
 public:
+   http_session_impl(worker& w, beast::flat_buffer buffer)
+   : buffer_(std::move(buffer))
+   , w_ {w}
+   { }
+
    void start()
    {
      do_read();
    }
 };
 
-}
-
+} // occase

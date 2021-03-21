@@ -14,30 +14,13 @@
 #include "net.hpp"
 #include "post.hpp"
 #include "logger.hpp"
+#include "worker.hpp"
+#include "ws_session_base.hpp"
 
 namespace occase {
 
-template <class Session>
-class worker;
-
-enum class ev_res
-{ register_ok
-, register_fail
-, login_ok
-, login_fail
-, subscribe_ok
-, subscribe_fail
-, publish_ok
-, publish_fail
-, chat_msg_ok
-, chat_msg_fail
-, presence_ok
-, presence_fail
-, unknown
-};
-
 template <class Derived>
-class ws_session_impl {
+class ws_session_impl : public ws_session_base {
 private:
    static auto constexpr ranges_size_ = 2 * 3;
 
@@ -57,6 +40,7 @@ private:
    code_type any_of_filter_ = 0;
 
    boost::container::static_vector<code_type, ranges_size_> ranges_;
+   worker& w_;
 
    Derived& derived() { return static_cast<Derived&>(*this); }
 
@@ -96,7 +80,7 @@ private:
       auto msg = beast::buffers_to_string(buffer_.data());
       buffer_.consume(std::size(buffer_));
       auto self = derived().shared_from_this();
-      auto const r = derived().db().on_app(self, std::move(msg));
+      auto const r = w_.on_app(self, std::move(msg));
       handle_ev(r);
       do_read();
    }
@@ -138,7 +122,7 @@ private:
          return;
       }
 
-      ++derived().db().get_ws_stats().number_of_sessions;
+      ++w_.get_ws_stats().number_of_sessions;
       do_read();
    }
 
@@ -191,7 +175,7 @@ private:
    void finish()
    {
       try {
-         --derived().db().get_ws_stats().number_of_sessions;
+         --w_.get_ws_stats().number_of_sessions;
          if (is_logged_in()) {
             // We also have to store all messages we weren't able to deliver
             // to the user, due to, for example, a disconnection. But we are
@@ -216,7 +200,7 @@ private:
                           , std::back_inserter(msgs)
                           , transformer);
 
-            derived().db().on_session_dtor(pub_hash_, msgs);
+            w_.on_session_dtor(pub_hash_, msgs);
          }
       } catch (...) {
       }
@@ -226,20 +210,22 @@ private:
 public:
    // NOTE: We cannot access the bases class members here since it is
    // not constructed yet.
+   ws_session_impl(worker& w)
+   : w_{w}
+   {}
 
-   template <class Body, class Allocator>
-   void run(http::request<Body, http::basic_fields<Allocator>> req)
+   void run(http::request<http::string_body, http::fields> req) override final
    {
       using timeout_type = websocket::stream_base::timeout;
 
       timeout_type wstm
-      { derived().db().get_timeouts().handshake
-      , derived().db().get_timeouts().idle
+      { w_.get_timeouts().handshake
+      , w_.get_timeouts().idle
       , true
       };
 
       derived().ws().set_option(wstm);
-      auto const name = derived().db().get_cfg().server_name;
+      auto const name = w_.get_cfg().server_name;
 
       auto f = [=](websocket::response_type& res)
          { res.set(http::field::server, name); };
@@ -269,7 +255,7 @@ public:
 
    // Messages for which persist is true will be persisted on the
    // database and sent to the user next time he reconnects.
-   void send(std::string msg, bool persist)
+   void send(std::string msg, bool persist) override final
    {
       assert(!std::empty(msg));
       auto const is_empty = std::empty(msg_queue_);
@@ -280,7 +266,7 @@ public:
          do_write(msg_queue_.front().msg);
    }
 
-   auto ignore(post const& p) const noexcept
+   bool ignore(post const& p) const noexcept override final
    {
       if (!std::empty(ranges_)) {
          auto const min =
@@ -299,7 +285,10 @@ public:
       return false;
    }
 
-   void send_post(std::shared_ptr<std::string> msg, post const& p)
+   void
+   send_post(
+      std::shared_ptr<std::string> msg,
+      post const& p) override final
    {
       if (ignore(p))
          return;
@@ -312,7 +301,7 @@ public:
          do_write(*msg_queue_.front().menu_msg);
    }
 
-   void shutdown()
+   void shutdown() override final
    {
       if (closing_)
          return;
@@ -329,9 +318,14 @@ public:
       derived().ws().async_close(reason, handler);
    }
 
-   void set_pub_hash(std::string hash) { pub_hash_ = std::move(hash); };
-   auto const& get_pub_hash() const noexcept { return pub_hash_;}
-   auto is_logged_in() const noexcept { return !std::empty(pub_hash_);};
+   void set_pub_hash(std::string hash) override final
+      { pub_hash_ = std::move(hash); };
+
+   std::string const& get_pub_hash() const noexcept override final
+      { return pub_hash_;}
+
+   bool is_logged_in() const noexcept override final
+      { return !std::empty(pub_hash_);};
 };
 
 template <class Stream>
@@ -340,23 +334,19 @@ class ws_session
    , public std::enable_shared_from_this<ws_session<Stream>> {
 public:
    using stream_type = Stream;
-   using worker_type = worker<Stream>;
 
 private:
    websocket::stream<Stream> stream_;
-   worker_type& w;
 
 public:
    explicit
-   ws_session(Stream&& stream, worker_type& w_)
-   : stream_(std::move(stream))
-   , w {w_}
+   ws_session(Stream&& stream, worker& w)
+   : ws_session_impl<ws_session<Stream>>{w}
+   , stream_(std::move(stream))
    { }
 
    auto& ws() { return stream_; }
-   worker_type& db() { return w; }
-   worker_type const& db() const { return w; }
 };
 
-}
+} // occase
 

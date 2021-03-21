@@ -10,6 +10,7 @@ echo "Statistics for host $host"
 
 while true; do
    wget -O - $host 2> /dev/null
+   echo ""
    sleep 1
 done
 

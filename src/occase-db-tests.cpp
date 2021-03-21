@@ -615,35 +615,30 @@ int main(int argc, char* argv[])
 
    set_fd_limits(100000);
 
-   auto const n_chat_msgs = 10;
-   auto const n_publishers = 10;
-
-   std::string host {"127.0.0.1"};
-   std::string port {"8080"};
    std::string target1 = "/posts/search";
    std::string target2 = "/posts/count";
    boost::asio::io_context ioc {1};
 
    if (op.test == 1)
-      net::co_spawn(ioc, tcp_timeout(host, port), net::detached);
+      net::co_spawn(ioc, tcp_timeout(op.host, op.port), net::detached);
 
    if (op.test == 2)
-      net::co_spawn(ioc, posts_search(host, port, target1), net::detached);
+      net::co_spawn(ioc, posts_search(op.host, op.port, target1), net::detached);
 
    if (op.test == 3)
-      net::co_spawn(ioc, posts_search(host, port, target2), net::detached);
+      net::co_spawn(ioc, posts_search(op.host, op.port, target2), net::detached);
 
    if (op.test == 4)
-      net::co_spawn(ioc, no_login(host, port), net::detached);
+      net::co_spawn(ioc, no_login(op.host, op.port), net::detached);
 
    if (op.test == 5) {
-      for (auto i = 0; i < n_publishers; ++i)
-	 net::co_spawn(ioc, publisher(host, port, n_chat_msgs), net::detached);
+      for (auto i = 0; i < op.publishers; ++i)
+	 net::co_spawn(ioc, publisher(op.host, op.port, op.repliers), net::detached);
    }
 
    if (op.test == 6) {
       for (auto i = 0; i < op.offline_tests; ++i)
-	 net::co_spawn(ioc, offline(host, port), net::detached);
+	 net::co_spawn(ioc, offline(op.host, op.port), net::detached);
    }
 
    ioc.run();

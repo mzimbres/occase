@@ -26,12 +26,10 @@ static_libs =
 static_libs += $(boost_dir)/lib/libboost_program_options.a
 
 LDFLAGS += -lpthread
-LDFLAGS += -l:libssl.a
-LDFLAGS += -l:libcrypto.a
-LDFLAGS += -l:libsodium.a
-LDFLAGS += -ldl
+LDFLAGS += -lssl
+LDFLAGS += -lcrypto
+LDFLAGS += -lsodium
 LDFLAGS += -lfmt
-LDFLAGS += -l:libm.a
 
 CPPFLAGS += -std=c++20
 CPPFLAGS += -Wall #-Werror

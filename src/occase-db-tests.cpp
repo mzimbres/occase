@@ -117,11 +117,10 @@ std::ostream& operator<<(std::ostream& os, user_cred const& c)
 auto make_publish_body(user_cred const& cred)
 {
    occase::post p;
-   //publish1='{"post":{"date":0, "id":"jsjsjs", "on_search":10, "visualizations":10, "click":20, "from":"marcelo", "nick":"","avatar":"","description":"","location":[1,2,3,4],"product":[1,2,3,4], "ex_details":[1,2,3], "in_details":[1,2,3], "range_values": [1,2,3], "images":[]}}'
+   //publish1='{"post":{"date":0, "id":"jsjsjs", "on_search":10, "visualizations":10, "from":"marcelo", "nick":"","avatar":"","description":"","location":[1,2,3,4],"product":[1,2,3,4], "ex_details":[1,2,3], "in_details":[1,2,3], "range_values": [1,2,3], "images":[]}}'
    p.date = occase::date_type {0};
    p.on_search = 0;
    p.visualizations = 0;
-   p.clicks = 0;
    p.id = "";
    p.from = cred.user_id;
    p.nick = "";

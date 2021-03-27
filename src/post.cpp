@@ -11,7 +11,6 @@ void to_json(json& j, post const& e)
            , {"id", e.id}
            , {"on_search", e.on_search}
            , {"visualizations", e.visualizations}
-           , {"clicks", e.clicks}
            , {"from", e.from}
            , {"nick", e.nick}
            , {"avatar", e.avatar}
@@ -31,7 +30,6 @@ void from_json(json const& j, post& e)
   e.id = j.at("id").get<std::string>();
   e.on_search = get_optional_field<int>(j, "on_search");
   e.visualizations = get_optional_field<int>(j, "visualizations");
-  e.clicks = get_optional_field<int>(j, "clicks");
   e.from = j.at("from").get<std::string>();
   e.nick = j.at("nick").get<std::string>();
   e.avatar = j.at("avatar").get<std::string>();
@@ -63,5 +61,5 @@ std::string make_rel_path(std::string const& filename)
    return path;
 }
 
-}
+} // occase
 

@@ -14,15 +14,15 @@ namespace occase
 std::ostream& operator<<(std::ostream& os, worker_stats const& stats)
 {
    os << stats.number_of_sessions
-      << ";"
+      << '\t'
       << stats.worker_post_queue_size
-      << ";"
+      << '\t'
       << stats.worker_reg_queue_size
-      << ";"
+      << '\t'
       << stats.worker_login_queue_size
-      << ";"
+      << '\t'
       << stats.db_post_queue_size
-      << ";"
+      << '\t'
       << stats.db_chat_queue_size;
 
    return os;
@@ -237,19 +237,7 @@ ev_res worker::on_app(std::shared_ptr<ws_session_base> s , std::string msg) noex
 
 std::vector<post> worker::search_posts(post const& p) const
 {
-   // Later we will use p to find the posts that satisfy the search.
-   std::vector<post> items;
-
-   auto pred = [](auto const& p)
-      { return true; };
-
-   posts_.get_posts(
-      date_type {0},
-      std::back_inserter(items),
-      cfg_.max_posts_on_search,
-      pred);
-
-   return items;
+   return posts_.query(p, cfg_.max_posts_on_search);
 }
 
 worker_stats worker::get_stats() const noexcept
@@ -318,18 +306,16 @@ std::vector<std::string> worker::get_upload_credit()
    return credit;
 }
 
-void worker::on_visualizations(std::string const& msg)
+void worker::on_visualization(std::string const& msg)
 {
-   auto f = [&](aedis::request& req)
-      { req.publish(cfg_.redis.posts_channel_key, msg); };
+   auto const j = json::parse(msg);
+   auto const post_id = j.at("post_id").get<std::string>();
 
-   redis_conn_->send(f);
-}
-
-void worker::on_click(std::string const& msg)
-{
    auto f = [&](aedis::request& req)
-      { req.publish(cfg_.redis.posts_channel_key, msg); };
+   {
+      req.publish(cfg_.redis.posts_channel_key, msg);
+      req.hincrby(cfg_.redis.post_visualizations_key, post_id, 1);
+   };
 
    redis_conn_->send(f);
 }
@@ -374,6 +360,7 @@ std::string worker::on_publish_impl(json j)
    p.from = user_id;
    p.date = duration_cast<seconds>(system_clock::now().time_since_epoch());
    p.id = pwdgen_.make(cfg_.pwd_size);
+   p.visualizations = 0;
 
    log::write(
       log::level::debug,
@@ -383,6 +370,7 @@ std::string worker::on_publish_impl(json j)
    json pub;
    pub["cmd"] = "publish_internal";
    pub["post"] = p;
+
    auto const msg = pub.dump();
 
    auto f = [&, this](aedis::request& req)
@@ -619,18 +607,10 @@ void worker::on_db_channel_post(std::string const& msg)
       auto const j = json::parse(msg);
       auto const cmd = j.at("cmd").get<std::string>();
 
-      if (cmd == "visualizations") {
-	 auto const j = json::parse(msg);
-	 auto post_ids = j.at("post_ids").get<std::vector<std::string>>();
-	 std::sort(std::begin(post_ids), std::end(post_ids));
-	 posts_.on_visualizations(post_ids);
-	 return;
-      }
-
-      if (cmd == "click") {
+      if (cmd == "visualization") {
 	 auto const j = json::parse(msg);
 	 auto const post_id = j.at("post_id").get<std::string>();
-	 posts_.on_click(post_id);
+	 posts_.on_visualization(post_id);
 	 return;
       }
 

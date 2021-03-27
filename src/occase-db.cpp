@@ -97,6 +97,7 @@ auto get_cfg(int argc, char* argv[])
    ("redis-key-posts-channel", po::value<std::string>(&cfg.core.redis.posts_channel_key)->default_value("posts_channel"))
    ("redis-notify-channel", po::value<std::string>(&cfg.core.redis.notify_channel)->default_value("notify"))
    ("redis-tokens-key", po::value<std::string>(&cfg.core.redis.tokens_key)->default_value("fcm_tokens"))
+   ("redis-post-visualizations-key", po::value<std::string>(&cfg.core.redis.post_visualizations_key)->default_value("post_visualizations"))
    ;
 
    po::positional_options_description pos;

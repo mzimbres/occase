@@ -65,6 +65,9 @@ struct redis {
    // The redis set where FCM tokens shall be stored.
    std::string tokens_key {"fcm_tokens"};
 
+   // The redis key holding the number of visualizations of each post.
+   std::string post_visualizations_key {"post_visualizations"};
+
    // Expiration time for user message keys. Keys will be deleted on
    // expiration and all chat messages that have not been retrieved
    // are gone.

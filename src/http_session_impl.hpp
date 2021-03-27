@@ -278,16 +278,13 @@ private:
          char const upload[] = "/posts/upload-credit";
          char const del[]    = "/posts/delete";
          char const pub[]    = "/posts/publish";
-	 char const visua[] =  "/posts/visualizations";
-	 char const click[] =  "/posts/click";
+	 char const visua[] =  "/posts/visualization";
 	 char const get_user_id[] = "/get-user-id";
 
          if (t.compare(0, sizeof count, count) == 0) {
             post_search_handler(true);
 	 } else if (t.compare(0, sizeof visua, visua) == 0) {
             post_visualization_handler();
-	 } else if (t.compare(0, sizeof click, click) == 0) {
-            post_click_handler();
 	 } else if (t.compare(0, sizeof search, search) == 0) {
             post_search_handler();
 	 } else if (t.compare(0, sizeof upload, upload) == 0) {
@@ -311,27 +308,13 @@ private:
    void post_visualization_handler() noexcept
    {
       try {
-	 w_.on_visualizations(req_.body());
+	 w_.on_visualization(req_.body());
          resp_.set(http::field::content_type, "text/plain");
 	 resp_.body() = "Ok\r\n";
       } catch (std::exception const& e) {
          set_not_fount_header();
          log::write( log::level::err
                    , "post_visualization_handler: {0}"
-                   , e.what());
-      }
-   }
-
-   void post_click_handler() noexcept
-   {
-      try {
-	 w_.on_click(req_.body());
-         resp_.set(http::field::content_type, "text/plain");
-	 resp_.body() = "Ok\r\n";
-      } catch (std::exception const& e) {
-         set_not_fount_header();
-         log::write( log::level::err
-                   , "post_click_handler: {0}"
                    , e.what());
       }
    }

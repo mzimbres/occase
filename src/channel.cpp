@@ -15,10 +15,8 @@ channel::remove_expired_posts(
    std::chrono::seconds now,
    std::chrono::seconds exp)
 {
-   // TODO: Implement this with remove_if. We have to traverse all
-   // posts as they are not sorted according to date. Consider
-   // using boost.MultiIndex. Or some container that allows one to
-   // have indices sorted according to many possible criteria.
+   // We have to traverse all posts as they are not sorted according
+   // to date.
 
    //auto f = [this, exp, now](auto const& p)
    //   { return (p.date + exp) < now; };
@@ -47,9 +45,9 @@ channel::remove_expired_posts(
    return std::vector<post>{};
 }
 
-void channel::add_post(post item)
+void channel::add_post(post p)
 {
-   items_.push_back(std::move(item));
+   items_.push_back(std::move(p));
 
    auto prev = std::prev(std::end(items_));
 
@@ -63,30 +61,14 @@ void channel::add_post(post item)
    std::rotate(point, prev, std::end(items_));
 }
 
-void channel::on_visualizations(std::vector<std::string> const& post_ids)
+void channel::on_visualization(std::string const& post_id)
 {
-   auto rbegin = std::rbegin(items_);
-   for (auto const id : post_ids) {
-      auto f = [id](auto const& p)
-	 { return p.id == id; };
-
-      rbegin = std::find_if(rbegin, std::rend(items_), f);
-      if (rbegin == std::rend(items_))
-	 break;
-
-      ++rbegin->visualizations;
-      ++rbegin;
-   }
-}
-
-void channel::on_click(std::string const& post_id)
-{
-   auto f = [post_id](auto const& p)
+   auto f = [&post_id](auto const& p)
       { return p.id == post_id; };
 
-   auto rbegin = std::find_if(std::rbegin(items_), std::rend(items_), f);
-   if (rbegin != std::rend(items_))
-      ++rbegin->clicks;
+   auto match = std::find_if(std::begin(items_), std::end(items_), f);
+   if (match != std::end(items_))
+      ++match->visualizations;
 }
 
 bool channel::remove_post(
@@ -101,9 +83,6 @@ bool channel::remove_post(
    if (match == std::end(items_))
       return false;
 
-   if (match->id != id)
-      return false;
-
    if (match->from != from)
       return false;
 
@@ -111,6 +90,11 @@ bool channel::remove_post(
    return true;
 }
 
+std::vector<post> channel::query(post const& p, int max) const
+{
+   auto const n = static_cast<int>(std::ssize(items_));
+   auto const s = std::min(n, max);
+   return std::vector<post>(std::cbegin(items_), std::cbegin(items_) + s);
 }
 
-
+} // occase 

@@ -135,30 +135,9 @@ public:
    auto const& get_cfg() const noexcept { return cfg_; }
    void delete_post( std::string const& user, std::string const& key, std::string const& post_id);
    std::vector<std::string> get_upload_credit();
-   void on_visualizations(std::string const& msg);
-   void on_click(std::string const& msg);
+   void on_visualization(std::string const& msg);
    std::string on_publish_impl(json j);
    std::string on_get_user_id();
-
-   template <class UnaryPredicate>
-   auto get_posts(date_type date, UnaryPredicate pred) const noexcept
-   {
-      try {
-         std::vector<post> posts;
-
-         posts_.get_posts(
-            date,
-            std::back_inserter(posts),
-            cfg_.max_posts_on_search,
-            pred);
-
-         return posts;
-      } catch (std::exception const& e) {
-         log::write(log::level::info, "get_posts: {}", e.what());
-      }
-
-      return std::vector<post>{};
-   }
 };
 
 } // occase

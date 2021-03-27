@@ -71,8 +71,10 @@ void worker::on_hello(aedis::resp::map_type& v) noexcept
    // 1. The server has started.
    //
    // 2. The connection to the database (redis) was lost and
-   //    restablished.  In this case we have to retrieve all posts
-   //    that may have arrived while we were offline.
+   //    restablished.
+   //
+   // In both cases we have to retrieve all posts from redis and their
+   // number of visualizations.
 
    log::write( log::level::info
 	     , "on_hello: connection with Redis stablished.");
@@ -87,6 +89,40 @@ void worker::on_hello(aedis::resp::map_type& v) noexcept
    };
 
    redis_conn_->send(f);
+}
+
+void worker::on_hgetall(aedis::resp::array_type& v) noexcept
+{
+   
+   if ((std::size(v) % 2) != 0) {
+      log::write(log::level::info, "on_hgetall: Invalid input.");
+      assert(false); // we can't recover from this.
+      return;
+   }
+
+   auto const n_posts = std::ssize(v) / 2;
+
+   log::write( log::level::info
+	     , "on_hgetall: {} posts received."
+	     , n_posts);
+
+   std::vector<std::pair<std::string, int>> in;
+   in.reserve(n_posts);
+
+   for (auto i = 0; i < n_posts; ++i) {
+      in.push_back(std::make_pair(
+	 std::move(v[2 * i + 0]),
+	 std::stoi(v[2 * i + 1])));
+   }
+
+   posts_.load_visualizations(in);
+
+   if (!acceptor_.is_open()) {
+      acceptor_.run( *this
+		   , ctx_
+		   , cfg_.db_port
+		   , cfg_.max_listen_connections);
+   }
 }
 
 void worker::on_push(aedis::resp::array_type& v) noexcept
@@ -173,13 +209,10 @@ void worker::on_zrangebyscore(aedis::resp::array_type& msgs) noexcept
 
    std::for_each(std::begin(msgs), std::end(msgs), loader);
 
-   if (!acceptor_.is_open()) {
-      // We can start to accept websocket connections.
-      acceptor_.run( *this
-		   , ctx_
-		   , cfg_.db_port
-		   , cfg_.max_listen_connections);
-   }
+   auto f = [&, this](aedis::request& req)
+      { req.hgetall(cfg_.redis.post_visualizations_key); };
+
+   redis_conn_->send(f);
 }
 
 void worker::on_session_dtor(

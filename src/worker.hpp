@@ -117,11 +117,15 @@ private:
 
 public:
    worker(config::core cfg, ssl::context& c);
+
+   // Redis receiver functions
    void on_quit(aedis::resp::simple_string_type& s) noexcept override;
    void on_hello(aedis::resp::map_type& v) noexcept override;
    void on_push(aedis::resp::array_type& v) noexcept override;
    void on_lrange(aedis::resp::array_type& msgs) noexcept override;
    void on_zrangebyscore(aedis::resp::array_type& msgs) noexcept override;
+   void on_hgetall(aedis::resp::array_type& all) noexcept override;
+
    void on_session_dtor( std::string const& user_id, std::vector<std::string> const& msgs);
    ev_res on_app(std::shared_ptr<ws_session_base> s , std::string msg) noexcept;
    auto const& get_timeouts() const noexcept { return cfg_.timeouts;}

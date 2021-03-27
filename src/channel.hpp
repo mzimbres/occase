@@ -3,6 +3,7 @@
 #include <string>
 #include <chrono>
 #include <vector>
+#include <utility>
 #include <algorithm>
 
 #include "post.hpp"
@@ -12,7 +13,7 @@ namespace occase {
 class channel {
 private:
    // The posts sorted by their id.
-   std::vector<post> items_;
+   std::vector<post> posts_;
 
 public:
    // Adds a new post.
@@ -31,10 +32,19 @@ public:
    bool remove_post(std::string const& id, std::string const& from);
 
    // Returns the number of posts.
-   auto size() const noexcept { return std::size(items_); }
+   auto size() const noexcept { return std::size(posts_); }
 
    // Returns to posts that satisfy the query.
    std::vector<post> query(post const& p, int max) const;
+
+   // Loads the visualizations in posts. The expected format is
+   //
+   // {post_id1, n1}, {post_id2, n2} ...
+   //
+   // that meast the input must have an even number of elements where
+   // the keys are a string and the value an integer.
+   void load_visualizations(
+      std::vector<std::pair<std::string, int>> const & v);
 };
 
 }

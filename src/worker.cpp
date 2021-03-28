@@ -641,7 +641,6 @@ void worker::on_db_channel_post(std::string const& msg)
       auto const cmd = j.at("cmd").get<std::string>();
 
       if (cmd == "visualization") {
-	 auto const j = json::parse(msg);
 	 auto const post_id = j.at("post_id").get<std::string>();
 	 posts_.on_visualization(post_id);
 	 return;

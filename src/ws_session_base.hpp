@@ -28,8 +28,6 @@ struct ws_session_base {
    virtual std::string const& get_pub_hash() const noexcept = 0;
    virtual bool is_logged_in() const noexcept = 0;
    virtual void shutdown() = 0;
-   virtual void send_post(std::shared_ptr<std::string> msg, post const& p) = 0;
-   virtual bool ignore(post const& p) const noexcept = 0;
    virtual void send(std::string msg, bool persist) = 0;
    virtual void run(http::request<http::string_body, http::fields> req) = 0;
 };

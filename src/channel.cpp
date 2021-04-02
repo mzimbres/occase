@@ -3,47 +3,13 @@
 #include <string>
 #include <chrono>
 #include <vector>
+#include <iterator>
 #include <algorithm>
 
 #include "post.hpp"
 
 namespace occase
 {
-
-std::vector<post>
-channel::remove_expired_posts(
-   std::chrono::seconds now,
-   std::chrono::seconds exp)
-{
-   // We have to traverse all posts as they are not sorted according
-   // to date.
-
-   //auto f = [this, exp, now](auto const& p)
-   //   { return (p.date + exp) < now; };
-
-   //auto point =
-   //   std::partition_point( std::begin(posts_)
-   //                       , std::end(posts_)
-   //                       , f);
-
-   //auto point2 =
-   //   std::rotate( std::begin(posts_)
-   //              , point
-   //              , std::end(posts_));
-
-   //auto const n = std::distance(point2, std::end(posts_));
-
-   //std::vector<post> expired;
-
-   //std::copy( point2
-   //         , std::end(posts_)
-   //         , std::back_inserter(expired));
-
-   //posts_.erase(point2, std::end(posts_));
-
-   //return expired;
-   return std::vector<post>{};
-}
 
 void channel::add_post(post p)
 {
@@ -59,6 +25,21 @@ void channel::add_post(post p)
 		       comp_post_id_less {});
 
    std::rotate(point, prev, std::end(posts_));
+}
+
+std::vector<post>
+channel::remove_expired_posts(
+   std::chrono::seconds now,
+   std::chrono::seconds exp)
+{
+   // We have to traverse all posts as they are not sorted according
+   // to date.
+
+   // Returns true when a post is expired.
+   //auto f = [this, exp, now](auto const& p)
+   //   { return (p.date + exp) < now; };
+
+   return std::vector<post>{};
 }
 
 void channel::on_visualization(std::string const& post_id)
@@ -90,16 +71,40 @@ bool channel::remove_post(
    return true;
 }
 
-std::vector<post> channel::query(post const& p, int max) const
+bool is_child_of(
+   std::vector<int> const& code,
+   std::vector<int> const& wanted)
 {
-   auto const n = static_cast<int>(std::ssize(posts_));
-   auto const s = std::min(n, max);
-   return std::vector<post>(std::cbegin(posts_), std::cbegin(posts_) + s);
+   if (std::size(wanted) > std::size(code))
+      return false;
+
+   auto i = 0U;
+   while (i < std::size(wanted) && wanted[i] == code[i])
+      ++i;
+
+   return i == std::size(wanted);
 }
 
-void
-channel::load_visualizations(
-   std::vector<std::pair<std::string, int>> const& v)
+std::vector<post> channel::query(post const& q, int max) const
+{
+   std::vector<post> ret;
+
+   auto f = [&](auto const& p)
+   {
+      if (!is_child_of(p.location, q.location))
+	 return;
+
+      if (!is_child_of(p.product, q.product))
+	 return;
+
+      ret.push_back(p);
+   };
+
+   std::for_each(std::cbegin(posts_), std::cend(posts_), f);
+   return ret;
+}
+
+void channel::load_visualizations(visual_type const& v)
 {
    auto vbegin = std::cbegin(v);
    auto pbegin = std::begin(posts_);

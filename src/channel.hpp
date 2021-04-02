@@ -11,6 +11,9 @@
 namespace occase {
 
 class channel {
+public:
+   using visual_type = std::vector<std::pair<std::string, int>>;
+
 private:
    // The posts sorted by their id.
    std::vector<post> posts_;
@@ -28,23 +31,22 @@ public:
    // Increases the number of visualizations of a post by one.
    void on_visualization(std::string const& post_id);
 
-   // Removes a post if it exists in the channel.
+   // Removes a post if it exists.
    bool remove_post(std::string const& id, std::string const& from);
 
    // Returns the number of posts.
    auto size() const noexcept { return std::size(posts_); }
 
-   // Returns to posts that satisfy the query.
-   std::vector<post> query(post const& p, int max) const;
+   // Returns to posts that satisfy the query. max refers to the
+   // maximum number of posts that should be returned.
+   std::vector<post> query(post const& p, int max = 300) const;
 
-   // Loads the visualizations in posts. The expected format is
+   // Loads the visualizations in the posts. The expected format is
    //
    // {post_id1, n1}, {post_id2, n2} ...
    //
-   // that meast the input must have an even number of elements where
-   // the keys are a string and the value an integer.
-   void load_visualizations(
-      std::vector<std::pair<std::string, int>> const & v);
+   // where the keys are strings and the values integers.
+   void load_visualizations(visual_type const & v);
 };
 
 }

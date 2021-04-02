@@ -106,7 +106,7 @@ void worker::on_hgetall(aedis::resp::array_type& v) noexcept
 	     , "on_hgetall: {} posts received."
 	     , n_posts);
 
-   std::vector<std::pair<std::string, int>> in;
+   channel::visual_type in;
    in.reserve(n_posts);
 
    for (auto i = 0; i < n_posts; ++i) {

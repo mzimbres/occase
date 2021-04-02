@@ -8,6 +8,7 @@
 #include "net.hpp"
 #include "post.hpp"
 #include "system.hpp"
+#include "channel.hpp"
 
 using tcp_socket = net::use_awaitable_t<>::as_default_on_t<tcp::socket>;
 
@@ -16,8 +17,16 @@ namespace this_coro = net::this_coro;
 namespace occase
 {
 
+void assert_true(bool b, std::string const& msg = "assert_true")
+{
+   if (b)
+     std::cout << "Success: " << msg << std::endl;
+   else
+     std::cout << "Error: " << msg << std::endl;
+}
+
 template <class T>
-void check_equal(T const& a, T const& b, std::string const& msg = "")
+void assert_equal(T const& a, T const& b, std::string const& msg = "assert_equal")
 {
    if (a == b)
      std::cout << "Success: " << msg << std::endl;
@@ -117,9 +126,8 @@ std::ostream& operator<<(std::ostream& os, user_cred const& c)
 auto make_publish_body(user_cred const& cred)
 {
    occase::post p;
-   //publish1='{"post":{"date":0, "id":"jsjsjs", "on_search":10, "visualizations":10, "from":"marcelo", "nick":"","avatar":"","description":"","location":[1,2,3,4],"product":[1,2,3,4], "ex_details":[1,2,3], "in_details":[1,2,3], "range_values": [1,2,3], "images":[]}}'
+   //publish1='{"post":{"date":0, "id":"jsjsjs", "visualizations":10, "from":"marcelo", "nick":"","avatar":"","description":"","location":[1,2,3,4],"product":[1,2,3,4], "ex_details":[1,2,3], "in_details":[1,2,3], "range_values": [1,2,3], "images":[]}}'
    p.date = occase::date_type {0};
-   p.on_search = 0;
    p.visualizations = 0;
    p.id = "";
    p.from = cred.user_id;
@@ -334,8 +342,8 @@ launch_replier(
                auto msg = j_msg.get<message>();
                log_message(cred, msg);
 
-               check_equal(cred.user_id, msg.to);
-               check_equal(msg.type, {"server_ack"});
+               assert_equal(cred.user_id, msg.to);
+               assert_equal(msg.type, {"server_ack"});
             }
 
             {  // App msg
@@ -347,8 +355,8 @@ launch_replier(
                auto msg = j_msg.get<message>();
                log_message(cred, msg);
 
-               check_equal(cred.user_id, msg.to);
-               check_equal(msg.type, {"chat"});
+               assert_equal(cred.user_id, msg.to);
+               assert_equal(msg.type, {"chat"});
             }
          }
          std::cout << "Replier Leaving" << std::endl;
@@ -456,9 +464,9 @@ publisher(
                   auto msg = j_msg.get<message>();
                   log_message(foo.cred, msg);
 
-                  check_equal(foo.cred.user_id, msg.to);
-                  check_equal(foo.pack.id, msg.post_id);
-                  check_equal(msg.type, {"chat"});
+                  assert_equal(foo.cred.user_id, msg.to);
+                  assert_equal(foo.pack.id, msg.post_id);
+                  assert_equal(msg.type, {"chat"});
 
                   auto const reply = make_message(msg.from, msg.post_id);
                   co_await ws.async_write(net::buffer(reply));
@@ -472,9 +480,9 @@ publisher(
                   auto msg = j_msg.get<message>();
                   log_message(foo.cred, msg);
 
-                  check_equal(foo.cred.user_id, msg.to);
-                  check_equal(foo.pack.id, msg.post_id);
-                  check_equal(msg.type, {"server_ack"});
+                  assert_equal(foo.cred.user_id, msg.to);
+                  assert_equal(foo.pack.id, msg.post_id);
+                  assert_equal(msg.type, {"server_ack"});
                }
             }
 
@@ -589,6 +597,68 @@ struct options {
 
 using namespace occase;
 
+void channel_tests()
+{
+   {  // query location and product.
+      post p1;
+      p1.location = {1, 2, 3};
+      p1.product = {1, 2, 3};
+
+      post p2;
+      p2.location = {1, 3, 3};
+      p2.product = {1, 3, 3};
+
+      channel chn;
+      chn.add_post(p1);
+      chn.add_post(p2);
+
+      auto const r = chn.query(p1);
+      assert_true(std::size(r) == 1u);
+      assert_equal(r.front().location, p1.location);
+   }
+
+   { // Visualizations
+      post p1;
+      p1.id = "1";
+      p1.location = {1};
+      p1.visualizations = 0;
+
+      post p2;
+      p2.id = "2";
+      p2.location = {2};
+      p2.visualizations = 0;
+
+      post p3;
+      p3.id = "3";
+      p3.location = {3};
+      p3.visualizations = 0;
+
+      channel::visual_type v
+      { {"1", 10}
+      , {"3", 10}
+      };
+
+      channel chn;
+      chn.add_post(p1);
+      chn.add_post(p2);
+      chn.add_post(p3);
+
+      chn.load_visualizations(v);
+
+      auto const r1 = chn.query(p1);
+      assert_true(std::size(r1) == 1u);
+      assert_equal(r1.front().visualizations, 10);
+
+      auto const r2 = chn.query(p2);
+      assert_true(std::size(r2) == 1u);
+      assert_equal(r2.front().visualizations, 0);
+
+      auto const r3 = chn.query(p3);
+      assert_true(std::size(r3) == 1u);
+      assert_equal(r3.front().visualizations, 0);
+   }
+}
+
 int main(int argc, char* argv[])
 {
    options op;
@@ -600,7 +670,16 @@ int main(int argc, char* argv[])
    ("publishers,u", po::value<int>(&op.publishers)->default_value(2), "Number of publishers.")
    ("repliers,c", po::value<int>(&op.repliers)->default_value(10), "Number of listeners.")
    ("offline-tests,l", po::value<int>(&op.offline_tests)->default_value(10), "Number of offline tests.")
-   ("test,r", po::value<int>(&op.test)->default_value(1), "Which test to run: 1, 2, 3, 4, 5, 6, 7.")
+   ( "test,r"
+   , po::value<int>(&op.test)->default_value(1)
+   , "The test to run:\n"
+     "• 1: \ttcp_timeout.\n"
+     "• 2: \tpost_search.\n"
+     "• 3: \tpost count.\n"
+     "• 4:  \tno_login.\n"
+     "• 6:  \toffline messages.\n"
+     "• 7:  \tunittests.\n"
+   )
    ;
 
    po::variables_map vm;        
@@ -638,6 +717,10 @@ int main(int argc, char* argv[])
    if (op.test == 6) {
       for (auto i = 0; i < op.offline_tests; ++i)
 	 net::co_spawn(ioc, offline(op.host, op.port), net::detached);
+   }
+
+   if (op.test == 7) {
+      channel_tests();
    }
 
    ioc.run();

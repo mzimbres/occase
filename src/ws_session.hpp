@@ -26,7 +26,6 @@ private:
 
    struct msg_entry {
       std::string msg;
-      std::shared_ptr<std::string> menu_msg;
       bool persist;
    };
 
@@ -148,11 +147,7 @@ private:
 
       // Do not move the front msg. If the write fail we will want to
       // save the message in the database or whatever.
-      if (msg_queue_.front().menu_msg) {
-         do_write(*msg_queue_.front().menu_msg);
-      } else {
-         do_write(msg_queue_.front().msg);
-      }
+      do_write(msg_queue_.front().msg);
    }
 
    void handle_ev(ev_res r)
@@ -260,45 +255,10 @@ public:
       assert(!std::empty(msg));
       auto const is_empty = std::empty(msg_queue_);
 
-      msg_queue_.push_back({std::move(msg), {}, persist});
+      msg_queue_.push_back({std::move(msg), persist});
 
       if (is_empty && !closing_)
          do_write(msg_queue_.front().msg);
-   }
-
-   bool ignore(post const& p) const noexcept override final
-   {
-      if (!std::empty(ranges_)) {
-         auto const min =
-            std::min(std::ssize(ranges_) / 2,
-                     std::ssize(p.range_values));
-
-         for (auto i = 0; i < min; ++i) {
-            auto const a = ranges_[2 * i + 0];
-            auto const b = ranges_[2 * i + 1];
-            auto const v = p.range_values[i];
-            if (v < a || b < v)
-               return true; // Not in range.
-         }
-      }
-
-      return false;
-   }
-
-   void
-   send_post(
-      std::shared_ptr<std::string> msg,
-      post const& p) override final
-   {
-      if (ignore(p))
-         return;
-
-      auto const is_empty = std::empty(msg_queue_);
-
-      msg_queue_.push_back({{}, msg, false});
-
-      if (is_empty && !closing_)
-         do_write(*msg_queue_.front().menu_msg);
    }
 
    void shutdown() override final

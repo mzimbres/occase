@@ -9,7 +9,6 @@ void to_json(json& j, post const& e)
 {
    j = json{ {"date", e.date.count()}
            , {"id", e.id}
-           , {"on_search", e.on_search}
            , {"visualizations", e.visualizations}
            , {"from", e.from}
            , {"nick", e.nick}
@@ -28,7 +27,6 @@ void from_json(json const& j, post& e)
 {
   e.date = date_type {j.at("date").get<long int>()};
   e.id = j.at("id").get<std::string>();
-  e.on_search = get_optional_field<int>(j, "on_search");
   e.visualizations = get_optional_field<int>(j, "visualizations");
   e.from = j.at("from").get<std::string>();
   e.nick = j.at("nick").get<std::string>();

@@ -56,11 +56,11 @@ common_objs += logger.o
 common_objs += crypto.o
 common_objs += asio.o
 common_objs += aedis.o
+common_objs += channel.o
 
 db_objs =
 db_objs += net.o
 db_objs += post.o
-db_objs += channel.o
 db_objs += acceptor_mgr.o
 db_objs += worker.o
 db_objs += http_ssl_session.o

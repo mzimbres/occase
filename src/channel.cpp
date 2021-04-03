@@ -85,22 +85,43 @@ bool is_child_of(
    return i == std::size(wanted);
 }
 
+template <class Receiver>
+void filter(post const& p, post const& q, Receiver recv)
+{
+   if (!is_child_of(p.location, q.location))
+      return;
+
+   if (!is_child_of(p.product, q.product))
+      return;
+
+   recv(p);
+}
+
 std::vector<post> channel::query(post const& q, int max) const
 {
    std::vector<post> ret;
 
-   auto f = [&](auto const& p)
-   {
-      if (!is_child_of(p.location, q.location))
-	 return;
+   auto f = [&](post const& p)
+      { ret.push_back(p); };
 
-      if (!is_child_of(p.product, q.product))
-	 return;
+   auto g = [&](post const& p)
+      { filter(p, q, f); };
 
-      ret.push_back(p);
-   };
+   std::for_each(std::cbegin(posts_), std::cend(posts_), g);
+   return ret;
+}
 
-   std::for_each(std::cbegin(posts_), std::cend(posts_), f);
+int channel::count(post const& q) const
+{
+   int ret;
+
+   auto f = [&](post const&)
+      { ++ret; };
+
+   auto g = [&](post const& p)
+      { filter(p, q, f); };
+
+   std::for_each(std::cbegin(posts_), std::cend(posts_), g);
    return ret;
 }
 

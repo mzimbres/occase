@@ -41,6 +41,9 @@ public:
    // maximum number of posts that should be returned.
    std::vector<post> query(post const& p, int max = 300) const;
 
+   // Counts the number of posts that satisfy the query.
+   int count(post const& p) const;
+
    // Loads the visualizations in the posts. The expected format is
    //
    // {post_id1, n1}, {post_id2, n2} ...

@@ -132,7 +132,7 @@ public:
    auto& get_ws_stats() noexcept { return ws_stats_;}
    auto const& get_ws_stats() const noexcept { return ws_stats_; }
    worker_stats get_stats() const noexcept;
-   auto count_posts(post const& p) const noexcept { return posts_.size(); }
+   int count_posts(post const& p) const;
    std::vector<post> search_posts(post const& p) const;
    auto& get_ioc() const noexcept { return ioc_; }
    void run() { ioc_.run(); }

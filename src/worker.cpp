@@ -273,6 +273,11 @@ std::vector<post> worker::search_posts(post const& p) const
    return posts_.query(p, cfg_.max_posts_on_search);
 }
 
+int worker::count_posts(post const& p) const
+{
+   return posts_.count(p);
+}
+
 worker_stats worker::get_stats() const noexcept
 {
    worker_stats wstats {};

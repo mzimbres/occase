@@ -8,9 +8,9 @@ namespace occase
 {
 
 std::string make_ntf_body(
-   std::string const& msg_body,
    std::string const& msg_title,
-   std::string const& fcm_user_token);
+   std::string const& msg_body,
+   std::string const& fcm_token);
 
 class ntf_session : public std::enable_shared_from_this<ntf_session> {
 public:

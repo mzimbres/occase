@@ -12,7 +12,7 @@ namespace occase
 std::string
 make_ntf_body( std::string const& msg_title
              , std::string const& msg_body
-             , std::string const& fcm_user_token)
+             , std::string const& fcm_token)
 {
    json j;
    j["notification"]["title"] = msg_title;
@@ -23,7 +23,7 @@ make_ntf_body( std::string const& msg_title
    j["data"]["click_action"] = "FLUTTER_NOTIFICATION_CLICK";
    j["data"]["id"] = "1";
    j["data"]["status"] = "done";
-   j["to"] = fcm_user_token;
+   j["to"] = fcm_token;
 
    return j.dump();
 }

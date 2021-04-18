@@ -3,18 +3,61 @@
 #include <string>
 #include <iostream>
 
+#include <boost/program_options/options_description.hpp>
+#include <boost/program_options/parsers.hpp>
+#include <boost/program_options/variables_map.hpp>
+
 #include "logger.hpp"
 #include "ntf_session.hpp"
 
 using namespace occase;
 
+namespace po = boost::program_options;
+
+struct options {
+   int help = 0;
+   std::string title;
+   std::string body;
+   std::string fcm_token;
+};
+
+auto parse_options(int argc, char* argv[])
+{
+   options op;
+   std::string of = "tree";
+   po::options_description desc("Options");
+   desc.add_options()
+   ( "help,h", "This help message.")
+   ( "title,t", po::value<std::string>(&op.title)->default_value("Test title"), "Message title.")
+   ( "body,b", po::value<std::string>(&op.body)->default_value("Test body."), "Message body.")
+   ( "fcm-token,c", po::value<std::string>(&op.fcm_token)->default_value("dQ2rmqTJUNclfzqQoR9Xkj:APA91bGJeqWlL4tlgKBrfl26FUBcnao0BjZrrCZ6bVr4HHoJfkod4nA99ZoMtwLcXGjoVq2Akaj7cItE_oH0X6zYHtxP0aNO54l79F5IfAiahjCCmgDinyyCSPdN3OsLrUpPLJQm3JJE"), "User private token.")
+   ;
+
+   po::positional_options_description pos;
+   pos.add("fcm-token", -1);
+
+   po::variables_map vm;        
+   po::store(po::command_line_parser(argc, argv).
+      options(desc).positional(pos).run(), vm);
+   po::notify(vm);    
+
+   if (vm.count("help")) {
+      op.help = 1;
+      std::cout << desc << "\n";
+      return op;
+   }
+
+   return op;
+}
+
 int main(int argc, char** argv)
 {
    try {
-      ntf_session::config cfg;
+      auto const op = parse_options(argc, argv);
+      if (op.help == 1)
+         return 0;
 
-      std::string fcm_user_token = 
-      {"dpv7_-a7Z6QodtFhIpJJSh:APA91bGO-waPFcH5_uGL84QcD8JEqbCGT-qF4XughM5H3ciL9ypuN6LKjm0RnRWinNSe_zEFBn2DnlA8awJ5Y97a7ECQoqx0qSayGWGEbh-cpNfl0BsdJVMOvd6FKIF4veKuQnL63nKt"};
+      ntf_session::config cfg;
 
       log::upto(log::level::debug);
 
@@ -23,9 +66,11 @@ int main(int argc, char** argv)
       ctx.set_verify_mode(ssl::verify_none);
 
       auto ntf_body = make_ntf_body(
-         "Nova mensagem",
-         "Vai ver se eu estou na esquina.",
-         fcm_user_token);
+         op.title,
+         op.body,
+         op.fcm_token);
+
+      log::write(log::level::info, "Sending: {0}", ntf_body);
 
       tcp::resolver resolver_ {ioc};
       boost::system::error_code ec;

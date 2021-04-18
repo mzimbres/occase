@@ -111,9 +111,11 @@ private:
    void on_db_channel_post(std::string const& msg);
    void on_db_presence(std::string const& user_id, std::string msg);
    void on_signal(boost::system::error_code const& ec, int n);
+
    // WARNING: Don't call this function from the signal handler.
    void shutdown();
    void shutdown_impl();
+   std::string get_chat_to_field(json& j);
 
 public:
    worker(config::core cfg, ssl::context& c);

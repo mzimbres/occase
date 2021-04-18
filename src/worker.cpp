@@ -11,6 +11,8 @@
 namespace occase
 {
 
+std::string const chat_admin_id_key = "chat_admin_id_key_0";
+
 std::ostream& operator<<(std::ostream& os, worker_stats const& stats)
 {
    os << stats.number_of_sessions
@@ -427,7 +429,13 @@ std::string worker::on_publish_impl(json j)
    ack["result"] = "ok";
    ack["id"] = p.id;
    ack["date"] = p.date.count();
-   ack["admin_id"] = "admin-id"; // TODO: Read from config file.
+
+   // We do not send the read admin id to the app but an identifier so
+   // that if we can change the id in the server and always use the
+   // same identifier. Otherwise we would have to update the id in the
+   // app which is bad. At the moment we are going to always use the
+   // same identifier.
+   ack["admin_id"] = chat_admin_id_key;
 
    return ack.dump();
 }
@@ -539,6 +547,17 @@ worker::on_app_login(json const& j, std::shared_ptr<ws_session_base> s)
    return ev_res::login_ok;
 }
 
+std::string worker::get_chat_to_field(json& j)
+{
+   auto to = j.at("to").get<std::string>();
+   if (to == chat_admin_id_key) {
+      to = cfg_.chat_admin_id;
+      j["to"] = to;
+   }
+
+   return to;
+}
+
 ev_res worker::on_app_chat_msg(json j, std::shared_ptr<ws_session_base> s)
 {
    j["from"] = s->get_pub_hash();
@@ -546,7 +565,8 @@ ev_res worker::on_app_chat_msg(json j, std::shared_ptr<ws_session_base> s)
    // If the user is online in this node we can send him a message
    // directly.  This is important to reduce the amount of data in
    // redis, occase-notify and to reduce the communication latency.
-   auto const to = j.at("to").get<std::string>();
+   auto const to = get_chat_to_field(j);
+
    auto const match = sessions_.find(to);
    if (match == std::end(sessions_)) {
       // The peer is either offline or not in this node. We have to
@@ -584,7 +604,7 @@ ev_res worker::on_app_presence(json j, std::shared_ptr<ws_session_base> s)
 
    j["from"] = s->get_pub_hash();
 
-   auto const to = j.at("to").get<std::string>();
+   auto const to = get_chat_to_field(j);
    auto const match = sessions_.find(to);
    if (match == std::end(sessions_)) {
       auto const msg = j.dump();

@@ -123,6 +123,9 @@ struct core {
    // reached. This value is also configurable via adm api.
    int allowed_posts = 0;
 
+   // See config/occase-db.conf for a description.
+   std::string chat_admin_id;
+
    // Redis config.
    config::redis redis;
 

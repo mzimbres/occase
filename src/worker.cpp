@@ -547,12 +547,13 @@ worker::on_app_login(json const& j, std::shared_ptr<ws_session_base> s)
    return ev_res::login_ok;
 }
 
-std::string worker::get_chat_to_field(json& j)
+std::string worker::get_chat_to_field(json& j, std::string& new_to)
 {
-   auto to = j.at("to").get<std::string>();
+   auto const to = j.at("to").get<std::string>();
+   new_to = to;
    if (to == chat_admin_id_key) {
-      to = cfg_.chat_admin_id;
-      j["to"] = to;
+      new_to = cfg_.chat_admin_id;
+      j["to"] = new_to;
    }
 
    return to;
@@ -565,7 +566,8 @@ ev_res worker::on_app_chat_msg(json j, std::shared_ptr<ws_session_base> s)
    // If the user is online in this node we can send him a message
    // directly.  This is important to reduce the amount of data in
    // redis, occase-notify and to reduce the communication latency.
-   auto const to = get_chat_to_field(j);
+   std::string to;
+   auto const old_to = get_chat_to_field(j, to);
 
    auto const match = sessions_.find(to);
    if (match == std::end(sessions_)) {
@@ -587,7 +589,7 @@ ev_res worker::on_app_chat_msg(json j, std::shared_ptr<ws_session_base> s)
    auto const message_id = j.at("id").get<int>();
    json ack;
    ack["cmd"] = "message";
-   ack["from"] = to;
+   ack["from"] = old_to;
    ack["to"] = s->get_pub_hash();
    ack["post_id"] = post_id;
    ack["ack_id"] = message_id;
@@ -604,7 +606,8 @@ ev_res worker::on_app_presence(json j, std::shared_ptr<ws_session_base> s)
 
    j["from"] = s->get_pub_hash();
 
-   auto const to = get_chat_to_field(j);
+   std::string to;
+   get_chat_to_field(j, to);
    auto const match = sessions_.find(to);
    if (match == std::end(sessions_)) {
       auto const msg = j.dump();

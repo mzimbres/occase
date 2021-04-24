@@ -115,7 +115,7 @@ private:
    // WARNING: Don't call this function from the signal handler.
    void shutdown();
    void shutdown_impl();
-   std::string get_chat_to_field(json& j);
+   std::string get_chat_to_field(json& j, std::string& to);
 
 public:
    worker(config::core cfg, ssl::context& c);

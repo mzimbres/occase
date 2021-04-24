@@ -81,7 +81,8 @@ make_req(
 
 auto make_search_body()
 {
-   json j = occase::post{};
+   json j;
+   j["post"] = occase::post{};
    return j.dump();
 }
 

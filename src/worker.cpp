@@ -540,7 +540,6 @@ worker::on_app_login(json const& j, std::shared_ptr<ws_session_base> s)
    json resp;
    resp["cmd"] = "login_ack";
    resp["result"] = "ok";
-   resp["remaining_posts"] = 0;
 
    s->send(resp.dump(), false);
 

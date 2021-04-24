@@ -140,7 +140,7 @@ private:
 	 post p;
 	 if (!std::empty(req_.body())) {
 	    auto const j = json::parse(req_.body());
-	    p = j.get<post>();
+	    p = j.at("post").get<post>();
 	 }
 
          resp_.set(http::field::content_type, "application/json");

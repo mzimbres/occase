@@ -93,11 +93,11 @@ struct core {
    int max_listen_connections;
 
    // The key used to generate authenticated filenames that will be
-   // user in the image server.
+   // used in the image server.
    std::string mms_key;
 
-   // The host name of this db. This is used by the adm interface when the html
-   // pages are generated.
+   // The host name of this db. This is used by the adm interface when
+   // the html pages are generated.
    std::string db_host;
 
    // The host where images are served and posted. It must have the

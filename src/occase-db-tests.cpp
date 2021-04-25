@@ -260,8 +260,7 @@ void to_json(json& j, message const& e)
            };
 }
 
-template <class T>
-net::awaitable<T>
+net::awaitable<http::response<http::string_body>>
 make_request(
    tcp::resolver::results_type const& results,
    std::string const& target,
@@ -277,9 +276,7 @@ make_request(
    http::response<http::string_body> res;
    co_await http::async_read(stream, b, res);
    stream.shutdown(tcp::socket::shutdown_both);
-   auto const j = json::parse(res.body());
-   auto const cred = j.get<T>();
-   co_return cred;
+   co_return res;
 }
 
 auto
@@ -309,13 +306,15 @@ launch_replier(
    try {
       auto ex = co_await this_coro::executor;
 
-      auto const cred =
+      auto const res1 =
          co_await net::co_spawn(
             ex,
-            make_request<user_cred>(results, "/get-user-id", host),
+            make_request(results, "/get-user-id", host),
             net::use_awaitable);
 
-      std::cout << "Success: get-user-id. " << cred << std::endl;
+      assert_true(res1.result() == http::status::ok, "get-user-id");
+      auto const j_cred = json::parse(res1.body());
+      auto const cred = j_cred.get<user_cred>();
 
       websocket::stream<tcp_socket> ws {ex};
       co_await async_connect(beast::get_lowest_layer(ws), results);
@@ -343,8 +342,8 @@ launch_replier(
                auto msg = j_msg.get<message>();
                log_message(cred, msg);
 
-               assert_equal(cred.user_id, msg.to);
-               assert_equal(msg.type, {"server_ack"});
+               assert_equal(cred.user_id, msg.to, "launch_replier");
+               assert_equal(msg.type, {"server_ack"}, "launch_replier");
             }
 
             {  // App msg
@@ -356,8 +355,8 @@ launch_replier(
                auto msg = j_msg.get<message>();
                log_message(cred, msg);
 
-               assert_equal(cred.user_id, msg.to);
-               assert_equal(msg.type, {"chat"});
+               assert_equal(cred.user_id, msg.to, "launch_replier");
+               assert_equal(msg.type, {"chat"}, "launch_replier");
             }
          }
          std::cout << "Replier Leaving" << std::endl;
@@ -383,19 +382,27 @@ cred_pub(
 {
    try {
       auto ex = co_await this_coro::executor;
-      auto const cred =
+      auto const res1 =
          co_await net::co_spawn(
             ex,
-            make_request<user_cred>(results, "/get-user-id", host),
+            make_request(results, "/get-user-id", host),
             net::use_awaitable);
+
+      assert_true(res1.result() == http::status::ok, "get-user-id");
+
+      auto const cred = json::parse(res1.body()).get<user_cred>();
 
       auto const body = make_publish_body(cred);
 
-      auto const pack =
+      auto const res2 =
          co_await net::co_spawn(
             ex,
-            make_request<pub_ack>(results, "/posts/publish", host, body),
+            make_request(results, "/posts/publish", host, body),
             net::use_awaitable);
+
+      assert_true(res2.result() == http::status::ok, "get-user-id");
+
+      auto const pack = json::parse(res2.body()).get<pub_ack>();
 
       co_return cred_pub_helper {cred, pack};
 
@@ -465,9 +472,9 @@ publisher(
                   auto msg = j_msg.get<message>();
                   log_message(foo.cred, msg);
 
-                  assert_equal(foo.cred.user_id, msg.to);
-                  assert_equal(foo.pack.id, msg.post_id);
-                  assert_equal(msg.type, {"chat"});
+                  assert_equal(foo.cred.user_id, msg.to, "publisher");
+                  assert_equal(foo.pack.id, msg.post_id, "publisher");
+                  assert_equal(msg.type, {"chat"}, "publisher");
 
                   auto const reply = make_message(msg.from, msg.post_id);
                   co_await ws.async_write(net::buffer(reply));
@@ -481,9 +488,9 @@ publisher(
                   auto msg = j_msg.get<message>();
                   log_message(foo.cred, msg);
 
-                  assert_equal(foo.cred.user_id, msg.to);
-                  assert_equal(foo.pack.id, msg.post_id);
-                  assert_equal(msg.type, {"server_ack"});
+                  assert_equal(foo.cred.user_id, msg.to, "publisher");
+                  assert_equal(foo.pack.id, msg.post_id, "publisher");
+                  assert_equal(msg.type, {"server_ack"}, "publisher");
                }
             }
 
@@ -539,11 +546,15 @@ offline(
       
       {  // Creates a second user and sends a chat message to user 1.
          // Credentials for user 2.
-         auto const cred2 =
+         auto const res2 =
             co_await net::co_spawn(
                ex,
-               make_request<user_cred>(results, "/get-user-id", host),
+               make_request(results, "/get-user-id", host),
                net::use_awaitable);
+
+	 assert_true(res2.result() == http::status::ok, "get-user-id");
+
+	 auto const cred2 = json::parse(res2.body()).get<user_cred>();
 
          std::clog << "Peer: " << cred2 << std::endl;
 
@@ -614,8 +625,8 @@ void channel_tests()
       chn.add_post(p2);
 
       auto const r = chn.query(p1);
-      assert_true(std::size(r) == 1u);
-      assert_equal(r.front().location, p1.location);
+      assert_true(std::size(r) == 1u, "channel_tests");
+      assert_equal(r.front().location, p1.location, "channel_test");
    }
 
    { // Visualizations
@@ -647,16 +658,16 @@ void channel_tests()
       chn.load_visualizations(v);
 
       auto const r1 = chn.query(p1);
-      assert_true(std::size(r1) == 1u);
-      assert_equal(r1.front().visualizations, 10);
+      assert_true(std::size(r1) == 1u, "channel_tests");
+      assert_equal(r1.front().visualizations, 10, "channel_tests");
 
       auto const r2 = chn.query(p2);
-      assert_true(std::size(r2) == 1u);
-      assert_equal(r2.front().visualizations, 0);
+      assert_true(std::size(r2) == 1u, "channel_tests");
+      assert_equal(r2.front().visualizations, 0, "channel_tests");
 
       auto const r3 = chn.query(p3);
-      assert_true(std::size(r3) == 1u);
-      assert_equal(r3.front().visualizations, 0);
+      assert_true(std::size(r3) == 1u, "channel_tests");
+      assert_equal(r3.front().visualizations, 0, "channel_tests");
    }
 }
 

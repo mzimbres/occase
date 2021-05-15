@@ -33,6 +33,9 @@ struct redis {
    // The key used to store posts in redis.
    std::string posts_key;
 
+   // The key where removed posts are moved to.
+   std::string removed_posts_key;
+
    // The prefix of chat message keys. The complete key will be a
    // composition of this prefix and the user id separate by a ":"
    // e.g. msg:102 where 102 is the user id, acquired on registration.

@@ -11,6 +11,23 @@
 namespace occase
 {
 
+post channel::get(std::string const& id) const
+{
+   post tmp;
+   tmp.id = id;
+
+   auto point =
+      std::lower_bound(std::cbegin(posts_),
+		       std::cend(posts_),
+		       tmp,
+		       comp_post_id_less {});
+
+   if (point == std::cend(posts_))
+      return {};
+
+   return *point;
+}
+
 void channel::add_post(post p)
 {
    posts_.push_back(std::move(p));
@@ -44,6 +61,8 @@ channel::remove_expired_posts(
 
 void channel::on_visualization(std::string const& post_id)
 {
+   // TODO: Why aren't we using lower_bound here?
+
    auto f = [&post_id](auto const& p)
       { return p.id == post_id; };
 

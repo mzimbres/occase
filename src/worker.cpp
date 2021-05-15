@@ -81,12 +81,9 @@ void worker::on_hello(aedis::resp::map_type& v) noexcept
    log::write( log::level::info
 	     , "on_hello: connection with Redis stablished.");
 
-   auto last = last_post_date_received_;
-   ++last;
-
    auto f = [&, this](aedis::request& req)
    {
-      req.zrangebyscore(cfg_.redis.posts_key, last.count(), -1);
+      req.hvals(cfg_.redis.posts_key);
       req.subscribe(cfg_.redis.posts_channel_key);
    };
 
@@ -200,10 +197,10 @@ void worker::on_lrange(aedis::resp::array_type& msgs) noexcept
    user_ids_chat_queue.pop();
 }
 
-void worker::on_zrangebyscore(aedis::resp::array_type& msgs) noexcept
+void worker::on_hvals(aedis::resp::array_type& msgs) noexcept
 {
    log::write( log::level::info
-	     , "on_zrangebyscore: {0} messages received."
+	     , "on_hvals: {0} messages received."
 	     , std::size(msgs));
 
    auto loader = [this](auto const& msg)
@@ -304,9 +301,6 @@ void worker::delete_post(
    // TODO: Check if the post indeed exists before sending the
    // command to all nodes. This is important to prevent ddos.
 
-   // TODO: For safety I will not remove from redis.  For example with
-   // zremrangebyscore. Decide what to do here.
-
    json j;
    j["cmd"] = "delete";
    j["from"] = make_hex_digest(user, key);
@@ -314,8 +308,29 @@ void worker::delete_post(
 
    auto const msg = j.dump();
 
+   // We have to remove the post from one redis key and add to
+   // another. To add we first have to generate its string here.
+   auto const p = posts_.get(post_id);
+   if (std::empty(p.id)) {
+      log::write(
+	 log::level::debug,
+	 "delete_post: post with id {0} not found.",
+	 post_id);
+      return;
+   }
+
+   json j_post = p;
+   auto const post_str = j_post.dump();
+
    auto f = [&](aedis::request& req)
-      { req.publish(cfg_.redis.posts_channel_key, msg);};
+   {
+      auto const pair = std::make_pair(post_id, post_str);
+      auto const list = {pair};
+      req.hset(cfg_.redis.removed_posts_key, list);
+      // TODO: Implement hdel.
+      //req.hdel(cfg_.redis.posts_key, post_id);
+      req.publish(cfg_.redis.posts_channel_key, msg);
+   };
 
    redis_conn_->send(f);
 }
@@ -415,7 +430,9 @@ std::string worker::on_publish_impl(json j)
 
    auto f = [&, this](aedis::request& req)
    {
-      req.zadd(cfg_.redis.posts_key, p.date.count(), msg);
+      auto const pair = std::make_pair(p.id, msg);
+      auto const list = {pair};
+      req.hset(cfg_.redis.posts_key, list);
       req.publish(cfg_.redis.posts_channel_key, msg);
    };
 
@@ -694,9 +711,6 @@ void worker::on_db_channel_post(std::string const& msg)
 
       if (cmd == "publish_internal") {
 	 auto const item = j.at("post").get<post>();
-
-	 if (item.date > last_post_date_received_)
-	    last_post_date_received_ = item.date;
 
 	 auto const now =
 	    duration_cast<seconds>(system_clock::now().time_since_epoch());

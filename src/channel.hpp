@@ -22,6 +22,9 @@ public:
    // Adds a new post.
    void add_post(post p);
 
+   // Returns the post with the requested id.
+   post get(std::string const& id) const;
+
    // Removes and returns expired posts.
    std::vector<post>
    remove_expired_posts(

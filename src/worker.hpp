@@ -60,9 +60,6 @@ private:
    // message.
    std::queue<std::string> user_ids_chat_queue;
 
-   // The last post id that has beed received from reidis pubsub channel.
-   date_type last_post_date_received_ {0};
-
    // Generates passwords that are sent to the app.
    pwd_gen pwdgen_;
 
@@ -125,7 +122,7 @@ public:
    void on_hello(aedis::resp::map_type& v) noexcept override;
    void on_push(aedis::resp::array_type& v) noexcept override;
    void on_lrange(aedis::resp::array_type& msgs) noexcept override;
-   void on_zrangebyscore(aedis::resp::array_type& msgs) noexcept override;
+   void on_hvals(aedis::resp::array_type& msgs) noexcept override;
    void on_hgetall(aedis::resp::array_type& all) noexcept override;
 
    void on_session_dtor( std::string const& user_id, std::vector<std::string> const& msgs);

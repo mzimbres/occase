@@ -31,8 +31,14 @@ public:
    // Increases the number of visualizations of a post by one.
    void on_visualization(std::string const& post_id);
 
-   // Removes a post if it exists.
-   bool remove_post(std::string const& id, std::string const& from);
+   // Removes a post if it exists and from matches the post author.
+   // When ignore_owner is true, removes regardless of the author.
+   // This is used by admin id. 
+   bool
+   remove_post(
+      std::string const& id,
+      std::string const& from,
+      bool ignore_owner);
 
    // Returns the number of posts.
    auto size() const noexcept { return std::size(posts_); }

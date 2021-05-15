@@ -54,7 +54,8 @@ void channel::on_visualization(std::string const& post_id)
 
 bool channel::remove_post(
    std::string const& id,
-   std::string const& from)
+   std::string const& from,
+   bool ignore_owner)
 {
    auto f = [&](auto const& p)
       { return p.id == id; };
@@ -64,11 +65,12 @@ bool channel::remove_post(
    if (match == std::end(posts_))
       return false;
 
-   if (match->from != from)
-      return false;
+   if (match->from == from || ignore_owner) {
+      posts_.erase(match);
+      return true;
+   }
 
-   posts_.erase(match);
-   return true;
+   return false;
 }
 
 bool is_child_of(

@@ -676,11 +676,18 @@ void worker::on_db_channel_post(std::string const& msg)
       if (cmd == "delete") {
 	 auto const post_id = j.at("post_id").get<std::string>();
 	 auto const from = j.at("from").get<std::string>();
-	 if (!posts_.remove_post(post_id, from)) 
+	 auto const ignore_owner = from == cfg_.chat_admin_id;
+	 if (posts_.remove_post(post_id, from, ignore_owner)) {
 	    log::write( log::level::notice
-		      , "Failed to remove post {0}. User {1}"
+		      , "Success: post {0} removed. User {1}"
 		      , post_id
 		      , from);
+	 } else {
+	    log::write( log::level::notice
+		      , "Error: post {0} not removed. User {1}"
+		      , post_id
+		      , from);
+	 }
 
 	 return;
       }

@@ -124,6 +124,7 @@ public:
    void on_lrange(aedis::resp::array_type& msgs) noexcept override;
    void on_hvals(aedis::resp::array_type& msgs) noexcept override;
    void on_hgetall(aedis::resp::array_type& all) noexcept override;
+   void on_hdel(aedis::resp::number_type n) noexcept override;
 
    void on_session_dtor( std::string const& user_id, std::vector<std::string> const& msgs);
    ev_res on_app(std::shared_ptr<ws_session_base> s , std::string msg) noexcept;

@@ -214,6 +214,14 @@ void worker::on_hvals(aedis::resp::array_type& msgs) noexcept
    redis_conn_->send(f);
 }
 
+void worker::on_hdel(aedis::resp::number_type n) noexcept
+{
+   log::write(
+      log::level::info,
+      "on_hdel: number of removed posts {0}.",
+      n);
+}
+
 void worker::on_session_dtor(
    std::string const& user_id,
    std::vector<std::string> const& msgs)
@@ -298,9 +306,6 @@ void worker::delete_post(
    // are already sold. To delete from the workers it is enough to
    // broadcast a delete command.
 
-   // TODO: Check if the post indeed exists before sending the
-   // command to all nodes. This is important to prevent ddos.
-
    json j;
    j["cmd"] = "delete";
    j["from"] = make_hex_digest(user, key);
@@ -309,11 +314,11 @@ void worker::delete_post(
    auto const msg = j.dump();
 
    // We have to remove the post from one redis key and add to
-   // another. To add we first have to generate its string here.
+   // another.
    auto const p = posts_.get(post_id);
    if (std::empty(p.id)) {
       log::write(
-	 log::level::debug,
+	 log::level::info,
 	 "delete_post: post with id {0} not found.",
 	 post_id);
       return;
@@ -327,8 +332,7 @@ void worker::delete_post(
       auto const pair = std::make_pair(post_id, post_str);
       auto const list = {pair};
       req.hset(cfg_.redis.removed_posts_key, list);
-      // TODO: Implement hdel.
-      //req.hdel(cfg_.redis.posts_key, post_id);
+      req.hdel(cfg_.redis.posts_key, {post_id});
       req.publish(cfg_.redis.posts_channel_key, msg);
    };
 

@@ -345,16 +345,23 @@ std::vector<std::string> worker::get_upload_credit()
    {
       auto const filename = pwdgen_.make(sz::mms_filename_size);
 
-      auto const path = make_rel_path(filename)
-		      + "/"
-		      + filename;
+      // We can generate the dir from the filename below because
+      // filename is a random string. Later we will use meaningful
+      // names so that the dir will have to be generated diferently.
+      std::string path;
+      path += "/posts/imgs";
+      path += make_dir(filename);
+      path += "/";
+      path += filename;
+      path += ".jpeg";
 
-      auto const digest = make_hex_digest(path, cfg_.mms_key);
+      std::string ret;
+      ret += cfg_.mms_host;
+      ret += path;
+      ret += "?hmac=";
+      ret += make_hex_digest(path, cfg_.mms_key);
 
-      return cfg_.mms_host
-	   + path
-	   + pwd_gen::sep
-	   + digest;
+      return ret;
    };
 
    std::vector<std::string> credit;

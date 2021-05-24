@@ -40,21 +40,18 @@ void from_json(json const& j, post& e)
   e.images = j.at("images").get<std::vector<std::string>>();
 }
 
-std::string make_rel_path(std::string const& filename)
+std::string make_dir(std::string const& filename)
 {
-   if (std::size(filename) < sz::mms_filename_size)
-      return {};
+   assert(std::size(filename) >= sz::mms_filename_size);
 
    std::string path = "/";
    path.append(filename.data(), 0, sz::a);
 
    path.push_back('/');
-   path.append( filename.data(), 0 + sz::a
-              , sz::b);
+   path.append(filename.data(), 0 + sz::a, sz::b);
 
    path.push_back('/');
-   path.append( filename.data(), 0 + sz::a + sz::b
-              , sz::c);
+   path.append(filename.data(), 0 + sz::a + sz::b, sz::c);
 
    return path;
 }

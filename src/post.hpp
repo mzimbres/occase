@@ -46,13 +46,13 @@ constexpr std::size_t mms_dir_size = 3 + a + b + c;
  * relative path where it should be stored, which will be a string
  * in the form.
  *
- *    /x/y/zz
+ *    /x/y/z
  *
  * The filename minimum length is expected to be mms_filename_size.
- * The length of the x, y and zz are as of sz::a, sz::b etc.
+ * The length of the x, y and z are as of sz::a, sz::b and sz::c.
  *
  */
-std::string make_rel_path(std::string const& filename);
+std::string make_dir(std::string const& filename);
 
 using code_type = std::uint64_t;
 using date_type = std::chrono::seconds;

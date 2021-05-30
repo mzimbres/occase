@@ -21,8 +21,8 @@ visualization='{"cmd":"visualization", "post_id":"8ft01lo6i8"}'
 
 #curl --verbose --header "Content-Type: application/json" --request POST --data "$search" http://localhost:8080/posts/search
 #curl --header "Content-Type: application/json" --request POST --data "$search" http://localhost:8080/posts/count 
-#curl --header "Content-Type: application/json" --request POST --data '{"user":"ksksksk", "key":"jdjdjddj"}' http://localhost:8080/posts/upload-credit 
-curl --header "Content-Type: application/json" --request POST --data '{"user":"e3f2dd45e22f34b41c8d85805e302ade", "key":"jdjdjddj", "post_id":"t7lgwe5jhs"}' http://localhost:8080/posts/delete 
+curl --header "Content-Type: application/json" --request POST --data '{"user":"ksksksk", "key":"jdjdjddj"}' https://db.occase.de/posts/upload-credit 
+#curl --header "Content-Type: application/json" --request POST --data '{"user":"e3f2dd45e22f34b41c8d85805e302ade", "key":"jdjdjddj", "post_id":"t7lgwe5jhs"}' http://localhost:8080/posts/delete 
 #curl --header "Content-Type: application/json" --request POST --data "$publish1" http://localhost:8080/posts/publish 
 #curl --header "Content-Type: application/json" --request POST --data "$publish2" http://localhost:8080/posts/publish 
 #curl --header "Content-Type: application/json" --request POST --data "$visualization" http://localhost:8080/posts/visualization

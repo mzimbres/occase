@@ -38,6 +38,16 @@ void from_json(json const& j, post& e)
   e.in_details = j.at("in_details").get<std::vector<code_type>>();
   e.range_values = j.at("range_values").get<std::vector<int>>();
   e.images = j.at("images").get<std::vector<std::string>>();
+
+  // Removes queries if any.
+  auto f = [](auto& s)
+  {
+     auto const pos = s.find('?');
+     if (pos != std::string::npos)
+	s.erase(pos);
+  };
+
+  std::for_each(std::begin(e.images), std::end(e.images), f);
 }
 
 std::string make_dir(std::string const& filename)
